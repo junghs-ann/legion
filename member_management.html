@@ -1,0 +1,723 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입정보 관리 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 100px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1200px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+            <!-- Search Filter Section -->
+            <div class="search-section"
+                style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                <h3
+                    style="margin-bottom: 15px; border-bottom: 2px solid var(--secondary-color); display: inline-block;">
+                    검색 조건</h3>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                        <label for="search-church">성당</label>
+                        <select id="search-church" style="width: 100%; padding: 8px;">
+                            <option value="">성당 선택 (전체)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                        <label for="search-curia">꾸리아 (Cu.)</label>
+                        <select id="search-curia" style="width: 100%; padding: 8px;" disabled>
+                            <option value="">꾸리아 선택 (전체)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                        <label for="search-presidium">쁘레지디움 (Pr.)</label>
+                        <select id="search-presidium" style="width: 100%; padding: 8px;" disabled>
+                            <option value="">쁘레지디움 선택 (전체)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                        <input type="text" id="search-name" placeholder="이름 입력" style="width: 100%; padding: 8px;">
+                    </div>
+                    <button id="btn-search" class="login-btn"
+                        style="width: auto; padding: 8px 20px; margin-bottom: 2px;">검색</button>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="results-section">
+                <h3 style="margin-bottom: 15px;">검색 결과 <span id="result-count"
+                        style="font-size: 0.9rem; color: #666; font-weight: normal;">(0명)</span></h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                        <thead>
+                            <tr style="background-color: var(--primary-color); color: white;">
+                                <th style="padding: 10px; border: 1px solid #ddd;">이름</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">세례명</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">성당</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">소속 (Pr.)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">직급</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">상태</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">탈퇴일</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="member-table-body">
+                            <tr>
+                                <td colspan="7" style="padding: 20px; text-align: center; border: 1px solid #ddd;">검색
+                                    버튼을 눌러 회원을 조회하세요.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Close Button -->
+            <div style="margin-top: 30px; text-align: center;">
+                <button onclick="location.href='dashboard.html'" class="login-btn"
+                    style="background-color: #757575; width: auto; padding: 10px 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+        <div
+            style="background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-bottom: 20px; color: var(--primary-color);">회원 정보 수정</h3>
+            <form id="edit-form">
+                <input type="hidden" id="edit-email">
+                <input type="hidden" id="edit-uid">
+                <div class="form-group">
+                    <label>성당</label>
+                    <input type="text" id="edit-church" disabled style="background: #e9ecef;">
+                </div>
+                <div class="form-group">
+                    <label>소속 (Pr.)</label>
+                    <input type="text" id="edit-presidium" disabled style="background: #e9ecef;">
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                <div class="form-group">
+                    <label>세례명</label>
+                    <input type="text" id="edit-baptismal" required>
+                </div>
+                <div class="form-group">
+                    <label>성별</label>
+                    <select id="edit-gender" required style="width: 100%; padding: 10px; border: 1px solid #ccc;">
+                        <option value="">성별 선택</option>
+                        <option value="남">남</option>
+                        <option value="여">여</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>상태</label>
+                    <select id="edit-status" required style="width: 100%; padding: 10px; border: 1px solid #ccc;">
+                        <option value="active">승인 (Active)</option>
+                        <option value="pending">대기 (Pending)</option>
+                        <option value="retire">퇴단처리 (Retire)</option>
+                        <option value="entry">입단 (Entry)</option>
+                        <option value="transfer">전입 (Transfer)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="leave-date-group" style="display: none;">
+                    <label>탈퇴일</label>
+                    <input type="text" id="edit-leave-date" disabled
+                        style="background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">
+                    <small style="color: #721c24;">* 단원관리에서 퇴단/전출 처리 시 자동 입력됩니다.</small>
+                </div>
+                <div class="form-group">
+                    <label>직급 (Role)</label>
+                    <select id="edit-role" required style="width: 100%; padding: 10px; border: 1px solid #ccc;">
+                        <option value="member">단원 (Member)</option>
+                        <option value="president">단장 (President)</option>
+                        <option value="vice_president">부단장 (Vice President)</option>
+                        <option value="secretary">서기 (Secretary)</option>
+                        <option value="treasurer">회계 (Treasurer)</option>
+                        <option value="admin">관리자 (Admin)</option>
+                    </select>
+                </div>
+                <!-- ID/PW Fields Added -->
+                <div class="form-group">
+                    <label>아이디 (ID)</label>
+                    <input type="text" id="edit-username" required style="background: #f9f9f9;">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <input type="text" id="edit-password" placeholder="비밀번호를 입력하세요" required style="flex: 1;">
+                        <button type="button" id="btn-reset-password"
+                            style="padding: 10px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">1234로
+                            초기화</button>
+                    </div>
+                    <small style="color: #666; display: block; margin-top: 5px;">* 사용자가 비밀번호를 분실한 경우 이곳에서 직접 수정하거나 초기화할
+                        수
+                        있습니다.</small>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" id="btn-cancel-edit"
+                        style="padding: 10px 20px; background: #ccc; border: none; border-radius: 4px; cursor: pointer;">취소</button>
+                    <button type="submit" class="login-btn"
+                        style="width: auto; padding: 10px 20px; margin: 0;">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver } from "./auth.js";
+
+        // DOM Elements
+        const searchChurch = document.getElementById('search-church');
+        const searchCuria = document.getElementById('search-curia');
+        const searchPresidium = document.getElementById('search-presidium');
+        const searchName = document.getElementById('search-name');
+        const btnSearch = document.getElementById('btn-search');
+        const tableBody = document.getElementById('member-table-body');
+        const resultCount = document.getElementById('result-count');
+
+        const editModal = document.getElementById('edit-modal');
+        const editForm = document.getElementById('edit-form');
+        const btnCancelEdit = document.getElementById('btn-cancel-edit');
+
+        let currentUserProfile = null;
+
+        // Initialize
+        initAuthObserver((user, profile) => {
+            currentUserProfile = profile;
+
+            // Permission Check
+            if (profile.role !== 'admin' && profile.role !== 'president') {
+                alert("접근 권한이 없습니다.");
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            // Mobile Menu Toggle logic
+            const menuToggle = document.querySelector('.menu-toggle');
+            if (menuToggle) {
+                menuToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('active');
+                });
+            }
+
+            // Setup Search Filters based on Role
+            setupFilters(profile);
+
+        }, () => {
+            alert("로그인이 필요합니다.");
+            window.location.href = 'index.html';
+        });
+
+        function setupFilters(profile) {
+            // Populate Churches (Common)
+            // 1. Get churches from organization registry
+            let churchList = getChurches();
+
+            // 2. Get churches from registered users (in case they are not in registry yet)
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const userChurches = Object.values(allUsers)
+                .map(u => u.church)
+                .filter(c => c); // Remove empty/null
+
+            // 3. Merge and Unique
+            churchList = [...new Set([...churchList, ...userChurches])].sort();
+
+            churchList.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                searchChurch.appendChild(opt);
+            });
+
+            if (profile.role === 'president') {
+                // Lock filters for President
+                searchChurch.value = profile.church || '';
+                searchChurch.disabled = true;
+
+                // Load Curiae for this church
+                loadCuriae(profile.church, profile.curia);
+
+                // Load Presidia
+                loadPresidia(profile.church, profile.curia, profile.presidiumId);
+
+                searchCuria.disabled = true;
+                searchPresidium.disabled = true;
+            } else {
+                // Admin: Enable cascading selects
+                searchChurch.addEventListener('change', function () {
+                    const selected = this.value;
+                    searchCuria.innerHTML = '<option value="">꾸리아 선택 (전체)</option>';
+                    searchPresidium.innerHTML = '<option value="">쁘레지디움 선택 (전체)</option>';
+                    searchCuria.disabled = !selected;
+                    searchPresidium.disabled = true;
+
+                    if (selected) loadCuriae(selected);
+                });
+
+                searchCuria.addEventListener('change', function () {
+                    const selectedChurch = searchChurch.value;
+                    const selectedCuria = this.value;
+                    searchPresidium.innerHTML = '<option value="">쁘레지디움 선택 (전체)</option>';
+                    searchPresidium.disabled = !selectedCuria;
+
+                    if (selectedChurch && selectedCuria) loadPresidia(selectedChurch, selectedCuria);
+                });
+            }
+
+            // Trigger initial data load if President (optional, or wait for search click)
+            if (profile.role === 'president') {
+                searchMembers(); // Auto search for their group
+            }
+        }
+
+        function loadCuriae(church, preselectVal = null) {
+            // 1. Get from Registry
+            let curiaList = getCuriae(church);
+
+            // 2. Get from Users
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const userCuriae = Object.values(allUsers)
+                .filter(u => u.church === church)
+                .map(u => u.curia)
+                .filter(c => c);
+
+            // 3. Merge and Unique
+            curiaList = [...new Set([...curiaList, ...userCuriae])].sort();
+
+            curiaList.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                if (preselectVal === c) opt.selected = true;
+                searchCuria.appendChild(opt);
+            });
+            if (!preselectVal) searchCuria.disabled = false;
+        }
+
+        function loadPresidia(church, curia, preselectVal = null) {
+            // 1. Get from Registry
+            const registryPresidia = getPresidia(church, curia); // Returns [{id, name}]
+
+            // 2. Get from Users
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const userPresidia = Object.values(allUsers)
+                .filter(u => u.church === church && u.curia === curia)
+                .map(u => ({ id: u.presidiumId, name: u.presidiumName }))
+                .filter(p => p.id && p.name);
+
+            // 3. Merge (Unique by ID)
+            const presidiumMap = new Map();
+
+            // Priority to Registry (official names)
+            registryPresidia.forEach(p => presidiumMap.set(p.id, p.name));
+
+            // Add from Users if not exists
+            userPresidia.forEach(p => {
+                if (!presidiumMap.has(p.id)) {
+                    presidiumMap.set(p.id, p.name);
+                }
+            });
+
+            // Convert to Array and Sort
+            const mergedPresidia = Array.from(presidiumMap, ([id, name]) => ({ id, name }))
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            mergedPresidia.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                if (preselectVal === p.id) opt.selected = true;
+                searchPresidium.appendChild(opt);
+            });
+            if (!preselectVal) searchPresidium.disabled = false;
+        }
+
+        // Search Logic
+        btnSearch.addEventListener('click', searchMembers);
+
+        function searchMembers() {
+            const sChurch = searchChurch.value;
+            const sCuria = searchCuria.value;
+            const sPresidiumId = searchPresidium.value;
+            const sName = searchName.value.trim().toLowerCase();
+
+            // Load all users
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            let results = Object.values(allUsers);
+
+            // Filtering
+            results = results.filter(u => {
+                // Admin can skip church selection, but if selected, it must match
+                if (sChurch && u.church !== sChurch) return false;
+                if (sCuria && u.curia !== sCuria) return false;
+                if (sPresidiumId && u.presidiumId !== sPresidiumId) return false;
+
+                // Name match (partial)
+                if (sName && !u.name.toLowerCase().includes(sName)) return false;
+
+                return true;
+            });
+
+            renderTable(results);
+        }
+
+        function renderTable(users) {
+            tableBody.innerHTML = '';
+            resultCount.textContent = `(${users.length}명)`;
+
+            if (users.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; border: 1px solid #ddd;">검색 결과가 없습니다.</td></tr>';
+                return;
+            }
+
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #ddd';
+
+
+                // Mapping status to text and colors
+                const statusMap = {
+                    'active': { text: '승인', bg: '#e8f5e9', color: '#2e7d32' },
+                    'pending': { text: '대기', bg: '#fff3e0', color: '#ef6c00' },
+                    'retire': { text: '퇴단처리', bg: '#ffebee', color: '#c62828' },
+                    'entry': { text: '입단', bg: '#e3f2fd', color: '#1565c0' },
+                    'transfer': { text: '전입', bg: '#f3e5f5', color: '#7b1ea2' }
+                };
+                const statusInfo = statusMap[u.status] || { text: u.status, bg: '#eee', color: '#333' };
+
+                // [개선] 최신 직급 정보를 가져오는 통합 함수 적용
+                const rankInfo = getLatestRank(u);
+
+                tr.innerHTML = `
+                    <td style="padding: 10px;">${u.name}</td>
+                    <td style="padding: 10px;">${u.baptismalName}</td>
+                    <td style="padding: 10px;">${u.church || '-'}</td>
+                    <td style="padding: 10px;">${u.presidiumName || '-'}</td>
+                    <td style="padding: 10px;">${rankInfo.text}</td>
+                    <td style="padding: 10px;">
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; background: ${statusInfo.bg}; color: ${statusInfo.color};">
+                            ${statusInfo.text}
+                        </span>
+                    </td>
+                    <td style="padding: 10px; color: #d32f2f; font-weight: bold;">${u.leaveDate || '-'}</td>
+                    <td style="padding: 10px;">
+                        <button class="btn-edit" data-uid="${u.uid}" style="padding: 5px 10px; background: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">수정</button>
+                        <button class="btn-delete" data-uid="${u.uid}" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">삭제</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // Attach Edit Event Listeners
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const uid = this.dataset.uid;
+                    openEditModal(uid);
+                });
+            });
+
+            // [추가] 삭제 이벤트 리스너
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const uid = this.dataset.uid;
+                    deleteUser(uid);
+                });
+            });
+        }
+
+        // [개선] 최신 직급 정보를 결정하는 핵심 로직
+        function getLatestRank(u) {
+            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const today = new Date().toISOString().split('T')[0];
+
+            const roleMap = {
+                'admin': '관리자',
+                'president': '단장',
+                'vice_president': '부단장',
+                'secretary': '서기',
+                'treasurer': '회계',
+                'member': '단원'
+            };
+
+            const reverseRoleMap = {
+                '단장': 'president',
+                '부단장': 'vice_president',
+                '서기': 'secretary',
+                '회계': 'treasurer',
+                '단원': 'member',
+                '관리자': 'admin'
+            };
+
+            // 1순위: 간부 명단에서 활동 중인 직책 확인 (성명 + 성당 + Pr. 대조)
+            const officialOfficer = officersList.find(o =>
+                o.name === u.name &&
+                (o.churchName === u.church || o.church === u.church) &&
+                (o.presidiumName === u.presidiumName || o.presidium === u.presidiumName) &&
+                (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
+            );
+
+            if (officialOfficer) {
+                return {
+                    text: officialOfficer.role,
+                    code: reverseRoleMap[officialOfficer.role] || 'member'
+                };
+            }
+
+            // 2순위: 단원 명단에서 활동 중인지 확인
+            const activeMember = membersList.find(m =>
+                m.name === u.name &&
+                m.churchName === u.church &&
+                m.presidiumName === u.presidiumName &&
+                (m.status !== '퇴단' && m.status !== '전출')
+            );
+
+            if (activeMember) {
+                return { text: '단원', code: 'member' };
+            }
+
+            // 3순위: 위 데이터가 없으면 가입 시 입력된 직급 정보 반환
+            return {
+                text: roleMap[u.role] || u.role || '단원',
+                code: u.role || 'member'
+            };
+        }
+
+        // [추가] 사용자 삭제 로직
+        function deleteUser(uid) {
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const user = allUsers[uid];
+
+            if (!user) {
+                alert("삭제할 사용자 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            if (confirm(`정말로 '${user.name}' 사용자의 가입 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                delete allUsers[uid];
+                localStorage.setItem('users', JSON.stringify(allUsers));
+                alert("삭제되었습니다.");
+                searchMembers(); // 리스트 갱신
+            }
+        }
+
+        // Edit Modal Logic
+        function openEditModal(uid) {
+            editForm.reset(); // Clear form state
+
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const user = allUsers[uid];
+            if (!user) {
+                // Compatibility: Find by email if UID not found (for old data)
+                const userByEmail = Object.values(allUsers).find(u => u.email === uid);
+                if (userByEmail) return openEditModal(userByEmail.uid);
+                alert("사용자 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            document.getElementById('edit-email').value = user.email; // We keep email as ID for login
+            document.getElementById('edit-uid').value = user.uid; // Hidden field to track current record
+            document.getElementById('edit-church').value = user.church || '';
+            document.getElementById('edit-presidium').value = user.presidiumName || '';
+            document.getElementById('edit-name').value = user.name;
+            document.getElementById('edit-baptismal').value = user.baptismalName;
+            document.getElementById('edit-gender').value = user.gender || '';
+            document.getElementById('edit-status').value = user.status;
+
+            // [개선] 모달을 열 때도 최신 직급 정보를 실시간으로 조회하여 반영
+            const currentRank = getLatestRank(user);
+            document.getElementById('edit-role').value = currentRank.code;
+
+            // Populate ID/PW
+            document.getElementById('edit-username').value = user.username || '';
+            document.getElementById('edit-password').value = user.password || '';
+
+            // 탈퇴일 표시 제어
+            const leaveDateGroup = document.getElementById('leave-date-group');
+            const leaveDateInput = document.getElementById('edit-leave-date');
+            if (user.status === 'retire' || user.leaveDate) {
+                leaveDateGroup.style.display = 'block';
+                leaveDateInput.value = user.leaveDate || '기록 없음';
+            } else {
+                leaveDateGroup.style.display = 'none';
+            }
+
+            // [New] 비밀번호 초기화 버튼 리스너 (한 번만 등록하기 위해 기존 것 제거는 복잡하니 매번 초기화는 아니고 전역에서 처리하거나 여기서)
+            const resetBtn = document.getElementById('btn-reset-password');
+            // Clean old listener
+            const newResetBtn = resetBtn.cloneNode(true);
+            resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+            newResetBtn.addEventListener('click', () => {
+                if (confirm(`'${user.name}'님의 비밀번호를 '1234'로 초기화하시겠습니까?`)) {
+                    document.getElementById('edit-password').value = '1234';
+                    alert("비밀번호가 '1234'로 설정되었습니다.\n'저장' 버튼을 눌러야 최종 반영됩니다.");
+                }
+            });
+
+            editModal.style.display = 'flex';
+        }
+
+        btnCancelEdit.addEventListener('click', () => {
+            editModal.style.display = 'none';
+        });
+
+        editForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('edit-email').value;
+            const uid = document.getElementById('edit-uid').value;
+            const newName = document.getElementById('edit-name').value;
+            const newBaptismal = document.getElementById('edit-baptismal').value;
+            const newGender = document.getElementById('edit-gender').value;
+            const newStatus = document.getElementById('edit-status').value;
+            const newRole = document.getElementById('edit-role').value;
+
+            // Get ID/PW
+            const newUsername = document.getElementById('edit-username').value;
+            const newPassword = document.getElementById('edit-password').value;
+
+            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
+            const currentUserData = allUsers[uid];
+
+            if (currentUserData) {
+                // [Logic Check] History Management
+                // If old status was 'retire' and new status is 'entry' or 'transfer', create NEW record
+                if (currentUserData.status === 'retire' && (newStatus === 'entry' || newStatus === 'transfer')) {
+                    if (!confirm("퇴단한 단원을 재입단 또는 전입 처리하여 신규 기록을 생성하시겠습니까? (기존 퇴단 기록은 보존됩니다)")) {
+                        return;
+                    }
+
+                    const newUid = 'user_' + Math.random().toString(36).substr(2, 9);
+                    const newRecord = {
+                        ...currentUserData,
+                        uid: newUid,
+                        name: newName,
+                        baptismalName: newBaptismal,
+                        gender: newGender,
+                        status: newStatus,
+                        role: newRole,
+                        username: newUsername,
+                        email: `${newUsername}@legion.app`, // [Bug Fix] Email sync for login
+                        password: newPassword,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    allUsers[newUid] = newRecord;
+                } else {
+                    // Just update existing record
+                    allUsers[uid].name = newName;
+                    allUsers[uid].baptismalName = newBaptismal;
+                    allUsers[uid].gender = newGender;
+                    allUsers[uid].status = newStatus;
+                    allUsers[uid].role = newRole;
+                    allUsers[uid].username = newUsername;
+                    allUsers[uid].email = `${newUsername}@legion.app`; // [Bug Fix] Email sync for login
+                    allUsers[uid].password = newPassword;
+
+                    // If modifying self, update session
+                    if (currentUserProfile.uid === uid) {
+                        currentUserProfile = allUsers[uid];
+                        localStorage.setItem('currentUser', JSON.stringify(currentUserProfile));
+                    }
+                }
+
+                localStorage.setItem('users', JSON.stringify(allUsers));
+                alert("저장되었습니다.");
+                editModal.style.display = 'none';
+                searchMembers(); // Refresh table
+            }
+        });
+
+    </script>
+</body>
+
+</html>

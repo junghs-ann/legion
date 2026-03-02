@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>복무 기록부 출력 - 레지오 마리애</title>
+    <style>
+        /* A4 가로 규격 강제 및 최적화 */
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 30px 0;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .print-page {
+            width: 297mm;
+            height: 210mm;
+            background: white;
+            padding: 10mm 12mm;
+            box-sizing: border-box;
+            color: #000;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            page-break-after: always;
+            /* 인쇄 시 자동 페이지 넘김 */
+        }
+
+        .record-title {
+            text-align: center;
+            font-size: 22pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 15px;
+        }
+
+        .page-counter {
+            text-align: right;
+            font-size: 9pt;
+            margin-right: 5mm;
+            margin-top: -5mm;
+            margin-bottom: 2mm;
+        }
+
+        /* 2단 메인 컨테이너 */
+        .main-horizontal-split {
+            display: flex;
+            gap: 2mm;
+            width: 100%;
+            border: 0.5mm solid #000;
+            height: calc(210mm - 48mm);
+        }
+
+        .left-column {
+            flex: 0 0 42%;
+            display: flex;
+            flex-direction: column;
+            border-right: 0.5mm solid #000;
+        }
+
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 0.3mm solid #000;
+            padding: 3px 6px;
+            font-size: 9pt;
+            text-align: center;
+            height: 25px;
+            overflow: hidden;
+        }
+
+        .section-title {
+            background-color: #f8f8f8;
+            font-weight: bold;
+            font-size: 10.5pt;
+            height: 30px;
+            letter-spacing: 5px;
+        }
+
+        .label-bg {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            width: 70px;
+        }
+
+        .personal-info {
+            border-bottom: 0.5mm solid #000;
+        }
+
+        .move-history {
+            border-bottom: 0.5mm solid #000;
+        }
+
+        .career-history {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .education-history {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .notes-section {
+            border-top: 0.5mm solid #000;
+            padding: 8px 12px;
+            height: 35mm;
+            box-sizing: border-box;
+        }
+
+        .notes-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 10pt;
+        }
+
+        .notes-content {
+            font-size: 9pt;
+            line-height: 1.4;
+            overflow: hidden;
+        }
+
+        .footer-logo {
+            text-align: right;
+            font-size: 8pt;
+            margin-top: 3px;
+            color: #444;
+        }
+
+        .print-btn-overlay {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border-radius: 5px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-print {
+            background-color: #1a73e8;
+            color: white;
+        }
+
+        .btn-close {
+            background-color: #5f6368;
+            color: white;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+
+            .print-page {
+                box-shadow: none;
+                margin: 0;
+                border: none;
+            }
+
+            .print-btn-overlay {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="print-btn-overlay">
+        <button class="btn btn-print" onclick="window.print()">인쇄하기</button>
+        <button class="btn btn-close" onclick="window.close()">닫기</button>
+    </div>
+
+    <div id="pageContainer"></div>
+
+    <script>
+        const PAGE_LIMITS = { move: 5, career: 10, education: 19 };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const memberId = params.get('id');
+            if (!memberId) { alert('잘못된 접근입니다.'); window.close(); return; }
+
+            const members = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const member = members.find(m => m.id === memberId || m.uid === memberId || m.name === memberId);
+            if (!member) { alert('회원 정보를 찾을 수 없습니다.'); window.close(); return; }
+
+            // Fetch Related Data
+            const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const allCareer = officers.filter(o => o.memberId === memberId || o.name === member.name).sort((a, b) => (a.appointmentDate || "").localeCompare(b.appointmentDate || ""));
+
+            const events = JSON.parse(localStorage.getItem('events_list') || '[]');
+            const allEvents = events.filter(e => {
+                const attendees = (e.attendeeNames || "").split(',').map(n => n.trim());
+                return attendees.includes(member.name);
+            }).sort((a, b) => (a.eventDate || "").localeCompare(b.eventDate || ""));
+
+            // Calculate Pages
+            const moveData = [{ pr: member.presidiumName, curia: member.curiaName, church: member.churchName, period: `${member.probationaryDate} ~` }];
+            const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;
+            const totalEduPages = Math.ceil(allEvents.length / PAGE_LIMITS.education) || 1;
+            const totalPages = Math.max(totalCareerPages, totalEduPages, 1);
+
+            const container = document.getElementById('pageContainer');
+
+            for (let i = 0; i < totalPages; i++) {
+                const pageEl = document.createElement('div');
+                pageEl.className = 'print-page';
+
+                const careerSlice = allCareer.slice(i * PAGE_LIMITS.career, (i + 1) * PAGE_LIMITS.career);
+                const eduSlice = allEvents.slice(i * PAGE_LIMITS.education, (i + 1) * PAGE_LIMITS.education);
+                const isLastPage = (i === totalPages - 1);
+
+                pageEl.innerHTML = `
+                    <div class="record-title">행동단원 복무 기록부</div>
+                    <div class="page-counter">Page ${i + 1} / ${totalPages}</div>
+                    <div class="main-horizontal-split">
+                        <div class="left-column">
+                            <div class="personal-info">
+                                <table>
+                                    <tr><th colspan="6" class="section-title">인 적 사 항</th></tr>
+                                    <tr><td class="label-bg">성 명</td><td style="font-weight:bold; width:120px;">${member.name}</td><td class="label-bg">본 명</td><td colspan="3" style="font-weight:bold;">${member.baptismalName || ''}</td></tr>
+                                    <tr><td class="label-bg">생년월일</td><td>${member.birthDate || ''}</td><td class="label-bg">축 일</td><td>${member.feastDate || ''}</td><td class="label-bg" style="width:40px;">성별</td><td style="width:40px;">${member.gender || '여'}</td></tr>
+                                    <tr><td class="label-bg">입 단 일</td><td>${member.probationaryDate || ''}</td><td class="label-bg">선 서 일</td><td colspan="3">${member.promiseDate || ''}</td></tr>
+                                    <tr><td class="label-bg">연 락 처</td><td colspan="5">${member.phone || ''}</td></tr>
+                                    <tr><td class="label-bg">퇴 단 일</td><td colspan="5">${member.retiredDate || member.leaveDate || ''}</td></tr>
+                                </table>
+                            </div>
+                            <div class="move-history">
+                                <table>
+                                    <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">쁘레시디움 이동 현황</th></tr>
+                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:25%;">쁘레시디움 명</th><th style="width:25%;">평의회 명</th><th style="width:20%;">본당 명</th><th style="width:30%;">기 간</th></tr>
+                                    ${renderMoveRows(i === 0 ? moveData : [])}
+                                </table>
+                            </div>
+                            <div class="career-history">
+                                <table>
+                                    <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">간부 경력 사항</th></tr>
+                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:25%;">소 속</th><th style="width:20%;">직 책</th><th style="width:20%;">본당 명</th><th style="width:35%;">기 간</th></tr>
+                                    ${renderCareerRows(careerSlice, member)}
+                                </table>
+                            </div>
+                        </div>
+                        <div class="right-column">
+                            <div class="education-history">
+                                <table>
+                                    <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">주요 교육 및 피정 참석 현황</th></tr>
+                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:20%;">소 속</th><th style="width:22%;">일 자(기 간)</th><th style="width:38%;">내 용</th><th style="width:20%;">주 관</th></tr>
+                                    ${renderEduRows(eduSlice, member)}
+                                </table>
+                            </div>
+                            <div class="notes-section">
+                                <div class="notes-title">특기 및 참고 사항 :</div>
+                                <div class="notes-content">${isLastPage ? (member.notes || '').replace(/\n/g, '<br>') : '(다음 페이지에 계속...)'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer-logo">서울 무염시태 세나뚜스 양식 제24호(2014년 2월 개정)</div>
+                `;
+                container.appendChild(pageEl);
+            }
+
+            setTimeout(applyTextFitting, 200);
+        });
+
+        function renderMoveRows(data) {
+            let html = '';
+            for (let i = 0; i < PAGE_LIMITS.move; i++) {
+                const item = data[i] || { pr: '&nbsp;', curia: '&nbsp;', church: '&nbsp;', period: '~' };
+                html += `<tr><td>${item.pr}</td><td>${item.curia || '-'}</td><td>${item.church}</td><td>${item.period}</td></tr>`;
+            }
+            return html;
+        }
+
+        function renderCareerRows(data, member) {
+            let html = '';
+            for (let i = 0; i < PAGE_LIMITS.career; i++) {
+                const o = data[i];
+                if (o) {
+                    const prName = o.presidiumName || o.presidium || member.presidiumName || '-';
+                    const churchName = o.churchName || o.church || member.churchName || '-';
+                    html += `<tr><td>${prName}</td><td>${o.role}</td><td>${churchName}</td><td>${o.appointmentDate} ~ ${o.appointmentExpiryDate || ''}</td></tr>`;
+                }
+                else html += '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>~</td></tr>';
+            }
+            return html;
+        }
+
+        function renderEduRows(data, member) {
+            let html = '';
+            for (let i = 0; i < PAGE_LIMITS.education; i++) {
+                const e = data[i];
+                if (e) {
+                    const prName = e.presidiumName || e.presidium || member.presidiumName || '';
+                    html += `<tr><td>${prName}</td><td>${e.eventDate}</td><td style="text-align:left;">${e.eventName}</td><td>${e.organizer || '-'}</td></tr>`;
+                }
+                else html += '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+            }
+            return html;
+        }
+
+        function applyTextFitting() {
+            const cells = document.querySelectorAll('td');
+            cells.forEach(cell => {
+                if (!cell.textContent.trim() || cell.classList.contains('section-title') || cell.classList.contains('label-bg')) return;
+                if (!cell.querySelector('.fit-wrapper')) {
+                    const text = cell.innerHTML;
+                    cell.innerHTML = `<span class="fit-wrapper" style="display:inline-block; white-space:nowrap;">${text}</span>`;
+                }
+                const wrapper = cell.querySelector('.fit-wrapper');
+                const containerWidth = cell.offsetWidth - 10;
+                let fontSize = 9;
+                wrapper.style.fontSize = fontSize + 'pt';
+                while (wrapper.offsetWidth > containerWidth && fontSize > 6) {
+                    fontSize -= 0.5;
+                    wrapper.style.fontSize = fontSize + 'pt';
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

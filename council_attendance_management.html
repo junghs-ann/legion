@@ -1,0 +1,970 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평의회 출석 관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .form-grid-header {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #444;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: white;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            padding: 12px 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .attendance-table th {
+            background-color: #f1f3f5;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .attendance-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-save {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-save:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-1px);
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #c82333;
+            transform: translateY(-1px);
+        }
+
+        /* Checkbox styling */
+        .attendance-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .role-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .role-dan {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .role-bu {
+            background: #f1f8e9;
+            color: #33691e;
+        }
+
+        .role-seo {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .role-hoe {
+            background: #fce4ec;
+            color: #880e4f;
+        }
+
+        /* Custom Dropdown Styling */
+        .custom-dropdown-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f5;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .dropdown-item .session-num {
+            display: block;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 2px;
+        }
+
+        .dropdown-item .session-date {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid-header {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body" style="padding-top: 80px;">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <main class="main-content" style="padding: 40px 20px;">
+        <div class="register-form-container">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px;">
+                <h2 style="color: var(--primary-color); margin: 0; font-family: 'Noto Serif KR', serif;">평의회 출석 관리</h2>
+                <div style="font-size: 0.9rem; color: #666;">꾸리아 평의회 참석 여부 등록 및 관리</div>
+            </div>
+
+            <div class="form-grid-header">
+                <div class="form-group">
+                    <label>성당</label>
+                    <select id="churchSelect">
+                        <option value="">성당 선택</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>꾸리아(Cu.)</label>
+                    <select id="curiaSelect" disabled>
+                        <option value="">꾸리아 선택</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>쁘레시디움(Pr.)</label>
+                    <select id="presidiumSelect" disabled>
+                        <option value="">쁘레시디움 선택</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>기준일자</label>
+                    <div class="custom-dropdown-container">
+                        <div style="position: relative; display: flex; gap: 4px;">
+                            <div style="position: relative; flex: 1;">
+                                <input type="text" id="baseDateInput" placeholder="YYYY-MM-DD" autocomplete="off"
+                                    style="width: 100%; padding-right: 30px;">
+                                <i class="fas fa-chevron-down"
+                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;"></i>
+                            </div>
+                            <input type="date" id="nativeDatePicker"
+                                style="position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none;">
+                            <button type="button" class="btn btn-close" id="btnShowCalendar"
+                                style="padding: 10px; min-width: 44px;">
+                                <i class="fas fa-calendar-alt"></i>
+                            </button>
+                        </div>
+                        <div id="dateHistoryList" class="custom-dropdown-list"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>회차</label>
+                    <div style="display: flex; gap: 8px;">
+                        <div class="custom-dropdown-container" style="flex: 1;">
+                            <div style="position: relative;">
+                                <input type="text" id="sessionInput" placeholder="회차 입력" autocomplete="off"
+                                    style="width: 100%; padding-right: 30px;">
+                                <i class="fas fa-chevron-down"
+                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;"></i>
+                            </div>
+                            <div id="customSessionList" class="custom-dropdown-list"></div>
+                        </div>
+                        <button id="btnSearch" class="btn btn-save" style="padding: 10px 15px; white-space: nowrap;">
+                            <i class="fas fa-search"></i> 조회
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="attendance-table" id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>회차</th>
+                            <th>쁘레시디움명</th>
+                            <th>직급</th>
+                            <th>성명</th>
+                            <th>세례명</th>
+                            <th>출석</th>
+                            <th>결석</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceBody">
+                        <tr>
+                            <td colspan="8" style="padding: 40px; color: #888;">입력 항목을 선택해 주세요.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-save" id="btnSave"><i class="fas fa-save"></i> 저장하기</button>
+                <button class="btn btn-delete" id="btnDelete" style="display: none;"><i class="fas fa-trash-alt"></i>
+                    삭제하기</button>
+                <button class="btn btn-close" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i>
+                    닫기</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver } from "./auth.js";
+
+        // Global State
+        let currentUser = null;
+        let isAdmin = false;
+        let presidiaList = [];
+        let membersList = [];
+        let officersList = [];
+
+        // DOM Elements
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const sessionInput = document.getElementById('sessionInput');
+        const baseDateInput = document.getElementById('baseDateInput');
+        const nativeDatePicker = document.getElementById('nativeDatePicker');
+        const btnShowCalendar = document.getElementById('btnShowCalendar');
+        const dateHistoryList = document.getElementById('dateHistoryList');
+        const attendanceBody = document.getElementById('attendanceBody');
+        const btnSave = document.getElementById('btnSave');
+        const btnDelete = document.getElementById('btnDelete');
+        const btnSearch = document.getElementById('btnSearch');
+
+        initAuthObserver((user, profile) => {
+            if (!user) {
+                location.href = 'index.html';
+                return;
+            }
+            currentUser = profile;
+
+            // [권한 제한 추가] 관리자 또는 간부(단장, 부단장, 서기, 회계)만 접근 가능
+            const roleLower = (profile.role || '').toLowerCase();
+            isAdmin = roleLower === '관리자' || roleLower.includes('admin') || roleLower.includes('시스템');
+            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(profile.role);
+
+            if (!isAdmin && !isOfficer) {
+                alert('평의회 출석 관리 페이지는 관리자 및 간부만 접근할 수 있습니다.');
+                location.href = 'dashboard.html';
+                return;
+            }
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            if (isAdmin) {
+                btnDelete.style.setProperty('display', 'inline-flex', 'important');
+                console.log("[시니어 개발자] 관리자 권한 확인됨 - 삭제 버튼 활성화");
+            } else {
+                console.log(`[시니어 개발자] 간부 권한 (${profile.role}) - 삭제 버튼 비활성화`);
+            }
+
+            loadInitialData();
+            setupOrganizationSelectors(profile);
+            setupEventListeners();
+            baseDateInput.value = new Date().toISOString().split('T')[0];
+
+            console.log(`[시니어 개발자 로그] 로그온 사용자: ${profile.name}, 직책: ${profile.role}, 관리자여부: ${isAdmin}`);
+
+            // 권한 기반 조직 설정
+            if (isAdmin) {
+                console.log("관리자 로그인: 전체 조직 조회 모드");
+                // 성당 목록이 하나도 없으면 관리자에게 안내
+                if (churchSelect.options.length <= 1) {
+                    alert("등록된 성당 정보가 없습니다. '관리자 -> 쁘레시디움 소속 등록' 메뉴에서 소속 정보를 먼저 등록해 주세요.");
+                }
+            } else {
+                console.log("일반 사용자 로그인: 소속 정보 고정");
+                // profile의 다양한 필드명 대응 (churchName, church 등)
+                const userChurch = (profile.churchName || profile.church || '').toString().trim();
+                const userCuria = (profile.curiaName || profile.curia || '').toString().trim();
+                const userPresidium = (profile.presidiumName || profile.presidium || '').toString().trim();
+
+                // 성당 설정 (목록에 없으면 강제 추가하여 안전하게 표시)
+                if (userChurch) {
+                    if (![...churchSelect.options].some(opt => opt.value === userChurch)) {
+                        const opt = document.createElement('option');
+                        opt.value = userChurch;
+                        opt.textContent = userChurch;
+                        churchSelect.appendChild(opt);
+                    }
+                    churchSelect.value = userChurch;
+                    churchSelect.disabled = true;
+                    updateCuriaList();
+                }
+
+                // 꾸리아 설정
+                if (userCuria) {
+                    if (![...curiaSelect.options].some(opt => opt.value === userCuria)) {
+                        const opt = document.createElement('option');
+                        opt.value = userCuria;
+                        opt.textContent = userCuria;
+                        curiaSelect.appendChild(opt);
+                    }
+                    curiaSelect.value = userCuria;
+                    curiaSelect.disabled = true;
+                    updatePresidiumList();
+                }
+
+                // 쁘레시디움 설정 (혹시 등록된 회원 중에 간부가 있다면 표시)
+                if (userPresidium) {
+                    if (![...presidiumSelect.options].some(opt => opt.value === userPresidium)) {
+                        const opt = document.createElement('option');
+                        opt.value = userPresidium;
+                        opt.textContent = userPresidium;
+                        presidiumSelect.appendChild(opt);
+                    }
+                    presidiumSelect.value = userPresidium;
+                    presidiumSelect.disabled = true;
+                }
+
+                // loadAttendanceList(); // 자동 조회 제거
+                clearAttendanceTable();
+            }
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function clearAttendanceTable() {
+            attendanceBody.innerHTML = '<tr><td colspan="8" style="padding: 40px; color: #888; text-align: center;">조회 버튼을 클릭하여 데이터를 불러와 주세요.</td></tr>';
+        }
+
+        function loadInitialData() {
+            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            updateHistoryList();
+        }
+
+        function updateHistoryList() {
+            const allSaved = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
+            const customSessionList = document.getElementById('customSessionList');
+            const dateHistoryList = document.getElementById('dateHistoryList');
+            if (!customSessionList || !dateHistoryList) return;
+
+            const recordMap = new Map(); // session + '|' + date -> record
+            allSaved.forEach(r => {
+                if (r.session && r.date) {
+                    recordMap.set(`${r.session}|${r.date}`, r);
+                }
+            });
+
+            // 회차 역순 정렬
+            const sortedKeys = Array.from(recordMap.keys()).sort((a, b) => {
+                const sA = Number(a.split('|')[0]);
+                const sB = Number(b.split('|')[0]);
+                return sB - sA;
+            });
+
+            customSessionList.innerHTML = '';
+            dateHistoryList.innerHTML = '';
+
+            sortedKeys.forEach(key => {
+                const record = recordMap.get(key);
+                const [s, date] = key.split('|');
+
+                // 기준일자 목록 아이템: [일자 (회차회)]
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'dropdown-item';
+                dateDiv.innerHTML = `
+                    <span class="session-num">${date}</span>
+                    <span class="session-date">(${s}회차)</span>
+                `;
+                dateDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    // 모든 필드 연동 (성당, 꾸리아 포함)
+                    if (record.church) {
+                        churchSelect.value = record.church;
+                        updateCuriaList();
+                        if (record.curia) {
+                            curiaSelect.value = record.curia;
+                            updatePresidiumList();
+                            if (record.presidium) presidiumSelect.value = record.presidium;
+                        }
+                    }
+                    baseDateInput.value = date;
+                    sessionInput.value = s;
+                    dateHistoryList.style.display = 'none';
+                    loadAttendanceList(); // 선택 즉시 조회
+                };
+                dateHistoryList.appendChild(dateDiv);
+
+                // 회차 목록 아이템 (기존 유지)
+                const sessDiv = document.createElement('div');
+                sessDiv.className = 'dropdown-item';
+                sessDiv.innerHTML = `
+                    <span class="session-num">${s}회차</span>
+                    <span class="session-date">${date}</span>
+                `;
+                sessDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    if (record.church) {
+                        churchSelect.value = record.church;
+                        updateCuriaList();
+                        if (record.curia) {
+                            curiaSelect.value = record.curia;
+                            updatePresidiumList();
+                            if (record.presidium) presidiumSelect.value = record.presidium;
+                        }
+                    }
+                    sessionInput.value = s;
+                    baseDateInput.value = date;
+                    customSessionList.style.display = 'none';
+                    loadAttendanceList(); // 선택 즉시 조회
+                };
+                customSessionList.appendChild(sessDiv);
+            });
+        }
+
+        function setupOrganizationSelectors(profile) {
+            // data.js의 공통 함수 사용하여 성당 목록 로드
+            let churchList = getChurches();
+
+            // 사용자 프로필의 성당 정보를 목록에 포함 (혹시 데이터베이스에 아직 없을 경우 대비)
+            const userChurch = (profile.churchName || profile.church || '').toString().trim();
+            if (userChurch && !churchList.includes(userChurch)) {
+                churchList.push(userChurch);
+            }
+
+            // 중복 및 불필요 항목 제거 후 정렬
+            churchList = [...new Set(churchList.map(c => c.trim()))].filter(c => c && c !== '성당 선택').sort();
+
+            churchSelect.innerHTML = '<option value="">성당 선택</option>';
+            churchList.forEach(church => {
+                const opt = document.createElement('option');
+                opt.value = church;
+                opt.textContent = church;
+                churchSelect.appendChild(opt);
+            });
+            console.log("성당 목록 최종 구성:", churchList);
+        }
+
+        function updateCuriaList() {
+            const selectedChurch = churchSelect.value;
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            curiaSelect.disabled = true;
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            presidiumSelect.disabled = true;
+
+            if (!selectedChurch) return;
+
+            const curias = getCuriae(selectedChurch);
+            curias.forEach(curia => {
+                const opt = document.createElement('option');
+                opt.value = curia;
+                opt.textContent = curia;
+                curiaSelect.appendChild(opt);
+            });
+            curiaSelect.disabled = false;
+        }
+
+        function updatePresidiumList() {
+            const selectedChurch = churchSelect.value;
+            const selectedCuria = curiaSelect.value;
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            presidiumSelect.disabled = true;
+
+            if (!selectedChurch || !selectedCuria) return;
+
+            const prs = getPresidia(selectedChurch, selectedCuria);
+            prs.forEach(pr => {
+                const opt = document.createElement('option');
+                opt.value = pr.name;
+                opt.textContent = pr.name;
+                presidiumSelect.appendChild(opt);
+            });
+            presidiumSelect.disabled = false;
+        }
+
+        function loadAttendanceList() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidium = presidiumSelect.value;
+            const baseDate = baseDateInput.value;
+            const session = sessionInput.value;
+
+            if (!church || !curia || !baseDate || !session) {
+                let missing = [];
+                if (!church) missing.push("성당");
+                if (!curia) missing.push("꾸리아");
+                if (!baseDate) missing.push("기준일자");
+                if (!session) missing.push("회차");
+
+                attendanceBody.innerHTML = `<tr><td colspan="8" style="padding: 40px; color: #e67e22; text-align: center;">
+                    <i class="fas fa-exclamation-triangle"></i> 필수 항목(${missing.join(', ')})을 모두 선택/입력한 후 조회를 눌러주세요.
+                </td></tr>`;
+                return;
+            }
+
+            const allSaved = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
+            const existing = allSaved.find(r =>
+                r.church === church &&
+                r.curia === curia &&
+                (presidium === "" || r.presidium === presidium) &&
+                String(r.session) === String(session) &&
+                r.date === baseDate
+            );
+
+            if (existing) {
+                renderAttendanceRows(existing.attendanceData);
+            } else {
+                let scopeOfficers = officersList.filter(o =>
+                    o.church === church &&
+                    o.curia === curia &&
+                    (presidium === "" || o.presidium === presidium)
+                );
+
+                const grouped = {};
+                scopeOfficers.forEach(o => {
+                    const key = `${o.presidium}|${o.role}`;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(o);
+                });
+
+                const finalOfficers = [];
+                for (const key in grouped) {
+                    const candidates = grouped[key].filter(o => o.appointmentDate <= baseDate);
+                    if (candidates.length === 0) continue;
+
+                    const activeAtBase = candidates.filter(o => !o.appointmentExpiryDate || o.appointmentExpiryDate >= baseDate);
+                    const retiredBeforeBase = candidates.filter(o => o.appointmentExpiryDate && o.appointmentExpiryDate < baseDate);
+
+                    let best = null;
+                    if (activeAtBase.length > 0) {
+                        best = activeAtBase.sort((a, b) => b.appointmentDate.localeCompare(a.appointmentDate))[0];
+                    } else if (retiredBeforeBase.length > 0) {
+                        best = retiredBeforeBase.sort((a, b) => b.appointmentExpiryDate.localeCompare(a.appointmentExpiryDate))[0];
+                    }
+
+                    if (best) finalOfficers.push(best);
+                }
+
+                const roleOrder = { "단장": 1, "부단장": 2, "서기": 3, "회계": 4 };
+                finalOfficers.sort((a, b) => {
+                    if (a.presidium !== b.presidium) return a.presidium.localeCompare(b.presidium);
+                    return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+                });
+
+                const initialData = finalOfficers.map(o => ({
+                    presidiumName: o.presidium,
+                    role: o.role,
+                    memberName: o.name,
+                    baptismalName: o.baptismalName,
+                    status: '결석'
+                }));
+
+                renderAttendanceRows(initialData);
+            }
+        }
+
+        function renderAttendanceRows(data) {
+            const session = sessionInput.value || '-';
+            const date = baseDateInput.value || '-';
+
+            if (data.length === 0) {
+                attendanceBody.innerHTML = '<tr><td colspan="8" style="padding: 40px; color: #e74c3c;">해당 조건에 맞는 유효한 간부 정보가 없습니다.</td></tr>';
+                return;
+            }
+
+            attendanceBody.innerHTML = '';
+
+            // 쁘레시디움별 그룹핑 및 개수 계산
+            const prCounts = {};
+            data.forEach(row => {
+                prCounts[row.presidiumName] = (prCounts[row.presidiumName] || 0) + 1;
+            });
+
+            // 이미 처리한 쁘레시디움을 추적하기 위한 집합
+            const processedPrs = new Set();
+            let isFirstRowOfTable = true;
+
+            data.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                const roleClass = row.role === '단장' ? 'role-dan' :
+                    row.role === '부단장' ? 'role-bu' :
+                        row.role === '서기' ? 'role-seo' :
+                            row.role === '회계' ? 'role-hoe' : '';
+
+                let innerHtml = '';
+
+                // 1. 날짜 및 회차 병합 (테이블 전체에서 첫 번째 행에만 표시)
+                if (isFirstRowOfTable) {
+                    innerHtml += `<td rowspan="${data.length}">${date}</td>`;
+                    innerHtml += `<td rowspan="${data.length}">${session}</td>`;
+                    isFirstRowOfTable = false;
+                }
+
+                // 2. 쁘레시디움명 병합 (해당 그룹의 첫 번째 행에만 표시)
+                if (!processedPrs.has(row.presidiumName)) {
+                    innerHtml += `<td rowspan="${prCounts[row.presidiumName]}">${row.presidiumName}</td>`;
+                    processedPrs.add(row.presidiumName);
+                }
+
+                // 3. 나머지 개별 데이터
+                innerHtml += `
+                    <td><span class="role-badge ${roleClass}">${row.role}</span></td>
+                    <td style="font-weight: 500;">${row.memberName}</td>
+                    <td>${row.baptismalName}</td>
+                    <td><input type="radio" name="status_${idx}" class="attendance-radio" value="출석" ${row.status === '출석' ? 'checked' : ''}></td>
+                    <td><input type="radio" name="status_${idx}" class="attendance-radio" value="결석" ${row.status === '결석' ? 'checked' : ''}></td>
+                `;
+
+                tr.innerHTML = innerHtml;
+                tr.dataset.rowData = JSON.stringify(row);
+                attendanceBody.appendChild(tr);
+            });
+        }
+
+        function saveAttendance() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidium = presidiumSelect.value;
+            const session = sessionInput.value;
+            const date = baseDateInput.value;
+
+            if (!church || !curia || !session || !date) {
+                alert('모든 필수 입력 항목(성당, 꾸리아, 회차, 날짜)을 채워주세요.');
+                return;
+            }
+
+            const attendanceData = [];
+            const rows = attendanceBody.querySelectorAll('tr');
+
+            if (rows.length === 0 || rows[0].cells.length < 8) {
+                alert('저장할 데이터가 없습니다.');
+                return;
+            }
+
+            rows.forEach((tr, idx) => {
+                const baseInfo = JSON.parse(tr.dataset.rowData);
+                const status = tr.querySelector(`input[name="status_${idx}"]:checked`).value;
+                attendanceData.push({ ...baseInfo, status: status });
+            });
+
+            const allSaved = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
+            const existingIdx = allSaved.findIndex(r =>
+                r.church === church &&
+                r.curia === curia &&
+                r.presidium === presidium &&
+                String(r.session) === String(session) &&
+                r.date === date
+            );
+
+            const record = {
+                church, curia, presidium, session, date,
+                attendanceData,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (existingIdx >= 0) allSaved[existingIdx] = record;
+            else allSaved.push(record);
+
+            localStorage.setItem('council_attendance_list', JSON.stringify(allSaved));
+            updateHistoryList();
+            alert('출석 정보가 성공적으로 저장되었습니다.');
+        }
+
+        function deleteAttendance() {
+            if (!isAdmin) return;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const session = sessionInput.value;
+            const date = baseDateInput.value;
+
+            if (!church || !curia || !session || !date) {
+                alert('삭제할 기록을 먼저 선택하거나 입력해 주세요.');
+                return;
+            }
+
+            if (!confirm(`[${session}회차 / ${date}] 기록을 정말 삭제하시겠습니까?`)) return;
+
+            const allSaved = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
+            const filtered = allSaved.filter(r =>
+                !(r.church === church &&
+                    r.curia === curia &&
+                    String(r.session) === String(session) &&
+                    r.date === date)
+            );
+
+            if (allSaved.length === filtered.length) {
+                alert('해당 조건의 저장된 기록을 찾을 수 없습니다.');
+                return;
+            }
+
+            localStorage.setItem('council_attendance_list', JSON.stringify(filtered));
+            updateHistoryList();
+            clearAttendanceTable();
+            alert('기록이 삭제되었습니다.');
+        }
+
+        function setupEventListeners() {
+            churchSelect.addEventListener('change', () => {
+                updateCuriaList();
+                clearAttendanceTable();
+            });
+            curiaSelect.addEventListener('change', () => {
+                updatePresidiumList();
+                clearAttendanceTable();
+            });
+            presidiumSelect.addEventListener('change', clearAttendanceTable);
+
+            baseDateInput.addEventListener('click', () => {
+                updateHistoryList();
+                dateHistoryList.style.display = 'block';
+            });
+
+            btnShowCalendar.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                nativeDatePicker.showPicker();
+            });
+
+            nativeDatePicker.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    baseDateInput.value = e.target.value;
+                    sessionInput.value = ''; // 새로운 일자 선택 시 회차 초기화
+                    clearAttendanceTable();
+                    // 날짜만 선택했을 때는 회차 입력이 필요하므로 자동 조회는 하지 않음 (사용자 흐름 방해 방지)
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-dropdown-container')) {
+                    dateHistoryList.style.display = 'none';
+                    customSessionList.style.display = 'none';
+                }
+            });
+
+            sessionInput.addEventListener('click', () => {
+                updateHistoryList();
+                customSessionList.style.display = 'block';
+            });
+
+            sessionInput.addEventListener('input', clearAttendanceTable);
+            baseDateInput.addEventListener('input', () => {
+                sessionInput.value = ''; // 직접 날짜 입력 시 회차 초기화
+                clearAttendanceTable();
+            });
+            baseDateInput.addEventListener('change', clearAttendanceTable);
+            btnSearch.addEventListener('click', loadAttendanceList);
+            btnSave.addEventListener('click', saveAttendance);
+            btnDelete.addEventListener('click', deleteAttendance);
+
+            const inputs = [churchSelect, curiaSelect, presidiumSelect, baseDateInput, sessionInput];
+            inputs.forEach((input, index) => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (input === sessionInput) {
+                            loadAttendanceList(); // 마지막 '회차' 필드에서 엔터 시 즉시 조회
+                        } else {
+                            const next = inputs[index + 1];
+                            if (next) {
+                                if (next.disabled) {
+                                    const nextNext = inputs[index + 2];
+                                    if (nextNext) nextNext.focus();
+                                } else {
+                                    next.focus();
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

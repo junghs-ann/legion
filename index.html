@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <h1>레지오 마리애 관리시스템</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" placeholder="아이디를 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <button type="submit" class="login-btn">로그인</button>
+                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                    <a href="signup.html"
+                        style="color: var(--secondary-color); text-decoration: none; font-weight: 500;">계정이 없으신가요?
+                        회원가입</a>
+                    <button type="button" id="exitBtn"
+                        style="margin-top: 10px; background: none; border: 1px solid #ddd; color: #888; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s;">
+                        <i class="fas fa-power-off"></i> 시스템 종료
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        // 시스템 종료 버튼 핸들러
+        document.getElementById('exitBtn')?.addEventListener('click', function () {
+            if (confirm('안전한 종료를 위해 브라우저 탭을 닫으시겠습니까?\n(확인을 누르시면 종료 안내가 표시됩니다.)')) {
+                // 브라우저 보안 정책상 대부분의 경우 탭 수동 닫기가 필요함을 안내
+                alert('안전하게 종료되었습니다. 이제 브라우저 탭 또는 창을 닫아주세요. 이용해 주셔서 감사합니다!');
+                window.close(); // 시도는 해보지만 수동 닫기 안내가 더 중요
+            }
+        });
+    </script>
+    <script type="module">
+        import { loginUser, initAuthObserver } from "./auth.js";
+
+        // Auto-redirect if already logged in
+        initAuthObserver((user, profile) => {
+            if (user) {
+                window.location.href = "dashboard.html";
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const username = this.querySelector('input[type="text"]').value;
+            const password = this.querySelector('input[type="password"]').value;
+
+            // Construct email from username
+            const email = `${username}@legion.app`;
+
+            try {
+                await loginUser(email, password);
+                // Redirect is handled by checking auth state on dashboard, 
+                // but we can force move here for UX speed
+                window.location.href = "dashboard.html";
+            } catch (error) {
+                alert("로그인 실패: 아이디 또는 비밀번호를 확인해주세요.");
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+
+</html>

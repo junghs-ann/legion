@@ -1,0 +1,475 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>월례보고서 생성 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .selection-container {
+            max-width: 900px;
+            margin: 180px auto 30px;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-item label {
+            font-weight: bold;
+            color: #444;
+            font-size: 0.95rem;
+        }
+
+        .filter-item select,
+        .filter-item input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            background-color: #fbfbfb;
+            transition: all 0.3s;
+        }
+
+        .filter-item select:focus,
+        .filter-item input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+            outline: none;
+        }
+
+        .btn-group {
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-action {
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s, background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-generate {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-generate:hover {
+            background-color: #1565c0;
+            transform: translateY(-2px);
+        }
+
+        .btn-generate:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-close {
+            background-color: #666;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background-color: #444;
+        }
+
+        /* 제목 헤더 스타일 */
+        .selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title-group h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-family: 'Noto Serif KR', serif;
+        }
+
+        .btn-close-top {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close-top:hover {
+            color: #333;
+            transform: rotate(90deg);
+        }
+
+        .guide-text {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+            <!-- [추가] 유저 메뉴 하드코딩 (가시성 보장) -->
+            <li class="nav-item">
+                <a href="my_page.html" class="nav-link"><i class="fas fa-user-circle"></i> 내 정보</a>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link" id="static-logout-btn" style="cursor:pointer;" onclick="window.handleLogout()"><i
+                        class="fas fa-sign-out-alt"></i> 로그아웃</span>
+            </li>
+        </ul>
+    </header>
+
+    <div class="selection-container">
+        <div class="selection-header">
+            <div class="header-title-group">
+                <i class="fas fa-file-alt" style="font-size: 1.5rem; color: var(--primary-color);"></i>
+                <h2>월례보고서 생성</h2>
+            </div>
+            <button class="btn-close-top" onclick="location.href='dashboard.html'" title="닫기">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <p class="guide-text">보고 대상 기간과 조직을 선택한 후 '보고서 생성' 버튼을 눌러주세요.<br>별도의 인쇄 전용 화면이 열립니다.</p>
+
+        <div class="filter-grid">
+            <!-- 보고서 모드 선택 (추가된 부분) -->
+            <div class="filter-item" id="modeContainer" style="grid-column: span 2;">
+                <label>보고서 업무 모드</label>
+                <div style="display: flex; gap: 20px; background: #f0f2f5; padding: 10px; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="reportMode" value="create" style="width: auto;"> <b>생성 및 수정
+                            (간부용)</b>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="reportMode" value="view" checked style="width: auto;"> <b>최종본 조회
+                            (공통)</b>
+                    </label>
+                </div>
+            </div>
+
+            <div class="filter-item">
+                <label>성당</label>
+                <select id="churchSelect">
+                    <option value="">성당 선택</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>꾸리아</label>
+                <select id="curiaSelect">
+                    <option value="">꾸리아 선택</option>
+                </select>
+            </div>
+            <div class="filter-item" style="grid-column: span 2;">
+                <label>쁘레시디움</label>
+                <select id="presidiumSelect">
+                    <option value="">쁘레시디움 선택</option>
+                </select>
+            </div>
+            <div class="filter-item" style="grid-column: span 2;">
+                <label>회차 범위</label>
+                <div class="range-group">
+                    <select id="startSess">
+                        <option value="">시작</option>
+                    </select>
+                    <span class="range-separator">~</span>
+                    <select id="endSess">
+                        <option value="">종료</option>
+                    </select>
+                </div>
+                <input type="hidden" id="startDate">
+                <input type="hidden" id="endDate">
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-action btn-generate" id="btnGenerate">
+                <i class="fas fa-magic"></i> <span id="btnText">월례보고서 생성</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let userProfile = null;
+
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const startSess = document.getElementById('startSess');
+        const endSess = document.getElementById('endSess');
+        const btnGenerate = document.getElementById('btnGenerate');
+
+        const btnText = document.getElementById('btnText');
+        const reportModeRadios = document.getElementsByName('reportMode');
+
+        initAuthObserver((user, profile) => {
+            if (!user) { location.href = "index.html"; return; }
+            currentUser = user; userProfile = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            initFilters(); checkPermissions(); setupEnterToNext();
+
+            // 권한에 따른 모드 제어
+            const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
+            const isOfficer = officerRoles.some(r => (userProfile.role || '').toLowerCase().includes(r.toLowerCase()));
+            if (!isOfficer) {
+                document.getElementById('modeContainer').style.display = 'none';
+                reportModeRadios[1].checked = true; // '조회' 모드로 강제
+            }
+
+            // 초기 버튼 텍스트 설정 (현재 체크된 라디오 기준)
+            const currentMode = document.querySelector('input[name="reportMode"]:checked').value;
+            btnText.textContent = currentMode === 'create' ? '월례보고서 생성' : '월례보고서 조회(열람)';
+        }, () => { location.href = "index.html"; });
+
+        // 라디오 버튼 변경 시 텍스트 업데이트
+        reportModeRadios.forEach(r => {
+            r.addEventListener('change', () => {
+                btnText.textContent = r.value === 'create' ? '월례보고서 생성' : '월례보고서 조회(열람)';
+            });
+        });
+
+        function initFilters() {
+            const churches = getChurches();
+            churchSelect.innerHTML = '<option value="">성당 선택</option>';
+            churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
+
+            if (userProfile.role !== '관리자' && userProfile.role !== 'admin') {
+                churchSelect.value = userProfile.church || ''; churchSelect.disabled = true;
+                updateCuriaList(userProfile.church);
+                curiaSelect.value = userProfile.curia || userProfile.curiaName || ''; curiaSelect.disabled = true;
+                updatePresidiumList(userProfile.church, curiaSelect.value);
+                presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
+
+                // [Fix] 단장 등 간부 로그인 시 조직이 고정되므로, 즉시 회차 목록을 로드함
+                updateSessionLists();
+            } else {
+                churchSelect.addEventListener('change', () => { updateCuriaList(churchSelect.value); updatePresidiumList('', ''); });
+                curiaSelect.addEventListener('change', () => { updatePresidiumList(churchSelect.value, curiaSelect.value); });
+            }
+        }
+
+        function updateCuriaList(c) {
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!c) return;
+            getCuriae(c).forEach(cr => { const opt = document.createElement('option'); opt.value = cr; opt.textContent = cr; curiaSelect.appendChild(opt); });
+        }
+
+        function updatePresidiumList(c, cr) {
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!c || !cr) return;
+            getPresidia(c, cr).forEach(p => { const opt = document.createElement('option'); opt.value = p.name; opt.textContent = p.name; presidiumSelect.appendChild(opt); });
+        }
+
+        function checkPermissions() {
+            // 모든 단원이 필터를 거쳐 들어올 수 있으므로 버튼 자체는 활성화 (조회용)
+            btnGenerate.disabled = false;
+        }
+
+        presidiumSelect.addEventListener('change', updateSessionLists);
+
+        function updateSessionLists() {
+            const pr = presidiumSelect.value;
+            startSess.innerHTML = '<option value="">시작 회차 선택</option>';
+            endSess.innerHTML = '<option value="">종료 회차 선택</option>';
+
+            if (!pr) return;
+
+            const attList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            // date와 session이 있는 유효한 출석부 기록만 필터링
+            const filteredAtts = attList.filter(a => (a.presidiumName || a.presidium) === pr && a.session && a.date)
+                .sort((a, b) => parseInt(b.session || 0) - parseInt(a.session || 0));
+
+            filteredAtts.forEach(a => {
+                const optText = `${a.session}회 (${a.date})`;
+                const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
+                const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
+                startSess.add(opt1);
+                endSess.add(opt2);
+            });
+        }
+
+        startSess.addEventListener('change', () => {
+            const opt = startSess.options[startSess.selectedIndex];
+            if (opt && opt.dataset.date) startDate.value = opt.dataset.date;
+        });
+
+        endSess.addEventListener('change', () => {
+            const opt = endSess.options[endSess.selectedIndex];
+            if (opt && opt.dataset.date) endDate.value = opt.dataset.date;
+        });
+
+        function setupEnterToNext() {
+            const ins = [churchSelect, curiaSelect, presidiumSelect, startSess, endSess];
+            ins.forEach((input, i) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = ins[i + 1]; if (next) next.focus(); else if (!btnGenerate.disabled) btnGenerate.focus(); } }); });
+        }
+
+        btnGenerate.addEventListener('click', () => {
+            const c = churchSelect.value, p = presidiumSelect.value, s = startDate.value, e = endDate.value;
+            const ss = startSess.value, es = endSess.value;
+            const mode = document.querySelector('input[name="reportMode"]:checked').value;
+
+            if (!c || !p || !s || !e) { alert('모든 항목을 채워주세요.'); return; }
+            if (s > e) { alert('날짜 범위를 확인해주세요.'); return; }
+
+            // 보고서 상태 체크
+            const reportHistory = JSON.parse(localStorage.getItem('monthly_report_status') || '[]');
+            const found = reportHistory.find(r =>
+                r.church === c && r.presidium === p && r.startSess === ss && r.endSess === es
+            );
+
+            // '생성 및 수정' 모드일 때 승인 여부 체크
+            if (mode === 'create') {
+                if (found && found.status === 'Approved') {
+                    alert('해당 회차의 보고서는 이미 단장 승인이 완료되었습니다.\n수정하시려면 먼저 [최종본 조회] 모드에서 보고서를 열어 [승인 취소]를 진행해주세요.');
+                    return;
+                }
+            }
+
+            // '조회' 모드일 때 생성 여부 체크
+            if (mode === 'view') {
+                if (!found) {
+                    alert('해당 회차의 보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
+                    return;
+                }
+            }
+
+            // 별도의 인쇄 화면 열기
+            const width = 1200; const height = 900;
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+
+            let url = `monthly_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curiaSelect.value)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+            if (ss) url += `&ss=${ss}`;
+            if (es) url += `&es=${es}`;
+
+            window.open(url, 'MonthlyReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+        });
+
+    </script>
+</body>
+
+</html>

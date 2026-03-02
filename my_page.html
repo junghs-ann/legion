@@ -1,0 +1,503 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 정보 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-header i {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .signature-section {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 25px;
+        }
+
+        .signature-preview-area {
+            width: 100%;
+            height: 150px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .signature-preview-area img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .signature-preview-area span {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .edit-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .signature-method {
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .signature-method label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .btn-save {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-save:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-close:hover {
+            opacity: 0.9;
+        }
+
+        canvas {
+            border: 1px solid #ddd;
+            background: #fff;
+            width: 100%;
+            height: 120px;
+            border-radius: 4px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding-top: 100px;">
+        <div class="profile-container">
+            <div class="profile-header">
+                <i class="fas fa-user-circle"></i>
+                <h2>내 정보 관리</h2>
+                <p style="color: #888; font-size: 0.9rem;">본인의 계정 정보와 서명을 확인하고 수정할 수 있습니다.</p>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-label">성함</div>
+                <div class="info-value" id="disp-name">-</div>
+                <div class="info-label">세례명</div>
+                <div class="info-value" id="disp-baptismal">-</div>
+                <div class="info-label">아이디</div>
+                <div class="info-value" id="disp-username">-</div>
+                <div class="info-label">역할</div>
+                <div class="info-value" id="disp-role">-</div>
+                <div class="info-label">소속 성당</div>
+                <div class="info-value" id="disp-church">-</div>
+                <div class="info-label">소속 쁘레시디움</div>
+                <div class="info-value" id="disp-presidium">-</div>
+            </div>
+
+            <div class="signature-section">
+                <h3 style="margin-bottom: 15px;"><i class="fas fa-pen-nib"></i> 서명(직인) 관리</h3>
+
+                <div class="signature-preview-area">
+                    <img id="current-signature-img" src="" alt="현재 서명" style="display: none;">
+                    <span id="no-signature-msg">등록된 서명이 없습니다.</span>
+                </div>
+
+                <div class="edit-options">
+                    <div class="signature-method">
+                        <label>방법 1: 직접 그리기</label>
+                        <div style="position: relative;">
+                            <canvas id="signature-pad" width="500" height="120"></canvas>
+                            <button type="button" id="clear-signature"
+                                style="position: absolute; right: 10px; top: 10px; padding: 4px 10px; font-size: 0.75rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">지우기</button>
+                        </div>
+                    </div>
+
+                    <div class="signature-method">
+                        <label>방법 2: 서명 파일 업로드</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="file" id="signature-file" accept="image/*" style="display: none;">
+                            <button type="button" onclick="document.getElementById('signature-file').click()"
+                                style="padding: 8px 15px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">파일
+                                선택</button>
+                            <span id="file-name" style="font-size: 0.8rem; color: #888;">서명 이미지 파일을 선택하세요.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- --- Password Change Section (New) --- -->
+            <div class="signature-section" style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+                <h3 style="margin-bottom: 20px;"><i class="fas fa-key"></i> 비밀번호 변경</h3>
+                <div class="edit-options">
+                    <div class="signature-method" style="background: #fff8f8; border-color: #ffe0e0;">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="color: #d32f2f;">현재 비밀번호 확인</label>
+                            <input type="password" id="current-password" placeholder="현재 비밀번호를 입력하세요"
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>새 비밀번호</label>
+                            <input type="password" id="new-password" placeholder="새 비밀번호 (6자 이상)"
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>새 비밀번호 확인</label>
+                            <input type="password" id="confirm-password" placeholder="새 비밀번호를 한 번 더 입력하세요"
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-save" id="btn-change-password"
+                    style="margin-top: 15px; background-color: #666;">비밀번호 변경하기</button>
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-save" id="btn-save-profile">서명 업데이트</button>
+                <button type="button" class="btn btn-close" onclick="location.href='dashboard.html'">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver, logoutUser, updatePassword } from "./auth.js";
+
+        let currentUser = null;
+        const signaturePad = document.getElementById('signature-pad');
+        const ctx = signaturePad.getContext('2d');
+        const signatureFile = document.getElementById('signature-file');
+        const fileNameDisp = document.getElementById('file-name');
+        const currentImg = document.getElementById('current-signature-img');
+        const noMsg = document.getElementById('no-signature-msg');
+        let painting = false;
+        let newSignatureData = null;
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            loadProfile();
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        // document.getElementById('logout-btn').remove(); // Handled by dynamic nav
+
+        function loadProfile() {
+            if (!currentUser) return;
+
+            document.getElementById('disp-name').textContent = currentUser.name || '-';
+            document.getElementById('disp-baptismal').textContent = currentUser.baptismalName || '-';
+            document.getElementById('disp-username').textContent = currentUser.username || '-';
+            document.getElementById('disp-role').textContent = currentUser.role || 'Member';
+            document.getElementById('disp-church').textContent = currentUser.church || '-';
+            document.getElementById('disp-presidium').textContent = currentUser.presidiumName || '-';
+
+            if (currentUser.signature) {
+                currentImg.src = currentUser.signature;
+                currentImg.style.display = 'block';
+                noMsg.style.display = 'none';
+            }
+        }
+
+        // --- Signature Pad Logic ---
+        function getMousePos(canvasDom, mouseEvent) {
+            const rect = canvasDom.getBoundingClientRect();
+            // 캔버스 실제 크기와 표시 크기 비율 보정
+            const scaleX = canvasDom.width / rect.width;
+            const scaleY = canvasDom.height / rect.height;
+            return {
+                x: ((mouseEvent.clientX || mouseEvent.touches[0].clientX) - rect.left) * scaleX,
+                y: ((mouseEvent.clientY || mouseEvent.touches[0].clientY) - rect.top) * scaleY
+            };
+        }
+
+        function startPosition(e) {
+            painting = true;
+            draw(e);
+        }
+        function finishedPosition() {
+            painting = false;
+            ctx.beginPath();
+            // 그림을 그리면 파일 업로드 상태 초기화
+            signatureFile.value = '';
+            fileNameDisp.textContent = '서명 이미지 파일을 선택하세요.';
+            newSignatureData = signaturePad.toDataURL('image/png');
+        }
+        function draw(e) {
+            if (!painting) return;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+
+            const pos = getMousePos(signaturePad, e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        signaturePad.addEventListener('mousedown', startPosition);
+        signaturePad.addEventListener('mouseup', finishedPosition);
+        signaturePad.addEventListener('mousemove', draw);
+        signaturePad.addEventListener('touchstart', (e) => { e.preventDefault(); startPosition(e); });
+        signaturePad.addEventListener('touchend', finishedPosition);
+        signaturePad.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+
+        document.getElementById('clear-signature').addEventListener('click', () => {
+            ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+            newSignatureData = null;
+        });
+
+        // --- File Upload Logic ---
+        signatureFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // 파일을 선택하면 캔버스 초기화
+                ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+                fileNameDisp.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    newSignatureData = event.target.result;
+                    // 미리보기에 즉시 반영 (선택사항)
+                    currentImg.src = newSignatureData;
+                    currentImg.style.display = 'block';
+                    noMsg.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- Save Logic ---
+        document.getElementById('btn-save-profile').addEventListener('click', () => {
+            if (!newSignatureData) {
+                alert('변경할 서명을 그리거나 파일을 선택해 주세요.');
+                return;
+            }
+
+            if (confirm('서명을 업데이트하시겠습니까?')) {
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                const uid = currentUser.uid || currentUser.username; // UID check
+
+                // Find user in storage (some might be indexed by UID, some by username)
+                let storedUser = users[uid];
+                if (!storedUser) {
+                    // Fallback: search by values
+                    const foundId = Object.keys(users).find(key => users[key].username === currentUser.username);
+                    if (foundId) storedUser = users[foundId];
+                }
+
+                if (storedUser) {
+                    storedUser.signature = newSignatureData;
+                    localStorage.setItem('users', JSON.stringify(users));
+
+                    // Session Sync
+                    currentUser.signature = newSignatureData;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    alert('서명이 성공적으로 업데이트되었습니다.');
+                    location.reload();
+                } else {
+                    alert('사용자 정보를 찾을 수 없습니다.');
+                }
+            }
+        });
+
+        // --- Password Change Logic (New) ---
+        document.getElementById('btn-change-password').addEventListener('click', async () => {
+            const curPwd = document.getElementById('current-password').value;
+            const newPwd = document.getElementById('new-password').value;
+            const confirmPwd = document.getElementById('confirm-password').value;
+
+            // 1. Validation
+            if (!curPwd || !newPwd || !confirmPwd) {
+                alert('모든 비밀번호 필드를 입력해 주세요.');
+                return;
+            }
+
+            if (curPwd !== currentUser.password) {
+                alert('현재 비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            if (newPwd.length < 4) { // Simplified for demo, maybe 6+
+                alert('새 비밀번호는 최소 4자 이상이어야 합니다.');
+                return;
+            }
+
+            if (newPwd !== confirmPwd) {
+                alert('새 비밀번호 확인이 일치하지 않습니다.');
+                return;
+            }
+
+            if (curPwd === newPwd) {
+                alert('현재 비밀번호와 새 비밀번호가 동일합니다.');
+                return;
+            }
+
+            // 2. Execute Update
+            if (confirm('비밀번호를 정말로 변경하시겠습니까?\n변경 후 세션 동기화를 위해 페이지가 새로고침됩니다.')) {
+                try {
+                    await updatePassword(currentUser.uid, newPwd);
+                    alert('비밀번호가 안전하게 변경되었습니다.');
+                    location.reload();
+                } catch (e) {
+                    alert('오류 발생: ' + e.message);
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>

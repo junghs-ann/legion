@@ -1,0 +1,581 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>활동항목 관리 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-container {
+            max-width: 1100px;
+            margin: 120px auto 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .church-selector {
+            background: #f1f3f5;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .category-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .category-header {
+            padding: 12px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .item-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .item-row {
+            padding: 10px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .item-name {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .item-unit {
+            color: #888;
+            font-size: 0.85rem;
+            width: 80px;
+            text-align: center;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-sm-icon {
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .add-box {
+            padding: 12px 20px;
+            background-color: #fff;
+            display: flex;
+            gap: 10px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .add-box input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .btn-sticky-save {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 40px;
+            border-radius: 30px;
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .cat-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #e9ecef;
+            color: #495057;
+            font-size: 0.75rem;
+            margin-right: 10px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="register-container">
+        <div
+            style="border-bottom: 2px solid var(--secondary-color); padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <h2 style="color: var(--primary-color); margin: 0;">활동항목 관리</h2>
+                <p style="margin: 5px 0 0; color: #666;">보고서의 '종목'과 '활동내용'의 계층 구조를 관리합니다.</p>
+            </div>
+            <button onclick="location.href='dashboard.html'" class="btn"
+                style="background: #6c757d; color: white; border: none; padding: 10px 25px; border-radius: 4px;">
+                <i class="fas fa-times"></i> 닫기
+            </button>
+        </div>
+
+        <div class="church-selector">
+            <label style="font-weight: bold;"><i class="fas fa-church"></i> 관리 대상 성당:</label>
+            <select id="churchSelect"
+                style="padding: 8px 15px; border-radius: 4px; border: 1px solid #ddd; flex: 1;"></select>
+            <button id="btnReset" class="btn-sm-icon" style="height: 38px; padding: 0 15px; background: #f8f9fa;">
+                <i class="fas fa-undo"></i> 초기화 (이미지 기준)
+            </button>
+        </div>
+
+        <div id="categoryContainer">
+            <!-- Dynamic Categories and Items -->
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-bottom: 80px;">
+            <button class="btn" style="background: #e9ecef; color: #444; border: 1px solid #ddd; padding: 10px 40px;"
+                onclick="addCategory()">
+                <i class="fas fa-plus"></i> 새 종목(상위 카테고리) 추가
+            </button>
+        </div>
+    </div>
+
+    <button id="btnFinalSave" class="btn-sticky-save">
+        <i class="fas fa-save" style="margin-right: 8px;"></i> [ <span id="currentChurchName">...</span> ] 설정 저장
+    </button>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches } from "./data.js";
+
+        let currentChurch = "";
+        let activitySchema = {}; // { churchName: [ { id, title, items: [{name, unit}] } ] }
+
+        // --- 이미지 기반 고도화된 기본 데이터 세트 ---
+        const DEFAULT_SCHEMA = [
+            {
+                id: 'cat_senatus', title: '교구 또는 레지오 세나뚜스 지시 사항', items: [
+                    { name: '밤9시 주모경 바치기', unit: '회' }, { name: '월간 성모님의 군단 읽기', unit: '회' },
+                    { name: '새 가족 찾기', unit: '회' }, { name: '쉬는 교우(5년이내) 돌봄', unit: '회' },
+                    { name: '사목자를 위한 기도', unit: '회' }, { name: '협조단원 행동단원 입단', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_pastor', title: '본당 사목자 지시 사항', items: [
+                    { name: '거룩한 독서', unit: '회' }, { name: '냉담 교우 회두', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_mission', title: '입교 권면', items: [
+                    { name: '외인 입교 권면', unit: '회' }, { name: '교리 중단자 재권면', unit: '회' },
+                    { name: '개종 권면', unit: '회' }, { name: '가두 선교', unit: '회' }, { name: '방문 선교', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_nonbeliever', title: '예비신자 돌봄', items: [
+                    { name: '교리반 인도 예비신자 돌봄', unit: '회' }, { name: '통신교리자 돌봄', unit: '회' }, { name: '교리반 봉사 또는 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_care', title: '교우 돌봄', items: [
+                    { name: '새영세자돌봄', unit: '회' }, { name: '전입교우 돌봄', unit: '회' }, { name: '쉬는교우 돌봄', unit: '회' },
+                    { name: '조당(혼인장애)자 안내', unit: '회' }, { name: '성사 권면', unit: '회' }, { name: '유아 세례 권면', unit: '회' },
+                    { name: '첫 영성체', unit: '회' }, { name: '교우 가정 방문', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_suffering', title: '어려움 겪는 분 돌봄', items: [
+                    { name: '교우 환자 방문', unit: '회' }, { name: '외인 환자 방문', unit: '회' }, { name: '다문화 가정 돌봄', unit: '회' },
+                    { name: '외인 상가 돌봄', unit: '회' }, { name: '교우 상가 돌봄', unit: '회' }, { name: '위령기도[연도]', unit: '회' },
+                    { name: '장례미사', unit: '회' }, { name: '추모미사', unit: '회' }, { name: '입관', unit: '회' }, { name: '장지 수행', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_expansion', title: '레지오 확장', items: [
+                    { name: '행동단원 모집', unit: '회' }, { name: '협조단원 모집 및 돌봄', unit: '회' }, { name: '소년 레지오 지도', unit: '회' }, { name: '입단권면', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_special', title: '특별 활동', items: [
+                    { name: '호구조사(호별방문)', unit: '회' }, { name: '재해 및 사고 피해자 돌봄', unit: '회' },
+                    { name: '복지시설 노력 봉사', unit: '회' }, { name: '병원방문 활동', unit: '회' }, { name: '기타 특별활동', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_parish_service', title: '본당 협조', items: [
+                    { name: '행사 준비 및 협조', unit: '회' }, { name: '주일학교 돌봄', unit: '회' },
+                    { name: '청소 미화', unit: '회' }, { name: '미사안내 봉사', unit: '회' }, { name: '기타 본당 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_community', title: '소공동체 활동', items: [
+                    { name: '소공동체 모임 참석', unit: '회' }, { name: '구역.반장교육 참석', unit: '회' }, { name: '반모임 참석', unit: '회' }, { name: '기타 소공동체', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_family', title: '가정성화 활동', items: [
+                    { name: '가족이 함께 모여 기도하기', unit: '회' }, { name: '외짝교우 부부 성경 봉독 및 기도', unit: '회' },
+                    { name: '자녀와 함께 미사 참례 및 기도', unit: '회' }, { name: '가족 복지시설 봉사', unit: '회' },
+                    { name: '출가한 자녀 함께 기도 및 미사 참례', unit: '회' }, { name: '영유아와 함께 미사 참례', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_others_simple', title: '기타활동(1)', items: [
+                    { name: '출판물 보급', unit: '회', isActive: true }, { name: '자연보호 활동', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_others_detail', title: '기타활동(2)', items: [
+                    { name: '묵주기도', unit: '단', isActive: true }, { name: '평일미사참례', unit: '회', isActive: true },
+                    { name: '성경읽기', unit: '장', isActive: true }, { name: '성경쓰기', unit: '장', isActive: true },
+                    { name: '매일미사읽고묵상', unit: '회', isActive: true }, { name: '십자가의 길', unit: '회', isActive: true },
+                    { name: '성체조배', unit: '회', isActive: true }, { name: '성시간 참석', unit: '회', isActive: true },
+                    { name: '교본읽기', unit: '쪽', isActive: true }, { name: '신심영상 시청', unit: '회', isActive: true },
+                    { name: '신심서적', unit: '쪽', isActive: true }, { name: '희생', unit: '회', isActive: true },
+                    { name: '피정', unit: '회', isActive: true }, { name: '성지순례', unit: '회', isActive: true },
+                    { name: '화살기도', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_charity', title: '기타활동(사랑의 증언)', items: [
+                    { name: '복지시설', unit: '회', isActive: true }, { name: '병원.요양원', unit: '회', isActive: true }, { name: '기타 사랑봉사', unit: '회', isActive: true }
+                ]
+            }
+        ];
+
+        let profileData = null;
+
+        initAuthObserver((user, profile) => {
+            profileData = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profileData, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            setupChurches(profile); // Pass profile to setupChurches
+            loadSchema();
+            renderSchema();
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function setupChurches(profile) {
+            const churches = getChurches();
+            const select = document.getElementById('churchSelect');
+
+            if (churches.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.textContent = "등록된 성당이 없습니다 (소속 등록 필요)";
+                select.appendChild(opt);
+                currentChurch = "";
+            } else {
+                churches.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    select.appendChild(opt);
+                });
+
+                // Default to user's church or first one
+                const userChurch = profile?.churchName || profile?.church || churches[0];
+                select.value = churches.includes(userChurch) ? userChurch : churches[0];
+                currentChurch = select.value;
+            }
+
+            document.getElementById('currentChurchName').textContent = currentChurch || "없음";
+
+            select.onchange = (e) => {
+                currentChurch = e.target.value;
+                document.getElementById('currentChurchName').textContent = currentChurch || "없음";
+                renderSchema();
+            };
+        }
+
+        function loadSchema() {
+            const saved = localStorage.getItem('activity_schema_v2');
+            if (saved) {
+                activitySchema = JSON.parse(saved);
+            }
+        }
+
+        function renderSchema() {
+            const container = document.getElementById('categoryContainer');
+            container.innerHTML = '';
+
+            const churchItems = activitySchema[currentChurch] || DEFAULT_SCHEMA;
+            const isAdmin = profileData?.role?.toLowerCase() === 'admin';
+
+            // Hide/Show Admin only elements
+            document.getElementById('btnReset').style.display = isAdmin ? 'inline-block' : 'none';
+            document.getElementById('btnFinalSave').style.display = isAdmin ? 'block' : 'none';
+            document.querySelector('.church-selector label').innerHTML = isAdmin ? '<i class="fas fa-church"></i> 관리 대상 성당:' : '<i class="fas fa-church"></i> 성당 활동 항목 조회:';
+
+            const addCatBtn = document.querySelector('button[onclick="addCategory()"]');
+            if (addCatBtn) addCatBtn.parentNode.style.display = isAdmin ? 'block' : 'none';
+
+            churchItems.forEach((group, gIdx) => {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.innerHTML = `
+                    <div class="category-header">
+                        <div class="category-title"><span class="cat-badge">종목</span> ${group.title}</div>
+                        <div class="item-actions" style="${isAdmin ? '' : 'display:none'}">
+                            <button class="btn-sm-icon" onclick="editCategory(${gIdx})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-sm-icon" onclick="deleteCategory(${gIdx})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+
+                const list = document.createElement('ul');
+                list.className = 'item-list';
+
+                group.items.forEach((item, iIdx) => {
+                    const isActive = item.isActive !== false;
+                    if (!isAdmin && !isActive) return; // 관리자 아니면 미사용 항목은 아예 안보여줌
+
+                    const li = document.createElement('li');
+                    li.className = 'item-row';
+                    li.style.opacity = isActive ? '1' : '0.5';
+                    li.style.background = isActive ? 'transparent' : '#f8f9fa';
+
+                    li.innerHTML = `
+                        <div class="item-name">${item.name} <span style="color: #999; font-size: 0.8rem;">(${item.unit || '회'})</span></div>
+                        <div class="item-actions" style="${isAdmin ? '' : 'display:none'}">
+                            <button class="btn-sm-icon" onclick="editItem(${gIdx}, ${iIdx})" title="수정"><i class="fas fa-pencil"></i></button>
+                            <button class="btn-sm-icon" onclick="toggleItemStatus(${gIdx}, ${iIdx})" title="${isActive ? '숨기기' : '보이기'}" style="color: ${isActive ? '#28a745' : '#dc3545'}">
+                                <i class="fas ${isActive ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${isActive ? '사용중' : '미사용'}
+                            </button>
+                            <button class="btn-sm-icon" onclick="moveItem(${gIdx}, ${iIdx})" title="종목 이동" style="color: var(--secondary-color)"><i class="fas fa-file-export"></i> 이동</button>
+                            <button class="btn-sm-icon" onclick="deleteItem(${gIdx}, ${iIdx})" title="삭제"><i class="fas fa-times"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+
+                card.appendChild(list); // Append list first
+
+                if (isAdmin) {
+                    const addBox = document.createElement('div');
+                    addBox.className = 'add-box';
+                    addBox.innerHTML = `
+                        <input type="text" placeholder="새 활동내용 입력..." class="new-item-name" style="flex:2">
+                        <input type="text" placeholder="단위(회/단/장/쪽)" class="new-item-unit" style="flex:1" value="회">
+                        <button class="btn-sm-icon" onclick="addItem(this, ${gIdx})" style="background:var(--secondary-color); color:white; border:none; padding:0 15px;">추가</button>
+                    `;
+                    card.appendChild(addBox); // Then append addBox if admin
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        // --- Action Functions ---
+        window.addItem = (btn, gIdx) => {
+            if (profileData?.role !== 'Admin') return; // Only Admin can add
+            const name = btn.parentNode.querySelector('.new-item-name').value.trim();
+            const unit = btn.parentNode.querySelector('.new-item-unit').value.trim();
+            if (!name) return;
+
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            activitySchema[currentChurch][gIdx].items.push({ name, unit, isActive: true });
+            renderSchema();
+        };
+
+        window.toggleItemStatus = (gIdx, iIdx) => {
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            const item = activitySchema[currentChurch][gIdx].items[iIdx];
+            item.isActive = (item.isActive === false) ? true : false;
+            renderSchema();
+        };
+
+        window.moveItem = (gIdx, iIdx) => {
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            const schema = activitySchema[currentChurch];
+            const item = schema[gIdx].items[iIdx];
+
+            // Generate category list for selection
+            const catList = schema.map((cat, idx) => `${idx + 1}. ${cat.title}`).join('\n');
+            const choice = prompt(`[ ${item.name} ] 항목을 이동할 종목의 번호를 입력하세요:\n\n${catList}`);
+
+            if (choice) {
+                const targetIdx = parseInt(choice) - 1;
+                if (targetIdx >= 0 && targetIdx < schema.length && targetIdx !== gIdx) {
+                    const movedItem = schema[gIdx].items.splice(iIdx, 1)[0];
+                    schema[targetIdx].items.push(movedItem);
+                    renderSchema();
+                    alert(`[ ${item.name} ] 항목이 [ ${schema[targetIdx].title} ] 종목으로 이동되었습니다.`);
+                } else if (targetIdx === gIdx) {
+                    alert('현재와 같은 종목입니다.');
+                } else {
+                    alert('올바른 종목 번호를 입력해 주세요.');
+                }
+            }
+        };
+
+        window.deleteItem = (gIdx, iIdx) => {
+            if (!confirm('해당 활동내용을 삭제하시겠습니까?')) return;
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            activitySchema[currentChurch][gIdx].items.splice(iIdx, 1);
+            renderSchema();
+        };
+
+        window.editItem = (gIdx, iIdx) => {
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            const item = activitySchema[currentChurch][gIdx].items[iIdx];
+            const newName = prompt('활동 내용을 수정하세요:', item.name);
+            if (newName && newName.trim()) {
+                const newUnit = prompt('단위를 수정하세요:', item.unit || '회');
+                item.name = newName.trim();
+                item.unit = newUnit || '회';
+                renderSchema();
+            }
+        };
+
+        window.addCategory = () => {
+            const title = prompt('새로운 상위 종목(카테고리) 명을 입력하세요:');
+            if (title && title.trim()) {
+                if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+                activitySchema[currentChurch].push({ id: 'cat_' + Date.now(), title: title.trim(), items: [] });
+                renderSchema();
+            }
+        };
+
+        window.editCategory = (gIdx) => {
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            const oldVal = activitySchema[currentChurch][gIdx].title;
+            const newVal = prompt('종목 명을 수정하세요:', oldVal);
+            if (newVal && newVal.trim()) {
+                activitySchema[currentChurch][gIdx].title = newVal.trim();
+                renderSchema();
+            }
+        };
+
+        window.deleteCategory = (gIdx) => {
+            if (!confirm('종목을 삭제하면 하위 활동내용도 모두 삭제됩니다. 계속하시겠습니까?')) return;
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            activitySchema[currentChurch].splice(gIdx, 1);
+            renderSchema();
+        };
+
+        document.getElementById('btnReset').onclick = () => {
+            if (confirm(`[${currentChurch}]의 설정을 이미지 기반 기본 데이터로 초기화하시겠습니까?\n현재 저장된 내용은 사라집니다.`)) {
+                activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+                renderSchema();
+            }
+        };
+
+        document.getElementById('btnFinalSave').onclick = () => {
+            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            localStorage.setItem('activity_schema_v2', JSON.stringify(activitySchema));
+            alert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>승인 대기 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://developers.kakao.com/sdk/js/kakao.js"></script>
+    <style>
+        .pending-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .pending-card {
+            background: #ffffff;
+            padding: 50px;
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--secondary-color);
+            max-width: 500px;
+        }
+
+        .pending-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .pending-title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .pending-text {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .kakao-btn {
+            background-color: #FEE500;
+            color: #000000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .kakao-btn:hover {
+            background-color: #fdd835;
+        }
+    </style>
+</head>
+
+<body class="login-body">
+    <div class="pending-container">
+        <div class="pending-card">
+            <i class="fas fa-clock pending-icon"></i> <!-- Assuming font-awesome is loaded in styles or index -->
+            <h2 class="pending-title">가입 승인 대기 중</h2>
+            <p class="pending-text">
+                회원가입이 완료되었으나 아직 활동 권한이 없습니다.<br>
+                소속 쁘레지디움 단장님의 승인이 필요합니다.<br>
+                아래 버튼을 눌러 단장님께 승인 요청 메시지를 보내세요.
+            </p>
+
+            <a href="#" class="kakao-btn" id="kafka-share-btn">
+                <img src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small.png"
+                    alt="카카오톡" width="20">
+                카카오톡으로 승인 요청하기
+            </a>
+
+            <div style="margin-top: 30px;">
+                <a href="#" id="logout-link" style="color: #999; font-size: 0.9rem; text-decoration: none;">로그인 화면으로
+                    돌아가기 (로그아웃)</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { logoutUser } from "./auth.js";
+
+        // Placeholder for Kakao Link
+        document.getElementById('kafka-share-btn').addEventListener('click', function (e) {
+            e.preventDefault();
+            alert('카카오톡 승인 요청 기능은 실제 API 키 설정 후 동작합니다.');
+            // Kakao.Link.sendDefault({ ... });
+        });
+
+        // Handle Logout
+        document.getElementById('logout-link').addEventListener('click', async function (e) {
+            e.preventDefault();
+            await logoutUser();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1050 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지사항 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 사용자 피드백 반영: 배경 흰색 및 테두리 강제 설정 */
+        body.dashboard-body {
+            background-color: #f4f7f6 !important;
+            /* 기본 배경색 */
+            background-image: none !important;
+            /* 이미지 배경 제거 */
+        }
+
+        .main-content {
+            padding: 120px 20px !important;
+            background-color: transparent !important;
+        }
+
+        /* 메인 컨테이너: 세련된 디자인 시스템 반영 */
+        .board-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 100;
+        }
+
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 20px;
+        }
+
+        .board-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* 버튼 레이아웃 수정 */
+        .header-btns {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-custom {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-notice {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .btn-notice:hover {
+            background-color: #1b5e20;
+        }
+
+        .btn-close {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-close:hover {
+            background-color: #e9ecef;
+        }
+
+        /* 검색 및 필터 영역 가로 배치 보강 */
+        .search-filter-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 35px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .search-bar {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .search-bar i {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            font-size: 1.2rem;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 12px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-tab {
+            padding: 10px 22px;
+            border-radius: 25px;
+            background: white;
+            color: #555;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .filter-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .filter-tab:hover:not(.active) {
+            background-color: #e9ecef;
+        }
+
+        /* 리스트 및 섹션 라벨 */
+        .section-label {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #2c3e50;
+            margin: 30px 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .notice-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .notice-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .notice-card:hover .card-title {
+            color: var(--primary-color);
+        }
+
+        .tag {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .tag-urgent {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .tag-event {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .tag-general {
+            background: #f3e5f5;
+            color: #731ea2;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .card-desc {
+            font-size: 1rem;
+            color: #555;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            margin-bottom: 25px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            height: 5.1em;
+            /* line-height * 3 */
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #888;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 15px;
+        }
+
+        .card-footer span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 상세 모달 스타일 강화 */
+        .detail-view-container {
+            padding: 10px;
+        }
+
+        .detail-header {
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+
+        .detail-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #222;
+            margin: 15px 0;
+            line-height: 1.3;
+        }
+
+        .detail-meta {
+            display: flex;
+            gap: 20px;
+            color: #777;
+            font-size: 0.95rem;
+        }
+
+        .detail-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+            min-height: 200px;
+        }
+
+        /* 등록 모달 디자인 전면 개편 */
+        .modern-form-group {
+            margin-bottom: 25px;
+        }
+
+        .modern-form-group label {
+            display: block;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #444;
+            margin-bottom: 10px;
+            margin-left: 2px;
+        }
+
+        .modern-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: #fcfcfc;
+            box-sizing: border-box;
+        }
+
+        .modern-input:focus {
+            border-color: var(--primary-color);
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb, 46, 125, 50), 0.1);
+            outline: none;
+        }
+
+        .modern-textarea {
+            min-height: 250px;
+            resize: vertical;
+            line-height: 1.6;
+            font-family: inherit;
+        }
+
+        .post-org-info {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f1f3f5;
+            border-radius: 15px;
+            border: 1px dashed #ced4da;
+        }
+
+        .post-org-item {
+            flex: 1;
+        }
+
+        .post-org-item select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background-color: white;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #fff9db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .checkbox-container:hover {
+            background: #fff3bf;
+        }
+
+        .checkbox-container input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .board-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .header-btns {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+
+        /* 조직 필터 영역 스타일 (게시판과 통일) */
+        .org-filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #eee;
+        }
+
+        .org-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .org-filter-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .org-filter-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
+        /* 모달 기본 기반 스타일 (누적 누락 해결) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            /* 어두운 배경 가림막 */
+            backdrop-filter: blur(5px);
+            /* 배경 흐림 효과로 집중도 향상 */
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            border: 1px solid #888;
+            width: 100%;
+            animation: modalFadeIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
+            /* 추가 안정성 */
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content">
+        <!-- 반드시 흰색 배경과 테두리를 가진 컨테이너 -->
+        <div class="board-container">
+            <div class="board-header">
+                <h1 class="board-title">
+                    <i class="fas fa-bullhorn" style="color: #ff9800;"></i> 공지사항
+                </h1>
+                <div class="header-btns">
+                    <button id="btnOpenWrite" class="btn-custom btn-notice" style="display: none;">
+                        <i class="fas fa-edit"></i> 공지 올리기
+                    </button>
+                    <button class="btn-custom btn-close" onclick="location.href='dashboard.html'">닫기</button>
+                </div>
+            </div>
+
+            <!-- 조직 필터 영역 추가 (최상단) -->
+            <div class="org-filter-container">
+                <div class="org-filter-group">
+                    <label>성당</label>
+                    <select id="filterChurch">
+                        <option value="">성당 선택</option>
+                    </select>
+                </div>
+                <div class="org-filter-group">
+                    <label>꾸리아</label>
+                    <select id="filterCuria" disabled>
+                        <option value="">꾸리아 선택</option>
+                    </select>
+                </div>
+                <div class="org-filter-group">
+                    <label>쁘레시디움</label>
+                    <select id="filterPresidium" disabled>
+                        <option value="">쁘레시디움 선택</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-filter-section">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="제목이나 내용을 입력하여 검색하세요...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="filter-tabs" id="categoryFilter">
+                    <button class="filter-tab active" data-filter="전체">전체 보기</button>
+                    <button class="filter-tab" data-filter="긴급">긴급 공지</button>
+                    <button class="filter-tab" data-filter="행사">행사/교육</button>
+                    <button class="filter-tab" data-filter="일반">일반 소식</button>
+                </div>
+            </div>
+
+            <div id="pinnedHeader" class="section-label" style="display: none; color: #d48806;">
+                <i class="fas fa-thumbtack"></i> <b>필독!</b> 중요 공지사항
+            </div>
+            <div id="pinnedGrid" class="notice-grid" style="margin-bottom: 40px;"></div>
+
+            <div class="section-label">
+                <i class="fas fa-stream"></i> 최신 공지 목록
+            </div>
+            <div id="noticeGrid" class="notice-grid"></div>
+
+            <div id="noDataResult" class="no-data" style="display: none;">
+                <i class="fas fa-search"></i>
+                <p>표시할 공지사항이 없습니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Write Modal: Modern & Intuitive Layout -->
+    <div id="writeModal" class="modal">
+        <div class="modal-content"
+            style="max-width: 800px; padding: 40px; border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px;">
+                <h2 style="margin:0; color:var(--primary-color); font-size: 1.8rem; font-weight: 800;">
+                    <i class="fas fa-edit"></i> 공지 등록 및 수정
+                </h2>
+                <span style="font-size: 2.5rem; cursor: pointer; color: #ccc;"
+                    onclick="closeModal('writeModal')">&times;</span>
+            </div>
+
+            <form id="noticeForm">
+                <input type="hidden" id="noticeId">
+
+                <!-- Compact Org Info: 한눈에 들어오도록 정리 -->
+                <div class="post-org-info">
+                    <div class="post-org-item">
+                        <label style="font-size: 0.8rem; color: #666; font-weight: 700;">성당</label>
+                        <select id="postChurch" required>
+                            <option value="">성당 선택</option>
+                        </select>
+                    </div>
+                    <div class="post-org-item">
+                        <label style="font-size: 0.8rem; color: #666; font-weight: 700;">꾸리아</label>
+                        <select id="postCuria" disabled>
+                            <option value="">꾸리아 선택</option>
+                        </select>
+                    </div>
+                    <div class="post-org-item">
+                        <label style="font-size: 0.8rem; color: #666; font-weight: 700;">쁘레시디움</label>
+                        <select id="postPresidium" disabled>
+                            <option value="">쁘레시디움 선택</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modern-form-group">
+                    <label for="noticeTitle">제목</label>
+                    <input type="text" id="noticeTitle" class="modern-input" required
+                        placeholder="공지사항의 핵심 제목을 입력해 주세요">
+                </div>
+
+                <div class="modern-form-group" style="max-width: 200px;">
+                    <label for="noticeCategory">공지 분류</label>
+                    <select id="noticeCategory" class="modern-input" style="padding: 10px 18px;">
+                        <option value="일반">일반 소식 💜</option>
+                        <option value="긴급">긴급 공지 🚨</option>
+                        <option value="행사">행사/교육 📅</option>
+                    </select>
+                </div>
+
+                <div class="modern-form-group">
+                    <label for="noticeContent">상세 내용</label>
+                    <textarea id="noticeContent" class="modern-input modern-textarea" required
+                        placeholder="알리고자 하는 상세 내용을 자유롭게 작성해 주세요."></textarea>
+                </div>
+
+                <label class="checkbox-container">
+                    <input type="checkbox" id="noticeIsPinned">
+                    <span style="font-weight: 700; color: #856404;">이 공지를 목록 상단에 '중요 공지'로 고정합니다.</span>
+                </label>
+
+                <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn-custom btn-close" style="padding: 14px 30px;"
+                        onclick="closeModal('writeModal')">취소</button>
+                    <button type="submit" class="btn-custom btn-notice"
+                        style="padding: 14px 45px; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);">공지
+                        저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Detail Modal: Readable Content View -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content"
+            style="max-width: 800px; padding: 40px; border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);">
+            <div class="detail-view-container">
+                <div id="detailViewContent"></div>
+                <div
+                    style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 30px; border-top: 1px solid #f0f0f0; align-items: center;">
+                    <div id="adminControls" style="display: none; gap: 12px;">
+                        <button id="btnEdit" class="btn-custom"
+                            style="background: #e7f5ff; color: #1971c2; border: 1px solid #a5d8ff;">
+                            <i class="fas fa-edit"></i> 수정하기
+                        </button>
+                        <button id="btnDelete" class="btn-custom"
+                            style="background: #fff5f5; color: #e03131; border: 1px solid #ffc9c9;">
+                            <i class="fas fa-trash-alt"></i> 공지 삭제
+                        </button>
+                    </div>
+                    <button class="btn-custom btn-close"
+                        style="padding: 12px 35px; border-radius: 12px; font-weight: 700;"
+                        onclick="closeModal('detailModal')">
+                        <i class="fas fa-times"></i> 화면 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let notices = [];
+        let filter = '전체';
+        let search = '';
+        let orgFilter = { church: '', curia: '', presidium: '' };
+
+        // 조직 필터 관련 요소
+        const filterChurch = document.getElementById('filterChurch');
+        const filterCuria = document.getElementById('filterCuria');
+        const filterPresidium = document.getElementById('filterPresidium');
+
+        // 등록 모달 조직 관련 요소
+        const postChurch = document.getElementById('postChurch');
+        const postCuria = document.getElementById('postCuria');
+        const postPresidium = document.getElementById('postPresidium');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            loadData();
+            initOrgLogic(profile); // 조직 연동 초기화
+            checkAdmin();
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            render();
+        }, () => { location.href = 'index.html'; });
+
+        function loadData() {
+            notices = JSON.parse(localStorage.getItem('legion_notices_list') || '[]');
+        }
+
+        // --- 조직 연동 및 권한 로직 시작 (게시판과 통일) ---
+        function initOrgLogic(profile) {
+            const isAdmin = profile.role === 'admin';
+
+            // 성당 목록 로드 (공통)
+            const churches = getChurches();
+            [filterChurch, postChurch].forEach(select => {
+                churches.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    select.appendChild(opt);
+                });
+            });
+
+            if (!isAdmin) {
+                // 일반 사용자는 소속 고정하되, 하위 조직은 선택 가능하도록 변경하여 상위 공지 확인 지원
+                orgFilter.church = profile.church || '';
+                orgFilter.curia = profile.curia || '';
+                orgFilter.presidium = profile.presidiumName || '';
+
+                // 필터바 설정
+                filterChurch.value = orgFilter.church;
+                filterChurch.disabled = true;
+
+                loadSelectOptions(filterCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                filterCuria.disabled = true;
+
+                loadSelectOptions(filterPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
+                filterPresidium.disabled = false; // 쁘레시디움 선택을 비워(전체) 상위 공지 확인 가능케 함
+
+                // [추가] 이벤트 바인딩: 일반 사용자도 쁘레시디움 필터 변경 시 렌더링 반영
+                filterPresidium.addEventListener('change', () => {
+                    orgFilter.presidium = filterPresidium.value;
+                    render();
+                });
+
+                // 등록 모달은 본인 소속으로 엄격 고정
+                postChurch.value = orgFilter.church;
+                postChurch.disabled = true;
+                loadSelectOptions(postCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                postCuria.disabled = true;
+                loadSelectOptions(postPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
+                postPresidium.disabled = true;
+
+            } else {
+                // 관리자용 이벤트 바인딩 (필터바)
+                setupAdminSelect(filterChurch, filterCuria, filterPresidium, (church, curia, presidium) => {
+                    orgFilter = { church, curia, presidium };
+                    render();
+                });
+
+                // 관리자용 이벤트 바인딩 (등록 모달)
+                setupAdminSelect(postChurch, postCuria, postPresidium);
+            }
+        }
+
+        function loadSelectOptions(select, options, preselect = '') {
+            const firstOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(firstOption);
+            options.forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal;
+                if (optVal === preselect) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
+            churchEl.addEventListener('change', () => {
+                const church = churchEl.value;
+                loadSelectOptions(curiaEl, church ? getCuriae(church) : []);
+                curiaEl.disabled = !church;
+                presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
+                presidiumEl.disabled = true;
+                if (callback) callback(church, '', '');
+            });
+
+            curiaEl.addEventListener('change', () => {
+                const church = churchEl.value;
+                const curia = curiaEl.value;
+                const presidiaNames = curia ? getPresidia(church, curia).map(p => p.name) : [];
+                loadSelectOptions(presidiumEl, presidiaNames);
+                presidiumEl.disabled = !curia;
+                if (callback) callback(church, curia, '');
+            });
+
+            presidiumEl.addEventListener('change', () => {
+                if (callback) callback(churchEl.value, curiaEl.value, presidiumEl.value);
+            });
+        }
+        // --- 조직 연동 및 권한 로직 종료 ---
+
+        function checkAdmin() {
+            const role = (currentUser.role || '').toLowerCase();
+            // 공지 올리기 버튼 권한: 관리자 및 모든 간부
+            const canWrite = ['admin', '관리자', '단장', '부단장', '서기', '회계'].some(r => role.includes(r.toLowerCase()));
+            if (canWrite) {
+                document.getElementById('btnOpenWrite').style.display = 'flex';
+            }
+        }
+
+        function render() {
+            const filtered = notices.filter(n => {
+                const matchesFilter = filter === '전체' || n.category === filter;
+                const matchesSearch = n.title.includes(search) || n.content.includes(search);
+
+                // [Case 1] 성당이 선택되지 않은 경우 (주로 관리자 초기 진입) -> 아무것도 노출하지 않음
+                if (!orgFilter.church) return false;
+
+                // [Case 2] 성당 매칭 (기본 필수)
+                const churchMatch = n.church === orgFilter.church;
+
+                // [Case 3] 꾸리아 및 쁘레시디움 엄격 매칭 (Strict Match)
+                // - 필터 값이 있으면 해당 값과 일치해야 함
+                // - 필터 값이 없으면(빈 문자열) 공지사항의 해당 필드도 비어있어야 함 (해당 조직 레벨의 공지임)
+                const curiaMatch = n.curia === (orgFilter.curia || "");
+                const presidiumMatch = n.presidiumName === (orgFilter.presidium || "");
+
+                return matchesFilter && matchesSearch && churchMatch && curiaMatch && presidiumMatch;
+            }).sort((a, b) => b.id - a.id);
+
+            const pinned = filtered.filter(n => n.isPinned);
+            const regular = filtered.filter(n => !n.isPinned);
+
+            const pg = document.getElementById('pinnedGrid');
+            const ng = document.getElementById('noticeGrid');
+            const ph = document.getElementById('pinnedHeader');
+            const empty = document.getElementById('noDataResult');
+
+            pg.innerHTML = ''; ng.innerHTML = '';
+
+            if (pinned.length > 0) {
+                ph.style.display = 'flex';
+                pinned.forEach(n => pg.appendChild(createCard(n)));
+            } else { ph.style.display = 'none'; }
+
+            regular.forEach(n => ng.appendChild(createCard(n)));
+            empty.style.display = filtered.length === 0 ? 'block' : 'none';
+        }
+
+        function createCard(n) {
+            const card = document.createElement('div');
+            card.className = 'notice-card';
+            const tagClass = n.category === '긴급' ? 'tag-urgent' : (n.category === '행사' ? 'tag-event' : 'tag-general');
+
+            card.innerHTML = `
+                <div style="margin-bottom: 12px;">
+                    <span class="tag ${tagClass}">${n.category}</span>
+                </div>
+                <h3 class="card-title">${n.title}</h3>
+                <p class="card-desc">${n.content}</p>
+                <div style="text-align: right; margin-bottom: 15px;">
+                    <span style="font-size: 0.85rem; color: var(--primary-color); font-weight: 700;">자세히 보기 <i class="fas fa-chevron-right"></i></span>
+                </div>
+                <div class="card-footer">
+                    <span><i class="far fa-user" style="color:#aaa;"></i> ${n.author}</span>
+                    <span><i class="far fa-calendar-alt" style="color:#aaa;"></i> ${n.date}</span>
+                </div>
+            `;
+            card.onclick = () => viewDetail(n.id);
+            return card;
+        }
+
+        function viewDetail(id) {
+            const n = notices.find(x => x.id === id);
+            if (!n) return;
+            const content = document.getElementById('detailViewContent');
+            const tagClass = n.category === '긴급' ? 'tag-urgent' : (n.category === '행사' ? 'tag-event' : 'tag-general');
+
+            content.innerHTML = `
+                <div class="detail-header">
+                    <span class="tag ${tagClass}">${n.category}</span>
+                    <h2 class="detail-title">${n.title}</h2>
+                    <div class="detail-meta">
+                        <span><i class="far fa-user"></i> <b>작성자:</b> ${n.author}</span>
+                        <span><i class="far fa-calendar-alt"></i> <b>날짜:</b> ${n.date}</span>
+                    </div>
+                </div>
+                <div class="detail-content">${n.content}</div>
+            `;
+
+            // 수정/삭제 권한 상세 체크 (글 열 때마다 수행)
+            const role = (currentUser.role || '').toLowerCase();
+            const isSuperAdmin = role === 'admin' || role.includes('관리자');
+            const isAuthor = n.author === (currentUser.name || currentUser.username);
+
+            if (isSuperAdmin || isAuthor) {
+                document.getElementById('adminControls').style.display = 'flex';
+            } else {
+                document.getElementById('adminControls').style.display = 'none';
+            }
+
+            document.getElementById('btnEdit').onclick = () => {
+                if (!(isSuperAdmin || isAuthor)) return alert('권한이 없습니다.');
+                closeModal('detailModal');
+                openEdit(id);
+            };
+            document.getElementById('btnDelete').onclick = () => {
+                if (!(isSuperAdmin || isAuthor)) return alert('권한이 없습니다.');
+                if (confirm('이 공지를 삭제하시겠습니까?')) {
+                    notices = notices.filter(x => x.id !== id);
+                    saveAndRefresh();
+                    closeModal('detailModal');
+                }
+            };
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        function openEdit(id) {
+            const n = notices.find(x => x.id === id);
+            if (!n) return;
+            document.getElementById('noticeId').value = n.id;
+            document.getElementById('noticeTitle').value = n.title;
+            document.getElementById('noticeCategory').value = n.category;
+            document.getElementById('noticeContent').value = n.content;
+            document.getElementById('noticeIsPinned').checked = n.isPinned;
+
+            // 수정 시 조직 정보 로드 (관리자용)
+            if (currentUser.role === 'admin') {
+                postChurch.value = n.church || '';
+                loadSelectOptions(postCuria, getCuriae(n.church), n.curia);
+                postCuria.disabled = false;
+                loadSelectOptions(postPresidium, getPresidia(n.church, n.curia).map(p => p.name), n.presidiumName);
+                postPresidium.disabled = false;
+            }
+
+            document.getElementById('writeModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('noticeTitle').focus(), 100);
+        }
+
+        const form = document.getElementById('noticeForm');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('noticeId').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                title: document.getElementById('noticeTitle').value,
+                category: document.getElementById('noticeCategory').value,
+                content: document.getElementById('noticeContent').value,
+                isPinned: document.getElementById('noticeIsPinned').checked,
+                author: currentUser.name || currentUser.username,
+                church: postChurch.value,
+                curia: postCuria.value,
+                presidiumName: postPresidium.value,
+                date: new Date().toISOString().split('T')[0]
+            };
+            if (id) {
+                const idx = notices.findIndex(x => x.id === parseInt(id));
+                notices[idx] = data;
+            } else { notices.push(data); }
+            saveAndRefresh();
+            closeModal('writeModal');
+        };
+
+        function saveAndRefresh() {
+            localStorage.setItem('legion_notices_list', JSON.stringify(notices));
+            render();
+        }
+
+        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+
+        document.getElementById('btnOpenWrite').onclick = () => {
+            form.reset();
+            document.getElementById('noticeId').value = '';
+
+            // 소속 자동 세팅
+            if (currentUser.role !== 'admin') {
+                postChurch.value = currentUser.church || '';
+                postCuria.value = currentUser.curia || '';
+                postPresidium.value = currentUser.presidiumName || '';
+            }
+
+            document.getElementById('writeModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('noticeTitle').focus(), 100);
+        };
+
+        document.querySelectorAll('.filter-tab').forEach(btn => {
+            btn.onclick = (e) => {
+                document.querySelectorAll('.filter-tab').forEach(x => x.classList.remove('active'));
+                e.target.classList.add('active');
+                filter = e.target.dataset.filter;
+                render();
+            };
+        });
+
+        document.getElementById('searchInput').oninput = (e) => {
+            search = e.target.value;
+            render();
+        };
+
+    </script>
+</body>
+
+</html>

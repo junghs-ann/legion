@@ -1,0 +1,502 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+
+:root {
+    --primary-color: #2E7D32;
+    /* Legion Green */
+    --secondary-color: #D4AF37;
+    /* Gold */
+    --hover-color: #1B5E20;
+    --text-color: #222222;
+    /* Black Text */
+    --overlay-color: rgba(255, 255, 255, 0.9);
+    --header-bg: rgba(255, 255, 255, 0.98);
+    /* White Header */
+    --input-bg: #f9f9f9;
+    --input-text: #333333;
+    --border-color: #e0e0e0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow-x: hidden;
+    background-color: #f5f5f5;
+    /* 텍스트 선택 방지 (앱 느낌 강조) */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* === Login Page Background === */
+.login-body {
+    background-color: #f5f5f5;
+    /* Clean background for login, maybe faint pattern or image */
+    background-image: url('image_0.png');
+    /* Keep image if desired, or remove for pure white. Keeping for consistency but with light overlay */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Light overlay for login background image to keep text readable if image is dark */
+.login-body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(245, 245, 245, 0.85);
+    /* Strong light gray overlay */
+    z-index: -1;
+}
+
+/* === Dashboard Page Background === */
+.dashboard-body {
+    background-color: #f5f5f5;
+    background-image: url('image_0.png');
+    background-size: auto 80%;
+    /* 크기 조정 */
+    background-position: center center;
+    /* 중앙 배치 */
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    position: relative;
+    padding-top: 100px;
+    /* 헤더 겹침 방지를 위한 여백 */
+}
+
+/* Dashboard Background Overlay */
+.dashboard-body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(245, 245, 245, 0.6);
+    /* 더 투명하게 조정하여 로고 강조 */
+    z-index: -1;
+}
+
+/* === Login Page Styles === */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    background: #ffffff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 50px 40px;
+    border-radius: 4px;
+    text-align: center;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--secondary-color);
+}
+
+.login-card h1 {
+    font-family: 'Noto Serif KR', serif;
+    margin-bottom: 40px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: -0.5px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    font-size: 1rem;
+    transition: box-shadow 0.3s, border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.login-btn:hover {
+    background-color: var(--hover-color);
+    box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);
+}
+
+/* === Dashboard Styles === */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+    height: 80px;
+    background-color: var(--header-bg);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 10005;
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+}
+
+.brand-logo {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10007;
+    /* 로고가 메뉴보다 위에 오도록 함 */
+}
+
+/* Desktop Navigation (Centered) */
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 20px;
+    height: 100%;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10006;
+    gap: 25px;
+}
+
+.nav-item {
+    position: relative;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.nav-item {
+    position: relative;
+    text-align: center;
+}
+
+.nav-link {
+    color: #444;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 20px 10px;
+    /* 패딩 축소 */
+    display: block;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 3px;
+    bottom: 20px;
+    left: 15px;
+    right: 15px;
+    background-color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-color);
+    background-color: rgba(46, 125, 50, 0.05);
+}
+
+.nav-link:hover::after {
+    width: calc(100% - 30px);
+}
+
+.nav-item.active .nav-link {
+    color: var(--primary-color);
+}
+
+/* Submenu (Dropdown for Desktop) */
+.sub-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #ffffff;
+    min-width: 220px;
+    list-style: none;
+    border-radius: 2px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 10px 0;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    margin-top: 15px;
+    z-index: 1001;
+    border: 1px solid #eee;
+    border-top: 3px solid var(--secondary-color);
+}
+
+.sub-menu::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background: transparent;
+}
+
+.sub-menu li a {
+    display: block;
+    padding: 12px 25px;
+    color: #555;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-size: 1.05rem;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+}
+
+.sub-menu li:last-child a {
+    border-bottom: none;
+}
+
+.sub-menu li a:hover {
+    background-color: #f5f5f5;
+    color: var(--primary-color);
+    padding-left: 30px;
+}
+
+.nav-item:hover .sub-menu {
+    display: block;
+    opacity: 1;
+    margin-top: 5px;
+}
+
+/* Mobile Toggle */
+.menu-toggle {
+    display: none;
+    position: absolute;
+    right: 25px;
+    top: 25px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+/* === Dashboard Custom Components === */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 40px 60px;
+    position: relative;
+    z-index: 1;
+}
+
+.welcome-banner {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeInDown 0.8s ease-out;
+}
+
+.welcome-banner h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 2.8rem;
+    color: var(--primary-color);
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.welcome-banner p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* Animations Scroll Down */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Main Content Area Override for Reports */
+.main-content {
+    margin-top: 0;
+    padding: 20px;
+    min-height: calc(100vh - 80px);
+    position: relative;
+    z-index: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        height: 70px;
+        border-bottom: 2px solid var(--primary-color);
+    }
+
+    .brand-logo {
+        margin-bottom: 0;
+        font-size: 1.3rem;
+    }
+
+    .menu-toggle {
+        display: block;
+        position: static;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background-color: #ffffff;
+        flex-direction: column;
+        gap: 0;
+        max-height: 0;
+        overflow-y: auto;
+        transition: max-height 0.4s ease-in-out;
+        padding: 0;
+        border-bottom: 2px solid var(--secondary-color);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-menu.active {
+        max-height: calc(100vh - 70px);
+        padding-bottom: 20px;
+    }
+
+    .nav-item {
+        width: 100%;
+        min-width: auto;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nav-link {
+        display: block;
+        padding: 18px 25px;
+        width: 100%;
+        color: #333;
+        font-size: 1.1rem;
+    }
+
+    .nav-link::after {
+        display: none;
+    }
+
+    .nav-link:hover {
+        background-color: #f5f5f5;
+        color: var(--primary-color);
+    }
+
+    /* Mobile Submenu (Accordion style) */
+    .sub-menu {
+        position: static;
+        transform: none;
+        background-color: #fafafa;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+        display: none;
+        opacity: 1;
+        margin: 0;
+        width: 100%;
+        border: none;
+        border-top: none;
+        min-width: auto;
+    }
+
+    .sub-menu::before {
+        display: none;
+    }
+
+    .sub-menu.open {
+        display: block;
+    }
+
+    .sub-menu li a {
+        padding-left: 40px;
+        text-align: left;
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+    .sub-menu li a:hover {
+        background-color: #eee;
+        color: var(--primary-color);
+        padding-left: 40px;
+    }
+
+    .dashboard-body {
+        padding-top: 85px;
+    }
+
+    .welcome-banner h1 {
+        font-size: 1.8rem;
+    }
+
+    .dashboard-container {
+        padding: 10px 20px;
+    }
+
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .card {
+        padding: 30px 20px;
+    }
+}

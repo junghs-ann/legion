@@ -1,0 +1,904 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회계 장부 - 레지오 마리애</title>
+    <!-- Force reload of styles -->
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=6">
+    <style>
+        /* Styles moved to accounting_styles.css */
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 100px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto;">
+
+            <!-- Filters -->
+            <div class="filter-section">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 30px; padding-bottom: 10px;">
+                    <h3 style="margin: 0; color: var(--primary-color);">입출내역 관리</h3>
+                    <button type="button" id="btnClose" class="btn btn-secondary"
+                        style="background-color: #757575; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">닫기</button>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>성당</label>
+                        <select id="churchFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="churchInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>꾸리아</label>
+                        <select id="curiaFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="curiaInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>쁘레시디움</label>
+                        <select id="presidiumFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>해당년도</label>
+                        <input type="number" id="yearFilter" min="2000" max="2100" style="text-align: center;">
+                    </div>
+                    <div class="filter-group">
+                        <label>기준일자</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="date" id="startDateFilter" style="width: 130px;">
+                            <span>~</span>
+                            <input type="date" id="endDateFilter" style="width: 130px;">
+                        </div>
+                    </div>
+                    <div class="filter-group"
+                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px;">
+                        <button id="btnSearch" class="btn btn-secondary"
+                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                        <button id="btnInput" class="btn btn-primary"
+                            style="height: 38px; background-color: var(--primary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">입력</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ledger Table -->
+            <div class="results-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>입/출금 상세내역</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label for="initialBalance" style="font-weight: bold; color: #555;">전월이월금:</label>
+                        <input type="text" id="initialBalance" placeholder="0"
+                            style="text-align: right; padding: 5px; border: 1px solid #ccc; border-radius: 4px; width: 120px;"
+                            disabled>
+                        <button id="btnAddRow" class="btn btn-sm"
+                            style="background-color: #4CAF50; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; display: none;">+
+                            행 추가</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">회차</th>
+                                <th style="width: 60px;">월</th>
+                                <th style="width: 60px;">일</th>
+                                <th style="width: 60px;">요일</th>
+                                <th style="width: 80px;">입/출<br>구분</th>
+                                <th style="width: 200px;">항목</th>
+                                <th style="width: 120px;">금액</th>
+                                <th style="width: 120px;">잔액</th>
+                                <th style="width: 300px;">적요</th>
+                                <th style="width: 70px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerBody">
+                            <tr>
+                                <td colspan="10" style="padding: 50px; color: #888;">조회 조건을 확인하고 [조회] 버튼을 눌러주세요.</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="ledgerFooter" style="display:none;">
+                            <tr class="total-row">
+                                <td colspan="6" style="text-align: right; padding-right: 15px;">이월금 포함 총 잔액</td>
+                                <td colspan="2" id="totalBalance"
+                                    style="text-align: center; color: var(--primary-color);">0</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="bottom-actions" style="margin-top: 30px; text-align: center;">
+                    <button type="button" id="btnSave" class="btn btn-primary btn-large"
+                        style="display:none;">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+
+        // DOM Elements
+        const yearFilter = document.getElementById('yearFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+        const churchFilter = document.getElementById('churchFilter');
+        const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumFilter = document.getElementById('presidiumFilter');
+
+        const churchInput = document.getElementById('churchInput');
+        const curiaInput = document.getElementById('curiaInput');
+        const presidiumInput = document.getElementById('presidiumInput');
+
+        const btnSearch = document.getElementById('btnSearch');
+        const btnInput = document.getElementById('btnInput');
+        const btnAddRow = document.getElementById('btnAddRow');
+        const btnSave = document.getElementById('btnSave');
+        const btnClose = document.getElementById('btnClose');
+        const ledgerBody = document.getElementById('ledgerBody');
+        const ledgerFooter = document.getElementById('ledgerFooter');
+        const totalBalanceEl = document.getElementById('totalBalance');
+        const initialBalanceInput = document.getElementById('initialBalance');
+
+        // State
+        let currentUser = null;
+        let isAdmin = false;
+        let loadedTransactions = [];
+        let accountItems = []; // Loaded from accounting_items
+        let isInputMode = false;
+
+        // --- Init ---
+        function init() {
+            // Set default year
+            yearFilter.value = new Date().getFullYear();
+
+            initAuthObserver((user, profile) => {
+                if (!user) {
+                    location.href = 'index.html';
+                    return;
+                }
+                currentUser = profile;
+
+                // [New] Role-based Menu Control & Common Menus
+                if (window.initCommonMenus) {
+                    window.initCommonMenus(profile, () => {
+                        import("./auth.js").then(auth => auth.logoutUser());
+                    });
+                }
+
+                // Permission Check: Admin, President, VP, Secretary, Treasurer, Member (English & Korean)
+                const allowedRoles = [
+                    'admin', '관리자',
+                    'president', '단장',
+                    'vice_president', '부단장',
+                    'secretary', '서기',
+                    'treasurer', '회계',
+                    'member', '단원'
+                ];
+                if (!allowedRoles.includes(profile.role)) {
+                    alert("접근 권한이 없습니다.");
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                isAdmin = profile.role === 'admin' || profile.role === '관리자';
+                setupFilters(profile);
+                setupEventListeners();
+
+                // Permission Control for Input (Only Officers can register/input)
+                const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(profile.role);
+                if (!isAdmin && !isOfficer) {
+                    btnInput.style.display = 'none';
+                    // Ensure save and add row are also hidden/disabled if they get into some mode?
+                    // loadTransactions handles more granular control.
+                }
+
+            }, () => {
+                alert("로그인이 필요합니다.");
+                window.location.href = 'index.html';
+            });
+        }
+
+        // --- Filters Setup ---
+        function setupFilters(profile) {
+            if (isAdmin) {
+                // Admin: Enable selects and load all data
+                churchFilter.disabled = false;
+                loadAdminFilters();
+            } else {
+                // Non-Admin: Read-only inputs showing their own organization
+                churchFilter.style.display = 'none';
+                curiaFilter.style.display = 'none';
+                presidiumFilter.style.display = 'none';
+
+                churchInput.style.display = 'inline-block';
+                curiaInput.style.display = 'inline-block';
+                presidiumInput.style.display = 'inline-block';
+
+                churchInput.value = profile.church || '';
+                curiaInput.value = profile.curia || '';
+                // Try presidiumName first, then fallback to presidium
+                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+            }
+        }
+
+        function getStoredPresidiaList() {
+            return JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        }
+
+        function loadAdminFilters() {
+            const presidia = getStoredPresidiaList();
+
+            // Load Churches
+            const uniqueChurches = [...new Set(presidia.map(p => p.churchName).filter(c => c))].sort();
+            churchFilter.innerHTML = '<option value="">성당 선택</option>';
+            uniqueChurches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                churchFilter.appendChild(opt);
+            });
+
+            // Cascading dropdowns
+            churchFilter.addEventListener('change', () => {
+                const selectedChurch = churchFilter.value;
+
+                curiaFilter.disabled = !selectedChurch;
+                curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
+                presidiumFilter.disabled = true;
+                presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+
+                if (selectedChurch) {
+                    const churchPresidia = presidia.filter(p => p.churchName === selectedChurch);
+                    const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName).filter(c => c))].sort();
+                    uniqueCuriae.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c;
+                        opt.textContent = c;
+                        curiaFilter.appendChild(opt);
+                    });
+                }
+            });
+
+            curiaFilter.addEventListener('change', () => {
+                const selectedChurch = churchFilter.value;
+                const selectedCuria = curiaFilter.value;
+
+                presidiumFilter.disabled = !selectedCuria;
+                presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+
+                if (selectedChurch && selectedCuria) {
+                    const targetPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
+                    // Filter active ones or show all? Show active usually.
+                    const uniquePresidia = [...new Set(targetPresidia.map(p => p.presidiumName).filter(n => n))].sort();
+                    uniquePresidia.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p;
+                        opt.textContent = p;
+                        presidiumFilter.appendChild(opt);
+                    });
+                }
+            });
+        }
+
+        // --- Data Loading ---
+        function getFilterValues() {
+            if (isAdmin) {
+                return {
+                    year: yearFilter.value,
+                    startDate: startDateFilter.value,
+                    endDate: endDateFilter.value,
+                    church: churchFilter.value,
+                    curia: curiaFilter.value,
+                    presidium: presidiumFilter.value
+                };
+            } else {
+                return {
+                    year: yearFilter.value,
+                    startDate: startDateFilter.value,
+                    endDate: endDateFilter.value,
+                    church: churchInput.value,
+                    curia: curiaInput.value,
+                    presidium: presidiumInput.value
+                };
+            }
+        }
+
+        function loadTransactions() {
+            const filters = getFilterValues();
+            if (!filters.church || !filters.curia || !filters.presidium) {
+                alert("성당, 꾸리아, 쁘레시디움을 모두 선택/확인해주세요.");
+                return;
+            }
+
+            // Load Accounting Items for Dropdown (Scoped to Curia)
+            const allItems = JSON.parse(localStorage.getItem('accounting_items') || '[]');
+            accountItems = allItems.filter(item =>
+                item.church === filters.church &&
+                item.curia === filters.curia &&
+                item.isActive // Only active items
+            );
+
+            // Load Initial Balance
+            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
+            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+
+            let currentInitialBalance = allSummaries[summaryKey]?.initialBalance;
+
+            // If no explicit initial balance for this year, try to calculate from Previous Year
+            if (currentInitialBalance === undefined || currentInitialBalance === null) {
+                const prevYear = parseInt(filters.year) - 1;
+                const prevSummaryKey = `${prevYear}_${filters.church}_${filters.curia}_${filters.presidium}`;
+
+                // Get Prev Year's Initial
+                const prevInitial = allSummaries[prevSummaryKey]?.initialBalance || 0;
+
+                // Get Prev Year's Transactions
+                const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
+                const prevTrans = allTrans.filter(t =>
+                    parseInt(t.year) === prevYear &&
+                    t.church === filters.church &&
+                    t.curia === filters.curia &&
+                    t.presidium === filters.presidium
+                );
+
+                // Calculate Prev Year Final Balance
+                let prevBalance = prevInitial;
+                prevTrans.forEach(t => {
+                    const amt = parseInt(t.amount) || 0;
+                    if (t.type === 'deposit') prevBalance += amt;
+                    else prevBalance -= amt;
+                });
+
+                if (prevBalance !== 0) {
+                    currentInitialBalance = prevBalance;
+                }
+            }
+
+            let yearInitialBalance = currentInitialBalance || 0;
+
+            // Load Transactions
+            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
+            let yearTransactions = allTrans.filter(t =>
+                t.year === filters.year &&
+                t.church === filters.church &&
+                t.curia === filters.curia &&
+                t.presidium === filters.presidium
+            );
+
+            // Sort by Date (Month, Day)
+            yearTransactions.sort((a, b) => {
+                if (a.month !== b.month) return a.month - b.month;
+                if (a.day !== b.day) return a.day - b.day;
+                return a.session - b.session; // fallback
+            });
+
+            // Date filtering logic
+            let displayTransactions = yearTransactions;
+            let displayInitialBalance = yearInitialBalance;
+
+            if (filters.startDate && filters.endDate) {
+                const start = new Date(filters.startDate);
+                const end = new Date(filters.endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+
+                const filtered = [];
+                let runningBalance = yearInitialBalance;
+
+                for (const t of yearTransactions) {
+                    // Check date
+                    const tDate = new Date(t.year, t.month - 1, t.day);
+
+                    if (tDate < start) {
+                        // Update balance
+                        const amt = parseInt(t.amount) || 0;
+                        if (t.type === 'deposit') runningBalance += amt;
+                        else runningBalance -= amt;
+                    } else if (tDate >= start && tDate <= end) {
+                        filtered.push(t);
+                    }
+                }
+
+                displayTransactions = filtered;
+                displayInitialBalance = runningBalance;
+            }
+
+            loadedTransactions = displayTransactions;
+
+            // Set Initial Balance Input
+            initialBalanceInput.value = displayInitialBalance.toLocaleString();
+
+            // Check ReadOnly State
+            // 1. Date filtered without input mode
+            // 2. User is just a 'member' (Inquiry only)
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(currentUser.role);
+            const isReadOnly = ((filters.startDate || filters.endDate) && !isInputMode) || (!isAdmin && !isOfficer);
+
+            if (isReadOnly) {
+                initialBalanceInput.disabled = true;
+                btnAddRow.style.display = 'none';
+                btnSave.style.display = 'none';
+            } else {
+                // In Input Mode or Full View
+                // Disable Initial Balance editing if specific date range is selected to prevent confusion
+                if (filters.startDate || filters.endDate) {
+                    initialBalanceInput.disabled = true;
+                } else {
+                    initialBalanceInput.disabled = false;
+                }
+                btnAddRow.style.display = 'inline-block';
+                btnSave.style.display = 'inline-block';
+            }
+
+            renderTable();
+            ledgerFooter.style.display = 'table-footer-group';
+        }
+
+        function calculateBalance() {
+            // Get initial balance from input
+            let balance = parseInt(initialBalanceInput.value.replace(/,/g, '')) || 0;
+
+            const rows = ledgerBody.querySelectorAll('tr');
+            rows.forEach(row => {
+                if (row.classList.contains('empty-msg')) return;
+
+                const type = row.querySelector('.type-select').value;
+                const amountInput = row.querySelector('.amount-input');
+                const balanceInput = row.querySelector('.balance-input');
+
+                // Remove commas for calculation
+                const amount = parseInt(amountInput.value.replace(/,/g, '')) || 0;
+
+                if (type === 'deposit') {
+                    balance += amount;
+                } else {
+                    balance -= amount;
+                }
+
+                balanceInput.value = balance.toLocaleString();
+            });
+
+            totalBalanceEl.textContent = balance.toLocaleString() + ' 원';
+        }
+
+        function renderTable() {
+            ledgerBody.innerHTML = '';
+
+            if (loadedTransactions.length === 0) {
+                if (isDateFiltered) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td colspan="10" style="padding: 50px; color: #888;">해당 기간에 내역이 없습니다.</td>`;
+                    ledgerBody.appendChild(tr);
+                    // Still need to update total balance
+                    calculateBalance();
+                } else {
+                    addEmptyRow(); // Start with one empty row for input
+                }
+            } else {
+                loadedTransactions.forEach(t => addRowToTable(t));
+                calculateBalance(); // Calc initial balance
+            }
+        }
+
+        // ... addRowToTable remains mostly same but need to handle disabled state if filtered?
+        // Actually, if filtered, buttons are hidden, but existing rows might be editable?
+        // We should disable inputs if isDateFiltered is true.
+
+        function addRowToTable(data = {}) {
+            const tr = document.createElement('tr');
+
+            // Defaults
+            let session = data.session || '';
+            let month = data.month || '';
+            let day = data.day || '';
+
+            // Pre-fill Date in Input Mode for new rows
+            const filters = getFilterValues();
+            if (!data.id && isInputMode && filters.startDate) {
+                // Parse YYYY-MM-DD
+                const yyyy = parseInt(filters.startDate.substring(0, 4));
+                const mm = parseInt(filters.startDate.substring(5, 7));
+                const dd = parseInt(filters.startDate.substring(8, 10));
+
+                if (mm && dd) {
+                    month = mm;
+                    day = dd;
+                }
+            }
+
+            const weekday = data.weekday || '';
+            const type = data.type || 'deposit';
+            const item = data.item || '';
+            // Format amount with commas if exists
+            const rawAmount = data.amount || '';
+            const amount = rawAmount ? parseInt(rawAmount).toLocaleString() : '';
+            const remarks = data.remarks || '';
+
+            // Generate Item Options
+            let itemOptions = '<option value="">선택</option>';
+            accountItems.filter(i => i.type === type).forEach(i => {
+                const selected = i.name === item ? 'selected' : '';
+                itemOptions += `<option value="${i.name}" ${selected}>${i.name}</option>`;
+            });
+
+            tr.innerHTML = `
+                <td><input type="number" class="session-input" value="${session}"></td>
+                <td><input type="number" class="month-input" value="${month}" min="1" max="12"></td>
+                <td><input type="number" class="day-input" value="${day}" min="1" max="31"></td>
+                <td>
+                    <input type="text" class="weekday-input readonly-input" value="${weekday}" readonly tabindex="-1">
+                </td>
+                <td>
+                    <select class="type-select">
+                        <option value="deposit" ${type === 'deposit' ? 'selected' : ''}>입금</option>
+                        <option value="withdrawal" ${type === 'withdrawal' ? 'selected' : ''}>출금</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="item-select">
+                        ${itemOptions}
+                    </select>
+                </td>
+                <td><input type="text" class="amount-input" value="${amount}" placeholder="" style="text-align: right; padding-right: 5px;"></td>
+                <td><input type="text" class="balance-input readonly-input" readonly></td>
+                <td><input type="text" class="remarks-input" value="${remarks}"></td>
+                <td><button type="button" class="btn-action btn-delete" style="color:red; background:none; border:1px solid #ddd; white-space: nowrap;">삭제</button></td>
+            `;
+
+            // Row Event Listeners
+            const monthInput = tr.querySelector('.month-input');
+            const dayInput = tr.querySelector('.day-input');
+            const weekdayInput = tr.querySelector('.weekday-input');
+            const typeSelect = tr.querySelector('.type-select');
+            const itemSelect = tr.querySelector('.item-select');
+            const amountInput = tr.querySelector('.amount-input');
+            const btnDelete = tr.querySelector('.btn-delete');
+            const inputs = tr.querySelectorAll('input, select');
+
+            // Check ReadOnly State
+            const isReadOnly = (filters.startDate || filters.endDate) && !isInputMode;
+            if (isReadOnly) {
+                inputs.forEach(el => el.disabled = true);
+                btnDelete.style.display = 'none';
+            }
+
+            // Auto-calculate Weekday
+            const updateWeekday = () => {
+                const year = parseInt(yearFilter.value) || new Date().getFullYear();
+                const month = parseInt(monthInput.value);
+                const day = parseInt(dayInput.value);
+
+                if (month && day) {
+                    const date = new Date(year, month - 1, day);
+                    // Check if date is valid
+                    if (date.getMonth() === month - 1 && date.getDate() === day) {
+                        const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                        weekdayInput.value = weekdays[date.getDay()];
+                    } else {
+                        weekdayInput.value = '';
+                    }
+                } else {
+                    weekdayInput.value = '';
+                }
+            };
+
+            // Trigger immediately if date present
+            updateWeekday();
+
+            monthInput.addEventListener('input', updateWeekday);
+            dayInput.addEventListener('input', updateWeekday);
+
+            // Dynamic Item List Change on Type Change
+            typeSelect.addEventListener('change', () => {
+                const newType = typeSelect.value;
+                let newOptions = '<option value="">선택</option>';
+                const filteredItems = accountItems.filter(i => i.type === newType);
+
+                filteredItems.forEach(i => {
+                    newOptions += `<option value="${i.name}">${i.name}</option>`; // Reset selection
+                });
+                itemSelect.innerHTML = newOptions;
+                calculateBalance(); // Re-calculate as type changed sign
+            });
+
+            // If item is not in current list (legacy or deleted item), add it temp
+            if (item && !Array.from(itemSelect.options).some(o => o.value === item)) {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item + " (미사용)";
+                opt.selected = true;
+                itemSelect.appendChild(opt);
+            }
+
+            // Recalculate on inputs
+            amountInput.addEventListener('input', (e) => {
+                // Format with commas
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val) {
+                    e.target.value = parseInt(val).toLocaleString();
+                } else {
+                    e.target.value = '';
+                }
+                calculateBalance();
+            });
+
+            btnDelete.addEventListener('click', () => {
+                tr.remove();
+                calculateBalance();
+                if (ledgerBody.children.length === 0) addEmptyRow();
+            });
+
+            // Enter Key Navigation
+            if (!isReadOnly) {
+                const focusableElements = tr.querySelectorAll('input:not([readonly]), select');
+                focusableElements.forEach((el, index) => {
+                    el.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (index < focusableElements.length - 1) {
+                                focusableElements[index + 1].focus();
+                            } else {
+                                // If it's the last element (remarks), add a new row
+                                addEmptyRow();
+                                // Focus the first element of the new row (async to wait for DOM)
+                                setTimeout(() => {
+                                    const newRow = ledgerBody.lastElementChild;
+                                    if (newRow) {
+                                        const firstInput = newRow.querySelector('.session-input');
+                                        if (firstInput) firstInput.focus();
+                                    }
+                                }, 0);
+                            }
+                        }
+                    });
+                });
+            }
+
+            ledgerBody.appendChild(tr);
+        }
+
+        function addEmptyRow() {
+            const filters = getFilterValues();
+            // Allow adding row if filters not set (full view) OR if in Input Mode
+            // Prevent if in ReadOnly View Mode
+            const isReadOnly = (filters.startDate || filters.endDate) && !isInputMode;
+
+            if (isReadOnly) return;
+            addRowToTable();
+        }
+
+        function saveData() {
+            const filters = getFilterValues();
+            const isReadOnly = (filters.startDate || filters.endDate) && !isInputMode;
+
+            if (isReadOnly) {
+                alert("조회 모드에서는 저장할 수 없습니다.");
+                return;
+            }
+            if (!filters.church || !filters.curia || !filters.presidium) return;
+
+            // Save Initial Balance
+            const initialVal = parseInt(initialBalanceInput.value.replace(/,/g, '')) || 0;
+            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
+            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+
+            if (!allSummaries[summaryKey]) allSummaries[summaryKey] = {};
+            // Only save initial balance if allowed (full year view)
+            if (!initialBalanceInput.disabled) {
+                allSummaries[summaryKey].initialBalance = initialVal;
+            }
+            localStorage.setItem('accounting_summaries', JSON.stringify(allSummaries));
+
+            const rows = ledgerBody.querySelectorAll('tr');
+            const newTransactions = [];
+
+            let isValid = true;
+
+            rows.forEach(row => {
+                if (row.classList.contains('empty-msg')) return;
+
+                // Get values
+                const session = row.querySelector('.session-input').value;
+                const month = row.querySelector('.month-input').value;
+                const day = row.querySelector('.day-input').value;
+                const weekday = row.querySelector('.weekday-input').value;
+                const type = row.querySelector('.type-select').value;
+                const item = row.querySelector('.item-select').value;
+                // Save raw amount number
+                const amount = row.querySelector('.amount-input').value.replace(/,/g, '');
+                const remarks = row.querySelector('.remarks-input').value;
+
+                // Basic validation: If any field filled, require Date, Type, Amount
+                if (session || month || day || amount) {
+                    if (!month || !day || !amount) {
+                        alert("월, 일, 금액은 필수입니다.");
+                        isValid = false;
+                        return;
+                    }
+                } else {
+                    // Empty row, skip
+                    return;
+                }
+
+                newTransactions.push({
+                    id: Date.now() + Math.random().toString(36).substr(2, 5),
+                    year: filters.year,
+                    church: filters.church,
+                    curia: filters.curia,
+                    presidium: filters.presidium,
+                    session, month, day, weekday, type, item, amount, remarks
+                });
+            });
+
+            if (!isValid) return;
+
+            // Merge Logic:
+            // If in Date Range Mode (Input Mode), we should only replace transactions falling within that range?
+            // A safer approach for "Input Mode" which might cover just 1 day is:
+            // Keep transactions that do NOT match the current filter scope (Org + Year)
+            // PLUS transactions that match Org+Year but are OUTSIDE the date range.
+
+            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
+
+            let otherTrans;
+            if (filters.startDate && filters.endDate) {
+                // If Partial View (Input Mode)
+                const start = new Date(filters.startDate);
+                const end = new Date(filters.endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+
+                otherTrans = allTrans.filter(t => {
+                    // Keep if different Org
+                    if (!(t.year === filters.year && t.church === filters.church && t.curia === filters.curia && t.presidium === filters.presidium)) return true;
+
+                    // Same Org+Year: Keep if date outside range
+                    const tDate = new Date(t.year, t.month - 1, t.day);
+                    return (tDate < start || tDate > end);
+                });
+
+            } else {
+                // Full Year View: Replace all for this Org+Year
+                otherTrans = allTrans.filter(t =>
+                    !(t.year === filters.year &&
+                        t.church === filters.church &&
+                        t.curia === filters.curia &&
+                        t.presidium === filters.presidium)
+                );
+            }
+
+            const finalTrans = [...otherTrans, ...newTransactions];
+            localStorage.setItem('accounting_transactions', JSON.stringify(finalTrans));
+
+            alert("저장되었습니다.");
+            window.setDirty(false);
+            loadTransactions(); // Reload to refresh
+        }
+
+        function setupEventListeners() {
+            // Track changes for isDirty
+            document.querySelector('.container').addEventListener('input', () => window.setDirty(true));
+            document.querySelector('.container').addEventListener('change', () => window.setDirty(true));
+
+            btnSearch.addEventListener('click', () => {
+                isInputMode = false;
+                loadTransactions();
+            });
+
+            btnInput.addEventListener('click', () => {
+                // Input Mode Logic
+                // 1. If startDate is set, mirror to endDate
+                if (startDateFilter.value) {
+                    endDateFilter.value = startDateFilter.value;
+                }
+
+                isInputMode = true;
+                loadTransactions();
+            });
+
+            btnAddRow.addEventListener('click', () => addEmptyRow());
+            btnSave.addEventListener('click', saveData);
+            btnClose.addEventListener('click', () => window.location.href = 'dashboard.html');
+
+            // Initial Balance Input Formatting & Recalc
+            initialBalanceInput.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val) {
+                    e.target.value = parseInt(val).toLocaleString();
+                } else {
+                    e.target.value = '';
+                }
+                calculateBalance();
+            });
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,492 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출결내역 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <style>
+        /* Report specific styles */
+        .summary-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-card h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+
+        .attendance-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 8px;
+            font-size: 0.9rem;
+        }
+
+        .attendance-table td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .status-present {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .status-absent {
+            color: red;
+            font-weight: bold;
+        }
+
+        .group-header-row td {
+            border-top: 2px solid #555 !important;
+        }
+
+        .attendance-table td.group-cell {
+            background-color: #fdfdfd;
+            font-weight: bold;
+        }
+
+        @media print {
+
+            .dashboard-header,
+            .filter-section,
+            button,
+            .menu-toggle {
+                display: none !important;
+            }
+
+            .main-content {
+                padding: 0 !important;
+            }
+
+            .container {
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .summary-info {
+                border: 1px solid #333;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+            <div class="filter-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3
+                        style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
+                        출결내역 보고서</h3>
+                    <button onclick="location.href='dashboard.html'"
+                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;">
+                    <button id="btnSearch"
+                        style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                    <button onclick="window.print()"
+                        style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
+                </div>
+
+                <div class="filter-row"
+                    style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <div class="filter-group">
+                        <label>성당</label>
+                        <select id="churchFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="churchInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>꾸리아</label>
+                        <select id="curiaFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="curiaInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>쁘레시디움</label>
+                        <select id="presidiumFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>해당년도</label>
+                        <input type="number" id="yearFilter" min="2000" max="2100" style="text-align: center;">
+                    </div>
+                    <div class="filter-group">
+                        <label>기준회차</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="text" id="startSessionFilter" placeholder="회차 선택"
+                                style="width: 120px; text-align: center;" list="sessionList" autocomplete="off">
+                            <span>~</span>
+                            <input type="text" id="endSessionFilter" placeholder="회차 선택"
+                                style="width: 120px; text-align: center;" list="sessionList" autocomplete="off">
+                            <datalist id="sessionList"></datalist>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>기준일자</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="date" id="startDateFilter" style="width: 130px;">
+                            <span>~</span>
+                            <input type="date" id="endDateFilter" style="width: 130px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="reportContent" style="display: none; margin-top: 30px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 id="reportTitle" style="margin-bottom: 10px;">주회합 출결내역 보고서</h2>
+                    <h3 id="reportDateRange"
+                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                    </h3>
+                </div>
+
+                <div class="summary-info">
+                    <div class="summary-card">
+                        <h4>조회 요약</h4>
+                        <div class="summary-item"><span>회차 범위</span><span id="sumSessionRange">-</span></div>
+                        <div class="summary-item"><span>총 회합 횟수</span><span id="sumTotalSessions">0회</span></div>
+                        <div class="summary-item"><span>간부</span><span id="sumOfficerStat">-</span></div>
+                        <div class="summary-item"><span>단원</span><span id="sumMemberStat">-</span></div>
+                        <div class="summary-item"><span>평균 출석률</span><span id="sumAvgRate">0%</span></div>
+                    </div>
+                    <div class="summary-card">
+                        <h4>간부 출석 현황</h4>
+                        <div class="summary-item"><span>단장</span><span id="ratePresident">-</span></div>
+                        <div class="summary-item"><span>부단장</span><span id="rateVicePresident">-</span></div>
+                        <div class="summary-item"><span>서기</span><span id="rateSecretary">-</span></div>
+                        <div class="summary-item"><span>회계</span><span id="rateTreasurer">-</span></div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">회차</th>
+                                <th style="width: 110px;">날짜</th>
+                                <th style="width: 80px;">직급</th>
+                                <th style="width: 100px;">성명</th>
+                                <th style="width: 120px;">세례명</th>
+                                <th style="width: 80px;">출석여부</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="noDataMsg"
+                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">해당 기간의 출결
+                데이터가 없습니다.</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        let currentUser = null;
+        let isAdmin = false;
+
+        const churchFilter = document.getElementById('churchFilter');
+        const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumFilter = document.getElementById('presidiumFilter');
+        const yearFilter = document.getElementById('yearFilter');
+        const startSessionFilter = document.getElementById('startSessionFilter');
+        const endSessionFilter = document.getElementById('endSessionFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+        const btnSearch = document.getElementById('btnSearch');
+        const reportContent = document.getElementById('reportContent');
+        const reportBody = document.getElementById('reportBody');
+        const noDataMsg = document.getElementById('noDataMsg');
+        const sessionDatalist = document.getElementById('sessionList');
+
+        yearFilter.value = new Date().getFullYear();
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            if (window.initCommonMenus) window.initCommonMenus(profile, logoutUser);
+            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
+            setupControls(profile);
+            if (!isAdmin) {
+                updateSessionDatalists();
+            }
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function setupControls(profile) {
+            const ci = document.getElementById('churchInput');
+            const cui = document.getElementById('curiaInput');
+            const pi = document.getElementById('presidiumInput');
+            if (isAdmin) {
+                churchFilter.style.display = 'block'; ci.style.display = 'none'; churchFilter.disabled = false; loadChurches();
+            } else {
+                churchFilter.style.display = 'none'; ci.style.display = 'block';
+                ci.value = profile.churchName || profile.church || '';
+                curiaFilter.style.display = 'none'; cui.style.display = 'block';
+                cui.value = profile.curiaName || profile.curia || '';
+                presidiumFilter.style.display = 'none'; pi.style.display = 'block';
+                pi.value = profile.presidiumName || profile.presidium || '';
+
+                // Ensure currentUser reflects these values for other functions
+                currentUser.churchName = ci.value;
+                currentUser.curiaName = cui.value;
+                currentUser.presidiumName = pi.value;
+            }
+        }
+
+        function loadChurches() {
+            const presidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            const churches = [...new Set(presidia.map(p => p.churchName))].sort();
+            churchFilter.innerHTML = '<option value="">성당 선택</option>';
+            churches.forEach(c => churchFilter.add(new Option(c, c)));
+            churchFilter.onchange = () => {
+                const selected = churchFilter.value;
+                if (!selected) { curiaFilter.disabled = true; presidiumFilter.disabled = true; return; }
+                const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
+                curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
+                curiae.forEach(c => curiaFilter.add(new Option(c, c)));
+                curiaFilter.disabled = false; presidiumFilter.disabled = true;
+            };
+            curiaFilter.onchange = () => {
+                const selectedChurch = churchFilter.value; const selectedCuria = curiaFilter.value;
+                if (!selectedCuria) { presidiumFilter.disabled = true; return; }
+                const prs = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
+                presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                prs.forEach(p => presidiumFilter.add(new Option(p, p)));
+                presidiumFilter.disabled = false; updateSessionDatalists();
+            };
+            presidiumFilter.onchange = updateSessionDatalists;
+        }
+
+        function updateSessionDatalists() {
+            let church, curia, presidium;
+            if (isAdmin) {
+                church = churchFilter.value;
+                curia = curiaFilter.value;
+                presidium = presidiumFilter.value;
+            } else {
+                church = currentUser.churchName || currentUser.church || '';
+                curia = currentUser.curiaName || currentUser.curia || '';
+                presidium = currentUser.presidiumName || currentUser.presidium || '';
+            }
+            if (!church || !curia || !presidium) { sessionDatalist.innerHTML = ''; return; }
+            const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const uniqueSessions = []; const seen = new Set();
+            attendanceList.filter(a => (a.presidium === presidium || a.presidiumName === presidium) && a.date && a.session)
+                .sort((a, b) => parseInt(b.session) - parseInt(a.session))
+                .forEach(a => { if (!seen.has(a.session)) { seen.add(a.session); uniqueSessions.push(a); } });
+            sessionDatalist.innerHTML = uniqueSessions.map(a => `<option value="${parseInt(a.session)}회 (${a.date})">`).join('');
+        }
+
+        function loadReport() {
+            const year = parseInt(yearFilter.value); const startSess = parseInt(startSessionFilter.value) || null; const endSess = parseInt(endSessionFilter.value) || null;
+            const start = startDateFilter.value; const end = endDateFilter.value;
+            let church, curia, presidium;
+            if (isAdmin) {
+                church = churchFilter.value;
+                curia = curiaFilter.value;
+                presidium = presidiumFilter.value;
+            } else {
+                church = currentUser.churchName || currentUser.church || '';
+                curia = currentUser.curiaName || currentUser.curia || '';
+                presidium = currentUser.presidiumName || currentUser.presidium || '';
+            }
+            if (!church || !curia || !presidium) return;
+
+            const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const membersMap = {}; membersList.forEach(m => membersMap[String(m.id)] = m);
+
+            function getRoleAtDate(memberId, date) {
+                const term = officersList.find(o => String(o.memberId) === String(memberId) && (o.appointmentDate || '') <= date && (!(o.appointmentExpiryDate) || o.appointmentExpiryDate >= date));
+                return term ? term.role : '단원';
+            }
+
+            let filtered = attendanceList.filter(a => a.presidium === presidium && new Date(a.date).getFullYear() === year);
+            if (start) filtered = filtered.filter(a => a.date >= start); if (end) filtered = filtered.filter(a => a.date <= end);
+            if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess); if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
+            filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+
+            if (filtered.length === 0) { reportContent.style.display = 'none'; noDataMsg.style.display = 'block'; return; }
+            noDataMsg.style.display = 'none'; reportContent.style.display = 'block';
+
+            const first = filtered[0]; const last = filtered[filtered.length - 1];
+            document.getElementById('reportDateRange').textContent = `${first.session}회(${first.date}) ~ ${last.session}회(${last.date})`;
+
+            const sessions = filtered.map(r => parseInt(r.session));
+            document.getElementById('sumSessionRange').textContent = `${Math.min(...sessions)}회 ~ ${Math.max(...sessions)}회`;
+            document.getElementById('sumTotalSessions').textContent = `${filtered.length}회`;
+
+            let totalP = 0, totalA = 0, offD = 0, offA = 0, memD = 0, memA = 0;
+            const offStats = { '단장': { p: filtered.length, a: 0 }, '부단장': { p: filtered.length, a: 0 }, '서기': { p: filtered.length, a: 0 }, '회계': { p: filtered.length, a: 0 } };
+
+            reportBody.innerHTML = '';
+            filtered.forEach(record => {
+                const data = record.attendanceData || {}; let firstRow = true;
+                const seenRoles = new Set();
+                Object.keys(data).forEach(id => {
+                    const rowData = data[id]; const status = (typeof rowData === 'object') ? rowData.status : rowData;
+                    const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
+                    const m = membersMap[id] || { name: '알수없음', baptismalName: '-' };
+                    const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : m.name;
+
+                    if (role !== 'admin') {
+                        totalP++; if (status === 'P') totalA++;
+                        if (['단장', '부단장', '서기', '회계'].includes(role)) {
+                            offD++; if (status === 'P') { offA++; if (!seenRoles.has(role)) { offStats[role].a++; seenRoles.add(role); } }
+                        } else if (role === '단원') { memD++; if (status === 'P') memA++; }
+                    }
+
+                    const tr = document.createElement('tr');
+                    if (firstRow) tr.classList.add('group-header-row');
+                    tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
+                    reportBody.appendChild(tr); firstRow = false;
+                });
+            });
+
+            document.getElementById('sumAvgRate').textContent = totalP > 0 ? Math.round((totalA / totalP) * 100) + '%' : '0%';
+            document.getElementById('sumOfficerStat').textContent = offD > 0 ? `${offA}/${offD} (${Math.round((offA / offD) * 100)}%)` : '-';
+            document.getElementById('sumMemberStat').textContent = memD > 0 ? `${memA}/${memD} (${Math.round((memA / memD) * 100)}%)` : '-';
+
+            const ids = { '단장': 'ratePresident', '부단장': 'rateVicePresident', '서기': 'rateSecretary', '회계': 'rateTreasurer' };
+            Object.keys(offStats).forEach(r => {
+                const s = offStats[r]; const el = document.getElementById(ids[r]);
+                if (el) el.textContent = `${s.a}/${s.p} (${Math.round((s.a / s.p) * 100)}%)`;
+            });
+        }
+
+        btnSearch.onclick = loadReport;
+        [yearFilter, startSessionFilter, endSessionFilter, startDateFilter, endDateFilter].forEach((f, i, arr) => {
+            f.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i < arr.length - 1) arr[i + 1].focus(); else loadReport(); } };
+        });
+
+        function syncSession(input, target) {
+            const sess = parseInt(input.value); if (!sess) return;
+            const match = JSON.parse(localStorage.getItem('attendance_list') || '[]').find(a => a.presidium === (isAdmin ? presidiumFilter.value : currentUser.presidiumName) && parseInt(a.session) === sess);
+            if (match) target.value = match.date;
+        }
+        startSessionFilter.oninput = () => syncSession(startSessionFilter, startDateFilter);
+        endSessionFilter.oninput = () => syncSession(endSessionFilter, endDateFilter);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,522 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간부현황 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <style>
+        /* Report specific styles */
+        .attendance-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 4px;
+            font-size: 0.85rem;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        .attendance-table td {
+            padding: 10px 4px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .attendance-table td.text-left {
+            text-align: left !important;
+            padding-left: 8px;
+        }
+
+        .notes-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .group-header-bg {
+            background-color: #f0f4f8;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: left !important;
+            padding-left: 15px !important;
+        }
+
+        @media print {
+
+            .dashboard-header,
+            .filter-section,
+            button,
+            .menu-toggle {
+                display: none !important;
+            }
+
+            .main-content {
+                padding: 0 !important;
+            }
+
+            .container {
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .attendance-table td {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1600px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+
+            <div class="filter-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3
+                        style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
+                        간부 현황
+                    </h3>
+                    <button onclick="location.href='dashboard.html'"
+                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
+                </div>
+
+                <div class="filter-row"
+                    style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <div class="filter-group">
+                        <label>성당</label>
+                        <select id="churchFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="churchInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>꾸리아</label>
+                        <select id="curiaFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="curiaInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>쁘레시디움</label>
+                        <select id="presidiumFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>직급</label>
+                        <select id="rankFilter">
+                            <option value="전체">전체</option>
+                            <option value="단장">단장</option>
+                            <option value="부단장">부단장</option>
+                            <option value="서기">서기</option>
+                            <option value="회계">회계</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>기준일자 범위(재직)</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="date" id="startDateFilter" style="width: 140px;">
+                            <span>~</span>
+                            <input type="date" id="endDateFilter" style="width: 140px;">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>성명</label>
+                        <input type="text" id="nameFilter" placeholder="이름 입력" autocomplete="off"
+                            style="width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div class="filter-group"
+                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px; margin-left: auto;">
+                        <button id="btnSearch" class="btn btn-secondary"
+                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                        <button onclick="window.print()" class="btn-print"
+                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="reportContent" style="display: none; margin-top: 30px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 id="reportTitle" style="margin-bottom: 10px;">간부 현황 내역</h2>
+                    <h3 id="reportDateRange"
+                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                    </h3>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">직급</th>
+                                <th style="width: 100px;">성명</th>
+                                <th style="width: 100px;">세례명</th>
+                                <th style="width: 70px;">축일</th>
+                                <th style="width: 100px;">임명일</th>
+                                <th style="width: 100px;">임명 만료일</th>
+                                <th style="width: 140px;">재직기간</th>
+                                <th style="width: 120px;">연락처</th>
+                                <th>특이 및 참고사항</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="noDataMsg"
+                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">
+                해당 조건의 간부 데이터가 없습니다.
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        let currentUser = null;
+        let isAdmin = false;
+
+        const churchFilter = document.getElementById('churchFilter');
+        const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumFilter = document.getElementById('presidiumFilter');
+        const rankFilter = document.getElementById('rankFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+        const nameFilter = document.getElementById('nameFilter');
+        const btnSearch = document.getElementById('btnSearch');
+        const reportContent = document.getElementById('reportContent');
+        const reportBody = document.getElementById('reportBody');
+        const noDataMsg = document.getElementById('noDataMsg');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            // 권한 체크 강화 (대소문자 및 공백 허용)
+            const role = String(profile.role || '').replace(/\s/g, '').toLowerCase();
+            isAdmin = (role === 'admin' || role === '관리자');
+            setupControls(profile);
+            setupEventListeners();
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function setupControls(profile) {
+            const ci = document.getElementById('churchInput');
+            const cui = document.getElementById('curiaInput');
+            const pi = document.getElementById('presidiumInput');
+
+            if (isAdmin) {
+                churchFilter.style.display = 'block';
+                ci.style.display = 'none';
+                churchFilter.disabled = false;
+                loadChurches();
+            } else {
+                churchFilter.style.display = 'none';
+                ci.style.display = 'block';
+                ci.value = profile.churchName || profile.church || '';
+
+                curiaFilter.style.display = 'none';
+                cui.style.display = 'block';
+                cui.value = profile.curiaName || profile.curia || '';
+
+                presidiumFilter.style.display = 'none';
+                pi.style.display = 'block';
+                pi.value = profile.presidiumName || profile.presidium || '';
+            }
+        }
+
+        function loadChurches() {
+            const presidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            const churches = [...new Set(presidia.map(p => p.churchName))].sort();
+            churchFilter.innerHTML = '<option value="">전체</option>';
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = c;
+                churchFilter.appendChild(opt);
+            });
+
+            churchFilter.onchange = () => {
+                const selected = churchFilter.value;
+                curiaFilter.innerHTML = '<option value="">전체</option>';
+                presidiumFilter.innerHTML = '<option value="">전체</option>';
+                if (selected) {
+                    const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
+                    curiae.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = c;
+                        curiaFilter.appendChild(opt);
+                    });
+                    curiaFilter.disabled = false;
+                } else {
+                    curiaFilter.disabled = true;
+                    presidiumFilter.disabled = true;
+                }
+            };
+
+            curiaFilter.onchange = () => {
+                const selectedChurch = churchFilter.value;
+                const selectedCuria = curiaFilter.value;
+                presidiumFilter.innerHTML = '<option value="">전체</option>';
+                if (selectedChurch && selectedCuria) {
+                    const prs = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
+                    prs.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = p;
+                        presidiumFilter.appendChild(opt);
+                    });
+                    presidiumFilter.disabled = false;
+                } else {
+                    presidiumFilter.disabled = true;
+                }
+            };
+        }
+
+        function calculateTenure(startStr, endStr) {
+            if (!startStr) return '-';
+
+            const start = new Date(startStr);
+            const end = endStr ? new Date(endStr) : new Date(); // 만료일 없으면 오늘 기준
+
+            if (isNaN(start) || isNaN(end) || start > end) return '-';
+
+            let years = end.getFullYear() - start.getFullYear();
+            let months = end.getMonth() - start.getMonth();
+            let days = end.getDate() - start.getDate();
+
+            if (days < 0) {
+                months--;
+                const prevMonthEnd = new Date(end.getFullYear(), end.getMonth(), 0);
+                days += prevMonthEnd.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            let result = [];
+            if (years > 0) result.push(`${years}년`);
+            if (months > 0) result.push(`${months}개월`);
+            if (days > 0) result.push(`${days}일`);
+
+            return result.length > 0 ? result.join(' ') : "당일";
+        }
+
+        function loadReport() {
+            let church, curia, presidium;
+            if (isAdmin) {
+                church = churchFilter.value;
+                curia = curiaFilter.value;
+                presidium = presidiumFilter.value;
+            } else {
+                church = currentUser.churchName || currentUser.church || '';
+                curia = currentUser.curiaName || currentUser.curia || '';
+                presidium = currentUser.presidiumName || currentUser.presidium || '';
+            }
+
+            const rank = rankFilter.value;
+            const start = startDateFilter.value;
+            const end = endDateFilter.value;
+            const name = nameFilter.value.trim();
+
+            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+
+            let filtered = officersList.filter(o => {
+                const isChurchMatch = !church || (o.church || o.churchName) === church;
+                const isCuriaMatch = !curia || (o.curia || o.curiaName) === curia;
+                const isPresidiumMatch = !presidium || (o.presidium || o.presidiumName) === presidium;
+                const isRankMatch = rank === '전체' || o.role === rank;
+                const isNameMatch = !name || (o.name || '').includes(name);
+
+                // [사용자 요청] 재직 기간 필터링 로직 정교화
+                const appointDate = o.appointmentDate || '';
+                const expiryDate = o.appointmentExpiryDate || '';
+                const startDate = start || '0000-00-00';
+                const endDate = end || '9999-12-31';
+
+                // 조건 1: 임명일 <= 종료일 면서 임명 만료일이 없거나
+                // 조건 2: 임명일 <= 종료일 면서 임명 만료일 > 시작일자
+                const isAppointedBeforeEnd = appointDate && appointDate <= endDate;
+                const isStillServingDuringPeriod = !expiryDate || expiryDate > startDate;
+
+                const isDateMatch = isAppointedBeforeEnd && isStillServingDuringPeriod;
+
+                return isChurchMatch && isCuriaMatch && isPresidiumMatch && isRankMatch && isDateMatch && isNameMatch;
+            });
+
+            if (filtered.length === 0) {
+                reportContent.style.display = 'none';
+                noDataMsg.style.display = 'block';
+                return;
+            }
+
+            // 정렬 로직: 직급순(단장, 부단장, 서기, 회계) -> 임명일 오름차순
+            const rankOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+            filtered.sort((a, b) => {
+                const orderA = rankOrder[a.role] || 99;
+                const orderB = rankOrder[b.role] || 99;
+                if (orderA !== orderB) return orderA - orderB;
+                return (a.appointmentDate || '').localeCompare(b.appointmentDate || '');
+            });
+
+            noDataMsg.style.display = 'none';
+            reportContent.style.display = 'block';
+            document.getElementById('reportDateRange').textContent =
+                (start || end) ? `${start || '초기'} ~ ${end || '현재'} (재직 기준)` : '전 기간 (재직 기준)';
+
+            reportBody.innerHTML = '';
+
+            // 직급별 그룹화를 위한 RowSpan 로직 (선택사항이나 사용자 요청 "묶음으로 보여줘" 반영)
+            for (let i = 0; i < filtered.length; i++) {
+                const o = filtered[i];
+                const tr = document.createElement('tr');
+
+                // 직급 RowSpan 처리
+                let rankTd = '';
+                if (i === 0 || filtered[i - 1].role !== o.role) {
+                    let span = 0;
+                    for (let j = i; j < filtered.length && filtered[j].role === o.role; j++) {
+                        span++;
+                    }
+                    rankTd = `<td rowspan="${span}" style="font-weight:bold;">${o.role}</td>`;
+                }
+
+                tr.innerHTML = `
+                    ${rankTd}
+                    <td>${o.name || '-'}</td>
+                    <td>${o.baptismalName || '-'}</td>
+                    <td>${o.feastDate || '-'}</td>
+                    <td>${o.appointmentDate || '-'}</td>
+                    <td>${o.appointmentExpiryDate || '-'}</td>
+                    <td>${calculateTenure(o.appointmentDate, o.appointmentExpiryDate)}</td>
+                    <td>${o.phone || '-'}</td>
+                    <td class="text-left notes-cell" title="${o.notes || ''}">${o.notes || '-'}</td>
+                `;
+                reportBody.appendChild(tr);
+            }
+        }
+
+        function setupEventListeners() {
+            btnSearch.onclick = loadReport;
+
+            // Enter 키 이동
+            const fields = [rankFilter, startDateFilter, endDateFilter, nameFilter];
+            if (isAdmin) {
+                fields.unshift(churchFilter, curiaFilter, presidiumFilter);
+            }
+
+            fields.forEach((f, idx) => {
+                f.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (idx < fields.length - 1) {
+                            const next = fields[idx + 1];
+                            if (!next.disabled && next.offsetParent !== null) {
+                                next.focus();
+                            } else {
+                                loadReport();
+                            }
+                        } else {
+                            loadReport();
+                        }
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

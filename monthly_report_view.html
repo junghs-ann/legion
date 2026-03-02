@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>월례 보고서 출력 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --report-border: #000;
+            --report-bg-header: #f2f2f2;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 컨트롤 패널 (화면용) */
+        .no-print-zone {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn-action {
+            padding: 12px 25px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .btn-print {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-close {
+            background: #333;
+            color: white;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 월례보고서 A4 용지 레이아웃 */
+        .report-page {
+            width: 210mm;
+            height: 297mm;
+            /* min-height 대신 height 고정으로 페이지 일관성 유지 */
+            padding: 10mm 10mm 3mm 10mm;
+            /* 상단 여백을 10mm로 늘리고 하단을 3mm로 축소 */
+            margin: 0 auto 30px auto;
+            background: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            position: relative;
+            font-family: 'Malgun Gothic', 'Dotum', sans-serif;
+            color: #000;
+            overflow: hidden;
+        }
+
+        .report-header {
+            text-align: center;
+            position: relative;
+            margin-bottom: 5mm;
+        }
+
+        .title-main {
+            font-size: 18pt;
+            /* 20pt에서 18pt로 추가 축소 */
+            font-family: 'Noto Serif KR', serif;
+            letter-spacing: 2mm;
+            margin: 0.5mm 0;
+            /* 1mm에서 0.5mm로 축소 */
+        }
+
+        .title-sub {
+            font-size: 12pt;
+            /* 13pt에서 12pt로 축소 */
+            margin-bottom: 2mm;
+            /* 3mm에서 2mm로 축소 */
+        }
+
+        .serial-box {
+            position: absolute;
+            right: 0;
+            top: 0;
+            border: 1px solid #000;
+            width: 22mm;
+            /* 25mm에서 22mm로 축소 */
+            height: 25mm;
+            /* 30mm에서 25mm로 축소 */
+        }
+
+        .serial-label {
+            border-bottom: 1px solid #000;
+            font-size: 9pt;
+            /* 10pt에서 9pt로 축소 */
+            padding: 0.5mm 0;
+            text-align: center;
+        }
+
+        .serial-value {
+            font-size: 14pt;
+            /* 16pt에서 14pt로 축소 */
+            font-weight: bold;
+            margin-top: 3mm;
+            /* 5mm에서 3mm로 축소 */
+            text-align: center;
+        }
+
+        .logo-box {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20mm;
+            /* 25mm에서 20mm로 축소 */
+        }
+
+        .logo-box img {
+            width: 100%;
+            opacity: 0.8;
+        }
+
+        table.report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            /* 9.5pt에서 9pt로 축소 */
+            margin-bottom: 1.5mm;
+            /* 2mm에서 1.5mm로 축소 */
+            table-layout: fixed;
+        }
+
+        table.report-table th,
+        table.report-table td {
+            border: 1px solid #000;
+            padding: 0.5mm 1mm;
+            /* 0.8mm에서 0.5mm로 극한 축소 */
+            text-align: center;
+            word-break: break-all;
+            line-height: 1.2;
+            /* 1.25에서 1.2로 축소 */
+        }
+
+        table.report-table th {
+            background-color: var(--report-bg-header);
+            font-weight: bold;
+        }
+
+        .section-title {
+            font-size: 10pt;
+            /* 10.5pt에서 10pt로 축소 */
+            font-weight: bold;
+            margin: 0.5mm 0;
+            /* 1mm에서 0.5mm로 극소화 */
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .underline {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 15mm;
+            text-align: center;
+            padding: 0 2mm;
+            margin: 0 1mm;
+        }
+
+        .footer-sig {
+            margin-top: 3mm;
+            /* 5mm에서 3mm로 추가 축소 */
+            text-align: right;
+            padding-right: 5mm;
+        }
+
+        .form-info {
+            position: absolute;
+            bottom: 10mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+        }
+
+        .page-break {
+            page-break-after: always;
+        }
+
+        /* 활동 상세 테이블 특화 스타일 */
+        #activityDetailBody td {
+            padding: 2.5mm 2mm;
+            /* 3.5mm에서 2.5mm로 축소 */
+        }
+
+        #activityDetailBody th {
+            font-size: 10.5pt;
+            /* 11pt에서 10.5pt로 축소 */
+            padding: 2.5mm 2mm;
+            /* 3.5mm에서 2.5mm로 축소 */
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .report-page {
+                margin: 0;
+                box-shadow: none;
+                border: none;
+                width: 210mm;
+                /* 인쇄 시에도 정확한 너비 유지 */
+                height: 297mm;
+                /* 인쇄 시에도 정확한 높이 유지 */
+                page-break-after: always;
+            }
+
+            .report-page:last-child {
+                page-break-after: auto;
+            }
+        }
+
+        .digital-stamp {
+            color: #000;
+            border: 3.5px solid #000;
+            /* 테두리 더 두껍게 */
+            border-radius: 50%;
+            width: 85px;
+            /* 65px에서 85px로 추가 확대 */
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            /* 글자 크기도 시원하게 확대 */
+            font-weight: bold;
+            margin-left: -15px;
+            /* 성함과 더 많이 겹치도록 조정 */
+            vertical-align: middle;
+            transform: rotate(-8deg);
+            background: rgba(231, 76, 60, 0.01);
+            line-height: 1;
+            flex-shrink: 0;
+            background-color: white;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print no-print-zone">
+        <div id="approvalZone"
+            style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 50px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-right: 20px;">
+            <span id="reportStatusBadge"
+                style="padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; background: #eee; color: #666;">상태:
+                미작성</span>
+            <button id="btnFinalize" class="btn-action" style="background: #e67e22; color: white; display: none;"><i
+                    class="fas fa-save"></i> 보고서 확정/저장</button>
+            <button id="btnApprove" class="btn-action" style="background: #27ae60; color: white; display: none;"><i
+                    class="fas fa-check-circle"></i> 단장 승인(직인)</button>
+            <button id="btnCancelApprove" class="btn-action"
+                style="background: #c0392b; color: white; display: none;"><i class="fas fa-undo"></i> 승인 취소/수정</button>
+        </div>
+        <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄하기</button>
+        <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 창 닫기</button>
+    </div>
+
+    <div id="reportDisplay">
+        <!-- 1페이지 -->
+        <div class="report-page page-break">
+            <div class="report-header">
+                <div class="logo-box"><img src="logo.png" alt="logo"></div>
+                <div class="serial-box">
+                    <div class="serial-label">고유번호</div>
+                    <div id="serialNum" class="serial-value">-</div>
+                </div>
+                <div style="font-size: 16pt; font-family: 'Noto Serif KR', serif;">레지오 마리애</div>
+                <div class="title-main">쁘레시디움 월례 보고서</div>
+                <div class="title-sub">
+                    <span id="repYear" class="underline">2026</span> 년 <span id="repMonth" class="underline">1</span>
+                    월 말 현재 제 <span id="repStartSess" class="underline">-</span> 차 ~ 제 <span id="repEndSess"
+                        class="underline">-</span> 차
+                </div>
+            </div>
+
+            <div style="font-size: 11pt; font-weight: bold; margin-bottom: 3mm;">
+                1. 주회합 일시 : 매주 <span id="repDay" class="underline">화</span>요일 <span id="repHour"
+                    class="underline">20</span>시 <span id="repMin" class="underline">20</span>분
+                &nbsp;&nbsp;&nbsp;&nbsp; 2. 장 소 : <span id="repPlace" class="underline">-</span><br>
+                3. 출 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 석 : 간부 <span id="repAttOff" class="underline">- / -</span>
+                &nbsp;&nbsp;&nbsp;&nbsp; 단원 <span id="repAttMem" class="underline">- / -</span>
+            </div>
+
+            <div class="section-title">4. 간부 명단 : ( 담당 사제 : <span id="repPriest" class="underline">-</span> 대리자 : <span
+                    id="repProxy" class="underline">-</span> )</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width:12%">직 책</th>
+                        <th style="width:18%">성 명</th>
+                        <th style="width:18%">세 례 명</th>
+                        <th style="width:12%">축 일</th>
+                        <th style="width:15%">임 명 일</th>
+                        <th style="width:25%">비 고</th>
+                    </tr>
+                </thead>
+                <tbody id="offTableBody"></tbody>
+            </table>
+
+            <div class="section-title">5. 단원 현황</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width:14%">구 분</th>
+                        <th colspan="3">행 동 단 원</th>
+                        <th rowspan="2" style="width:12%">
+                            <div style="display:inline-block; text-align:center;">
+                                쁘레또리움<br>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>단</span><span>원</span>
+                                </div>
+                            </div>
+                        </th>
+                        <th colspan="3">협 조 단 원</th>
+                        <th rowspan="2" style="width:12%">
+                            <div style="display:inline-block; text-align:center;">
+                                아듀또리움<br>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>단</span><span>원</span>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th style="width:10%">남</th>
+                        <th style="width:10%">여</th>
+                        <th style="width:10%">계</th>
+                        <th style="width:10%">남</th>
+                        <th style="width:10%">여</th>
+                        <th style="width:10%">계</th>
+                    </tr>
+                </thead>
+                <tbody id="memStatBody">
+                    <tr>
+                        <th>전 월</th>
+                        <td id="m_p_m">-</td>
+                        <td id="m_p_f">-</td>
+                        <td id="m_p_t">-</td>
+                        <td id="p_p">-</td>
+                        <td id="a_p_m">-</td>
+                        <td id="a_p_f">-</td>
+                        <td id="a_p_t">-</td>
+                        <td id="aj_p">-</td>
+                    </tr>
+                    <tr>
+                        <th>금 월</th>
+                        <td id="m_c_m">-</td>
+                        <td id="m_c_f">-</td>
+                        <td id="m_c_t">-</td>
+                        <td id="p_c">-</td>
+                        <td id="a_c_m">-</td>
+                        <td id="a_c_f">-</td>
+                        <td id="a_c_t">-</td>
+                        <td id="aj_c">-</td>
+                    </tr>
+                    <tr>
+                        <th>입단 및 전입</th>
+                        <td id="m_i_m">-</td>
+                        <td id="m_i_f">-</td>
+                        <td id="m_i_t">-</td>
+                        <td id="p_i">-</td>
+                        <td id="a_i_m">-</td>
+                        <td id="a_i_f">-</td>
+                        <td id="a_i_t">-</td>
+                        <td id="aj_i">-</td>
+                    </tr>
+                    <tr>
+                        <th>퇴단 및 전출</th>
+                        <td id="m_o_m">-</td>
+                        <td id="m_o_f">-</td>
+                        <td id="m_o_t">-</td>
+                        <td id="p_o">-</td>
+                        <td id="a_o_m">-</td>
+                        <td id="a_o_f">-</td>
+                        <td id="a_o_t">-</td>
+                        <td id="aj_o">-</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section-title">6. 주요 사항(행사/교육/피정)</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width:10%">구분</th>
+                        <th style="width:30%">제 목</th>
+                        <th style="width:15%">주 관</th>
+                        <th style="width:20%">일 시</th>
+                        <th style="width:15%">장 소</th>
+                        <th style="width:10%">참 석</th>
+                    </tr>
+                </thead>
+                <tbody id="eventTableBody"></tbody>
+            </table>
+
+            <div class="section-title"><span style="display:inline-block; width:20px;">7.</span>회계 보고 : &lt;잔액에 관계없이
+                월말기준&gt;</div>
+            <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
+                이월금 <span id="acc_prev" class="underline">-</span> 수입 <span id="acc_in" class="underline">-</span> 지출
+                <span id="acc_out" class="underline">-</span> 잔 액 <span id="acc_bal" class="underline">-</span>
+            </div>
+            <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
+                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow"
+                    class="underline">-</span> (기타)
+                <span id="exp_etc" class="underline">-</span>
+            </div>
+
+            <div class="section-title">8. 주요 활동 요약</div>
+            <table class="report-table" style="width: 185mm; margin: 0 auto;">
+                <colgroup>
+                    <col style="width: 10mm;"> <!-- 좌측 번호 -->
+                    <col style="width: 25mm;"> <!-- 좌측 활동명 1 (매일미사 그룹 축소) -->
+                    <col style="width: 40mm;"> <!-- 좌측 활동명 2 -->
+                    <col style="width: 20mm;"> <!-- 좌측 실적 (확대) -->
+                    <col style="width: 10mm;"> <!-- 우측 번호 -->
+                    <col style="width: 10mm;"> <!-- 우측 활동명 1 (사랑의 증언 타이틀) -->
+                    <col style="width: 50mm;"> <!-- 우측 활동명 2 (세부내용) -->
+                    <col style="width: 20mm;"> <!-- 우측 실적 (확대) -->
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th colspan="3">기도 및 신심행위 (Se. 및 교구 · Re.)</th>
+                        <th>번호</th>
+                        <th colspan="3">중 점 활 동</th>
+                    </tr>
+                </thead>
+                <tbody id="activitySummaryBody">
+                    <!-- 1행: 묵주기도 (좌) / 새 가족 (우 1) -->
+                    <tr>
+                        <td rowspan="2" style="white-space:nowrap;">1</td>
+                        <td rowspan="2" colspan="2" style="text-align:left; padding-left:10px;">목 주 기 도</td>
+                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_rosary">-</span> 단
+                        </td>
+                        <td rowspan="2" style="white-space:nowrap;">1</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">새 가족 찾기 / 예비자 교리반 입교</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_new">-</span> 명</td>
+                    </tr>
+                    <!-- 2행: 묵주기도 병합 / 냉담 교우 (우 2 - 번호 없음/병합된 1번의 하위?) -->
+                    <tr>
+                        <td colspan="2" style="text-align:left; padding-left:5px; border-top:1px solid #ddd;">쉬는교우회두
+                            고해성사 및 신부님 면담</td>
+                        <td style="border-top:1px solid #ddd; text-align:right; padding-right:5px;"><span
+                                id="sum_soul">-</span> 명</td>
+                    </tr>
+
+                    <!-- 3행: 매일미사 그룹 시작 (좌) / 사랑의 증언 1 (우) -->
+                    <tr>
+                        <td rowspan="8" style="white-space:nowrap;">2</td> <!-- 매일미사 그룹 전체 Rowspan 8 -->
+                        <td rowspan="8"
+                            style="text-align:left; padding-left:5px; font-weight:bold; background-color:#f9f9f9; width: 100px;">
+                            매일미사와<br>말씀과 함께하기</td>
+                        <td style="text-align:left; padding-left:5px;">① 평일미사 참례</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_mass">-</span> 회</td>
+                        <!-- 우측 2번 사랑의 증언 (Rowspan 3, Title + Detail) -->
+                        <td rowspan="3" style="white-space:nowrap;">2</td>
+                        <td rowspan="3" style="width:30px; line-height:1.2;">사랑의<br>증언<br>활동</td>
+                        <td style="text-align:left; padding-left:5px;">① 복지시설</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_wel">-</span> 회</td>
+                    </tr>
+
+                    <!-- 4행: 성경 (좌) / 사랑의 증언 2 (우) -->
+                    <tr>
+                        <td style="text-align:left; padding-left:5px;">② 성경읽기, 쓰기</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_bible">-</span> 장</td>
+                        <td style="text-align:left; padding-left:5px;">② 병원, 요양원</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_hosp">-</span> 회</td>
+                    </tr>
+
+                    <!-- 5행: 매일미사 묵상 (좌) / 사랑의 증언 3 (우) -->
+                    <tr>
+                        <td style="text-align:left; padding-left:5px;">③ 매일미사 읽고, 묵상</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_medi">-</span> 회</td>
+                        <td style="text-align:left; padding-left:5px;">③ 기타(독거노인 등)</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_oth">-</span> 회</td>
+                    </tr>
+
+                    <!-- 6행: 성모님 군단 (좌 - 나머지 공간 채움) / 9시 주모경 (우) -->
+                    <tr>
+                        <td rowspan="5" style="text-align:left; padding-left:5px;">④ 성모님의 군단 읽기</td> <!-- Rowspan 5 -->
+                        <td rowspan="5" style="text-align:right; padding-right:5px;"><span id="sum_legion">-</span> 쪽
+                        </td>
+                        <td style="white-space:nowrap;">3</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">한반도 평화를 위한 밤 9시 주모경 바치기</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_peace">-</span> 회</td>
+                    </tr>
+
+                    <!-- 7행: 특별 돌봄 -->
+                    <tr>
+                        <td style="white-space:nowrap;">4</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">세례성사후 5년이내 쉬는 교우들 찾아 특별히 돌보기</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_care">-</span> 회</td>
+                    </tr>
+
+                    <!-- 8행: 탄소중립 -->
+                    <tr>
+                        <td style="white-space:nowrap;">5</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">탄소중립 실천하기</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_eco">-</span> 회</td>
+                    </tr>
+
+                    <!-- 9행: 거룩한 독서 (말씀 봉독) -->
+                    <tr>
+                        <td rowspan="2" style="white-space:nowrap;">6</td>
+                        <td rowspan="2" style="text-align:center; vertical-align:middle;">거룩한<br>독서</td>
+                        <td style="text-align:left; padding-left:5px;">말씀 봉독하기(시청,묵상,기도)</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_holy">-</span> 회</td>
+                    </tr>
+                    <!-- 10행: 거룩한 독서 (노트작성) -->
+                    <tr>
+                        <td style="text-align:left; padding-left:5px;">노트작성</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_note">0</span> 회</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="section-title" style="display:flex; align-items:flex-end; gap:5px;">
+                <span style="white-space:nowrap;">9. 기타(질의 및 건의) :</span>
+                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 1px solid black;"></span>
+            </div>
+
+            <div class="footer-sig">
+                <div style="font-size: 11pt; margin-bottom: 2mm;">
+                    <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(평의회)</span>
+                    <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>직속</b>
+                </div>
+                <div style="font-weight:bold; font-size:12.5pt; margin-bottom: 3.5mm;">
+                    <span id="footChurch" class="underline" style="min-width:30mm">-</span>
+                    <span id="footPr" class="underline" style="min-width:35mm">-</span> 쁘레시디움 단장
+                    <span id="footName" class="underline" style="min-width:30mm">-</span> (인)
+                </div>
+                <div style="font-size: 8.5pt; color: #000; letter-spacing: -0.1mm; font-family: 'Malgun Gothic';">
+                    서울 무염시태 세나뚜스 양식 제6호(2024년12월개정)(대전Re.2024.12)
+                </div>
+            </div>
+        </div>
+
+        <!-- 2페이지 -->
+        <div class="report-page">
+            <div class="report-header">
+                <div class="title-main" style="font-size:18pt;">활 동 사 항</div>
+            </div>
+            <div style="font-size:9pt; margin-bottom:3mm; text-align:center;">활동은 아래 내용을 기준으로 작성하되 필요에 따라서 내용을 수정할 수
+                있습니다.</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width:28%">종 목</th>
+                        <th style="width:10%">활동<br>횟수</th>
+                        <th style="width:62%">활 동 내 용</th>
+                    </tr>
+                </thead>
+                <tbody id="activityDetailBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <th>합 계</th>
+                        <td id="grandTotalCount" style="font-weight:bold;">-</td>
+                        <td style="background:#eee;"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="form-info">월례보고서 - 활동 상세 내역 (Page 2)</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+
+        // URL 파라미터 파싱
+        const urlParams = new URLSearchParams(window.location.search);
+        const church = urlParams.get('church');
+        const pr = urlParams.get('pr');
+        const start = urlParams.get('start');
+        const end = urlParams.get('end');
+
+        let userProfile = null;
+
+        initAuthObserver((user, profile) => {
+            userProfile = profile;
+            if (church && pr && start && end) {
+                generateReport(church, pr, start, end);
+            } else {
+                alert('잘못된 접근입니다.');
+                window.close();
+            }
+        }, () => { window.close(); });
+
+        async function generateReport(church, pr, start, end) {
+            const getField = (obj, fields) => {
+                if (!obj) return null;
+                for (let f of fields) if (obj[f] !== undefined && obj[f] !== null) return obj[f];
+                return null;
+            };
+
+            const curiaParam = urlParams.get('curia');
+            const ssValue = urlParams.get('ss'), esValue = urlParams.get('es');
+
+            const t = (val) => String(val || '').trim();
+            const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
+            const targetChurchClean = clean(church);
+            const targetPrClean = clean(pr);
+            const isOrgMatch = (churchVal, prVal) => {
+                if (clean(prVal) !== targetPrClean) return false;
+                return !churchVal || clean(churchVal) === '' || clean(churchVal) === targetChurchClean;
+            };
+
+            const targetChurch = t(church);
+            const targetPr = t(pr);
+
+            // 1. 쁘레시디움 기본 정보 (Super Match 적용)
+            const presList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            const info = presList.find(p =>
+                isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'presidium'])) &&
+                (t(getField(p, ['curiaName', 'curia'])) === t(curiaParam) || !curiaParam)
+            ) || {};
+
+            const allAtt = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            let atts = allAtt.filter(a =>
+                isOrgMatch(getField(a, ['church', 'churchName']), getField(a, ['presidium', 'presidiumName'])) &&
+                a.date >= start && a.date <= end
+            );
+            atts.sort((a, b) => a.date.localeCompare(b.date));
+
+            // [추가] 전 회차 일자 계산 (사용자 요청: 전월 퇴단 기준용)
+            let prevDate = start;
+            if (ssValue) {
+                const prAtts = allAtt.filter(a => isOrgMatch(getField(a, ['church', 'churchName']), getField(a, ['presidium', 'presidiumName'])))
+                    .sort((a, b) => parseInt(a.session) - parseInt(b.session));
+                const currIdx = prAtts.findIndex(a => String(a.session) === String(ssValue));
+                if (currIdx > 0) {
+                    prevDate = prAtts[currIdx - 1].date;
+                }
+            }
+
+            const allMem = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const mms = allMem.filter(m =>
+                isOrgMatch(getField(m, ['churchName', 'church']), getField(m, ['presidiumName', 'presidium']))
+            );
+
+            const allOff = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const offs = allOff.filter(o =>
+                t(getField(o, ['churchName', 'church'])) === targetChurch &&
+                t(getField(o, ['presidiumName', 'presidium'])) === targetPr &&
+                (getField(o, ['appointmentDate']) || '') <= end &&
+                (!(getField(o, ['appointmentExpiryDate'])) || getField(o, ['appointmentExpiryDate']) > end)
+            );
+
+            const allRec = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const recs = allRec.filter(r =>
+                isOrgMatch(getField(r, ['churchName', 'church']), getField(r, ['presidiumName', 'presidium'])) &&
+                r.date >= start && r.date <= end
+            );
+
+            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
+            const leds = allTrans.filter(l =>
+                isOrgMatch(getField(l, ['churchName', 'church']), getField(l, ['presidiumName', 'presidium'])) &&
+                `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}` >= start &&
+                `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}` <= end
+            );
+
+            const allEv = JSON.parse(localStorage.getItem('events_list') || '[]');
+            const evs = allEv.filter(e =>
+                isOrgMatch(getField(e, ['churchName', 'church']), getField(e, ['presidiumName', 'presidium'])) &&
+                e.eventDate >= start // 종료일 제한을 해제하여 차기 일정까지 모두 포함
+            ).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+
+            const allAux = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+            const ams = allAux.filter(a => t(a.presidium) === targetPr);
+
+            const offIds = new Set(offs.map(o => String(o.memberId || o.id)));
+
+            // 1. 헤더 및 주회합 정보
+            const endYear = new Date(end).getFullYear();
+            const endMonth = new Date(end).getMonth() + 1;
+            document.getElementById('repYear').textContent = endYear;
+            document.getElementById('repMonth').textContent = endMonth;
+            document.getElementById('repStartSess').textContent = ssValue || (atts.length > 0 ? (atts[0].session || '-') : '-');
+            document.getElementById('repEndSess').textContent = esValue || (atts.length > 0 ? (atts[atts.length - 1].session || '-') : '-');
+            document.getElementById('serialNum').textContent = info.uniqueNumber || info.serialNumber || info.id || '-';
+
+            document.getElementById('repDay').textContent = info.meetingDay || '-';
+            const meetTime = info.meetingTime || '00:00';
+            document.getElementById('repHour').textContent = meetTime.split(':')[0] || '00';
+            document.getElementById('repMin').textContent = meetTime.split(':')[1] || '00';
+            document.getElementById('repPlace').textContent = info.meetingPlace || info.place || '-';
+            document.getElementById('repPriest').textContent = info.spiritualDirector || '-';
+            if (document.getElementById('repProxy')) document.getElementById('repProxy').textContent = info.spiritualDirectorDeputy || info.proxy || '-';
+
+            // 2. 간부 명단
+            const roles = ['단장', '부단장', '서기', '회계'];
+            document.getElementById('offTableBody').innerHTML = roles.map(r => {
+                const o = offs.find(of => of.role === r) || {};
+                const feast = (o.feastMonth && o.feastDay) ? `${String(o.feastMonth).padStart(2, '0')}.${String(o.feastDay).padStart(2, '0')}.` : (o.feastDate || '');
+                return `<tr><td>${r}</td><td>${o.name || ''}</td><td>${o.baptismalName || ''}</td><td>${feast}</td><td>${o.appointmentDate || ''}</td><td>-</td></tr>`;
+            }).join('');
+
+            // 3. 출석 요약 (누적 합산)
+            let oA = 0, oC = 0, mA = 0, mC = 0;
+            atts.forEach(a => {
+                const ad = a.attendanceData || {};
+                const entries = Object.entries(ad);
+
+                if (entries.length > 0) {
+                    entries.forEach(([id, item]) => {
+                        const status = (typeof item === 'object') ? item.status : item;
+                        let role = (typeof item === 'object' && item.role) ? item.role : '';
+
+                        // 역할이 없는 경우offs/mms에서 유추
+                        if (!role) {
+                            if (offIds.has(String(id))) role = '단장'; // 직책 그룹으로 분류만 되면 됨
+                            else role = '단원';
+                        }
+
+                        const isOff = ['단장', '부단장', '서기', '회계'].includes(role);
+                        if (isOff) {
+                            oC++;
+                            if (status === 'P' || status === '출석') oA++;
+                        } else {
+                            mC++;
+                            if (status === 'P' || status === '출석') mA++;
+                        }
+                    });
+                } else if (a.summary) {
+                    const parseP = (s) => {
+                        const p = String(s || "0 / 0").split('/').map(v => parseInt(v.trim()) || 0);
+                        return p.length >= 2 ? p : [p[0], 0];
+                    };
+                    const [oa, oc] = parseP(a.summary.officerAttendance);
+                    const [ma, mc] = parseP(a.summary.memberAttendance);
+                    oA += oa; oC += oc; mA += ma; mC += mc;
+                }
+            });
+
+            document.getElementById('repAttOff').textContent = `${oA} / ${oC}`;
+            document.getElementById('repAttMem').textContent = `${mA} / ${mC}`;
+
+            // 4. 단원 현황 (시점 및 구분 기준 정밀 집계)
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            const getF = (m, keys) => t(getField(m, keys));
+
+            const norm = (d) => {
+                if (!d) return '';
+                let s = String(d).trim();
+                if (/^\d{8}$/.test(s)) return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
+                const parts = s.split(/[^0-9]+/).filter(v => v);
+                if (parts.length >= 3) {
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                }
+                return s;
+            };
+
+            // 해당 쁘레시디움 소속 단원만 먼저 필터링 (행동단원 전체)
+            const targetMems = allMem.filter(m =>
+                m && isOrgMatch(getField(m, ['churchName', 'church']), getField(m, ['presidiumName', 'presidium']))
+            );
+
+            // 행동단원(활동단원 포함), 쁘레또리움, 아듀또리움 구분
+            const filterByType = (list, types) => list.filter(m => types.includes(getF(m, ['classification'])));
+
+            const actionMems = filterByType(targetMems, ['행동단원', '활동단원']);
+            const pretMems = filterByType(targetMems, ['쁘레또리움']);
+            const adjMems = filterByType(targetMems, ['아쥬또리움', '아듀또리움']);
+
+            const getStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.probationaryDate), l = norm(m.leaveDate);
+                const d = norm(date);
+                const lRef = leaveRef ? norm(leaveRef) : d; // 퇴단 기준일 (없으면 d 사용)
+                const joined = isEnd ? (j <= d) : (j < d);
+                const notLeft = !l || (l > lRef);
+                return joined && notLeft;
+            });
+
+            const getIntake = (list) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.probationaryDate), l = norm(m.leaveDate);
+                const dStart = norm(start), dEnd = norm(end);
+                return (j >= dStart && j <= dEnd) && (!l || l > dEnd);
+            });
+
+            const getOutgoing = (list, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const l = norm(m.leaveDate);
+                const dStart = norm(start), dEnd = norm(end);
+                const lRef = leaveRef ? norm(leaveRef) : null;
+                const isAfterPrev = lRef ? (l > lRef) : (l >= dStart);
+                return l && isAfterPrev && l <= dEnd;
+            });
+
+            // 쁘레또리움 목록 가져오기 및 필터링
+            const allPret = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+            const pretHistory = allPret.filter(p =>
+                isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'presidium']))
+            );
+
+            // 쁘레또리움 전용 집계 함수 (사용자 요청 로직 반영)
+            const getPretStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.joinDate), l = norm(m.leaveDate);
+                const d = norm(date);
+                const lRef = leaveRef ? norm(leaveRef) : d;
+                // 전월(isEnd=false): 입단일 < 시작일 && (퇴단일 없음 || 퇴단일 > 전 회차 일자)
+                // 당월(isEnd=true): 입단일 <= 종료일 && (퇴단일 없음 || 퇴단일 > 종료일)
+                const joined = isEnd ? (j <= d) : (j < d);
+                const notLeft = !l || (l > lRef);
+                return joined && notLeft;
+            });
+
+            const getPretIntake = (list) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.joinDate);
+                const dStart = norm(start), dEnd = norm(end);
+                return (j >= dStart && j <= dEnd);
+            });
+
+            const getPretOutgoing = (list, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const l = norm(m.leaveDate);
+                const dStart = norm(start), dEnd = norm(end);
+                const lRef = leaveRef ? norm(leaveRef) : null;
+                const isAfterPrev = lRef ? (l > lRef) : (l >= dStart);
+                return l && isAfterPrev && l <= dEnd;
+            });
+
+            // [New] 아듀또리움 전용 집계 (adjutorium_members_list 사용)
+            const allAdj = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
+            const adjHistory = allAdj.filter(a =>
+                isOrgMatch(getField(a, ['churchName', 'church']), getField(a, ['presidiumName', 'presidium']))
+            );
+
+            const getAdjStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.admissionDate), l = norm(m.withdrawalDate);
+                const d = norm(date);
+                const lRef = leaveRef ? norm(leaveRef) : d;
+                // 전월(isEnd=false): 입단일 < 시작일 && (퇴단일 없음 || 퇴단일 > 전 회차 일자)
+                // 당월(isEnd=true): 입단일 <= 종료일 && (퇴단일 없음 || 퇴단일 > 종료일)
+                const joined = isEnd ? (j <= d) : (j < d);
+                const notLeft = !l || (l > lRef);
+                return joined && notLeft;
+            });
+
+            const getAdjIntake = (list) => list.filter(m => {
+                if (!m) return false;
+                const j = norm(m.admissionDate);
+                const dStart = norm(start), dEnd = norm(end);
+                return (j >= dStart && j <= dEnd);
+            });
+
+            const getAdjOutgoing = (list, leaveRef = null) => list.filter(m => {
+                if (!m) return false;
+                const l = norm(m.withdrawalDate);
+                const dStart = norm(start), dEnd = norm(end);
+                const lRef = leaveRef ? norm(leaveRef) : null;
+                const isAfterPrev = lRef ? (l > lRef) : (l >= dStart);
+                return l && isAfterPrev && l <= dEnd;
+            });
+
+            // 행동단원 집계 (기본 members_list 기준 유지)
+            const act_p = getStat(actionMems, start, false, prevDate);
+            const act_c = getStat(actionMems, end, true);
+            const act_i = getIntake(actionMems);
+            const act_o = getOutgoing(actionMems, prevDate);
+
+            const fLen = (list, gender) => list.filter(x => x && (x.gender === gender || x.sex === gender)).length;
+            setVal('m_p_m', fLen(act_p, '남')); setVal('m_p_f', fLen(act_p, '여')); setVal('m_p_t', act_p.length);
+            setVal('m_c_m', fLen(act_c, '남')); setVal('m_c_f', fLen(act_c, '여')); setVal('m_c_t', act_c.length);
+            setVal('m_i_m', fLen(act_i, '남')); setVal('m_i_f', fLen(act_i, '여')); setVal('m_i_t', act_i.length);
+            setVal('m_o_m', fLen(act_o, '남')); setVal('m_o_f', fLen(act_o, '여')); setVal('m_o_t', act_o.length);
+
+            // 쁘레또리움 & 아듀또리움 집계 (업데이트된 데이터 소스 및 로직 적용)
+            setVal('p_p', getPretStat(pretHistory, start, false, prevDate).length);
+            setVal('p_c', getPretStat(pretHistory, end, true).length);
+            setVal('p_i', getPretIntake(pretHistory).length);
+            setVal('p_o', getPretOutgoing(pretHistory, prevDate).length);
+
+            // [Update] 아듀또리움 집계 (신규 전용 로직 적용)
+            setVal('aj_p', getAdjStat(adjHistory, start, false, prevDate).length);
+            setVal('aj_c', getAdjStat(adjHistory, end, true).length);
+            setVal('aj_i', getAdjIntake(adjHistory).length);
+            setVal('aj_o', getAdjOutgoing(adjHistory, prevDate).length);
+
+            // 협조단원 집계
+            const targetActiveIds = new Set(targetMems.map(m => String(m.id)));
+            const isMatch = (a) => {
+                if (isOrgMatch(a.church, a.presidium)) return true;
+                if (targetActiveIds.has(String(a.activeMemberId))) return true;
+                return clean(a.presidium) === targetPrClean; // 최후의 보루: Pr명만 같아도 포함
+            };
+
+            const getAuxStat = (date, isEnd = false, leaveRef = null) => allAux.filter(a => {
+                if (!a || !isMatch(a)) return false;
+                const j = norm(a.admissionDate), l = norm(a.withdrawalDate || a.leaveDate);
+                const d = norm(date);
+                const lRef = leaveRef ? norm(leaveRef) : d;
+                const joined = isEnd ? (j <= d) : (j < d);
+                const notLeft = !l || (l > lRef);
+                return joined && notLeft;
+            });
+
+            const aux_p = getAuxStat(start, false, prevDate);
+            const aux_c = getAuxStat(end, true);
+            const aux_i = allAux.filter(a => {
+                if (!a || !isMatch(a)) return false;
+                const j = norm(a.admissionDate), l = norm(a.withdrawalDate || a.leaveDate);
+                const dStart = norm(start), dEnd = norm(end);
+                return (j >= dStart && j <= dEnd) && (!l || l > dEnd);
+            });
+            const aux_o = allAux.filter(a => {
+                if (!a || !isMatch(a)) return false;
+                const l = norm(a.withdrawalDate || a.leaveDate);
+                const dStart = norm(start), dEnd = norm(end);
+                const lRef = prevDate ? norm(prevDate) : null;
+                const isAfterPrev = lRef ? (l > lRef) : (l >= dStart);
+                return l && isAfterPrev && l <= dEnd;
+            });
+
+            setVal('a_p_m', fLen(aux_p, '남')); setVal('a_p_f', fLen(aux_p, '여')); setVal('a_p_t', aux_p.length);
+            setVal('a_c_m', fLen(aux_c, '남')); setVal('a_c_f', fLen(aux_c, '여')); setVal('a_c_t', aux_c.length);
+            setVal('a_i_m', fLen(aux_i, '남')); setVal('a_i_f', fLen(aux_i, '여')); setVal('a_i_t', aux_i.length);
+            setVal('a_o_m', fLen(aux_o, '남')); setVal('a_o_f', fLen(aux_o, '여')); setVal('a_o_t', aux_o.length);
+
+            // 5. 행사 내역
+            document.getElementById('eventTableBody').innerHTML = evs.slice(0, 5).map(e => `
+                <tr><td>${e.category || ''}</td><td style="text-align:left;">${e.eventName || ''}</td><td>${e.organizer || ''}</td><td>${e.eventDate || ''}</td><td>${e.venue || ''}</td><td>${e.attendanceCount || 0}</td></tr>
+            `).join('') || '<tr><td colspan="6" style="height:10mm">기간 내 행사가 없습니다.</td></tr>';
+
+            // 6. 회계 보고 (UI상 7번)
+            let totalIn = 0, totalOut = 0;
+            let expCont = 0, expFlow = 0;
+
+            // [개선] 이월금 계산: 연초 기초 잔액 + 보고 기간 이전 누적 수지 합계
+            const allSums = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
+            const sKey = `${endYear}_${church}_${info.curiaName || ''}_${pr}`;
+            const initBal = allSums[sKey]?.initialBalance || 0;
+
+            let carryOverIn = 0, carryOverOut = 0;
+            const startStr = t(start);
+
+            allTrans.forEach(l => {
+                // 대상 조직(Pr) 거래 필터링
+                if (!isOrgMatch(getField(l, ['churchName', 'church']), getField(l, ['presidiumName', 'presidium']))) return;
+                if (parseInt(l.year) !== endYear) return;
+
+                const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
+                const amt = parseInt(l.amount) || 0;
+                const isDeposit = (l.type === 'deposit' || l.type === 'income');
+
+                if (lDate < startStr) {
+                    // 보고 기간 이전 내역 -> 이월금에 합산
+                    if (isDeposit) carryOverIn += amt;
+                    else carryOverOut += amt;
+                } else if (lDate <= t(end)) {
+                    // 보고 기간 내 내역
+                    if (isDeposit) {
+                        totalIn += amt;
+                    } else {
+                        totalOut += amt;
+                        if (l.item && l.item.includes('의연금')) expCont += amt;
+                        if (l.item && l.item.includes('꽃값')) expFlow += amt;
+                    }
+                }
+            });
+
+            const accPrev = initBal + carryOverIn - carryOverOut;
+
+            setVal('acc_prev', accPrev.toLocaleString());
+            setVal('acc_in', totalIn.toLocaleString());
+            setVal('acc_out', totalOut.toLocaleString());
+            setVal('acc_bal', (accPrev + totalIn - totalOut).toLocaleString());
+
+            // 중요 지출 내역 표시
+            const expEtc = totalOut - (expCont + expFlow);
+            setVal('exp_cont', expCont.toLocaleString());
+            setVal('exp_flow', expFlow.toLocaleString());
+            setVal('exp_etc', expEtc.toLocaleString());
+
+            // 7. 활동 요약
+            const sumAct = (name) => recs.reduce((a, c) => a + (parseInt(c.counts && c.counts[name]) || 0), 0);
+            setVal('sum_rosary', sumAct('묵주기도').toLocaleString());
+            setVal('sum_mass', sumAct('평일미사참례').toLocaleString());
+            setVal('sum_bible', (sumAct('성경읽기') + sumAct('성경쓰기')).toLocaleString()); // 성경읽기 + 성경쓰기 합산
+            setVal('sum_medi', sumAct('매일미사읽고묵상').toLocaleString());
+            setVal('sum_legion', sumAct('월간 성모님의 군단 읽기').toLocaleString());
+
+            setVal('sum_new', sumAct('새 가족 찾기').toLocaleString());
+            setVal('sum_soul', sumAct('냉담 교우 회두').toLocaleString());
+            // 사랑의 증언활동 개별 집계 (복지시설, 병원.요양원, 기타 사랑봉사)
+            setVal('sum_wel', sumAct('복지시설').toLocaleString());
+            setVal('sum_hosp', sumAct('병원.요양원').toLocaleString());
+            setVal('sum_oth', sumAct('기타 사랑봉사').toLocaleString());
+
+            setVal('sum_peace', sumAct('밤9시 주모경 바치기').toLocaleString()); // 복구됨
+            setVal('sum_care', sumAct('쉬는 교우(5년이내) 돌봄').toLocaleString());
+            setVal('sum_eco', sumAct('탄소중립 실천하기').toLocaleString()); // 항목 추가
+            setVal('sum_holy', sumAct('거룩한 독서').toLocaleString());     // 복구
+            setVal('sum_note', '0'); // 노트작성 (임시 0)
+
+            // 8. 활동 상세
+            // --- 이미지 기반 고도화된 기본 데이터 세트 (activity_register.html과 동일) ---
+            const DEFAULT_SCHEMA = [
+                {
+                    id: 'cat_senatus', title: '교구 또는 레지오 세나뚜스 지시 사항', items: [
+                        { name: '밤9시 주모경 바치기', unit: '회' }, { name: '월간 성모님의 군단 읽기', unit: '회' },
+                        { name: '새 가족 찾기', unit: '회' }, { name: '쉬는 교우(5년이내) 돌봄', unit: '회' },
+                        { name: '사목자를 위한 기도', unit: '회' }, { name: '협조단원 행동단원 입단', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_pastor', title: '본당 사목자 지시 사항', items: [
+                        { name: '거룩한 독서', unit: '회' }, { name: '냉담 교우 회두', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_mission', title: '입교 권면', items: [
+                        { name: '외인 입교 권면', unit: '회' }, { name: '교리 중단자 재권면', unit: '회' },
+                        { name: '개종 권면', unit: '회' }, { name: '가두 선교', unit: '회' }, { name: '방문 선교', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_nonbeliever', title: '예비신자 돌봄', items: [
+                        { name: '교리반 인도 예비신자 돌봄', unit: '회' }, { name: '통신교리자 돌봄', unit: '회' }, { name: '교리반 봉사 또는 협조', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_care', title: '교우 돌봄', items: [
+                        { name: '새영세자돌봄', unit: '회' }, { name: '전입교우 돌봄', unit: '회' }, { name: '쉬는교우 돌봄', unit: '회' },
+                        { name: '조당(혼인장애)자 안내', unit: '회' }, { name: '성사 권면', unit: '회' }, { name: '유아 세례 권면', unit: '회' },
+                        { name: '첫 영성체', unit: '회' }, { name: '교우 가정 방문', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_suffering', title: '어려움 겪는 분 돌봄', items: [
+                        { name: '교우 환자 방문', unit: '회' }, { name: '외인 환자 방문', unit: '회' }, { name: '다문화 가정 돌봄', unit: '회' },
+                        { name: '외인 상가 돌봄', unit: '회' }, { name: '교우 상가 돌봄', unit: '회' }, { name: '위령기도[연도]', unit: '회' },
+                        { name: '장례미사', unit: '회' }, { name: '추모미사', unit: '회' }, { name: '입관', unit: '회' }, { name: '장지 수행', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_expansion', title: '레지오 확장', items: [
+                        { name: '행동단원 모집', unit: '회' }, { name: '협조단원 모집 및 돌봄', unit: '회' }, { name: '소년 레지오 지도', unit: '회' }, { name: '입단권면', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_special', title: '특별 활동', items: [
+                        { name: '호구조사(호별방문)', unit: '회' }, { name: '재해 및 사고 피해자 돌봄', unit: '회' },
+                        { name: '복지시설 노력 봉사', unit: '회' }, { name: '병원방문 활동', unit: '회' }, { name: '기타 특별활동', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_parish_service', title: '본당 협조', items: [
+                        { name: '행사 준비 및 협조', unit: '회' }, { name: '주일학교 돌봄', unit: '회' },
+                        { name: '청소 미화', unit: '회' }, { name: '미사안내 봉사', unit: '회' }, { name: '기타 본당 협조', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_community', title: '소공동체 활동', items: [
+                        { name: '소공동체 모임 참석', unit: '회' }, { name: '구역.반장교육 참석', unit: '회' }, { name: '반모임 참석', unit: '회' }, { name: '기타 소공동체', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_family', title: '가정성화 활동', items: [
+                        { name: '가족이 함께 모여 기도하기', unit: '회' }, { name: '외짝교우 부부 성경 봉독 및 기도', unit: '회' },
+                        { name: '자녀와 함께 미사 참례 및 기도', unit: '회' }, { name: '가족 복지시설 봉사', unit: '회' },
+                        { name: '출가한 자녀 함께 기도 및 미사 참례', unit: '회' }, { name: '영유아와 함께 미사 참례', unit: '회' }
+                    ]
+                },
+                {
+                    id: 'cat_others_simple', title: '기타활동(1)', items: [
+                        { name: '출판물 보급', unit: '회', isActive: true }, { name: '탄소중립 실천하기', unit: '회', isActive: true }
+                    ]
+                },
+                {
+                    id: 'cat_others_detail', title: '기타활동(2)', items: [
+                        { name: '묵주기도', unit: '단', isActive: true }, { name: '평일미사참례', unit: '회', isActive: true },
+                        { name: '성경읽기', unit: '장', isActive: true }, { name: '성경쓰기', unit: '장', isActive: true },
+                        { name: '매일미사읽고묵상', unit: '회', isActive: true }, { name: '십자가의 길', unit: '회', isActive: true },
+                        { name: '성체조배', unit: '회', isActive: true }, { name: '성시간 참석', unit: '회', isActive: true },
+                        { name: '교본읽기', unit: '쪽', isActive: true }, { name: '신심영상 시청', unit: '회', isActive: true },
+                        { name: '신심서적', unit: '쪽', isActive: true }, { name: '희생', unit: '회', isActive: true },
+                        { name: '피정', unit: '회', isActive: true }, { name: '성지순례', unit: '회', isActive: true },
+                        { name: '화살기도', unit: '회', isActive: true }
+                    ]
+                },
+                {
+                    id: 'cat_charity', title: '사랑의 증언활동', items: [
+                        { name: '복지시설', unit: '회', isActive: true }, { name: '병원.요양원', unit: '회', isActive: true }, { name: '기타 사랑봉사', unit: '회', isActive: true }
+                    ]
+                }
+            ];
+
+            const schemas = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            const prSchema = schemas[church] || DEFAULT_SCHEMA;
+            let gCount = 0, detailHtml = '';
+
+            let grpSimple = null, grpDetail = null, grpCharity = null;
+
+            // 1. 일반 그룹 처리 및 특수 그룹 분리
+            prSchema.forEach(group => {
+                // 특수 그룹은 별도 처리를 위해 저장하고 루프 건너뜀
+                if (group.id === 'cat_others_simple') { grpSimple = group; return; }
+                if (group.id === 'cat_others_detail') { grpDetail = group; return; }
+                if (group.id === 'cat_charity') { grpCharity = group; return; }
+
+                let groupCount = 0, groupDetails = [];
+                group.items.forEach(it => {
+                    const c = sumAct(it.name);
+                    groupCount += c;
+                    const cStr = c > 0 ? c.toLocaleString() : '';
+                    groupDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                });
+
+                gCount += groupCount;
+                const gTotalStr = groupCount > 0 ? groupCount.toLocaleString() : '-';
+                detailHtml += `<tr><th>${group.title}</th><td>${gTotalStr}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${groupDetails.join(', ')}</td></tr>`;
+            });
+
+            // 2. 기타 활동 병합 처리 (2행 구성)
+            // [1행] 기타활동(1) 내용
+            let simpleCount = 0, simpleDetails = [];
+            if (grpSimple) {
+                grpSimple.items.forEach(it => {
+                    const c = sumAct(it.name);
+                    simpleCount += c;
+                    const cStr = c > 0 ? c.toLocaleString() : '';
+                    simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                });
+            }
+
+            // [2행] 기타활동(2) + 사랑의 증언활동 내용 합산
+            let combinedCount = 0;
+            let detailItemsStr = '', charityItemsStr = '';
+
+            if (grpDetail) {
+                let dItems = [];
+                grpDetail.items.forEach(it => {
+                    const c = sumAct(it.name);
+                    combinedCount += c;
+                    const cStr = c > 0 ? c.toLocaleString() : '';
+                    dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                });
+                if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
+            }
+
+            if (grpCharity) {
+                let cItems = [];
+                grpCharity.items.forEach(it => {
+                    const c = sumAct(it.name);
+                    combinedCount += c;
+                    const cStr = c > 0 ? c.toLocaleString() : '';
+                    cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                });
+                if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
+            }
+
+            gCount += (simpleCount + combinedCount);
+
+            // 기타 활동 헤더 병합 (Rowspan 2)
+            detailHtml += `<tr>
+                <th rowspan="2">기타 활동</th>
+                <td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
+                <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
+            </tr>`;
+
+            detailHtml += `<tr>
+                <td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
+                <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
+                    ${detailItemsStr}
+                    ${charityItemsStr}
+                </td>
+            </tr>`;
+
+            document.getElementById('activityDetailBody').innerHTML = detailHtml || '<tr><td colspan="3">해당 기간의 활동 상세 내역이 없습니다.</td></tr>';
+            setVal('grandTotalCount', gCount.toLocaleString());
+
+            // 9. 푸터
+            setVal('footChurch', church);
+            setVal('footCu', info.curiaName || userProfile.curia || userProfile.curiaName || '-');
+            setVal('footPr', pr);
+
+            // 단장 성명 찾기 (간부 현황에서 조회 - Robust Match)
+            const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const today = new Date().toISOString().split('T')[0];
+            const president = allOfficers.find(o =>
+                isOrgMatch(getField(o, ['churchName', 'church']), getField(o, ['presidiumName', 'presidium'])) &&
+                (o.role === '단장' || String(o.role).toLowerCase() === 'president') &&
+                (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
+            );
+
+            const officialPresidentName = president ? president.name : '';
+            setVal('footName', officialPresidentName || (userProfile.name || '-'));
+
+            // --- 보고서 결재 및 워크플로우 로직 추가 ---
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode') || 'view';
+            const reportKey = {
+                church: params.get('church'),
+                presidium: params.get('pr'),
+                startSess: params.get('ss'),
+                endSess: params.get('es')
+            };
+
+            const getStatusData = () => {
+                const history = JSON.parse(localStorage.getItem('monthly_report_status') || '[]');
+                return history.find(h =>
+                    h.church === reportKey.church &&
+                    h.presidium === reportKey.presidium &&
+                    h.startSess === reportKey.startSess &&
+                    h.endSess === reportKey.endSess
+                );
+            };
+
+            const renderStatus = () => {
+                const data = getStatusData();
+                const status = data ? data.status : 'Draft';
+                const role = String(userProfile.role || '').toLowerCase().trim();
+
+                // [보강] 권한 그룹 정의
+                const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
+                const presidentRoles = ['단장', '관리자', 'admin', 'president'];
+
+                const isOfficer = officerRoles.some(r => role === r.toLowerCase()); // exact match for roles
+
+                // [보강] 더욱 강력한 권한 체크: 직책(Role)이 정확히 일치하거나, 로그인 성함이 공식 단장 성명과 일치하면 승인 권한 부여
+                // '부단장' 등 문자열이 포함된 직책은 제외하고 '단장', 'admin', '관리자', 'president'만 필터링
+                const currentUserName = String(userProfile.name || '').replace(/\s/g, '');
+                const targetPresName = String(officialPresidentName || '').replace(/\s/g, '');
+
+                const isPresident = ['단장', '관리자', 'admin', 'president'].includes(role) ||
+                    (currentUserName !== '' && targetPresName !== '' && currentUserName === targetPresName);
+
+                console.log("Permission Log:", { role, currentUserName, targetPresName, isOfficer, isPresident, status, mode });
+
+                const badge = document.getElementById('reportStatusBadge');
+                const btnFin = document.getElementById('btnFinalize');
+                const btnApp = document.getElementById('btnApprove');
+                const btnCan = document.getElementById('btnCancelApprove');
+                const footNameArea = document.getElementById('footName');
+
+                // 1. 상태 배지 업데이트
+                if (status === 'Approved') {
+                    badge.textContent = '상태: 단장 승인 완료';
+                    badge.style.background = '#27ae60';
+                    badge.style.color = 'white';
+                } else if (data) {
+                    badge.textContent = '상태: 검토 중 (미승인)';
+                    badge.style.background = '#e67e22';
+                    badge.style.color = 'white';
+                } else {
+                    badge.textContent = '상태: 미작성';
+                    badge.style.background = '#eee';
+                    badge.style.color = '#666';
+                }
+
+                // 2. 버튼 가시성 제어
+                // 생성 모드이거나 이미 생성된 문서(data 존재)인 경우 권한에 따라 버튼 노출
+                btnFin.style.display = ((mode === 'create' || (data && mode === 'view')) && isOfficer && status !== 'Approved') ? 'block' : 'none';
+                btnApp.style.display = (isPresident && status !== 'Approved') ? 'block' : 'none';
+                btnCan.style.display = (isPresident && status === 'Approved') ? 'block' : 'none';
+
+                // 3. 서명(직인) 렌더링
+                const signMark = footNameArea.nextSibling;
+
+                // 3. 서명(직인) 및 성명 렌더링
+                if (status === 'Approved' && data) {
+                    // 성함: 공식 단장 이름 우선, 없으면 서명자 이름 표시
+                    footNameArea.textContent = officialPresidentName || data.signer || '-';
+
+                    // 서명자(signer)의 실제 데이터 찾기
+                    const users = JSON.parse(localStorage.getItem('users') || '{}');
+                    const signerUser = Object.values(users).find(u =>
+                        u.name === (officialPresidentName || data.signer) &&
+                        (u.church === church) &&
+                        (u.presidiumName === pr)
+                    );
+
+                    const signatureImg = signerUser ? signerUser.signature : null;
+
+                    // 서명(직인) 렌더링
+                    if (signMark && signMark.nodeType === 3 && signMark.textContent.includes('(인)')) {
+                        const stamp = document.createElement('span');
+                        stamp.className = 'digital-stamp';
+
+                        if (signatureImg && signatureImg.length > 500) {
+                            const img = document.createElement('img');
+                            img.src = signatureImg;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'contain';
+                            stamp.innerHTML = '';
+                            stamp.appendChild(img);
+                            stamp.style.border = 'none';
+                            stamp.style.background = 'transparent';
+                        } else {
+                            const stampChar = (officialPresidentName || data.signer || '-').substring(0, 1);
+                            stamp.innerHTML = stampChar;
+                        }
+                        footNameArea.parentNode.replaceChild(stamp, signMark);
+                    } else {
+                        const existingStamp = footNameArea.parentNode.querySelector('.digital-stamp');
+                        if (existingStamp) {
+                            if (signatureImg && signatureImg.length > 500) {
+                                let img = existingStamp.querySelector('img');
+                                if (!img) {
+                                    img = document.createElement('img');
+                                    existingStamp.innerHTML = '';
+                                    existingStamp.appendChild(img);
+                                }
+                                img.src = signatureImg;
+                                existingStamp.style.border = 'none';
+                                existingStamp.style.background = 'transparent';
+                            } else {
+                                const stampChar = (officialPresidentName || data.signer || '-').substring(0, 1);
+                                existingStamp.innerHTML = stampChar;
+                            }
+                        }
+                    }
+                } else {
+                    // 미승인(Draft 등): 현재 단장 혹은 내 이름 표시 (원래 로직 유지)
+                    const currentPres = officialPresidentName || (userProfile.name || '-');
+                    footNameArea.textContent = currentPres;
+
+                    // 승인 취소 시 서명 제거하고 (인) 복구
+                    const stamp = footNameArea.parentNode.querySelector('.digital-stamp');
+                    if (stamp) {
+                        const text = document.createTextNode(' (인)');
+                        footNameArea.parentNode.replaceChild(text, stamp);
+                    }
+                }
+            };
+
+            const saveStatus = (status, signer = null) => {
+                let history = JSON.parse(localStorage.getItem('monthly_report_status') || '[]');
+                const idx = history.findIndex(h =>
+                    h.church === reportKey.church &&
+                    h.presidium === reportKey.presidium &&
+                    h.startSess === reportKey.startSess &&
+                    h.endSess === reportKey.endSess
+                );
+
+                const newData = {
+                    ...reportKey,
+                    status: status,
+                    signer: signer || (idx >= 0 ? history[idx].signer : null),
+                    signDate: signer ? new Date().toISOString() : (idx >= 0 ? history[idx].signDate : null),
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (idx >= 0) history[idx] = newData;
+                else history.push(newData);
+
+                localStorage.setItem('monthly_report_status', JSON.stringify(history));
+                renderStatus();
+                if (status === 'Approved') alert('보고서가 최종 승인되었습니다.');
+                else if (status === 'Draft' && !signer) alert('보고서가 생성(저장)되었습니다. 이제 단원들이 조회할 수 있습니다.');
+                else alert('승인이 취소되었습니다. 다시 수정이 가능합니다.');
+            };
+
+            document.getElementById('btnFinalize').onclick = () => {
+                if (confirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
+                    saveStatus('Draft');
+                }
+            };
+
+            document.getElementById('btnApprove').onclick = () => {
+                if (confirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
+                    saveStatus('Approved', userProfile.name);
+                }
+            };
+
+            document.getElementById('btnCancelApprove').onclick = () => {
+                if (confirm('승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
+                    saveStatus('Draft', null);
+                }
+            };
+
+            renderStatus();
+        }
+    </script>
+</body>
+
+</html>

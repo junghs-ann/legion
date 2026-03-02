@@ -1,0 +1,653 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>협조단원 돌봄 관리 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .form-grid-header {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .col-span-2 {
+            grid-column: span 2;
+        }
+
+        .col-span-3 {
+            grid-column: span 3;
+        }
+
+        .col-span-6 {
+            grid-column: span 6;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .form-group label {
+            flex: 0 0 100px;
+            margin-bottom: 0;
+            font-weight: 600;
+            color: #444;
+            text-align: right;
+        }
+
+        .form-group input,
+        .form-group select {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .care-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .care-table th,
+        .care-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .care-table th {
+            background-color: #f1f3f5;
+            font-weight: 600;
+        }
+
+        .group-cell {
+            background-color: #fdfdfd;
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .care-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .summary-box {
+            display: flex;
+            justify-content: flex-end;
+            gap: 30px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px;">
+        <div class="register-form-container">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 20px; padding-bottom: 10px;">
+                <h2 class="form-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">협조단원 돌봄 관리</h2>
+                <button type="button" class="btn-close" onclick="location.href='dashboard.html'"
+                    style="padding: 8px 16px; font-size: 0.9rem; margin: 0;">닫 기</button>
+            </div>
+
+            <div class="form-grid-header">
+                <div class="form-group col-span-3">
+                    <label>성당</label>
+                    <select id="churchSelect">
+                        <option value="">성당 선택</option>
+                    </select>
+                </div>
+                <div class="form-group col-span-3">
+                    <label>꾸리아(Cu.)</label>
+                    <select id="curiaSelect" disabled>
+                        <option value="">꾸리아 선택</option>
+                    </select>
+                </div>
+                <div class="form-group col-span-6">
+                    <label>쁘레시디움(Pr.)</label>
+                    <select id="presidiumSelect" disabled style="max-width: calc(50% - 7.5px);">
+                        <option value="">쁘레시디움 선택</option>
+                    </select>
+                </div>
+                <div class="form-group col-span-3">
+                    <label>회차</label>
+                    <input type="text" id="sessionInput" placeholder="회차 선택" list="sessionList" autocomplete="off">
+                    <datalist id="sessionList"></datalist>
+                </div>
+                <div class="form-group col-span-3">
+                    <label>날짜</label>
+                    <input type="date" id="dateInput" readonly>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="care-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">행동단원</th>
+                            <th colspan="3">협조단원</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 150px;">성명</th>
+                            <th style="width: 180px;">세례명</th>
+                            <th style="width: 150px;">성명</th>
+                            <th style="width: 180px;">세례명</th>
+                            <th style="width: 100px;">돌봄여부</th>
+                        </tr>
+                    </thead>
+                    <tbody id="careTableBody">
+                        <tr>
+                            <td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="summary-box">
+                <div>대상 협조단원: <span id="totalAuxCount">0</span>명</div>
+                <div style="margin-left: 20px;">돌봄 완료: <span id="caredCount">0</span>명</div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center; display: flex; justify-content: center; gap: 15px;">
+                <button type="button" id="btnSave" class="btn-submit">저 장</button>
+                <button type="button" id="btnDelete" class="btn-submit"
+                    style="background-color: #dc3545; display: none;">삭 제</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        let currentUser = null;
+        let presidiaList = [];
+        let attendanceList = [];
+        let membersList = [];
+        let auxiliaryList = [];
+        let careHistory = [];
+
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const sessionInput = document.getElementById('sessionInput');
+        const sessionList = document.getElementById('sessionList');
+        const dateInput = document.getElementById('dateInput');
+        const tableBody = document.getElementById('careTableBody');
+        const btnSave = document.getElementById('btnSave');
+        const btnDelete = document.getElementById('btnDelete');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            loadData();
+            setupOrgSelectors();
+            setupEventListeners();
+        }, () => { location.href = 'index.html'; });
+
+        function loadData() {
+            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+        }
+
+        function setupOrgSelectors() {
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = c;
+                churchSelect.appendChild(opt);
+            });
+
+            if (!isAdmin) {
+                churchSelect.value = currentUser.churchName || currentUser.church || '';
+                churchSelect.disabled = true;
+                updateCuriaList();
+                curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
+                curiaSelect.disabled = true;
+                updatePresidiumList();
+                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumSelect.disabled = true;
+                updateSessionList();
+            }
+        }
+
+        function updateCuriaList() {
+            const church = churchSelect.value;
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!church) { curiaSelect.disabled = true; return; }
+            const curias = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+            curias.forEach(cu => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = cu;
+                curiaSelect.appendChild(opt);
+            });
+            curiaSelect.disabled = false;
+        }
+
+        function updatePresidiumList() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!curia) { presidiumSelect.disabled = true; return; }
+            const prs = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+            prs.forEach(pr => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = pr;
+                presidiumSelect.appendChild(opt);
+            });
+            presidiumSelect.disabled = false;
+        }
+
+        function updateSessionList() {
+            const pr = presidiumSelect.value;
+            sessionList.innerHTML = '';
+            if (!pr) return;
+            const prAttendance = attendanceList.filter(a => a.presidium === pr).sort((a, b) => parseInt(b.session) - parseInt(a.session));
+            prAttendance.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = `${a.session}회 (${a.date})`;
+                sessionList.appendChild(opt);
+            });
+        }
+
+        function setupEventListeners() {
+            // Track changes for isDirty
+            document.querySelector('.register-form-container').addEventListener('input', () => window.setDirty(true));
+            document.querySelector('.register-form-container').addEventListener('change', () => window.setDirty(true));
+
+            churchSelect.onchange = () => { updateCuriaList(); updateSessionList(); };
+            curiaSelect.onchange = () => { updatePresidiumList(); updateSessionList(); };
+            presidiumSelect.onchange = updateSessionList;
+
+            sessionInput.onfocus = () => {
+                // To show ALL options in datalist without browser filtering, clear the value on focus
+                // This solves the issue where the list is hidden or only shows the current item
+                sessionInput.value = '';
+                dateInput.value = '';
+                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                btnDelete.style.display = 'none';
+                updateCaredCount();
+            };
+
+            sessionInput.oninput = (e) => {
+                const val = sessionInput.value;
+                if (!val) return;
+
+                // Match pattern "917회 (2026-01-06)"
+                const fullMatch = val.match(/^(\d+회)\s*\((.*?)\)$/);
+
+                if (fullMatch) {
+                    const cleanSession = fullMatch[1];
+                    const extractedDate = fullMatch[2];
+
+                    // Update input to show only the session number part
+                    sessionInput.value = cleanSession;
+                    dateInput.value = extractedDate;
+
+                    const sessionNum = cleanSession.replace('회', '');
+                    const pr = presidiumSelect.value;
+                    const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
+                    if (record) {
+                        loadCareList(record);
+                        updateDeleteButtonState(record.session);
+                    }
+                    // Crucial: remove focus to prevent browser from showing datalist again immediately with filtered value
+                    sessionInput.blur();
+                } else {
+                    // Manual typing check
+                    const match = val.match(/^(\d+)회$/);
+                    if (match) {
+                        const sessionNum = match[1];
+                        const pr = presidiumSelect.value;
+                        const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
+                        if (record) {
+                            dateInput.value = record.date;
+                            loadCareList(record);
+                            updateDeleteButtonState(record.session);
+                        }
+                    }
+                }
+            };
+
+            btnSave.onclick = saveCareData;
+            btnDelete.onclick = deleteCareData;
+        }
+
+        function updateDeleteButtonState(sessionNum) {
+            const pr = presidiumSelect.value;
+            const existingCare = careHistory.find(c => c.presidium === pr && String(c.session) === String(sessionNum));
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+            if (existingCare && isAdmin) {
+                btnDelete.style.display = 'inline-block';
+            } else {
+                btnDelete.style.display = 'none';
+            }
+        }
+
+        function deleteCareData() {
+            const pr = presidiumSelect.value;
+            const sessionVal = sessionInput.value;
+            const match = sessionVal.match(/(\d+)회/);
+            if (!match) return;
+            const session = match[1];
+
+            if (!confirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
+
+            const index = careHistory.findIndex(c => c.presidium === pr && String(c.session) === String(session));
+            if (index >= 0) {
+                careHistory.splice(index, 1);
+                localStorage.setItem('auxiliary_care_list', JSON.stringify(careHistory));
+                alert('삭제되었습니다.');
+                window.setDirty(false);
+                // Reset/Reload
+                sessionInput.value = '';
+                dateInput.value = '';
+                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                btnDelete.style.display = 'none';
+                updateCaredCount();
+            }
+        }
+
+        function loadCareList(attendanceRecord) {
+            const pr = presidiumSelect.value;
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            // 1. Get present active members for this session
+            const presentActiveMemberIds = Object.entries(attendanceRecord.attendanceData)
+                .filter(([id, data]) => {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    return status === 'P';
+                })
+                .map(([id]) => id);
+
+            // 2. Map to auxiliary members they manage (active ONLY)
+            let matchedAuxiliaries = auxiliaryList.filter(aux =>
+                String(aux.presidium) === String(pr) &&
+                presentActiveMemberIds.includes(String(aux.activeMemberId)) &&
+                // Active condition: No withdrawal date OR withdrawal date is in the future compared to session date
+                (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date)
+            );
+
+            // [추가] 단원은 본인이 담당하는 협조단원만 돌봄 등록 가능
+            const roleLower = (currentUser.role || '').toLowerCase();
+            const isAdmin = roleLower === 'admin' || roleLower === '관리자';
+            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
+
+            if (!isAdmin && !isOfficer) {
+                matchedAuxiliaries = matchedAuxiliaries.filter(aux =>
+                    String(aux.activeMemberId) === String(currentUser.id || currentUser.uid) ||
+                    (aux.activeMemberName === currentUser.name && (aux.activeMemberBaptismalName === (currentUser.baptismalName || '')))
+                );
+            }
+
+
+            if (matchedAuxiliaries.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">해당 회차에 출석한 행동단원이 관리하는 활동 중인 협조단원이 없습니다.<br><br>돌보는 협조단원이 협조단원 관리에 등록되어 있는지 확인하세요.</td></tr>';
+                return;
+            }
+
+            // 3. Group by active member
+            const grouped = [];
+            matchedAuxiliaries.forEach(aux => {
+                let group = grouped.find(g => String(g.id) === String(aux.activeMemberId));
+                if (!group) {
+                    group = { id: aux.activeMemberId, name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
+                    grouped.push(group);
+                }
+                group.list.push(aux);
+            });
+
+            // 5. Load existing care data if any
+            const existingCare = careHistory.find(c => c.presidium === pr && String(c.session) === String(attendanceRecord.session));
+
+            // [개선] 항상 최신 행동단원 출석 및 협조단원 목록을 기준으로 표시합니다.
+            // 기존에 저장된 데이터가 있다면 해당 단원의 '체크 상태'만 가져옵니다.
+            const displayList = grouped;
+
+            // 5. Render
+            tableBody.innerHTML = '';
+            let total = 0;
+            displayList.forEach(group => {
+                group.list.forEach((aux, idx) => {
+                    const tr = document.createElement('tr');
+
+                    // Logic to determine if checked: 저장된 데이터에서 해당 협조단원의 ID를 기준으로 상태를 찾습니다.
+                    let isChecked = false;
+                    if (existingCare) {
+                        if (existingCare.careData && existingCare.careData[aux.id]) {
+                            isChecked = existingCare.careData[aux.id] === 'checked';
+                        } else if (existingCare.careDataSnapshot) {
+                            const snap = existingCare.careDataSnapshot.find(s => s.auxId === aux.id || s.id === aux.id);
+                            if (snap) isChecked = snap.checked === 'checked';
+                        }
+                    }
+
+                    tr.innerHTML = `
+                        <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? group.name : ''}</td>
+                        <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? (group.baptismal || '-') : ''}</td>
+                        <td>${aux.name}</td>
+                        <td>${aux.baptismalName || '-'}</td>
+                        <td><input type="checkbox" class="care-checkbox" 
+                            data-aux-id="${aux.id || aux.auxId}" 
+                            data-aux-name="${aux.name}"
+                            data-aux-baptismal="${aux.baptismalName || ''}"
+                            data-aux-gender="${aux.gender || ''}"
+                            data-active-id="${group.id}"
+                            data-active-name="${group.name}"
+                            data-active-baptismal="${group.baptismal || ''}"
+                            ${isChecked ? 'checked' : ''}>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                    total++;
+                });
+            });
+
+            document.getElementById('totalAuxCount').textContent = total;
+            updateCaredCount();
+
+            tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
+                cb.onchange = updateCaredCount;
+            });
+        }
+
+        function updateCaredCount() {
+            const count = tableBody.querySelectorAll('.care-checkbox:checked').length;
+            document.getElementById('caredCount').textContent = count;
+        }
+
+        function saveCareData() {
+            const pr = presidiumSelect.value;
+            const sessionVal = sessionInput.value;
+            const date = dateInput.value;
+            const match = sessionVal.match(/(\d+)회/);
+
+            if (!pr || !match || !date) {
+                alert('회차 정보를 확인해 주세요.');
+                return;
+            }
+
+            const session = match[1];
+
+            // NEW: Structure with Snapshot
+            const careData = {}; // Keeping for legacy support
+            const careDataSnapshot = []; // The new Snapshotted list
+
+            tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
+                const status = cb.checked ? 'checked' : 'none';
+                careData[cb.dataset.auxId] = status; // Legacy
+
+                careDataSnapshot.push({
+                    auxId: cb.dataset.auxId,
+                    name: cb.dataset.auxName,
+                    baptismalName: cb.dataset.auxBaptismal,
+                    gender: cb.dataset.auxGender,
+                    activeMemberId: cb.dataset.activeId,
+                    activeMemberName: cb.dataset.activeName,
+                    activeMemberBaptismalName: cb.dataset.activeBaptismal,
+                    checked: status
+                });
+            });
+
+            const index = careHistory.findIndex(c => c.presidium === pr && String(c.session) === String(session));
+            const newEntry = {
+                id: index >= 0 ? careHistory[index].id : Date.now(),
+                presidium: pr,
+                session: session,
+                date: date,
+                careData: careData, // Legacy support
+                careDataSnapshot: careDataSnapshot, // Snapshot data
+                updatedAt: new Date().toISOString()
+            };
+
+            if (index >= 0) {
+                careHistory[index] = newEntry;
+            } else {
+                careHistory.push(newEntry);
+            }
+
+            localStorage.setItem('auxiliary_care_list', JSON.stringify(careHistory));
+            alert('저장되었습니다.');
+            window.setDirty(false);
+
+            // Clear session input to encourage next entry
+            sessionInput.value = '';
+            dateInput.value = '';
+            tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+            updateCaredCount();
+            btnDelete.style.display = 'none';
+            sessionInput.focus(); // Focus back to session for next entry
+        }
+    </script>
+</body>
+
+</html>

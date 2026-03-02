@@ -1,0 +1,789 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소통 게시판 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .board-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+        }
+
+        .board-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .category-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f5f5f5;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .category-tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .category-tab:hover:not(.active) {
+            background: #e0e0e0;
+        }
+
+        .board-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        .board-table th,
+        .board-table td {
+            padding: 15px 10px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .board-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .board-table tr:hover {
+            background: #fafafa;
+        }
+
+        .board-table td.title {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-meeting {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-monthly {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .badge-business {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-etc {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        .btn-write {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .link-icon {
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        /* 조직 필터 영역 스타일 */
+        .org-filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #eee;
+        }
+
+        .org-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .org-filter-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .org-filter-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px;">
+        <div class="board-container">
+            <div class="board-header">
+                <h2 class="board-title">소통 게시판 (자료 공유)</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button id="btnOpenWrite" class="btn-write" style="display: none;">
+                        <i class="fas fa-edit"></i> 자료 등록
+                    </button>
+                    <button type="button" class="btn-write" style="background-color: #666; padding: 10px 20px;"
+                        onclick="location.href='dashboard.html'">
+                        닫 기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 조직 필터 영역 추가 -->
+            <div class="org-filter-container">
+                <div class="org-filter-group">
+                    <label>성당</label>
+                    <select id="filterChurch">
+                        <option value="">성당 선택</option>
+                    </select>
+                </div>
+                <div class="org-filter-group">
+                    <label>꾸리아</label>
+                    <select id="filterCuria" disabled>
+                        <option value="">꾸리아 선택</option>
+                    </select>
+                </div>
+                <div class="org-filter-group">
+                    <label>쁘레시디움</label>
+                    <select id="filterPresidium" disabled>
+                        <option value="">쁘레시디움 선택</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="category-tabs" id="categoryTabs">
+                <div class="category-tab active" data-category="전체">전체</div>
+                <div class="category-tab" data-category="월례회의">월례회의 자료</div>
+                <div class="category-tab" data-category="월례보고서">월례보고서</div>
+                <div class="category-tab" data-category="사업보고서">사업보고서</div>
+                <div class="category-tab" data-category="기타">기타</div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="board-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">번호</th>
+                            <th style="width: 120px;">분류</th>
+                            <th style="text-align: left; padding-left: 20px;">제목</th>
+                            <th style="width: 100px;">작성자</th>
+                            <th style="width: 120px;">등록일</th>
+                            <th style="width: 80px;">자료</th>
+                            <th id="manageCol" style="width: 120px; display: none;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="boardBody">
+                        <!-- JS로 채움 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Write Modal -->
+    <div id="writeModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">자료 등록</h3>
+            <form id="boardForm">
+                <input type="hidden" id="postId">
+                <!-- 조직 정보 (자동 입력 또는 선택) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>성당</label>
+                        <select id="postChurch" required>
+                            <option value="">성당 선택</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>꾸리아</label>
+                        <select id="postCuria" required disabled>
+                            <option value="">꾸리아 선택</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>쁘레시디움</label>
+                        <select id="postPresidium" required disabled>
+                            <option value="">쁘레시디움 선택</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>카테고리</label>
+                    <select id="postCategory" required>
+                        <option value="월례회의">월례회의 자료</option>
+                        <option value="월례보고서">월례보고서</option>
+                        <option value="사업보고서">사업보고서</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="postTitle" required placeholder="예: 2024년 2월 월례회의 자료">
+                </div>
+                <div class="form-group">
+                    <label>파일 업로드 <span style="font-weight:normal; font-size:0.8rem; color:#666;">(최대
+                            1MB)</span></label>
+                    <input type="file" id="postFile" required>
+                    <input type="hidden" id="fileData">
+                    <input type="hidden" id="fileName">
+                    <input type="hidden" id="fileType">
+                </div>
+                <div class="form-group">
+                    <label>내용/메모</label>
+                    <textarea id="postContent" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="category-tab" onclick="closeModal()"
+                        style="border-radius:4px;">취소</button>
+                    <button type="submit" class="btn-write">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let posts = [];
+        let currentFilter = '전체';
+        let orgFilter = { church: '', curia: '', presidium: '' };
+
+        const categoryTabs = document.getElementById('categoryTabs');
+        const boardBody = document.getElementById('boardBody');
+        const btnOpenWrite = document.getElementById('btnOpenWrite');
+        const writeModal = document.getElementById('writeModal');
+        const boardForm = document.getElementById('boardForm');
+        const manageCol = document.getElementById('manageCol');
+
+        // 조직 필터 관련 요소
+        const filterChurch = document.getElementById('filterChurch');
+        const filterCuria = document.getElementById('filterCuria');
+        const filterPresidium = document.getElementById('filterPresidium');
+
+        // 등록 모달 조직 관련 요소
+        const postChurch = document.getElementById('postChurch');
+        const postCuria = document.getElementById('postCuria');
+        const postPresidium = document.getElementById('postPresidium');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            loadPosts();
+            initOrgLogic(profile); // 조직 연동 초기화
+            setupPermissions();
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(currentUser, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            renderPosts();
+        }, () => { location.href = 'index.html'; });
+
+        function loadPosts() {
+            posts = JSON.parse(localStorage.getItem('board_posts_list') || '[]');
+        }
+
+        // --- 조직 연동 및 권한 로직 시작 ---
+        function initOrgLogic(profile) {
+            const isAdmin = profile.role === 'admin';
+
+            // 성당 목록 로드 (공통)
+            const churches = getChurches();
+            [filterChurch, postChurch].forEach(select => {
+                churches.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    select.appendChild(opt);
+                });
+            });
+
+            if (!isAdmin) {
+                // 일반 사용자는 소속 고정 및 필터 조작 금지
+                orgFilter.church = profile.church || '';
+                orgFilter.curia = profile.curia || '';
+                orgFilter.presidium = profile.presidiumName || '';
+
+                // 필터바 고정
+                filterChurch.value = orgFilter.church;
+                filterChurch.disabled = true;
+
+                loadSelectOptions(filterCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                filterCuria.disabled = true;
+
+                loadSelectOptions(filterPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
+                filterPresidium.disabled = true;
+
+                // 등록 모달 고정 (화면상에만 보여줌)
+                postChurch.value = orgFilter.church;
+                postChurch.disabled = true;
+                loadSelectOptions(postCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                postCuria.disabled = true;
+                loadSelectOptions(postPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
+                postPresidium.disabled = true;
+
+            } else {
+                // 관리자용 이벤트 바인딩 (필터바)
+                setupAdminSelect(filterChurch, filterCuria, filterPresidium, (church, curia, presidium) => {
+                    orgFilter = { church, curia, presidium };
+                    renderPosts();
+                });
+
+                // 관리자용 이벤트 바인딩 (등록 모달)
+                setupAdminSelect(postChurch, postCuria, postPresidium);
+            }
+        }
+
+        function loadSelectOptions(select, options, preselect = '') {
+            const firstOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(firstOption);
+            options.forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal;
+                if (optVal === preselect) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
+            churchEl.addEventListener('change', () => {
+                const church = churchEl.value;
+                loadSelectOptions(curiaEl, church ? getCuriae(church) : []);
+                curiaEl.disabled = !church;
+                presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
+                presidiumEl.disabled = true;
+                if (callback) callback(church, '', '');
+            });
+
+            curiaEl.addEventListener('change', () => {
+                const church = churchEl.value;
+                const curia = curiaEl.value;
+                const presidiaNames = curia ? getPresidia(church, curia).map(p => p.name) : [];
+                loadSelectOptions(presidiumEl, presidiaNames);
+                presidiumEl.disabled = !curia;
+                if (callback) callback(church, curia, '');
+            });
+
+            presidiumEl.addEventListener('change', () => {
+                if (callback) callback(churchEl.value, curiaEl.value, presidiumEl.value);
+            });
+        }
+        // --- 조직 연동 및 권한 로직 종료 ---
+
+        function setupPermissions() {
+            const role = (currentUser.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].some(r => role.includes(r));
+            const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].some(r => role.includes(r.toLowerCase()));
+
+            if (isAdmin || isOfficer) {
+                btnOpenWrite.style.display = 'flex';
+                manageCol.style.display = 'table-cell';
+            }
+        }
+
+        function renderPosts() {
+            // 카테고리 필터 + 조직 필터 적용
+            const filtered = posts.filter(p => {
+                const catMatch = currentFilter === '전체' || p.category === currentFilter;
+
+                // 조직 필터링 (일반 사용자는 본인 조직 게시물만, 관리자는 서치 조건에 맞게)
+                const churchMatch = !orgFilter.church || p.church === orgFilter.church;
+                const curiaMatch = !orgFilter.curia || p.curia === orgFilter.curia;
+                const presidiumMatch = !orgFilter.presidium || p.presidiumName === orgFilter.presidium;
+
+                return catMatch && churchMatch && curiaMatch && presidiumMatch;
+            });
+            const sorted = filtered.sort((a, b) => b.id - a.id);
+
+            boardBody.innerHTML = '';
+            if (sorted.length === 0) {
+                boardBody.innerHTML = `<tr><td colspan="${manageCol.style.display === 'none' ? 6 : 7}" style="padding:40px; color:#999;">등록된 자료가 없습니다.</td></tr>`;
+                return;
+            }
+
+            sorted.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                const badgeClass = getBadgeClass(p.category);
+
+                let manageBtn = '';
+                if (manageCol.style.display !== 'none') {
+                    manageBtn = `<td>
+                        <button class="category-tab" onclick="window.editPost(${p.id})" style="padding:4px 8px; font-size:0.8rem; background:#fff; border:1px solid #ccc;">수정</button>
+                        <button class="category-tab" onclick="window.deletePost(${p.id})" style="padding:4px 8px; font-size:0.8rem; background:#fff; border:1px solid #ff4d4f; color:#ff4d4f;">삭제</button>
+                    </td>`;
+                }
+
+                tr.innerHTML = `
+                    <td>${sorted.length - index}</td>
+                    <td><span class="badge ${badgeClass}">${p.category}</span></td>
+                    <td class="title">${p.title}</td>
+                    <td>${p.author || '관리자'}</td>
+                    <td>${p.date}</td>
+                    <td><a href="javascript:void(0)" onclick="window.downloadFile(${p.id})" class="link-icon" title="${p.fileName}"><i class="fas fa-file-download"></i></a></td>
+                    ${manageBtn}
+                `;
+                boardBody.appendChild(tr);
+            });
+        }
+
+        function getBadgeClass(cat) {
+            switch (cat) {
+                case '월례회의': return 'badge-meeting';
+                case '월례보고서': return 'badge-monthly';
+                case '사업보고서': return 'badge-business';
+                default: return 'badge-etc';
+            }
+        }
+
+        // Filter Event
+        categoryTabs.addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-tab')) {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.category;
+                renderPosts();
+            }
+        });
+
+        btnOpenWrite.onclick = () => {
+            boardForm.reset();
+            document.getElementById('postId').value = '';
+            document.getElementById('fileData').value = '';
+            document.getElementById('postFile').required = true;
+
+            // 모달 열 때 소속 정보 자동 세팅 (관리자가 아닐 경우)
+            if (currentUser.role !== 'admin') {
+                postChurch.value = currentUser.church || '';
+                postCuria.value = currentUser.curia || '';
+                postPresidium.value = currentUser.presidiumName || '';
+            }
+
+            writeModal.style.display = 'flex';
+        };
+
+        window.closeModal = () => {
+            writeModal.style.display = 'none';
+        };
+
+        // File Change Handler
+        document.getElementById('postFile').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 용량 체크 (1MB)
+            if (file.size > 1024 * 1024) {
+                alert('파일 용량이 너무 큽니다. 1MB 이하의 파일만 업로드 가능합니다.');
+                e.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('fileData').value = event.target.result;
+                document.getElementById('fileName').value = file.name;
+                document.getElementById('fileType').value = file.type;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        boardForm.onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('postId').value;
+            const fileData = document.getElementById('fileData').value;
+
+            if (!id && !fileData) {
+                alert('파일을 선택해 주세요.');
+                return;
+            }
+
+            const newPost = {
+                id: id ? parseInt(id) : Date.now(),
+                category: document.getElementById('postCategory').value,
+                title: document.getElementById('postTitle').value,
+                fileName: document.getElementById('fileName').value,
+                fileType: document.getElementById('fileType').value,
+                fileData: fileData,
+                content: document.getElementById('postContent').value,
+                author: currentUser.name || currentUser.username,
+                church: postChurch.value,
+                curia: postCuria.value,
+                presidiumName: postPresidium.value,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            // 만약 수정 모드인데 파일을 새로 선택하지 않은 경우 기존 데이터 유지
+            if (id && !fileData) {
+                const old = posts.find(p => p.id === parseInt(id));
+                newPost.fileData = old.fileData;
+                newPost.fileName = old.fileName;
+                newPost.fileType = old.fileType;
+            }
+
+            try {
+                if (id) {
+                    const idx = posts.findIndex(p => p.id === parseInt(id));
+                    posts[idx] = newPost;
+                } else {
+                    posts.push(newPost);
+                }
+                localStorage.setItem('board_posts_list', JSON.stringify(posts));
+                alert('저장되었습니다.');
+                closeModal();
+                renderPosts();
+            } catch (err) {
+                alert('저장 공간이 부족합니다. 불필요한 자료를 삭제하거나 더 작은 용량의 파일을 업로드해 주세요.');
+            }
+        };
+
+        window.downloadFile = (id) => {
+            const p = posts.find(post => post.id === id);
+            if (!p || !p.fileData) return;
+
+            const base64Parts = p.fileData.split(',');
+            const mime = base64Parts[0].match(/:(.*?);/)[1];
+            const bstr = atob(base64Parts[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+
+            const blob = new Blob([u8arr], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = p.fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.editPost = (id) => {
+            const p = posts.find(post => post.id === id);
+            if (p) {
+                document.getElementById('postId').value = p.id;
+                document.getElementById('postCategory').value = p.category;
+                document.getElementById('postTitle').value = p.title;
+                document.getElementById('postContent').value = p.content;
+                // 파일 데이터는 숨겨진 필드에 세팅 (수정 시 파일 선택 안 하면 기존 거 유지하기 위해)
+                document.getElementById('fileData').value = '';
+                document.getElementById('fileName').value = p.fileName;
+                document.getElementById('fileType').value = p.fileType;
+                document.getElementById('postFile').required = false; // 수정 시 필수 해제
+
+                // 수정 시 기존 조직 정보 로드
+                if (currentUser.role === 'admin') {
+                    postChurch.value = p.church || '';
+                    loadSelectOptions(postCuria, getCuriae(p.church), p.curia);
+                    postCuria.disabled = false;
+                    loadSelectOptions(postPresidium, getPresidia(p.church, p.curia).map(pr => pr.name), p.presidiumName);
+                    postPresidium.disabled = false;
+                }
+
+                writeModal.style.display = 'flex';
+            }
+        };
+
+        window.deletePost = (id) => {
+            if (confirm('정말 삭제하시겠습니까?')) {
+                posts = posts.filter(p => p.id !== id);
+                localStorage.setItem('board_posts_list', JSON.stringify(posts));
+                renderPosts();
+            }
+        };
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,728 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쁘레시디움 기본정보 관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Form specific styles */
+        .register-form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .form-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: white;
+        }
+
+        .form-btn-group {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--hover-color);
+        }
+
+        .custom-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .custom-dropdown li {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .custom-dropdown li:hover {
+            background-color: #f5f5f5;
+        }
+
+        .input-group-relative {
+            position: relative;
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content">
+        <div class="register-form-container">
+            <h2 class="form-title">쁘레시디움 기본정보 관리</h2>
+            <form id="presidiumForm" autocomplete="one-time-code">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>성당 명</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="churchSelect"
+                                style="flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="">성당 선택</option>
+                            </select>
+                            <input type="text" name="churchName" id="churchNameInput" required placeholder="성당 명 입력"
+                                style="display: none; flex: 1;" autocomplete="one-time-code">
+                            <button type="button" id="btnToggleChurchInput" class="btn-action"
+                                style="width: 100px; height: 42px; background: #666; color: white; border: none; border-radius: 4px;">직접
+                                입력</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>소속 꾸리아 명(Cu.)</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="curiaName" required placeholder="Cu. 이름을 입력하세요"
+                                autocomplete="one-time-code">
+                            <ul id="curiaCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>쁘레시디움 명(Pr.)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="input-group-relative">
+                                <input type="text" name="presidiumName" id="presidiumNameInput" required
+                                    placeholder="Pr. 이름을 입력하세요" autocomplete="one-time-code">
+                                <ul id="presidiumCustomList" class="custom-dropdown"></ul>
+                            </div>
+                            <button type="button" id="btnView"
+                                style="background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                            <input type="text" name="uniqueNumber" placeholder="고유번호" style="width: 100px;"
+                                autocomplete="one-time-code">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>소속 꼬미시움 명(Co.)</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="comitiumName" placeholder="Co. 이름을 입력하세요"
+                                autocomplete="one-time-code">
+                            <ul id="comitiumCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>소속 레지아 명(Re.)</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="regiaName" placeholder="Re. 이름을 입력하세요"
+                                autocomplete="one-time-code">
+                            <ul id="regiaCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>소속 세나뚜스 명</label>
+                        <select name="senatusName" required>
+                            <option value="">선택하세요</option>
+                            <option value="서울">서울</option>
+                            <option value="광주">광주</option>
+                            <option value="대구">대구</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>설립일</label>
+                        <input type="date" name="foundationDate" placeholder="날짜 선택" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group">
+                        <label>승인일</label>
+                        <input type="date" name="approvalDate" placeholder="날짜 선택" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group">
+                        <label>주회합 요일</label>
+                        <select name="meetingDay">
+                            <option value="">선택하세요</option>
+                            <option value="일">일요일</option>
+                            <option value="월">월요일</option>
+                            <option value="화">화요일</option>
+                            <option value="수">수요일</option>
+                            <option value="목">목요일</option>
+                            <option value="금">금요일</option>
+                            <option value="토">토요일</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>주회합 일시</label>
+                        <input type="time" name="meetingTime" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>주회합 장소</label>
+                        <input type="text" name="meetingPlace" placeholder="장소를 입력하세요" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group">
+                        <label>영적지도자 / 대리자</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" name="spiritualDirector" placeholder="영적지도자 성명" style="flex: 1;"
+                                autocomplete="one-time-code">
+                            <input type="text" name="spiritualDirectorDeputy" placeholder="대리자 성명" style="flex: 1;"
+                                autocomplete="one-time-code">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>쁘레시디움 해체/이동일자</label>
+                        <input type="date" name="dissolutionDate" placeholder="날짜 선택" autocomplete="one-time-code">
+                    </div>
+                </div>
+                <!-- Hidden inputs for validation or future use -->
+                <input type="hidden" name="id" id="recordId">
+
+                <div class="form-btn-group">
+                    <button type="submit" class="btn-submit">저 장</button>
+                    <button type="button" id="btnDelete" class="btn-submit"
+                        style="background-color: #dc3545; display: none; margin-left: 10px;">삭 제</button>
+                    <button type="button" class="btn-submit" onclick="location.href='dashboard.html'"
+                        style="background-color: #757575; margin-left: 10px;">닫 기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        // Auth Guard
+        initAuthObserver((user, profile) => {
+            const currentUser = profile;
+            try {
+                // Populate Lists from DB
+                const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
+
+                // Extract Churches from Presidia & Users for Select List
+                const presidiumChurches = storedPresidia.map(p => p.churchName).filter(c => c);
+                const userChurches = Object.values(storedUsers).map(u => u.church).filter(c => c);
+                const uniqueChurches = [...new Set([...presidiumChurches, ...userChurches])].sort();
+
+                // DOM Elements
+                const churchSelect = document.getElementById('churchSelect');
+                const churchNameInput = document.getElementById('churchNameInput'); // Actual hidden input or visible input
+                const btnToggleChurchInput = document.getElementById('btnToggleChurchInput');
+
+                // Populate Select
+                uniqueChurches.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    churchSelect.appendChild(opt);
+                });
+
+                // Toggle Logic
+                let isDirectInput = false;
+                btnToggleChurchInput.addEventListener('click', () => {
+                    isDirectInput = !isDirectInput;
+                    if (isDirectInput) {
+                        churchSelect.style.display = 'none';
+                        churchNameInput.style.display = 'block';
+                        churchNameInput.value = '';
+                        churchNameInput.focus();
+                        btnToggleChurchInput.textContent = '목록 선택';
+                    } else {
+                        churchSelect.style.display = 'block';
+                        churchNameInput.style.display = 'none';
+                        churchNameInput.value = churchSelect.value;
+                        btnToggleChurchInput.textContent = '직접 입력';
+                        // Trigger change to update downstream
+                        churchNameInput.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                // Sync Select to Input (Hidden Logic)
+                // We use 'churchNameInput' as the name="churchName" field. 
+                // When Select changes, we update the input value.
+                churchSelect.addEventListener('change', () => {
+                    churchNameInput.value = churchSelect.value;
+                    // Trigger input event to update cascading logic
+                    churchNameInput.dispatchEvent(new Event('input'));
+                });
+
+                // --- Cascading Logic ---
+                // Setup References
+                // NOTE: 'churchInput' was used in previous code. We now use 'churchNameInput'.
+                // 'curiaInput' was redeclared. Fix strict scope.
+
+                const curiaInputRef = document.querySelector('input[name="curiaName"]');
+                const curiaCustomList = document.getElementById('curiaCustomList');
+                const presidiumNameInput = document.getElementById('presidiumNameInput');
+                const presidiumCustomList = document.getElementById('presidiumCustomList');
+                const form = document.getElementById('presidiumForm');
+
+                // 1. Update Presidium List
+                const updatePresidiumList = (filterText = '') => {
+                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                    const selectedChurch = churchNameInput.value.trim();
+                    const selectedCuria = curiaInputRef.value.trim();
+
+                    let filtered = storedPresidiaRef;
+
+                    if (selectedChurch) {
+                        filtered = filtered.filter(p => p.churchName.trim() === selectedChurch);
+                    }
+                    if (selectedCuria) {
+                        filtered = filtered.filter(p => p.curiaName.trim() === selectedCuria);
+                    }
+
+                    let presidiumNames = filtered.map(p => p.presidiumName);
+                    presidiumNames = [...new Set(presidiumNames)];
+
+                    if (filterText) {
+                        presidiumNames = presidiumNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
+                    }
+
+                    presidiumCustomList.innerHTML = '';
+                    presidiumNames.forEach(name => {
+                        const li = document.createElement('li');
+                        li.textContent = name;
+                        li.addEventListener('click', () => {
+                            presidiumNameInput.value = name;
+                            presidiumCustomList.style.display = 'none';
+                        });
+                        presidiumCustomList.appendChild(li);
+                    });
+
+                    if (presidiumNames.length > 0) {
+                        presidiumCustomList.style.display = 'block';
+                    } else {
+                        presidiumCustomList.style.display = 'none';
+                    }
+                };
+
+                // 2. Update Curia List
+                const updateCuriaList = (filterText = '') => {
+                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                    const selectedChurch = churchNameInput.value.trim();
+
+                    let filtered = storedPresidiaRef;
+                    if (selectedChurch) {
+                        filtered = filtered.filter(p => p.churchName.trim() === selectedChurch);
+                    }
+
+                    let curiaNames = filtered.map(p => p.curiaName);
+                    curiaNames = [...new Set(curiaNames)].filter(n => n);
+
+                    if (filterText) {
+                        curiaNames = curiaNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
+                    }
+
+                    curiaCustomList.innerHTML = '';
+                    curiaNames.forEach(name => {
+                        const li = document.createElement('li');
+                        li.textContent = name;
+                        li.addEventListener('click', () => {
+                            curiaInputRef.value = name;
+                            curiaCustomList.style.display = 'none';
+                            presidiumNameInput.value = '';
+                        });
+                        curiaCustomList.appendChild(li);
+                    });
+
+                    if (curiaNames.length > 0) {
+                        curiaCustomList.style.display = 'block';
+                    } else {
+                        curiaCustomList.style.display = 'none';
+                    }
+                };
+
+                // Event Listeners
+                presidiumNameInput.addEventListener('focus', () => updatePresidiumList(''));
+                presidiumNameInput.addEventListener('click', () => updatePresidiumList(''));
+                presidiumNameInput.addEventListener('input', (e) => updatePresidiumList(e.target.value));
+
+                curiaInputRef.addEventListener('focus', () => updateCuriaList(''));
+                curiaInputRef.addEventListener('click', () => updateCuriaList(''));
+                curiaInputRef.addEventListener('input', (e) => updateCuriaList(e.target.value));
+
+                document.addEventListener('click', (e) => {
+                    // Fix: check targets correctly
+                    if (!presidiumNameInput.contains(e.target) && !presidiumCustomList.contains(e.target)) { // Fix: presidiumCustomList
+                        presidiumCustomList.style.display = 'none';
+                    }
+                    if (!curiaInputRef.contains(e.target) && !curiaCustomList.contains(e.target)) {
+                        curiaCustomList.style.display = 'none';
+                    }
+                });
+
+                // Generic Custom Dropdown (Co, Re)
+                const createCustomDropdown = (inputId, listId, dataKey, filterByChurch = true) => {
+                    const input = document.querySelector(`input[name="${inputId}"]`);
+                    const list = document.getElementById(listId);
+                    if (!input || !list) return () => { };
+
+                    const updateList = (filterText = '') => {
+                        const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                        let filteredData = [];
+
+                        if (filterByChurch) {
+                            const selectedChurch = churchNameInput.value.trim();
+                            const churchPresidia = storedPresidiaRef.filter(p => p.churchName.trim() === selectedChurch);
+                            filteredData = churchPresidia.map(p => p[dataKey]);
+                        } else {
+                            filteredData = storedPresidiaRef.map(p => p[dataKey]);
+                        }
+                        filteredData = [...new Set(filteredData)].filter(item => item);
+
+                        if (filterText) {
+                            filteredData = filteredData.filter(item => item.toLowerCase().includes(filterText.toLowerCase()));
+                        }
+
+                        list.innerHTML = '';
+                        filteredData.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            li.addEventListener('click', () => {
+                                input.value = item;
+                                list.style.display = 'none';
+                            });
+                            list.appendChild(li);
+                        });
+                        if (filteredData.length > 0) list.style.display = 'block';
+                        else list.style.display = 'none';
+                    };
+
+                    input.addEventListener('focus', () => updateList(''));
+                    input.addEventListener('click', () => updateList(''));
+                    input.addEventListener('input', (e) => updateList(e.target.value));
+
+                    document.addEventListener('click', (e) => {
+                        if (!input.contains(e.target) && !list.contains(e.target)) {
+                            list.style.display = 'none';
+                        }
+                    });
+                    return updateList;
+                };
+
+                const updateComitiumList = createCustomDropdown('comitiumName', 'comitiumCustomList', 'comitiumName', true);
+                const updateRegiaList = createCustomDropdown('regiaName', 'regiaCustomList', 'regiaName', true);
+
+                // 3. Inquiry Logic (btnView)
+                const btnView = document.getElementById('btnView');
+                btnView.addEventListener('click', () => {
+                    const selectedChurch = churchNameInput.value.trim();
+                    const selectedPresidium = presidiumNameInput.value.trim();
+
+                    if (!selectedChurch || !selectedPresidium) {
+                        alert('성당 명과 쁘레시디움 명을 모두 선택/입력해 주세요.');
+                        return;
+                    }
+
+                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                    const record = storedPresidiaRef.find(p =>
+                        p.churchName.trim() === selectedChurch &&
+                        p.presidiumName.trim() === selectedPresidium
+                    );
+
+                    if (record) {
+                        // Fill all fields
+                        Object.keys(record).forEach(key => {
+                            const input = form.querySelector(`[name="${key}"]`);
+                            if (input) {
+                                input.value = record[key];
+                            }
+                        });
+                        alert('기존 정보를 불러왔습니다.');
+                    } else {
+                        alert('해당하는 쁘레시디움 정보를 찾을 수 없습니다.');
+                    }
+                });
+
+                // Auto-fill Logic
+                const autoFillHigherCouncils = () => {
+                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                    const selectedChurch = churchNameInput.value.trim();
+                    const churchPresidia = storedPresidiaRef.filter(p => p.churchName.trim() === selectedChurch);
+
+                    if (churchPresidia.length > 0) {
+                        const firstRecord = churchPresidia[0];
+                        if (firstRecord.comitiumName) document.querySelector('input[name="comitiumName"]').value = firstRecord.comitiumName;
+                        if (firstRecord.regiaName) document.querySelector('input[name="regiaName"]').value = firstRecord.regiaName;
+                        if (firstRecord.senatusName) document.querySelector('select[name="senatusName"]').value = firstRecord.senatusName;
+
+                        // Clear Pr specific fields when church changes
+                        document.querySelector('input[name="uniqueNumber"]').value = '';
+                        document.querySelector('input[name="spiritualDirector"]').value = '';
+                        document.querySelector('input[name="spiritualDirectorDeputy"]').value = '';
+                    }
+                };
+
+                // Trigger updates on Church Change (Input Event from Select or Type)
+                churchNameInput.addEventListener('input', () => {
+                    curiaInputRef.value = '';
+                    presidiumNameInput.value = '';
+                    autoFillHigherCouncils();
+                });
+                // We don't need 'change' as well if we dispatch 'input' manually, but safe to keep logic consistent.
+
+                // Initial auto-fill
+                if (churchNameInput.value) {
+                    autoFillHigherCouncils();
+                }
+
+                // Pre-fill Church Name with last used if exists
+                if (storedPresidia.length > 0) {
+                    const lastChurch = storedPresidia[storedPresidia.length - 1].churchName;
+                    if (churchNameInput) {
+                        churchNameInput.value = lastChurch;
+                        // Also set the select if not in direct input mode
+                        if (!isDirectInput) {
+                            churchSelect.value = lastChurch;
+                        }
+                    }
+                }
+
+                // [New] Role-based Menu Control & Dynamic Items
+                const isAdminRole = (currentUser.role || '').toLowerCase().includes('admin') || (currentUser.role || '').includes('관리자');
+                const btnDelete = document.getElementById('btnDelete');
+                if (btnDelete && isAdminRole) {
+                    btnDelete.style.display = 'inline-block';
+                }
+
+
+                // [New] Role-based Menu Control & Common Menus
+                if (window.initCommonMenus) {
+                    window.initCommonMenus(currentUser, logoutUser);
+                }
+
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData.entries());
+
+                    // Basic Validation
+                    if (!data.churchName || !data.presidiumName) {
+                        alert('성당 명과 쁘레시디움 명은 필수입니다.');
+                        return;
+                    }
+
+                    const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+
+                    // Check for existing record to update based on keys (Church + Presidium)
+                    // Or if we had an internal ID. For now, let's use Church + Presidium as unique key effectively.
+                    const existingIndex = storedPresidia.findIndex(p =>
+                        p.churchName === data.churchName && p.presidiumName === data.presidiumName
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update existing record - preserve other fields not in form if any
+                        const existing = storedPresidia[existingIndex];
+                        storedPresidia[existingIndex] = { ...existing, ...data };
+                        alert('정보가 수정되었습니다.');
+                    } else {
+                        // Create new
+                        data.id = 'pr_' + Date.now();
+                        data.createdAt = new Date().toISOString();
+                        storedPresidia.push(data);
+                        alert('성공적으로 등록되었습니다.');
+                        form.reset();
+                        // Reset select manually if needed
+                        if (!isDirectInput) {
+                            churchSelect.value = '';
+                            churchNameInput.value = '';
+                        }
+                    }
+
+                    localStorage.setItem('presidia_list', JSON.stringify(storedPresidia));
+                });
+
+                // [New] Delete Logic
+                if (btnDelete) {
+                    btnDelete.addEventListener('click', () => {
+                        const selectedChurch = churchNameInput.value.trim();
+                        const selectedPresidium = presidiumNameInput.value.trim();
+
+                        if (!selectedChurch || !selectedPresidium) {
+                            alert('삭제할 쁘레시디움을 먼저 조회하거나 입력해 주세요.');
+                            return;
+                        }
+
+                        if (confirm(`정말로 '${selectedChurch}' 성당의 '${selectedPresidium}' 쁘레시디움 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                            let storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                            const originalLength = storedPresidia.length;
+
+                            // Remove matching record
+                            storedPresidia = storedPresidia.filter(p =>
+                                !(p.churchName.trim() === selectedChurch && p.presidiumName.trim() === selectedPresidium)
+                            );
+
+                            if (storedPresidia.length < originalLength) {
+                                localStorage.setItem('presidia_list', JSON.stringify(storedPresidia));
+                                alert('성공적으로 삭제되었습니다.');
+                                form.reset();
+                                // Reset select/input manually
+                                churchSelect.value = '';
+                                churchNameInput.value = '';
+                                churchNameInput.dispatchEvent(new Event('input'));
+                            } else {
+                                alert('삭제할 대상을 찾을 수 없습니다. 정보를 다시 확인해 주세요.');
+                            }
+                        }
+                    });
+                }
+
+                // Enter Key Navigation
+                form.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        // If it's the submit button, let it work normally
+                        if (e.target.type === 'submit' || e.target.id === 'btnView') return;
+
+                        e.preventDefault();
+
+                        // Get all visible and focusable input/select elements
+                        const elements = Array.from(form.querySelectorAll('input:not([type="hidden"]), select'))
+                            .filter(el => {
+                                const style = window.getComputedStyle(el);
+                                return style.display !== 'none' && style.visibility !== 'hidden' && !el.disabled;
+                            });
+
+                        const index = elements.indexOf(e.target);
+                        if (index > -1) {
+                            if (index < elements.length - 1) {
+                                elements[index + 1].focus();
+                            } else {
+                                // Last element - trigger submit
+                                form.querySelector('button[type="submit"]').click();
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing presidium register:", error);
+            }
+        }, () => {
+            window.location.href = "index.html";
+        });
+    </script>
+</body>
+
+</html>

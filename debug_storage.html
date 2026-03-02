@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>LocalStorage Debugger</title>
+</head>
+
+<body>
+    <h1>LocalStorage Debugger</h1>
+    <pre id="output"></pre>
+    <script>
+        const data = {
+            presidia_list: JSON.parse(localStorage.getItem('presidia_list') || '[]'),
+            currentUser: JSON.parse(localStorage.getItem('currentUser') || '{}'),
+            users: JSON.parse(localStorage.getItem('users') || '{}')
+        };
+        document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        console.log("Full LocalStorage Data:", data);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1236 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>활동보고 등록 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .entry-container {
+            max-width: 1200px;
+            margin: 180px auto 0;
+            /* 바닥 마진 제거 */
+            padding: 20px 20px 250px;
+            /* 바닥 패딩을 250px로 대폭 확대하여 스크롤 확보 */
+        }
+
+        .info-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .category-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .category-card.has-data {
+            border-color: rgba(46, 125, 50, 0.4);
+            box-shadow: 0 8px 25px rgba(46, 125, 50, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* [추가] 정렬 토글 스타일 */
+        .sort-toggle-container {
+            display: flex;
+            background: #f1f3f5;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 4px;
+            margin-top: 5px;
+        }
+
+        .btn-sort {
+            flex: 1;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            background: transparent;
+            color: #666;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-sort i {
+            font-size: 0.8rem;
+        }
+
+        .btn-sort.active {
+            background: white;
+            color: var(--primary-color);
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-card-header {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cat-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .cat-subtotal {
+            background: var(--secondary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .item-input-list {
+            padding: 10px 0 20px;
+            /* 바닥 여백 20px 추가하여 마지막 항목 보호 */
+            flex: 1;
+        }
+
+        .item-input-row {
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #f9f9f9;
+        }
+
+        .item-input-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-label {
+            flex: 1;
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.3;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            width: 100px;
+        }
+
+        .activity-input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: right;
+            font-family: inherit;
+        }
+
+        .activity-input:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.1);
+        }
+
+        .unit-label {
+            font-size: 0.75rem;
+            color: #999;
+            width: 25px;
+        }
+
+        /* [추가] 항목 검색 아이콘 및 필드 스타일 */
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 12px;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+        }
+
+        .search-wrapper input {
+            padding-left: 35px !important;
+            border-color: var(--primary-color) !important;
+            background-color: #f0f7f1;
+        }
+
+        .search-wrapper input::placeholder {
+            color: #88a68a;
+            font-size: 0.85rem;
+        }
+
+        .summary-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .total-info {
+            display: flex;
+            gap: 30px;
+        }
+
+        .total-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .total-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .total-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .total-value span {
+            font-size: 0.9rem;
+            margin-left: 3px;
+        }
+
+        .btn-save {
+            padding: 14px 50px;
+            /* 크기 확대 */
+            border-radius: 40px;
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse-save 3s infinite;
+            /* 강조 애니메이션 추가 */
+        }
+
+        @keyframes pulse-save {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 10px 30px rgba(46, 125, 50, 0.5);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            }
+        }
+
+        .btn-save:hover {
+            transform: translateY(-3px) scale(1.05);
+            background: #1b5e20;
+            box-shadow: 0 8px 25px rgba(46, 125, 50, 0.4);
+        }
+
+        .btn-quick-save {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .btn-quick-save:hover {
+            background: #1b5e20;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-save:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .entry-container {
+                margin-top: 80px;
+            }
+
+            .summary-bar {
+                padding: 10px 15px;
+            }
+
+            .total-info {
+                gap: 15px;
+            }
+
+            .total-value {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="entry-container">
+        <div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="color: var(--primary-color); margin: 0;"><i class="fas fa-edit"></i> 단원 활동 보고 등록</h2>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="btnSaveQuick" class="btn-quick-save">
+                    <i class="fas fa-save"></i> 지금 바로 저장
+                </button>
+                <button onclick="location.href='dashboard.html'" class="btn"
+                    style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px;">
+                    <i class="fas fa-times"></i> 닫기
+                </button>
+            </div>
+        </div>
+
+        <!-- 필터 영역: 성당, 꾸리아, 쁘레시디움, 회차, 날짜, 성명 -->
+        <div class="info-card">
+            <div class="form-group">
+                <label>성당</label>
+                <select id="churchSelect">
+                    <option value="">성당 선택</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>꾸리아</label>
+                <select id="curiaSelect">
+                    <option value="">꾸리아 선택</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>쁘레시디움</label>
+                <select id="presidiumSelect">
+                    <option value="">쁘레시디움 선택</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>주회합 날짜</label>
+                <select id="reportDate">
+                    <option value="">날짜 선택</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>주회합 회차</label>
+                <input type="text" id="sessionNumber" readonly placeholder="날짜 선택 시 자동 입력">
+            </div>
+            <div class="form-group">
+                <label>단원 성명</label>
+                <select id="memberSelect" style="border-color: var(--primary-color); font-weight: bold;">
+                    <option value="">단원 선택</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>활동항목 찾기 (두 글자 입력)</label>
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="itemSearch" list="itemList" placeholder="예: 외인, 방문, 쉬는...">
+                    <datalist id="itemList"></datalist>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>항목 정렬</label>
+                <div class="sort-toggle-container">
+                    <button type="button" class="btn-sort active" data-mode="default">
+                        <i class="fas fa-list-ol"></i> 기본순
+                    </button>
+                    <button type="button" class="btn-sort" data-mode="activity">
+                        <i class="fas fa-bolt"></i> 활동량순
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="absentState"
+            style="display: none; text-align: center; padding: 50px; border: 2px dashed #ffc107; background: #fffdf6; border-radius: 12px; margin-bottom: 20px;">
+            <i class="fas fa-user-times fa-3x" style="margin-bottom: 15px; color: #ffc107;"></i><br>
+            <h3 style="color: #ffc107; margin-top: 0; margin-bottom: 10px;">결석(또는 출석 미기입) 상태입니다</h3>
+            해당 주회합에 결석 처리되어 활동 보고를 입력할 수 없습니다.<br>
+            먼저 출석 상태를 확인해 주세요.
+        </div>
+
+        <div id="activityGrid" class="category-section">
+            <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">
+                <i class="fas fa-info-circle fa-3x" style="margin-bottom: 15px;"></i><br>
+                성당과 단원을 선택하면 입력 창이 나타납니다.
+            </div>
+        </div>
+    </div>
+
+    <div class="summary-bar">
+        <div class="total-info">
+            <div class="total-item">
+                <span class="total-label">활동 종목 수</span>
+                <span class="total-value" id="activeCategoryCount">0 <span>종목</span></span>
+            </div>
+            <div class="total-item">
+                <span class="total-label">총 활동 건수</span>
+                <span class="total-value" id="grandTotalCount">0 <span>건</span></span>
+            </div>
+        </div>
+        <button id="btnSaveReport" class="btn-save">
+            <i class="fas fa-check-circle"></i> 활동 보고 저장
+        </button>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let activitySchemaMap = {}; // 성당별 스키마 맵
+        let currentSchema = [];     // 현재 선택된 성당의 스키마
+        let currentSortMode = 'default'; // [추가] 정렬 모드 (default / activity)
+
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const reportDateSelect = document.getElementById('reportDate'); // Changed from reportDateInput
+        const sessionInput = document.getElementById('sessionNumber');
+        const memberSelect = document.getElementById('memberSelect');
+
+        // 인증 상태 감시자 초기화
+        initAuthObserver((user, profile) => {
+            if (!user) {
+                alert('로그인이 필요합니다.');
+                location.href = 'index.html';
+                return;
+            }
+            currentUser = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            // 모든 성당의 스키마 데이터 로드
+            activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+
+            initSelectors();
+            setupEventListeners();
+        });
+
+
+        /**
+         * @function initSelectors
+         * @description 사용자 권한에 따라 성당, 꾸리아, 쁘레시디움, 단원 선택 필드를 초기화하고 접근을 제어합니다.
+         */
+        function initSelectors() {
+            const role = currentUser.role?.toLowerCase();
+            const isAdmin = role === 'admin' || role === '관리자';
+            // 간부 역할 목록 (단장, 부단장, 서기, 회계)
+            const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].includes(role);
+
+            // 1. 성당 목록 채우기
+            const churches = getChurches();
+            churchSelect.innerHTML = '<option value="">성당 선택</option>';
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                churchSelect.appendChild(opt);
+            });
+
+            // 2. 권한별 초기값 및 잠금 처리
+            if (!isAdmin) {
+                // 간부 또는 단원: 본인 소속 고정
+                const userChurch = currentUser.churchName || currentUser.church;
+                churchSelect.value = userChurch;
+                churchSelect.disabled = true;
+
+                updateCuriaList(userChurch);
+                const userCuria = currentUser.curiaName || currentUser.curia;
+                curiaSelect.value = userCuria;
+                curiaSelect.disabled = true;
+
+                updatePresidiumList(userChurch, userCuria);
+                const userPr = currentUser.presidiumName || currentUser.presidium;
+                presidiumSelect.value = userPr;
+                presidiumSelect.disabled = true;
+
+                updateMeetingDates(); // [수정] 출석 날짜 목록 로드 (내부에서 초기화 처리 포함)
+
+                if (role === 'member' || role === '단원') {
+                    // 일반 단원은 본인 이름 고정
+                    setTimeout(() => {
+                        memberSelect.value = currentUser.memberName || currentUser.name;
+                        memberSelect.disabled = true;
+                        // 입력을 위해 폼 렌더링 호출
+                        handleChurchSelection(userChurch);
+                    }, 100);
+                } else {
+                    // 간부는 단원 선택 가능
+                    handleChurchSelection(userChurch);
+                }
+            } else {
+                // 관리자: 모든 선택 가능
+            }
+        }
+
+        /**
+         * @function updateCuriaList
+         * @description 선택된 성당에 해당하는 꾸리아 목록을 업데이트합니다.
+         * @param {string} churchName - 선택된 성당 이름.
+         */
+        function updateCuriaList(churchName) {
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!churchName) return;
+            const curiae = getCuriae(churchName);
+            curiae.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                curiaSelect.appendChild(opt);
+            });
+        }
+
+        /**
+         * @function updatePresidiumList
+         * @description 선택된 성당과 꾸리아에 해당하는 쁘레시디움 목록을 업데이트합니다.
+         * @param {string} churchName - 선택된 성당 이름.
+         * @param {string} curiaName - 선택된 꾸리아 이름.
+         */
+        function updatePresidiumList(churchName, curiaName) {
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!churchName || !curiaName) return;
+            const presidia = getPresidia(churchName, curiaName);
+            presidia.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name; opt.textContent = p.name;
+                presidiumSelect.appendChild(opt);
+            });
+        }
+
+        /**
+         * @function updateMeetingDates
+         * @description 선택된 쁘레시디움의 출석 기록(attendance_list)을 가져와 날짜 드롭다운을 구성합니다.
+         */
+        function updateMeetingDates() {
+            const presidium = presidiumSelect.value;
+            reportDateSelect.innerHTML = '<option value="">날짜 선택</option>';
+            sessionInput.value = '';
+            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+
+            if (!presidium) return;
+
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const myAttendance = allAttendance.filter(a =>
+                (a.presidium === presidium || a.presidiumName === presidium)
+            ).sort((a, b) => b.date.localeCompare(a.date)); // 최신순
+
+            if (myAttendance.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.textContent = "등록된 출석 기록 없음";
+                reportDateSelect.appendChild(opt);
+                return;
+            }
+
+            myAttendance.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.date;
+                opt.dataset.session = a.session;
+                opt.dataset.attendanceId = a.id; // [추가] 고유 ID 저장
+                opt.textContent = `${a.date} (${a.session}회)`;
+                reportDateSelect.appendChild(opt);
+            });
+
+            // [추가] 최신 주회합 날짜 자동 선택 및 단원 목록 로드
+            if (myAttendance.length > 0) {
+                reportDateSelect.value = myAttendance[0].date;
+                updateMemberList();
+            }
+        }
+
+        /**
+         * [Point 3] 단원 목록 업데이트
+         *              선택된 주회합 날짜에 '출석(P)'한 단원만 출석부 원본 데이터를 기반으로 목록에 표시합니다.
+         */
+        function updateMemberList() {
+            const church = (churchSelect.value || '').trim();
+            const curia = (curiaSelect.value || '').trim();
+            const presidium = (presidiumSelect.value || '').trim();
+            const reportDate = reportDateSelect.value;
+
+            // 회차 자동 입력
+            const selectedOpt = reportDateSelect.options[reportDateSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.session) {
+                sessionInput.value = selectedOpt.dataset.session;
+            } else {
+                sessionInput.value = '';
+            }
+
+            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+            if (!presidium || !reportDate) return;
+
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+
+            // 1. 해당 주회합의 출석 데이터 찾기 (ID 매칭)
+            const attId = selectedOpt ? selectedOpt.dataset.attendanceId : null;
+            const attendanceRecord = allAttendance.find(a => a.id === attId);
+
+            if (!attendanceRecord || !attendanceRecord.attendanceData) {
+                console.warn("[MemberList Update] No attendance record found.");
+                return;
+            }
+
+            // 2. [출석부 화면과 100% 동일한 목록 구성 로직]
+            const rolePriorityMap = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+
+            // (1) 간부 필터링 (출석부 화면 로직 이식)
+            const officers = allOfficers.filter(o =>
+                (o.church === church || o.churchName === church) &&
+                (o.curia === curia || o.curiaName === curia) &&
+                (o.presidium === presidium || o.presidiumName === presidium) &&
+                o.appointmentDate <= reportDate &&
+                (!o.appointmentExpiryDate || o.appointmentExpiryDate > reportDate)
+            ).sort((a, b) => (rolePriorityMap[a.role] || 99) - (rolePriorityMap[b.role] || 99));
+
+            const officerIds = new Set(officers.map(o => o.memberId));
+
+            // (2) 일반 단원 필터링 (출석부 화면 로직 이식)
+            const members = allMembers.filter(m =>
+                (m.churchName === church || m.church === church) &&
+                (m.presidiumName === presidium || m.presidium === presidium) &&
+                (!m.leaveDate || m.leaveDate > reportDate) &&
+                !officerIds.has(m.id)
+            ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+
+            // (3) 합치기 (순서 엄수: 간부 -> 단원)
+            const combinedSource = [];
+            officers.forEach(o => combinedSource.push({ id: o.memberId, name: o.name, role: o.role, baptismalName: o.baptismalName }));
+            members.forEach(m => combinedSource.push({ id: m.id, name: m.name, role: '단원', baptismalName: m.baptismalName }));
+
+            // 3. 목록 렌더링 (출석한 'P' 상태인 사람만 순서대로 추가)
+            let presentCount = 0;
+            combinedSource.forEach(m => {
+                const data = attendanceRecord.attendanceData[m.id] || attendanceRecord.attendanceData[m.name];
+                if (!data) return;
+
+                const status = (typeof data === 'object') ? data.status : data;
+                if (status === 'P' || status === 'L') {
+                    const opt = document.createElement('option');
+                    opt.value = m.name;
+                    opt.dataset.uid = m.id; // ID 속성 추가하여 검증 시 사용 용이하게 함
+                    opt.textContent = `[${m.role}] ${m.name} (${m.baptismalName || ''})`;
+                    memberSelect.appendChild(opt);
+                    presentCount++;
+                }
+            });
+
+            console.log(`[MemberList Update] Mirroring attendance record: ${presentCount} members loaded.`);
+
+            // 날짜 변경 등에 의해 단원 목록이 갱신되면 기존 데이터 로드 시도
+            loadExistingReport();
+        }
+
+        /**
+         * @function handleChurchSelection
+         * @description 성당 선택 시 해당 성당의 활동 스키마를 로드하고 폼을 렌더링합니다.
+         *              또한, 해당 쁘레시디움의 마지막 주회합 회차를 추정하여 입력 필드를 채웁니다.
+         * @param {string} churchName - 선택된 성당 이름.
+         */
+        function handleChurchSelection(churchName) {
+            let schema = activitySchemaMap[churchName] || [];
+
+            // [추가/수정] 선배님 요청: '기타활동(2)'를 '교구 또는 레지오 세나뚜스 지시 사항' 왼쪽(맨 앞)으로 이동
+            const otherIdx = schema.findIndex(group => group.title === '기타활동(2)');
+            if (otherIdx > 0) {
+                const otherGroup = schema.splice(otherIdx, 1)[0];
+                schema.unshift(otherGroup); // 맨 앞으로 이동
+            }
+
+            currentSchema = schema;
+            renderForm();
+        }
+
+        /**
+         * @function setupEventListeners
+         * @description 각 선택 필드와 입력 필드에 이벤트 리스너를 설정합니다.
+         *              선택 변경 시 하위 목록을 업데이트하고, 활동 입력 시 총계를 계산합니다.
+         */
+        function setupEventListeners() {
+            // 성당 선택 변경 시 꾸리아 목록 업데이트 및 폼 렌더링
+            churchSelect.addEventListener('change', (e) => {
+                updateCuriaList(e.target.value);
+                updatePresidiumList('', ''); // 쁘레시디움 목록 초기화
+                memberSelect.innerHTML = '<option value="">단원 선택</option>'; // 단원 목록 초기화
+                handleChurchSelection(e.target.value);
+            });
+
+            // 꾸리아 선택 변경 시 쁘레시디움 목록 업데이트
+            curiaSelect.addEventListener('change', (e) => {
+                updatePresidiumList(churchSelect.value, e.target.value);
+                memberSelect.innerHTML = '<option value="">단원 선택</option>'; // 단원 목록 초기화
+            });
+
+            // 쁘레시디움 선택 변경 시 출석 날짜 목록 업데이트
+            presidiumSelect.addEventListener('change', () => {
+                updateMeetingDates();
+            });
+
+            // 주회합 날짜 변경 시 단원 목록 업데이트
+            reportDateSelect.addEventListener('change', updateMemberList);
+
+            // [추가] 단원 선택 변경 시 기존 데이터 로드
+            memberSelect.addEventListener('change', loadExistingReport);
+
+            // 활동 입력 필드 변경 시 총계 계산
+            const grid = document.getElementById('activityGrid');
+            grid.addEventListener('input', (e) => {
+                if (e.target.classList.contains('activity-input')) {
+                    calculateTotals();
+                    // 활동량순 모드일 때 실시간 재배치 (타이핑 방해되지 않게 선택적으로 실행 가능)
+                    if (currentSortMode === 'activity') {
+                        reorderCards();
+                    }
+                }
+            });
+
+            // 정렬 토글 이벤트 추가
+            document.querySelectorAll('.btn-sort').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.btn-sort').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentSortMode = btn.dataset.mode;
+                    reorderCards();
+                };
+            });
+
+            // [추가] 활동 항목 검색 및 바로가기 이벤트
+            const itemSearch = document.getElementById('itemSearch');
+            itemSearch.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (!val) return;
+
+                // datalist에 있는 정확한 항목명인지 확인
+                const options = Array.from(document.getElementById('itemList').options);
+                const match = options.find(opt => opt.value === val);
+
+                if (match) {
+                    // 해당 항목의 입력 필드 찾기
+                    const targetInput = document.querySelector(`.activity-input[data-name="${val}"]`);
+                    if (targetInput) {
+                        // 1. 부드럽게 스크롤 이동
+                        targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // 2. 입력 필드 강조 및 포커스
+                        targetInput.focus();
+                        targetInput.style.backgroundColor = '#fff3e0';
+                        setTimeout(() => {
+                            targetInput.style.backgroundColor = '';
+                        }, 1500);
+
+                        // 3. 검색창 초기화 (선택 사항 - 입력 편의를 위해 지움)
+                        e.target.value = '';
+                    }
+                }
+            });
+
+            // 저장 버튼 클릭 이벤트
+            document.getElementById('btnSaveReport').onclick = saveReport;
+            document.getElementById('btnSaveQuick').onclick = saveReport; // 상단 퀵 저장 버튼 연결
+        }
+
+        /**
+         * @function loadExistingReport
+         * @description 선택된 주회합/단원의 기존 활동 보고 기록이 있는지 확인하고, 있으면 내역을 폼에 채웁니다.
+         *              기록이 없으면 모든 입력 필드를 0으로 초기화합니다.
+         */
+        function loadExistingReport() {
+            const memberName = memberSelect.value;
+            const date = reportDateSelect.value;
+            const session = sessionInput.value;
+            const presidium = presidiumSelect.value;
+            const inputs = document.querySelectorAll('.activity-input');
+
+            // 1. 입력 필드 전체 초기화 (이전 데이터 잔상 방지)
+            inputs.forEach(input => input.value = "");
+
+            const absState = document.getElementById('absentState');
+            const grid = document.getElementById('activityGrid');
+            const btnSaveReport = document.getElementById('btnSaveReport');
+            const btnSaveQuick = document.getElementById('btnSaveQuick');
+
+            if (!memberName || !date || !session) {
+                absState.style.display = 'none';
+                grid.style.display = 'grid';
+                btnSaveReport.disabled = false;
+                btnSaveReport.style.opacity = '1';
+                btnSaveQuick.disabled = false;
+                btnSaveQuick.style.opacity = '1';
+                calculateTotals();
+                return;
+            }
+
+            // --- 출석 여부 화면단 사전 검증 추가 ---
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const attRecord = allAttendance.find(a =>
+                (a.presidium === presidium || a.presidiumName === presidium) &&
+                a.date === date &&
+                String(a.session) === String(session)
+            );
+
+            let isAttended = false;
+            if (attRecord && attRecord.attendanceData) {
+                const selectedOpt = memberSelect.options[memberSelect.selectedIndex];
+                const uid = selectedOpt ? selectedOpt.dataset.uid : null;
+
+                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
+                if (data) {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') isAttended = true;
+                } else {
+                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                    const memberObj = allMembers.find(m => m.name === memberName && (m.presidium === presidium || m.presidiumName === presidium)) ||
+                        allOfficers.find(o => o.name === memberName && (o.presidium === presidium || o.presidiumName === presidium));
+                    if (memberObj) {
+                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
+                        if (dataById) {
+                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
+                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                        }
+                    }
+                }
+            }
+
+            if (!isAttended) {
+                // 결석 시 폼 숨김 처리
+                absState.style.display = 'block';
+                grid.style.display = 'none';
+                btnSaveReport.disabled = true;
+                btnSaveReport.style.opacity = '0.5';
+                btnSaveQuick.disabled = true;
+                btnSaveQuick.style.opacity = '0.5';
+                calculateTotals();
+                return; // 이후 로직 수행 안함
+            } else {
+                absState.style.display = 'none';
+                grid.style.display = 'grid';
+                btnSaveReport.disabled = false;
+                btnSaveReport.style.opacity = '1';
+                btnSaveQuick.disabled = false;
+                btnSaveQuick.style.opacity = '1';
+            }
+
+            // 2. 저장된 기록 검색
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const record = records.find(r =>
+                r.memberName === memberName &&
+                r.date === date &&
+                r.session === session
+            );
+
+            // 3. 데이터가 있으면 폼에 채우기
+            if (record && record.counts) {
+                console.log(`[LoadReport] Found existing record for ${memberName} (${session}차)`);
+                inputs.forEach(input => {
+                    const itemName = input.dataset.name;
+                    if (record.counts[itemName] !== undefined) {
+                        input.value = record.counts[itemName];
+                    }
+                });
+            } else {
+                console.log(`[LoadReport] No existing record for ${memberName} (${session}차)`);
+            }
+
+            // 4. 합계 계산 및 정렬 적용 (데이터 로드 후 즉시 반영)
+            calculateTotals();
+            if (currentSortMode === 'activity') reorderCards();
+        }
+
+        /**
+         * @function renderForm
+         * @description 현재 선택된 성당의 활동 스키마를 기반으로 활동 입력 폼을 동적으로 렌더링합니다.
+         *              스키마가 없으면 안내 메시지를 표시합니다.
+         */
+        function renderForm() {
+            const grid = document.getElementById('activityGrid');
+            const itemList = document.getElementById('itemList');
+            grid.innerHTML = '';
+            itemList.innerHTML = ''; // [추가] 검색 목록 초기화
+
+            if (currentSchema.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #dc3545;">
+                        <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 15px;"></i><br>
+                        이 성당의 활동 항목이 설정되지 않았습니다.
+                    </div>`;
+                return;
+            }
+
+            currentSchema.forEach((group, gIdx) => {
+                const activeItems = group.items.filter(item => item.isActive !== false);
+                if (activeItems.length === 0) return;
+
+                // [추가] 검색을 위한 활동 항목 목록 수집
+                activeItems.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.name;
+                    itemList.appendChild(opt);
+                });
+
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.id = `cat-card-${gIdx}`;
+
+                card.innerHTML = `
+                    <div class="category-card-header">
+                        <span class="cat-title">${group.title}</span>
+                        <span class="cat-subtotal" id="subtotal-${gIdx}">0</span>
+                    </div>
+                    <div class="item-input-list">
+                        ${activeItems.map((item, iIdx) => `
+                            <div class="item-input-row">
+                                <span class="item-label">${item.name}</span>
+                                <div class="input-wrapper">
+                                    <input type="number" 
+                                           class="activity-input" 
+                                           data-group="${gIdx}" 
+                                           data-name="${item.name}" 
+                                           placeholder="0"
+                                           onwheel="this.blur()"
+                                           min="0">
+                                    <span class="unit-label">${item.unit || '회'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // 렌더링 후 현재 정렬 모드 적용
+            if (currentSortMode !== 'default') {
+                reorderCards();
+            }
+        }
+
+        /**
+         * @function calculateTotals
+         * @description 모든 활동 입력 필드의 값을 합산하여 각 카테고리별 소계와 전체 총계를 계산하고 UI를 업데이트합니다.
+         */
+        function calculateTotals() {
+            const inputs = document.querySelectorAll('.activity-input');
+            let grandTotal = 0;
+            let activeCats = new Set();
+            const subtotals = {};
+
+            inputs.forEach(input => {
+                const val = parseInt(input.value) || 0;
+                const gIdx = input.dataset.group;
+
+                subtotals[gIdx] = (subtotals[gIdx] || 0) + val;
+                grandTotal += val;
+
+                if (val > 0) activeCats.add(gIdx);
+            });
+
+            // UI 업데이트
+            Object.keys(subtotals).forEach(gIdx => {
+                const el = document.getElementById(`subtotal-${gIdx}`);
+                const card = document.getElementById(`cat-card-${gIdx}`);
+                if (el) el.textContent = subtotals[gIdx];
+                if (card) {
+                    if (subtotals[gIdx] > 0) card.classList.add('has-data');
+                    else card.classList.remove('has-data');
+                }
+            });
+
+            document.getElementById('activeCategoryCount').innerHTML = `${activeCats.size} <span>종목</span>`;
+            document.getElementById('grandTotalCount').innerHTML = `${grandTotal} <span>건</span>`;
+        }
+
+        /**
+         * @function reorderCards
+         * @description 정렬 모드에 따라 활동 종목 카드의 DOM 순서를 재배치합니다.
+         */
+        function reorderCards() {
+            const grid = document.getElementById('activityGrid');
+            const cards = Array.from(grid.querySelectorAll('.category-card'));
+            if (cards.length <= 1) return;
+
+            if (currentSortMode === 'default') {
+                // 기본 순서 (생성 시 id 기반)
+                cards.sort((a, b) => {
+                    const idA = parseInt(a.id.replace('cat-card-', ''));
+                    const idB = parseInt(b.id.replace('cat-card-', ''));
+                    return idA - idB;
+                });
+            } else {
+                // 활동량 순서 (소계 기반 내림차순)
+                cards.sort((a, b) => {
+                    const subA = parseInt(document.getElementById(a.id.replace('cat-card-', 'subtotal-')).textContent) || 0;
+                    const subB = parseInt(document.getElementById(b.id.replace('cat-card-', 'subtotal-')).textContent) || 0;
+                    if (subB !== subA) return subB - subA;
+                    // 활동량이 같으면 기본 순서 유지
+                    return parseInt(a.id.replace('cat-card-', '')) - parseInt(b.id.replace('cat-card-', ''));
+                });
+            }
+
+            // 부드러운 전환을 위해 DOM 재배치
+            cards.forEach(card => grid.appendChild(card));
+        }
+
+        /**
+         * @function saveReport
+         * @description 현재 입력된 활동 보고 데이터를 로컬 스토리지에 저장합니다.
+         *              필수 필드 유효성 검사, 활동 건수 확인, 기존 기록 덮어쓰기 로직을 포함합니다.
+         */
+        function saveReport() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidium = presidiumSelect.value;
+            const date = reportDateSelect.value;
+            const session = sessionInput.value;
+            const memberName = memberSelect.value;
+
+            // 필수 필드 유효성 검사
+            if (!church || !presidium || !date || !session || !memberName) {
+                return alert('모든 소속 정보와 단원, 회차를 정확히 입력해 주세요.');
+            }
+
+            // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const attRecord = allAttendance.find(a =>
+                (a.presidium === presidium || a.presidiumName === presidium) &&
+                a.date === date &&
+                String(a.session) === String(session)
+            );
+
+            let isAttended = false;
+            if (attRecord && attRecord.attendanceData) {
+                // select option에 저장된 uid 활용 
+                const selectedOpt = memberSelect.options[memberSelect.selectedIndex];
+                const uid = selectedOpt ? selectedOpt.dataset.uid : null;
+
+                // uid로 먼저 찾고, 없으면 이름으로 찾기
+                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
+                if (data) {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') isAttended = true;
+                } else {
+                    // 혹시 매칭 실패 시 전체 회원 목록에서 id를 찾아 확인
+                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                    const memberObj = allMembers.find(m => m.name === memberName && (m.presidium === presidium || m.presidiumName === presidium)) ||
+                        allOfficers.find(o => o.name === memberName && (o.presidium === presidium || o.presidiumName === presidium));
+                    if (memberObj) {
+                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
+                        if (dataById) {
+                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
+                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                        }
+                    }
+                }
+            }
+
+            if (!isAttended) {
+                return alert('해당 주회합에 출석(또는 지각) 처리된 단원만 활동 보고를 등록할 수 있습니다.\\n먼저 출석 상태를 확인해 주세요.');
+            }
+
+            const inputs = document.querySelectorAll('.activity-input');
+            const counts = {};
+            let hasAnyActivity = false;
+
+            // 입력된 활동 데이터 수집
+            inputs.forEach(input => {
+                const val = parseInt(input.value) || 0;
+                if (val > 0) {
+                    counts[input.dataset.name] = val;
+                    hasAnyActivity = true;
+                }
+            });
+
+            // 활동 건수가 없는 경우 사용자에게 확인 요청
+            if (!hasAnyActivity) {
+                if (!confirm('입력된 활동 건수가 없습니다. 그래도 저장하시겠습니까?')) return;
+            }
+
+            // 새로운 활동 보고 레코드 객체 생성
+            const record = {
+                id: Date.now(), // 고유 ID
+                churchName: church,
+                curiaName: curia,
+                presidiumName: presidium,
+                memberName: memberName,
+                session: session,
+                date: date,
+                counts: counts,
+                timestamp: new Date().toISOString() // 저장 시점
+            };
+
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+
+            // 동일 단원/회차/날짜 중복 체크 및 덮어쓰기 로직
+            const existingIdx = records.findIndex(r => r.memberName === memberName && r.session === session && r.date === date);
+            if (existingIdx > -1) {
+                if (!confirm(`${memberName} 단원의 ${session}차 활동 보고가 이미 존재합니다. 덮어쓰시겠습니까?`)) return;
+                records.splice(existingIdx, 1); // 기존 레코드 제거
+            }
+
+            records.push(record); // 새 레코드 추가
+            localStorage.setItem('activity_records', JSON.stringify(records)); // 로컬 스토리지 업데이트
+
+            alert('저장되었습니다.');
+
+            // 저장 후 다음 작업 선택
+            if (confirm('계속해서 다른 단원을 등록하시겠습니까?')) {
+                // 단원 선택만 해제 (소속 및 날짜 유지는 편의성을 위함)
+                memberSelect.value = "";
+                // 단원 역할이 아닌 경우에만 단원 선택 필드 활성화
+                if (currentUser.role?.toLowerCase() !== 'member') memberSelect.disabled = false;
+                inputs.forEach(input => input.value = ""); // 활동 입력 필드 초기화
+                calculateTotals(); // 총계 초기화
+            } else {
+                location.href = 'dashboard.html'; // 대시보드로 이동
+            }
+        }
+    </script>
+</body>
+
+</html>

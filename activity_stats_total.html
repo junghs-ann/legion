@@ -1,0 +1,1078 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>활동 내역 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- ExcelJS & FileSaver.js 추가 (테두리 및 스타일 지원) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --category-mission: #fff2cc;
+            /* 선교 - 연주황 */
+            --category-nonbeliever: #fff9c4;
+            /* 비신자 - 연노랑 */
+            --category-believer-care: #e3f2fd;
+            /* 교우돌봄 - 연파랑 */
+            --category-suffering-care: #e8f5e9;
+            /* 어려움돌봄 - 연초록 */
+            --category-church-service: #f3e5f5;
+            /* 교회활동 - 연보라 */
+            --category-regio-service: #eceff1;
+            /* 레지오활동 - 연회색 */
+        }
+
+        .stats-container {
+            width: 100%;
+            max-width: 1800px;
+            margin: 180px auto 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        /* [필터 섹션 개선] */
+        .filter-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end;
+            border: 1px solid #e9ecef;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        /* 날짜 범위 그룹은 더 넓게 차지하도록 설정 */
+        .filter-group.date-range-group {
+            flex: 2;
+            min-width: 380px;
+        }
+
+        .filter-group label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            width: 100%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(0, 153, 230, 0.1);
+            outline: none;
+        }
+
+        .range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+        }
+
+        .range-wrapper input {
+            border: none;
+            padding: 8px;
+        }
+
+        .range-wrapper input:focus {
+            box-shadow: none;
+        }
+
+        .btn-list-trigger {
+            background: #f1f3f5;
+            color: #495057;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-list-trigger:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+            color: #212529;
+        }
+
+        .btn-search {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 30px;
+            border-radius: 6px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 42px;
+        }
+
+        .btn-search:hover {
+            background: #0088cc;
+            transform: translateY(-2px);
+        }
+
+        /* [날짜 목록 팝업 스타일] */
+        .date-list-trigger {
+            position: relative;
+        }
+
+        .date-list-popup {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 300px;
+            max-height: 400px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .date-list-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .date-list-item:hover {
+            background: #f0f7ff;
+        }
+
+        .date-list-item .date-info {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .date-list-item .session-info {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            table-layout: fixed;
+            min-width: 1600px;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            border: 1px solid #aaa;
+            padding: 4px 2px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats-table thead th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            height: 35px;
+        }
+
+        /* Category Header Colors */
+        .cat-mission {
+            background-color: var(--category-mission) !important;
+        }
+
+        .cat-nonbeliever {
+            background-color: var(--category-nonbeliever) !important;
+        }
+
+        .cat-believer {
+            background-color: var(--category-believer-care) !important;
+        }
+
+        .cat-suffering {
+            background-color: var(--category-suffering-care) !important;
+        }
+
+        .cat-church {
+            background-color: var(--category-church-service) !important;
+        }
+
+        .cat-regio {
+            background-color: var(--category-regio-service) !important;
+        }
+
+        .sub-cat-header {
+            font-size: 0.75rem;
+            line-height: 1.1;
+            padding: 2px !important;
+        }
+
+        .total-cell {
+            background-color: #f1f3f5;
+            font-weight: bold;
+        }
+
+        .member-info-cell {
+            background-color: #fff;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            border-right: 2px solid #666;
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            .dashboard-header,
+            .filter-section,
+            .btn-group {
+                display: none !important;
+            }
+
+            .stats-container {
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+            }
+
+            .stats-table {
+                font-size: 7pt;
+                min-width: auto;
+            }
+
+            .stats-table th,
+            .stats-table td {
+                border: 0.1mm solid #000;
+                padding: 1px;
+            }
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-print {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-excel {
+            background-color: #2e7d32;
+            color: white;
+            margin-right: 8px;
+        }
+
+        .btn-excel:hover {
+            background-color: #1b5e20;
+            transform: translateY(-2px);
+        }
+
+        .btn-close {
+            background-color: #666;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="stats-container">
+        <div class="stats-header">
+            <div>
+                <h2 style="color: var(--primary-color); margin: 0;">활동 내역</h2>
+                <p id="statsPeriod" style="margin: 5px 0 0; color: #666;"></p>
+            </div>
+            <div class="btn-group">
+                <button class="btn-action btn-excel" id="btnExcel"><i class="fas fa-file-excel"></i> 엑셀 다운로드</button>
+                <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄</button>
+                <button class="btn-action btn-close" onclick="history.back()">닫기</button>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label><i class="fas fa-church"></i> 성당</label>
+                <select id="churchSelect" class="nav-enter">
+                    <option value="">성당 선택</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-users"></i> 꾸리아</label>
+                <select id="curiaSelect" class="nav-enter">
+                    <option value="">꾸리아 선택</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-users-cog"></i> 쁘레시디움</label>
+                <select id="presidiumSelect" class="nav-enter">
+                    <option value="">쁘레시디움 선택</option>
+                </select>
+            </div>
+
+            <div class="filter-group date-range-group date-list-trigger">
+                <label><i class="fas fa-calendar-alt"></i> 날짜 범위 (목록 클릭 시 자동 입력)</label>
+                <div class="range-wrapper">
+                    <input type="date" id="startDate" class="nav-enter" placeholder="시작">
+                    <span>~</span>
+                    <input type="date" id="endDate" class="nav-enter" placeholder="종료">
+                    <button type="button" id="btnShowDateList" class="btn-list-trigger">
+                        <i class="fas fa-list-ul"></i> 목록
+                    </button>
+                    <!-- 날짜 목록 팝업 -->
+                    <div id="dateListPopup" class="date-list-popup"></div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label><i class="fas fa-user-check"></i> 단원 선택 (옵션)</label>
+                <select id="memberSelect" class="nav-enter">
+                    <option value="">전체 단원</option>
+                </select>
+            </div>
+
+            <div class="filter-group" style="flex: 0 0 auto; min-width: 120px;">
+                <button id="btnSearch" class="btn-search">
+                    <i class="fas fa-search"></i> 조회
+                </button>
+            </div>
+        </div>
+
+        <div id="tableWrapper">
+            <table class="stats-table" id="statsTable">
+                <thead id="statsHead">
+                    <!-- Dynamic Header will be inserted here -->
+                </thead>
+                <tbody id="statsBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+                <tfoot id="statsFoot">
+                    <!-- Total Row will be inserted here -->
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let members = [];
+        let activityRecords = [];
+        let activitySchemaMap = {};
+
+        // DOM 요소
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const memberSelect = document.getElementById('memberSelect');
+        const dateListPopup = document.getElementById('dateListPopup');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                location.href = 'index.html';
+                return;
+            }
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(currentUser, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+            // 초기 데이터 로드
+            activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            activityRecords = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            members = JSON.parse(localStorage.getItem('members_list') || '[]');
+
+            initSelectors();
+            setupEventListeners();
+        });
+
+        /**
+         * @function initSelectors
+         * @description 사용자 권한에 따라 필터 초기화
+         */
+        function initSelectors() {
+            const role = currentUser.role?.toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+
+            // 1. 성당 목록 채우기
+            const churches = getChurches();
+            churchSelect.innerHTML = '<option value="">성당 선택</option>';
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = c;
+                churchSelect.appendChild(opt);
+            });
+
+            // 2. 권한별 초기값 및 잠금
+            if (isAdmin) {
+                // 관리자: 모든 필터 활성화
+                churchSelect.disabled = false;
+                curiaSelect.disabled = false;
+                presidiumSelect.disabled = false;
+                memberSelect.disabled = false;
+            } else {
+                // 간부 및 단원 공통: 소속 정보 고정
+                const userChurch = currentUser.churchName || currentUser.church;
+                churchSelect.value = userChurch;
+                churchSelect.disabled = true;
+
+                updateCuriaList(userChurch);
+                const userCuria = currentUser.curiaName || currentUser.curia;
+                curiaSelect.value = userCuria;
+                curiaSelect.disabled = true;
+
+                // 쁘레시디움 목록 업데이트 후 값을 먼저 설정
+                updatePresidiumList(userChurch, userCuria);
+                const userPr = currentUser.presidiumName || currentUser.presidium;
+                presidiumSelect.value = userPr;
+                presidiumSelect.disabled = true;
+
+                // 명시적으로 단원 목록을 다시 불러와서 목록을 완성함
+                updateMemberList(userChurch, userPr);
+
+                if (isOfficer) {
+                    // 간부: 단원 선택 가능
+                    memberSelect.disabled = false;
+                } else {
+                    // 일반 단원: 본인만 선택 및 고정
+                    const userName = currentUser.memberName || currentUser.name;
+                    memberSelect.value = userName;
+                    memberSelect.disabled = true;
+                    console.log(`[Init] Member role detected. Setting memberSelect to: ${userName}`);
+                }
+            }
+        }
+
+        function updateCuriaList(churchName) {
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!churchName) return;
+            getCuriae(churchName).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = c;
+                curiaSelect.appendChild(opt);
+            });
+        }
+
+        function updatePresidiumList(churchName, curiaName) {
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!churchName || !curiaName) {
+                updateMemberList('', '');
+                return;
+            }
+            getPresidia(churchName, curiaName).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = p.name;
+                presidiumSelect.appendChild(opt);
+            });
+            updateMemberList(churchName, presidiumSelect.value);
+        }
+
+        function updateMemberList(churchName, prName) {
+            memberSelect.innerHTML = '<option value="">전체 단원</option>';
+            if (!churchName || !prName) return;
+
+            const startD = startDate.value;
+            const endD = endDate.value;
+
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const prMembers = allMembers.filter(m => {
+                const isOrgMatch = (m.churchName === churchName || m.church === churchName) &&
+                    (m.presidiumName === prName || m.presidium === prName);
+                if (!isOrgMatch) return false;
+
+                // [강화된 필터링 로직]
+                // 1. 퇴단/전출 단원 제외: leaveDate가 있고, 조회 시작일(startD)보다 이전이면 제외
+                if ((m.status === '퇴단' || m.status === '전출') && m.leaveDate && startD && m.leaveDate < startD) {
+                    return false;
+                }
+
+                // 2. 예정 단원 제외: probationaryDate가 있고, 조회 종료일(endD)보다 이후이면 제외
+                if (m.probationaryDate && endD && m.probationaryDate > endD) {
+                    return false;
+                }
+
+                return true;
+            }).sort((a, b) => a.name.localeCompare(b.name));
+
+            prMembers.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.name;
+                opt.textContent = m.name;
+                memberSelect.appendChild(opt);
+            });
+
+            // [추가] 단원 권한인 경우 본인 이름으로 항상 고정
+            if (currentUser) {
+                const role = currentUser.role?.toLowerCase();
+                const isAdmin = ['admin', '관리자'].includes(role);
+                const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+
+                if (!isAdmin && !isOfficer) {
+                    const userName = currentUser.memberName || currentUser.name;
+                    memberSelect.value = userName;
+                    memberSelect.disabled = true;
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            // 필터 연동
+            churchSelect.onchange = () => {
+                updateCuriaList(churchSelect.value);
+                updatePresidiumList('', '');
+            };
+            curiaSelect.onchange = () => updatePresidiumList(churchSelect.value, curiaSelect.value);
+            presidiumSelect.onchange = () => updateMemberList(churchSelect.value, presidiumSelect.value);
+
+            // 날짜 변경 시 단원 목록 자동 갱신
+            startDate.onchange = () => updateMemberList(churchSelect.value, presidiumSelect.value);
+            endDate.onchange = () => updateMemberList(churchSelect.value, presidiumSelect.value);
+
+            // 날짜 목록 팝업 토글
+            document.getElementById('btnShowDateList').onclick = (e) => {
+                e.stopPropagation();
+                showDateList();
+            };
+
+            // 외부 클릭 시 팝업 닫기
+            window.onclick = () => dateListPopup.style.display = 'none';
+
+            // Enter 키 이동
+            const enters = document.querySelectorAll('.nav-enter');
+            enters.forEach((el, idx) => {
+                el.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const next = enters[idx + 1];
+                        if (next) next.focus();
+                        else document.getElementById('btnSearch').click(); // 마지막이면 조회 버튼 클릭
+                    }
+                };
+            });
+
+            document.getElementById('btnSearch').addEventListener('click', () => {
+                console.log('[Search] Button clicked!');
+                renderStats();
+            });
+
+            // 엑셀 다운로드 이벤트
+            document.getElementById('btnExcel').addEventListener('click', exportToExcel);
+        }
+
+        /**
+         * @function showDateList
+         * @description 주회합(attendance_list) 기록에서 날짜와 회차 목록을 가져와 팝업으로 표시
+         */
+        function showDateList() {
+            const prName = presidiumSelect.value;
+            if (!prName) {
+                alert('쁘레시디움을 먼저 선택해주세요.');
+                return;
+            }
+
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const myHistory = allAttendance.filter(a => (a.presidium === prName || a.presidiumName === prName))
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            if (myHistory.length === 0) {
+                dateListPopup.innerHTML = '<div class="date-list-item">기록이 없습니다.</div>';
+            } else {
+                dateListPopup.innerHTML = myHistory.map(h => `
+                    <div class="date-list-item" onclick="selectDateRange('${h.date}')">
+                        <span class="date-info">${h.date}</span>
+                        <span class="session-info">(${h.session}차)</span>
+                    </div>
+                `).join('');
+            }
+            dateListPopup.style.display = 'block';
+        }
+
+        // 전역 스코프에 선택 함수 노출
+        window.selectDateRange = (date) => {
+            // 시작일이 없으면 시작일에, 있으면 종료일에 입력 (편의성)
+            if (!startDate.value) startDate.value = date;
+            else if (!endDate.value) endDate.value = date;
+            else {
+                startDate.value = date;
+                endDate.value = '';
+            }
+            dateListPopup.style.display = 'none';
+            // 날짜 선택 후 단원 목록 갱신
+            updateMemberList(churchSelect.value, presidiumSelect.value);
+        };
+
+        function renderStats() {
+            const church = churchSelect.value;
+            const pr = presidiumSelect.value;
+            const startD = startDate.value;
+            const endD = endDate.value;
+            const selectedMember = memberSelect.value;
+
+            if (!church || !pr) {
+                alert('성당과 쁘레시디움을 선택해주세요.');
+                return;
+            }
+
+            // [추가] 날짜 유효성 검증
+            if (startD && endD && startD > endD) {
+                alert('시작일자가 종료일자보다 클 수 없습니다. 날짜를 다시 확인해주세요.');
+                return;
+            }
+
+            const prSchema = activitySchemaMap[church] || [];
+            if (prSchema.length === 0) {
+                alert('해당 성당의 활동 항목 설정이 없습니다. 관리자 메뉴에서 먼저 설정해주세요.');
+                return;
+            }
+
+            // [추가] 성명 정렬 순서 고도화 (활동 등록 화면과 동일하게)
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const rolePriorityMap = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+
+            // 해당 쁘레시디움의 모든 인원에 대해 정렬 가중치 생성
+            const memberSortMap = {};
+
+            // 1. 간부 가중치 (10~49)
+            allOfficers.filter(o => (o.churchName === church || o.church === church) && (o.presidiumName === pr || o.presidium === pr))
+                .forEach(o => {
+                    const priority = rolePriorityMap[o.role] || 50;
+                    // 간부인데 이미 등록된 경우 더 높은 직책 우선
+                    if (!memberSortMap[o.name] || memberSortMap[o.name] > priority) {
+                        memberSortMap[o.name] = priority;
+                    }
+                });
+
+            // 2. 일반 단원 가중치 (수련일 기준, 100부터 시작)
+            const sortedMembers = allMembers.filter(m => (m.churchName === church || m.church === church) && (m.presidiumName === pr || m.presidium === pr))
+                .sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+
+            sortedMembers.forEach((m, idx) => {
+                if (!memberSortMap[m.name]) {
+                    memberSortMap[m.name] = 100 + idx;
+                }
+            });
+
+            const schemaCopy = JSON.parse(JSON.stringify(prSchema));
+            const otherIdx = schemaCopy.findIndex(group => group.title === '기타활동(2)');
+            if (otherIdx > 0) {
+                const otherGroup = schemaCopy.splice(otherIdx, 1)[0];
+                schemaCopy.unshift(otherGroup);
+            }
+
+            // 1. 데이터 필터링 및 정렬
+            const filteredRecords = activityRecords.filter(r => {
+                const isOrgMatch = r.churchName === church && r.presidiumName === pr;
+                const isDateMatch = (!startD || r.date >= startD) && (!endD || r.date <= endD);
+                const isMemberMatch = !selectedMember || r.memberName === selectedMember;
+                return isOrgMatch && isDateMatch && isMemberMatch;
+            }).sort((a, b) => {
+                // (가) 날짜/회차 우선 (오름차순)
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                if (a.session !== b.session) return parseInt(a.session) - parseInt(b.session);
+
+                // (나) 성명 정렬 (멤버 정렬 맵 기준) [선배님 요청]
+                const priorityA = memberSortMap[a.memberName] || 999;
+                const priorityB = memberSortMap[b.memberName] || 999;
+                if (priorityA !== priorityB) return priorityA - priorityB;
+                return a.memberName.localeCompare(b.memberName);
+            });
+
+            // 3. 컬럼별 통계 계산 (스키마 필터링용)
+            const colTotals = {};
+            filteredRecords.forEach(r => {
+                for (const itemName in r.counts) {
+                    const val = parseInt(r.counts[itemName]) || 0;
+                    colTotals[itemName] = (colTotals[itemName] || 0) + val;
+                }
+            });
+
+            // [추가] 데이터가 있는 항목만 표시하도록 스키마 필터링
+            const filteredSchema = schemaCopy.map(group => {
+                const activeAndDataItems = group.items.filter(item => {
+                    const isActive = item.isActive !== false;
+                    const hasData = (colTotals[item.name] || 0) > 0;
+                    return isActive && hasData;
+                });
+                return { ...group, items: activeAndDataItems };
+            }).filter(group => group.items.length > 0);
+
+            // 4. 그룹별 합계 및 전체 총계 재계산 (화면에 보이는 항목 기준)
+            let grandTotal = 0;
+            const groupTotals = {};
+            filteredSchema.forEach(group => {
+                let gSum = 0;
+                group.items.forEach(item => {
+                    const val = colTotals[item.name] || 0;
+                    gSum += val;
+                });
+                groupTotals[group.title] = gSum;
+                grandTotal += gSum;
+            });
+
+            // 5. 헤더 렌더링
+            renderHeader(filteredSchema, groupTotals, grandTotal);
+
+            // 4. 바디 렌더링
+            const tbody = document.getElementById('statsBody');
+            tbody.innerHTML = '';
+
+            // (1) 상단 총계 행 (이미지 스타일)
+            if (filteredRecords.length > 0) {
+                const trTotal = document.createElement('tr');
+                trTotal.style.backgroundColor = '#f8f9fa';
+                trTotal.style.fontWeight = 'bold';
+                let totalHtml = `<td></td><td></td><td style="color:#333;">총계</td><td style="color:var(--primary-color);">${grandTotal.toLocaleString()}</td>`;
+
+                filteredSchema.forEach(group => {
+                    group.items.forEach(item => {
+                        const val = colTotals[item.name] || 0;
+                        totalHtml += `<td style="background-color: #f1f3f5;">${val ? val.toLocaleString() : '-'}</td>`;
+                    });
+                });
+                totalHtml += `<td style="background-color: #eee;">${grandTotal.toLocaleString()}</td>`;
+                trTotal.innerHTML = totalHtml;
+                tbody.appendChild(trTotal);
+
+                // (2) 개별 레코드 행
+                let lastYear = null;
+                let lastMonth = null;
+                let lastSession = null;
+
+                filteredRecords.forEach((r) => {
+                    const tr = document.createElement('tr');
+                    const d = new Date(r.date);
+                    const year = d.getFullYear();
+                    const month = d.getMonth() + 1;
+                    const session = r.session;
+
+                    // 이전 행과 동일하면 빈칸 처리 (이미지 스타일)
+                    const displayYear = (year === lastYear) ? "" : year;
+                    const displayMonth = (year === lastYear && month === lastMonth) ? "" : month;
+                    const displaySession = (year === lastYear && month === lastMonth && session === lastSession) ? "" : session;
+
+                    lastYear = year;
+                    lastMonth = month;
+                    lastSession = session;
+
+                    let rowSum = 0;
+                    let html = `<td>${displayYear}</td><td>${displayMonth}</td><td>${displaySession}</td><td class="member-info-cell">${r.memberName}</td>`;
+
+                    filteredSchema.forEach(group => {
+                        group.items.forEach(item => {
+                            const val = r.counts[item.name] || 0;
+                            html += `<td>${val ? val.toLocaleString() : ''}</td>`;
+                            rowSum += val;
+                        });
+                    });
+
+                    html += `<td style="background-color: #f8f9fa; font-weight:bold;">${rowSum ? rowSum.toLocaleString() : ''}</td>`;
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="50" style="padding: 100px; color: #999;">조회된 내역이 없습니다.</td></tr>';
+            }
+
+            // 5. 푸터 렌더링 (간소화 또는 합계 유지)
+            renderFooter(filteredSchema, colTotals, grandTotal);
+
+            // 기간 텍스트 업데이트
+            const periodText = (startD || endD) ? `${startD || '...'} ~ ${endD || '현재'}` : '전체 기간';
+            document.getElementById('statsPeriod').textContent = `${periodText} 활동 내역`;
+        }
+
+        function renderHeader(schema, groupTotals, grandTotal) {
+            const head = document.getElementById('statsHead');
+            // 년, 월, 회, 성명
+            let row1 = `<tr><th rowspan="2" style="width: 50px;">년</th><th rowspan="2" style="width: 40px;">월</th><th rowspan="2" style="width: 50px;">회</th><th rowspan="2" style="width: 100px;" class="member-info-cell">성명</th>`;
+            let row2 = '<tr>';
+
+            const colors = ['cat-mission', 'cat-nonbeliever', 'cat-believer', 'cat-suffering', 'cat-church', 'cat-regio'];
+
+            schema.forEach((group, idx) => {
+                const colorClass = colors[idx % colors.length];
+                const activeItems = group.items.filter(item => item.isActive !== false);
+                if (activeItems.length === 0) return;
+
+                const gSum = groupTotals[group.title] || 0;
+                // 이미지 스타일: ( 계 : 1,049 )
+                row1 += `<th colspan="${activeItems.length}" class="${colorClass}">${group.title}<br><span style="font-size:0.75rem; font-weight:normal;">( 계 : ${gSum.toLocaleString()} )</span></th>`;
+                activeItems.forEach(item => {
+                    const itemName = item.name || '';
+                    row2 += `<th class="sub-cat-header ${colorClass}" data-name="${itemName}">${itemName.replace(' ', '<br>')}</th>`;
+                });
+            });
+
+            row1 += `<th rowspan="2" style="width: 60px; background-color: #eee;">합계</th></tr>`;
+            row2 += '</tr>';
+            head.innerHTML = row1 + row2;
+        }
+
+        function renderFooter(schema, colTotals, grandTotal) {
+            const foot = document.getElementById('statsFoot');
+            let html = `<tr style="background-color: #eee; font-weight: bold;"><td colspan="3">함 계</td><td style="color: var(--secondary-color);">${grandTotal.toLocaleString()}</td>`;
+            schema.forEach(group => {
+                const activeItems = group.items.filter(item => item.isActive !== false);
+                activeItems.forEach(item => {
+                    const itemName = item.name;
+                    const val = colTotals[itemName] || 0;
+                    html += `<td class="total-cell">${val.toLocaleString()}</td>`;
+                });
+            });
+            html += `<td class="total-cell">${grandTotal.toLocaleString()}</td></tr>`;
+            foot.innerHTML = html;
+        }
+
+        /**
+         * @function exportToExcel
+         * @description ExcelJS를 사용하여 HTML 테이블의 rowSpan/colSpan을 완벽히 인식하여 내보냅니다.
+         */
+        async function exportToExcel() {
+            const table = document.getElementById('statsTable');
+            if (!table || table.rows.length <= 1) {
+                alert('조회된 데이터가 없습니다.');
+                return;
+            }
+
+            const church = churchSelect.value;
+            const pr = presidiumSelect.value;
+            const filename = `활동내역_${church}_${pr}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('활동내역');
+
+                // 셀 점유 상태를 추적하기 위한 2차원 맵
+                const occupiedCells = {}; // "row,col" -> true
+
+                for (let r = 0; r < table.rows.length; r++) {
+                    const htmlRow = table.rows[r];
+                    let excelCol = 1;
+
+                    for (let c = 0; c < htmlRow.cells.length; c++) {
+                        const htmlCell = htmlRow.cells[c];
+
+                        // 이미 점유된 셀(rowSpan 등에 의해) 건너뛰기
+                        while (occupiedCells[`${r + 1},${excelCol}`]) {
+                            excelCol++;
+                        }
+
+                        const excelCell = worksheet.getRow(r + 1).getCell(excelCol);
+                        const rowSpan = htmlCell.rowSpan || 1;
+                        const colSpan = htmlCell.colSpan || 1;
+
+                        // 셀 병합 처리
+                        if (rowSpan > 1 || colSpan > 1) {
+                            worksheet.mergeCells(r + 1, excelCol, r + rowSpan, excelCol + colSpan - 1);
+                            // 병합된 영역 점유 표시
+                            for (let i = 0; i < rowSpan; i++) {
+                                for (let j = 0; j < colSpan; j++) {
+                                    occupiedCells[`${r + 1 + i},${excelCol + j}`] = true;
+                                }
+                            }
+                        } else {
+                            occupiedCells[`${r + 1},${excelCol}`] = true;
+                        }
+
+                        // 값 입력 처리
+                        const val = htmlCell.textContent.replace(/,/g, '').trim();
+                        // 데이터 행(r >= 2)이면서 숫자인 경우 숫자로 입력
+                        if (val !== "" && !isNaN(val) && r >= 2) {
+                            excelCell.value = Number(val);
+                            excelCell.numFmt = '#,##0';
+                        } else {
+                            excelCell.value = htmlCell.textContent.trim();
+                        }
+
+                        // 스타일 적용
+                        excelCell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        excelCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+                        // 헤더 배경색 설정
+                        if (r < 2) {
+                            const bgColor = window.getComputedStyle(htmlCell).backgroundColor;
+                            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                                const hex = rgbToHex(bgColor).replace('#', '');
+                                excelCell.fill = {
+                                    type: 'pattern',
+                                    pattern: 'solid',
+                                    fgColor: { argb: 'FF' + hex }
+                                };
+                            }
+                            excelCell.font = { bold: true };
+                        }
+
+                        excelCol += colSpan;
+                    }
+                }
+
+                // 컬럼 너비 최적화
+                worksheet.columns.forEach((column, i) => {
+                    column.width = i < 4 ? 10 : 7; // 년,월,회,성명은 좀 더 넓게
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+                console.log(`[ExcelJS] Exported with MergeCells: ${filename}`);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                alert('엑셀 파일 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // RGB를 HEX로 변환하는 헬퍼 함수
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return '#FFFFFF';
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Specific styles for signup to match login theme */
+        .signup-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .signup-card {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--secondary-color);
+        }
+
+        .signup-card h2 {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+
+        .step-content {
+            margin-bottom: 30px;
+        }
+
+        select,
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+        }
+
+        .role-selection {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .role-option {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        /* [IME Control] Best-effort language hint */
+        .ime-active {
+            ime-mode: active;
+        }
+
+        .ime-inactive {
+            ime-mode: inactive;
+        }
+    </style>
+</head>
+
+<body class="login-body">
+    <div class="signup-container">
+        <div class="signup-card ime-active">
+            <h2>회원가입</h2>
+            <form id="signup-form">
+                <!-- Step 1: Organization -->
+                <div class="step-content">
+                    <div class="section-title">1. 소속 선택</div>
+                    <div class="form-group">
+                        <select id="church-select" required autofocus>
+                            <option value="">성당 선택</option>
+                            <!-- Options will be populated via JS -->
+                            <option value="test_church">테스트 성당</option>
+                        </select>
+                        <select id="curia-select" required disabled>
+                            <option value="">꾸리아(Cu.) 선택</option>
+                        </select>
+                        <select id="presidium-select" required disabled>
+                            <option value="">쁘레지디움(Pr.) 선택</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Step 2: User Info -->
+                <div class="step-content">
+                    <div class="section-title">2. 개인 정보</div>
+                    <div class="form-group">
+                        <input type="text" id="name" class="ime-active" placeholder="이름 (실명)" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="baptismal-name" class="ime-active" placeholder="세례명" required>
+                    </div>
+                    <div class="form-group">
+                        <select id="gender" required
+                            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 2px;">
+                            <option value="">성별 선택</option>
+                            <option value="남">남</option>
+                            <option value="여">여</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="username" class="ime-inactive" inputmode="latin" placeholder="아이디"
+                            required style="ime-mode: inactive;">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="password" class="ime-active" placeholder="비밀번호" required>
+                    </div>
+                </div>
+
+                <!-- Step 3: Role -->
+                <div class="step-content">
+                    <div class="section-title">3. 직책 선택</div>
+                    <div class="role-selection">
+                        <select id="role-select" required>
+                            <option value="">직책 선택</option>
+                            <option value="member">단원</option>
+                            <option value="president">단장</option>
+                            <option value="vice_president">부단장</option>
+                            <option value="secretary">서기</option>
+                            <option value="treasurer">회계</option>
+                            <option value="admin">관리자</option>
+                        </select>
+                    </div>
+                    <p id="role-error"
+                        style="display: none; color: red; text-align: center; font-size: 0.9rem; margin-top: 10px; font-weight: bold;">
+                    </p>
+                    <p id="admin-notice" style="display: none; color: blue; text-align: center;">계정 관리자는 소속 정보를 선택할 필요가
+                        없습니다.</p>
+                </div>
+
+                <!-- Step 4: Signature -->
+                <div class="step-content">
+                    <div class="section-title">4. 서명(직인) 등록 (선택)</div>
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">
+                        본인의 고유 서명을 그려주시거나, 서명 이미지를 업로드해 주세요. (선택 사항이며, 추후 마이페이지에서 등록 가능합니다)
+                    </div>
+
+                    <!-- Option 1: Drawing -->
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px;">방법 1:
+                            직접 그리기</label>
+                        <div id="signature-container"
+                            style="border: 1px solid #ccc; background: #fafafa; position: relative; border-radius: 4px; overflow: hidden;">
+                            <canvas id="signature-pad" width="420" height="150"
+                                style="cursor: crosshair; display: block;"></canvas>
+                            <button type="button" id="clear-signature"
+                                style="position: absolute; right: 8px; top: 8px; padding: 4px 12px; font-size: 0.8rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">지우기</button>
+                        </div>
+                    </div>
+
+                    <!-- Option 2: File Upload -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px;">방법 2:
+                            서명 파일 업로드</label>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                            <input type="file" id="signature-file" accept="image/*" style="display: none;">
+                            <button type="button" onclick="document.getElementById('signature-file').click()"
+                                style="padding: 8px 16px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">파일
+                                선택</button>
+                            <span id="file-name-display" style="font-size: 0.85rem; color: #888;">선택된 파일 없음</span>
+                        </div>
+                        <div id="file-preview-container"
+                            style="display: none; text-align: center; border: 1px solid #eee; padding: 15px; border-radius: 4px; background: #fff;">
+                            <img id="signature-preview" src=""
+                                style="max-width: 100%; max-height: 120px; display: block; margin: 0 auto; object-fit: contain;">
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="signature-data" name="signature">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="login-btn" style="flex: 2;">가입하기</button>
+                    <button type="button" class="login-btn" onclick="location.href='index.html'"
+                        style="flex: 1; background-color: #666;">닫기</button>
+                </div>
+            </form>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="index.html" style="color: #666; text-decoration: none;">이미 계정이 있으신가요? 로그인</a>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { registerUser, logoutUser } from "./auth.js";
+
+        const churchSelect = document.getElementById('church-select');
+        const curiaSelect = document.getElementById('curia-select');
+        const presidiumSelect = document.getElementById('presidium-select');
+        const roleSelect = document.getElementById('role-select');
+        const roleError = document.getElementById('role-error');
+        const adminNotice = document.getElementById('admin-notice');
+        const signupForm = document.getElementById('signup-form');
+        const submitBtn = signupForm.querySelector('button[type="submit"]');
+
+        // --- 1. Populate Churches ---
+        const churches = getChurches();
+        churches.forEach(church => {
+            const option = document.createElement('option');
+            option.value = church;
+            option.textContent = church;
+            churchSelect.appendChild(option);
+        });
+
+        // --- 2. Handle Church Selection ---
+        churchSelect.addEventListener('change', function () {
+            const selectedChurch = this.value;
+            // Reset Curia & Presidium
+            curiaSelect.innerHTML = '<option value="">꾸리아(Cu.) 선택</option>';
+            curiaSelect.disabled = !selectedChurch;
+            presidiumSelect.innerHTML = '<option value="">쁘레지디움(Pr.) 선택</option>';
+            presidiumSelect.disabled = true;
+
+            if (selectedChurch) {
+                const curiae = getCuriae(selectedChurch);
+                curiae.forEach(curia => {
+                    const option = document.createElement('option');
+                    option.value = curia;
+                    option.textContent = curia;
+                    curiaSelect.appendChild(option);
+                });
+            }
+        });
+
+        // --- 3. Handle Curia Selection ---
+        curiaSelect.addEventListener('change', function () {
+            const selectedChurch = churchSelect.value;
+            const selectedCuria = this.value;
+
+            // Reset Presidium
+            presidiumSelect.innerHTML = '<option value="">쁘레지디움(Pr.) 선택</option>';
+            presidiumSelect.disabled = !selectedCuria;
+
+            if (selectedChurch && selectedCuria) {
+                const presidia = getPresidia(selectedChurch, selectedCuria);
+                presidia.forEach(pr => {
+                    const option = document.createElement('option');
+                    option.value = pr.id; // Use ID for value
+                    option.textContent = pr.name;
+                    option.dataset.name = pr.name; // Store name for easy access
+                    presidiumSelect.appendChild(option);
+                });
+            }
+        });
+
+        // --- 3.5 Handle Role Selection (New) ---
+        function updateRoleState() {
+            const role = roleSelect.value;
+            console.log("Role changed to:", role); // Debugging
+
+            if (role === 'admin') {
+                // Disable browser validation for admin to bypass organization checks
+                signupForm.noValidate = true;
+
+                // Disable organization selects
+                churchSelect.disabled = true;
+                curiaSelect.disabled = true;
+                presidiumSelect.disabled = true;
+
+                // Remove required attribute explicitly
+                churchSelect.removeAttribute('required');
+                curiaSelect.removeAttribute('required');
+                presidiumSelect.removeAttribute('required');
+
+                // [Bug Fix] Do not clear values here, just disable them. 
+                // This allows preservation if user switches back from admin to officer.
+                // churchSelect.value = "";
+                // curiaSelect.value = "";
+                // presidiumSelect.value = "";
+
+                adminNotice.style.display = 'block';
+            } else {
+                // Enable browser validation
+                signupForm.noValidate = false;
+
+                // Re-enable (restore initial logic)
+                churchSelect.disabled = false;
+
+                // Restore organization selection logic
+                if (!churchSelect.value) {
+                    curiaSelect.disabled = true;
+                    presidiumSelect.disabled = true;
+                } else {
+                    curiaSelect.disabled = false;
+                    if (!curiaSelect.value) presidiumSelect.disabled = true;
+                    else presidiumSelect.disabled = false;
+                }
+
+                churchSelect.setAttribute('required', '');
+
+                adminNotice.style.display = 'none';
+            }
+
+            // [Bug Fix] Force re-validation whenever role changes
+            checkRoleConflict();
+        }
+
+        roleSelect.addEventListener('change', updateRoleState);
+
+        // --- 3.5.1 [New] Reset Personal Info but Keep Organization ---
+        function resetPersonalInfo() {
+            console.log("필드 초기화 실행 (소속 제외)");
+            // 1. 개인 정보 초기화
+            document.getElementById('name').value = '';
+            document.getElementById('baptismal-name').value = '';
+            document.getElementById('gender').value = '';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+
+            // 2. 직책 선택 초기화 및 잠금 해제
+            roleSelect.value = '';
+            roleSelect.disabled = false;
+            adminNotice.style.display = 'none';
+
+            // 3. 서명 초기화
+            document.getElementById('signature-data').value = '';
+            // Canvas 지우기
+            const canvas = document.getElementById('signature-pad');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            // 파일 입력 및 미리보기 지우기
+            document.getElementById('signature-file').value = '';
+            document.getElementById('file-name-display').textContent = '선택된 파일 없음';
+            document.getElementById('file-preview-container').style.display = 'none';
+            document.getElementById('signature-preview').src = '';
+
+            // 4. 에러 메시지 및 제출 버튼 상태 리셋
+            checkRoleConflict();
+
+            // 이름 필드로 포커스 이동
+            document.getElementById('name').focus();
+        }
+
+        // --- 3.5.2 Auto Detect Role from Officers List (New) ---
+        const nameInput = document.getElementById('name');
+
+        function autoDetectRole() {
+            const role = roleSelect.value;
+            if (role === 'admin') return; // Admin is manual
+
+            const name = nameInput.value.trim();
+            const church = churchSelect.value;
+            const presidiumName = presidiumSelect.options[presidiumSelect.selectedIndex]?.text || '';
+
+            if (name && church && presidiumName && presidiumName !== '쁘레지디움(Pr.) 선택') {
+                const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                // [개선] 임명일(appointmentDate) 기준 내림차순 정렬하여 가장 최신 기록(예: 단장)을 우선적으로 찾음
+                const matchedOfficers = officers
+                    .filter(o =>
+                        o.name === name &&
+                        (o.churchName === church || o.church === church) &&
+                        (o.presidiumName === presidiumName || o.presidium === presidiumName)
+                    )
+                    .sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
+
+                const found = matchedOfficers[0];
+
+                if (found) {
+                    console.log("Auto-matched officer role:", found.role);
+                    // Map Korean role to English values used in auth
+                    const roleMap = { '단장': 'president', '부단장': 'vice_president', '서기': 'secretary', '회계': 'treasurer' };
+                    const engRole = roleMap[found.role];
+                    if (engRole) {
+                        roleSelect.value = engRole;
+                        roleSelect.disabled = true; // Lock it
+                        adminNotice.style.display = 'block';
+                        adminNotice.textContent = `공식 간부 정보(${found.role})가 확인되어 직급이 고정되었습니다.`;
+                        adminNotice.style.color = 'green';
+                    }
+                } else {
+                    // Not an officer, default to member and allow selection (or keep member)
+                    // If previously disabled by auto-detect, re-enable
+                    if (roleSelect.disabled && roleSelect.value !== 'admin') {
+                        roleSelect.disabled = false;
+                        adminNotice.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        presidiumSelect.addEventListener('change', () => { autoDetectRole(); checkRoleConflict(); });
+        curiaSelect.addEventListener('change', () => { autoDetectRole(); checkRoleConflict(); });
+        churchSelect.addEventListener('change', () => { autoDetectRole(); checkRoleConflict(); });
+
+        // --- 3.5.2 Check Role Conflict (Refined with Curia & Global Admin) ---
+        function checkRoleConflict() {
+            const role = roleSelect.value;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidiumName = presidiumSelect.options[presidiumSelect.selectedIndex]?.text || '';
+
+            // Reset error
+            roleError.style.display = 'none';
+            roleError.textContent = '';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+
+            if (!role) return;
+
+            // 1. 관리자 전역 체크 (소속 상관없이 시스템당 1명)
+            if (role === 'admin') {
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                const existingAdmin = Object.values(users).find(u => u.role === 'admin' && u.status === 'active');
+
+                if (existingAdmin) {
+                    roleError.textContent = `⚠️ 오류: 시스템에 이미 등록된 '관리자'(${existingAdmin.name}) 계정이 존재합니다. 관리자는 중복 등록이 불가능합니다.`;
+                    roleError.style.display = 'block';
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                }
+                return;
+            }
+
+            // 2. 간부 소속별 체크 (성당, 꾸리아, 쁘레시디움 완벽 대조)
+            if (role === 'member') return;
+            if (!church || !curia || !presidiumName || presidiumName === '쁘레시디움(Pr.) 선택') return;
+
+            const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const roleMap = { 'president': '단장', 'vice_president': '부단장', 'secretary': '서기', 'treasurer': '회계' };
+            const targetRoleName = roleMap[role];
+
+            const name = document.getElementById('name').value; // 현재 입력중인 성명
+            const today = new Date().toISOString().split('T')[0];
+            const activeOfficer = officers.find(o =>
+                o.role === targetRoleName &&
+                (o.churchName === church || o.church === church) &&
+                (o.curiaName === curia || o.curia === curia) &&
+                (o.presidiumName === presidiumName || o.presidium === presidiumName) &&
+                !['퇴단', '전출'].includes(o.status) &&
+                (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today) &&
+                o.name !== name // [핵심] 가입하려는 본인인 경우는 제외 (본인 직책 찾기 허용)
+            );
+
+            if (activeOfficer) {
+                roleError.textContent = `⚠️ 오류: ${church} > ${curia} > ${presidiumName}에 이미 활동 중인 '${targetRoleName}'(${activeOfficer.name})님이 존재합니다. 중복 가입은 불가능합니다.\n(본인이 직접 가입하시는 것이라면 '개인 정보'의 성명을 확인해 주세요. 타인인 경우 관리자 메뉴에서 기존 간부의 임기 정보를 만료 처리해야 합니다.)`;
+                roleError.style.display = 'block';
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+            }
+        }
+
+        // Initialize state on load
+        updateRoleState();
+
+
+
+
+        // --- 3.6 Signature Pad Logic ---
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clear-signature');
+        const signatureDataInput = document.getElementById('signature-data');
+        const signatureFileInput = document.getElementById('signature-file');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const filePreviewContainer = document.getElementById('file-preview-container');
+        const signaturePreview = document.getElementById('signature-preview');
+        let painting = false;
+
+        function startPosition(e) {
+            painting = true;
+            draw(e);
+        }
+        function finishedPosition() {
+            painting = false;
+            ctx.beginPath();
+            // 캔버스에 그리면 파일 업로드 영역 초기화
+            resetFileUpload();
+        }
+        function draw(e) {
+            if (!painting) return;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+
+            const rect = canvas.getBoundingClientRect();
+            const x = ((e.clientX || (e.touches && e.touches[0].clientX)) - rect.left);
+            const y = ((e.clientY || (e.touches && e.touches[0].clientY)) - rect.top);
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', finishedPosition);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startPosition);
+        canvas.addEventListener('touchend', finishedPosition);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+
+        clearBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            signatureDataInput.value = '';
+        });
+
+        // --- 3.7 Signature File Upload Logic (New) ---
+        signatureFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // 파일이 선택되면 캔버스 초기화
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result;
+                    signaturePreview.src = base64;
+                    signatureDataInput.value = base64;
+                    fileNameDisplay.textContent = file.name;
+                    filePreviewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resetFileUpload();
+            }
+        });
+
+        function resetFileUpload() {
+            signatureFileInput.value = '';
+            fileNameDisplay.textContent = '선택된 파일 없음';
+            filePreviewContainer.style.display = 'none';
+            signaturePreview.src = '';
+            if (signatureDataInput.value.startsWith('data:image')) {
+                // Do not clear if it might hold canvas data, but here we track file separately
+                // For safety, only clear if it was a file-based base64
+                signatureDataInput.value = '';
+            }
+        }
+
+        // Helper to check if canvas is empty
+        function isCanvasBlank(canvas) {
+            const context = canvas.getContext('2d');
+            const pixelBuffer = new Uint32Array(
+                context.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+            );
+            return !pixelBuffer.some(color => color !== 0);
+        }
+
+        // --- 4. Handle Form Submission ---
+        signupForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidiumId = presidiumSelect.value;
+            const name = document.getElementById('name').value;
+            const baptismalName = document.getElementById('baptismal-name').value;
+            const gender = document.getElementById('gender').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role-select').value;
+
+            // 서명 데이터 가져오기 (파일 업로드 우선 확인)
+            let finalSignature = signatureDataInput.value;
+
+            // 파일 업로드가 없고 캔버스에 그림이 있다면 캔버스 데이터 추출
+            if (!finalSignature && !isCanvasBlank(canvas)) {
+                finalSignature = canvas.toDataURL('image/png');
+            }
+
+            // 서명이 없어도 가입 가능하도록 빈 값 허용
+            if (!finalSignature) {
+                finalSignature = "";
+            }
+
+            // 쁘레시디움 명칭 추출
+            let presidiumName = '';
+            if (role !== 'admin') {
+                if (presidiumSelect.selectedIndex >= 0) {
+                    presidiumName = presidiumSelect.options[presidiumSelect.selectedIndex].text;
+                }
+            } else {
+                presidiumName = '관리자(본부)';
+            }
+
+            // --- [시니어 팁] 단원정보 관리 명부 대조 및 자동 승인 로직 ---
+            if (role !== 'admin') {
+                const members = JSON.parse(localStorage.getItem('members_list') || '[]');
+
+                // 1. 해당 조직에 동일 성명의 단원이 존재하는지 확인 (성당, 꾸리아, 쁘레시디움 전체 일치)
+                const matchedMember = members.find(m =>
+                    m.name === name &&
+                    (m.churchName === church || m.church === church) &&
+                    (m.curiaName === curia || m.curia === curia) &&
+                    (m.presidiumName === presidiumName || m.presidium === presidiumName)
+                );
+
+                if (!matchedMember) {
+                    alert(`⚠️ 오류: '${name}' 단원님은 선택하신 조직(${church} > ${presidiumName})의 단원 명부에 등록되어 있지 않습니다.\n가입을 위해 먼저 해당 쁘레시디움 단장에게 단원 등록을 요청해 주세요.`);
+                    resetPersonalInfo();
+                    return;
+                }
+
+                // 2. 정상 단원 여부 확인 (퇴단, 전출 제외)
+                if (matchedMember.status === '퇴단' || matchedMember.status === '전출') {
+                    alert(`⚠️ 오류: '${name}' 단원님은 현재 '${matchedMember.status}' 상태로 등록되어 있어 회원가입이 불가능합니다.`);
+                    resetPersonalInfo();
+                    return;
+                }
+
+                // 3. [추가] 이미 가입된 계정이 있는지 확인 (이름 + 소속 기준 중복 가입 방지)
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                const alreadyRegistered = Object.values(users).find(u =>
+                    u.name === name &&
+                    (u.church === church || u.churchName === church) &&
+                    (u.presidiumName === presidiumName || u.presidium === presidiumName) &&
+                    u.status === 'active'
+                );
+
+                if (alreadyRegistered) {
+                    alert(`⚠️ 오류: '${name}' 님은 이미 동일한 소속으로 가입된 계정(${alreadyRegistered.username})이 존재합니다.\n중복 가입은 불가능하오니 기존 계정으로 로그인해 주세요.`);
+                    resetPersonalInfo();
+                    return;
+                }
+            }
+
+            // Construct email from username
+            const email = `${username}@legion.app`;
+
+            const userData = {
+                name,
+                baptismalName,
+                gender,
+                username,
+                role,
+                church,
+                curia,
+                presidiumId,
+                presidiumName,
+                signature: finalSignature // 서명 이미지 보관
+            };
+
+            console.log("Attempting Signup with:", userData);
+
+            try {
+                await registerUser(email, password, userData);
+                alert("축하드립니다! 회원가입이 완료되었습니다.\n단원 명부 확인이 완료되어 별도의 승인 절차 없이 즉시 이용 가능합니다.");
+                window.location.href = "index.html";
+            } catch (error) {
+                // [시니어 팁] 사용자에게 구체적인 실패 원인을 알리고 포커스 유지
+                alert("회원가입 실패: " + error.message);
+                console.error(error);
+
+                // 에러 발생 시 최상단으로 스크롤하여 문제를 확인하게 함
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+
+</html>

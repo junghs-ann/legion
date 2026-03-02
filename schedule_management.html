@@ -1,0 +1,1191 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일정 관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .schedule-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+        }
+
+        .schedule-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            font-size: 1.6rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Layout Grid */
+        .schedule-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        @media (max-width: 992px) {
+            .schedule-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Organization Filter Section */
+        .org-filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #edf2f7;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group label {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #4a5568;
+            white-space: nowrap;
+        }
+
+        .filter-group select {
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            min-width: 160px;
+            background-color: white;
+            color: #2d3748;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* Calendar Styles */
+        .calendar-card {
+            background: white;
+            border: 1px solid #edf2f7;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #fdfdfd;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .current-month {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #2d3748;
+        }
+
+        .nav-btn {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #4a5568;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav-btn:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .weekday {
+            padding: 12px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            background: #f8f9fa;
+            color: #718096;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .weekday.sun {
+            color: #e53e3e;
+        }
+
+        .weekday.sat {
+            color: #3182ce;
+        }
+
+        .day {
+            min-height: 100px;
+            padding: 10px;
+            border-right: 1px solid #edf2f7;
+            border-bottom: 1px solid #edf2f7;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .day:nth-child(7n) {
+            border-right: none;
+        }
+
+        .day:hover {
+            background: #fdfdfd;
+        }
+
+        .day.today {
+            background: #fffaf0;
+        }
+
+        .day.today::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: orange;
+        }
+
+        .day.other-month {
+            color: #cbd5e0;
+            background: #fcfcfc;
+        }
+
+        .day-num {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+        }
+
+        .day.today .day-num {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+        }
+
+        .event-dot-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .event-mini {
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+
+        /* Event List (Right Side) */
+        .event-list-card {
+            background: #fdfdfd;
+            border: 1px solid #edf2f7;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .list-title {
+            font-weight: 800;
+            color: #2d3748;
+            font-size: 1.1rem;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 10px;
+            margin-bottom: 10px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: #a0aec0;
+            padding: 40px 20px;
+            font-size: 0.95rem;
+        }
+
+        .schedule-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .schedule-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .schedule-item {
+            word-break: keep-all;
+            /* 단어 단위 줄바꿈 적용 */
+            overflow-wrap: break-word;
+        }
+
+        .item-category {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .cat-meeting {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .cat-event {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .cat-feast {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .cat-anniversary {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .item-time {
+            font-size: 0.85rem;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+
+        .item-title {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            background: #fff5f5;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Category Tag Styles */
+        .cat-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        /* Category Management Styles */
+        .category-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid #edf2f7;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #718096;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .btn-icon:hover {
+            color: #e53e3e;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px;">
+        <div class="schedule-container">
+            <div class="schedule-header">
+                <h2 class="schedule-title"><i class="far fa-calendar-alt"></i> 일정 관리</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnOpenAdd" class="btn-primary">
+                        <i class="fas fa-plus"></i> 일정 등록
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="location.href='dashboard.html'">
+                        닫 기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 조직 필터 영역 -->
+            <div class="org-filter-section">
+                <div class="filter-group">
+                    <label>성당</label>
+                    <select id="filterChurch">
+                        <option value="">성당 선택</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>꾸리아</label>
+                    <select id="filterCuria" disabled>
+                        <option value="">꾸리아 선택</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>쁘레시디움</label>
+                    <select id="filterPresidium" disabled>
+                        <option value="">쁘레시디움 선택</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="schedule-layout">
+                <!-- Left: Calendar Area -->
+                <div class="calendar-card">
+                    <div class="calendar-nav">
+                        <button class="nav-btn" id="prevMonth"><i class="fas fa-chevron-left"></i> 이전달</button>
+                        <div class="current-month" id="monthDisplay">2024년 3월</div>
+                        <button class="nav-btn" id="nextMonth">다음달 <i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="calendarWeekdays">
+                        <div class="weekday sun">일</div>
+                        <div class="weekday">월</div>
+                        <div class="weekday">화</div>
+                        <div class="weekday">수</div>
+                        <div class="weekday">목</div>
+                        <div class="weekday">금</div>
+                        <div class="weekday sat">토</div>
+                    </div>
+                    <div class="calendar-grid" id="calendarDays" style="border-top: none;">
+                        <!-- JS로 채움 -->
+                    </div>
+                </div>
+
+                <!-- Right: Event List Area -->
+                <div class="event-list-card">
+                    <div class="list-title" id="selectedDateTitle">오늘의 일정</div>
+                    <div id="eventListContainer">
+                        <!-- JS로 채움 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle" style="margin:0;">일정 등록</h3>
+            </div>
+            <form id="scheduleForm">
+                <input type="hidden" id="scheduleId">
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="schedTitle" required placeholder="일정 제목을 입력하세요">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>날짜</label>
+                        <input type="date" id="schedDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>시간 (선택)</label>
+                        <input type="time" id="schedTime">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        분류
+                        <button type="button" id="btnManageCategories" class="btn-icon" style="display:none;"
+                            title="분류 관리">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </label>
+                    <select id="schedCategory" required>
+                        <!-- JS로 동적 채움 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>메모</label>
+                    <textarea id="schedNotes" rows="3" placeholder="상세 내용을 입력하세요"></textarea>
+                </div>
+
+                <!-- Hidden org fields for auto-sync -->
+                <input type="hidden" id="schedChurch">
+                <input type="hidden" id="schedCuria">
+                <input type="hidden" id="schedPresidium">
+
+                <div class="btn-group">
+                    <button type="button" id="btnDelete" class="btn-delete"
+                        style="display:none; margin-right: auto;">삭제</button>
+                    <button type="button" class="btn-secondary" id="btnCloseModal">취소</button>
+                    <button type="submit" class="btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0;">일정 분류 관리</h3>
+            </div>
+            <div id="categoryList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- JS로 채움 -->
+            </div>
+            <div class="form-group">
+                <label>신규 분류 추가</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newCategoryName" placeholder="예: 주회합, 피정">
+                    <button type="button" id="btnAddCategory" class="btn-primary"
+                        style="padding: 10px 15px;">추가</button>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn-secondary" id="btnCloseCategoryModal">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let schedules = [];
+        let orgFilter = { church: '', curia: '', presidium: '' };
+        let currentDate = new Date(); // 달력 표시용
+        let selectedDate = new Date(); // 리스트 표시용 (오늘 날짜 기본값)
+
+        // DOM Elements
+        const monthDisplay = document.getElementById('monthDisplay');
+        const calendarDays = document.getElementById('calendarDays');
+        const eventListContainer = document.getElementById('eventListContainer');
+        const selectedDateTitle = document.getElementById('selectedDateTitle');
+        const btnOpenAdd = document.getElementById('btnOpenAdd');
+        const scheduleModal = document.getElementById('scheduleModal');
+        const scheduleForm = document.getElementById('scheduleForm');
+
+        // Logic Initialization
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            setupOrgFilters();
+            loadSchedules();
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    if (confirm("로그아웃 하시겠습니까?")) {
+                        window.location.href = "index.html";
+                    }
+                });
+            }
+
+            // [Role-based Access Control] All officers and members can add schedules
+            const role = (profile.role || '').toLowerCase();
+            const canManage = ['admin', '관리자', '단장', '부단장', '서기', '회계', '단원'].some(r => role.includes(r.toLowerCase()));
+
+            if (canManage) {
+                btnOpenAdd.style.display = 'flex'; // Use flex for better alignment
+                const btnCategory = document.getElementById('btnManageCategories');
+                if (btnCategory) btnCategory.style.display = 'inline-block';
+            } else {
+                btnOpenAdd.style.display = 'none'; // Hide only if not allowed
+            }
+
+            renderCalendar();
+            renderEventList();
+        }, () => { location.href = 'index.html'; });
+
+        // --- Organization Filter Logic ---
+        function setupOrgFilters() {
+            const filterChurch = document.getElementById('filterChurch');
+            const filterCuria = document.getElementById('filterCuria');
+            const filterPresidium = document.getElementById('filterPresidium');
+
+            const churchList = getChurches();
+            churchList.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                filterChurch.appendChild(opt);
+            });
+
+            const isAdmin = currentUser.role === 'admin' || (currentUser.role || '').includes('관리자');
+
+            const userChurch = currentUser.churchName || currentUser.church || '';
+            const userCuria = currentUser.curiaName || currentUser.curia || '';
+            const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
+
+            if (!isAdmin) {
+                // Lock for non-admins: Only lock if data exists
+                if (userChurch) {
+                    filterChurch.value = userChurch;
+                    if (filterChurch.value === userChurch) filterChurch.disabled = true;
+                    updateCuriaSelect(userChurch, userCuria);
+
+                    if (userCuria) {
+                        filterCuria.value = userCuria;
+                        if (filterCuria.value === userCuria) filterCuria.disabled = true;
+                        updatePresidiumSelect(userChurch, userCuria, userPresidium);
+
+                        if (userPresidium) {
+                            filterPresidium.value = userPresidium;
+                            // [수정] 일반 단원도 쁘레시디움 선택을 해제하여 상위 일정을 볼 수 있도록 허용
+                            filterPresidium.disabled = false;
+                        } else {
+                            filterPresidium.disabled = false;
+                        }
+                    } else {
+                        filterCuria.disabled = false;
+                    }
+                } else {
+                    filterChurch.disabled = false;
+                }
+
+                orgFilter = {
+                    church: filterChurch.value,
+                    curia: filterCuria.value,
+                    presidium: filterPresidium.value
+                };
+
+                // [추가] 일반 사용자도 쁘레시디움 필터 변경 시 데이터 갱신
+                filterPresidium.addEventListener('change', (e) => {
+                    orgFilter.presidium = e.target.value;
+                    refreshData();
+                });
+
+                refreshData();
+            } else {
+                // Admin Cascading
+                filterChurch.addEventListener('change', (e) => {
+                    const church = e.target.value;
+                    updateCuriaSelect(church);
+                    filterCuria.disabled = !church;
+                    filterPresidium.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    filterPresidium.disabled = true;
+                    orgFilter = { church: church, curia: '', presidium: '' };
+                    refreshData();
+                });
+
+                filterCuria.addEventListener('change', (e) => {
+                    const curia = e.target.value;
+                    updatePresidiumSelect(filterChurch.value, curia);
+                    filterPresidium.disabled = !curia;
+                    orgFilter.curia = curia;
+                    orgFilter.presidium = '';
+                    refreshData();
+                });
+
+                filterPresidium.addEventListener('change', (e) => {
+                    orgFilter.presidium = e.target.value;
+                    refreshData();
+                });
+            }
+        }
+
+        function updateCuriaSelect(church, preselect = '') {
+            const filterCuria = document.getElementById('filterCuria');
+            filterCuria.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!church) return;
+            getCuriae(church).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                if (c === preselect) opt.selected = true;
+                filterCuria.appendChild(opt);
+            });
+        }
+
+        function updatePresidiumSelect(church, curia, preselect = '') {
+            const filterPresidium = document.getElementById('filterPresidium');
+            filterPresidium.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!church || !curia) return;
+            getPresidia(church, curia).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name; opt.textContent = p.name;
+                if (p.name === preselect) opt.selected = true;
+                filterPresidium.appendChild(opt);
+            });
+        }
+
+        function refreshData() {
+            loadSchedules();
+            renderCalendar();
+            renderEventList();
+        }
+
+        // --- Data Logic ---
+        function loadSchedules() {
+            const raw = localStorage.getItem('schedules_list') || '[]';
+            const all = JSON.parse(raw);
+
+            // Filter by Org
+            schedules = all.filter(s => {
+                const sChurch = s.churchName || s.church || '';
+                const sCuria = s.curiaName || s.curia || '';
+                const sPresidium = s.presidiumName || s.presidium || '';
+
+                // 성당이 선택되지 않았으면 아무것도 보여주지 않음 (관리자 초기 화면 등)
+                if (!orgFilter.church) return false;
+
+                // [계층형 누적 필터링 로직]
+                // 1. 기본적으로 선택된 성당의 일정이어야 함
+                if (sChurch !== orgFilter.church) return false;
+
+                // 2. 성당 레벨 일정 (꾸리아/쁘레시디움 정보가 없는 경우)
+                const isChurchLevel = !sCuria && !sPresidium;
+
+                // 3. 꾸리아 레벨 일정 (해당 꾸리아 정보가 있고 쁘레시디움 정보가 없는 경우)
+                const isCuriaLevel = orgFilter.curia && (sCuria === orgFilter.curia) && !sPresidium;
+
+                // 4. 쁘레시디움 레벨 일정 (해당 꾸리아와 쁘레시디움 정보가 모두 일치하는 경우)
+                const isPresidiumLevel = orgFilter.curia && orgFilter.presidium && (sCuria === orgFilter.curia) && (sPresidium === orgFilter.presidium);
+
+                // 선택된 필터 수준에 따라 누적하여 반환
+                if (orgFilter.presidium) {
+                    // 성당 + 꾸리아 + 쁘레시디움 일정 모두 노출
+                    return isChurchLevel || isCuriaLevel || isPresidiumLevel;
+                } else if (orgFilter.curia) {
+                    // 성당 + 꾸리아 일정 노출
+                    return isChurchLevel || isCuriaLevel;
+                } else {
+                    // 성당 일정만 노출
+                    return isChurchLevel;
+                }
+            });
+        }
+
+        function saveSchedule(item) {
+            const all = JSON.parse(localStorage.getItem('schedules_list') || '[]');
+            if (item.id) {
+                const idx = all.findIndex(s => s.id === item.id);
+                if (idx !== -1) all[idx] = item;
+            } else {
+                item.id = 'sched_' + Date.now();
+                all.push(item);
+            }
+            localStorage.setItem('schedules_list', JSON.stringify(all));
+            refreshData();
+        }
+
+        function deleteSchedule(id) {
+            let all = JSON.parse(localStorage.getItem('schedules_list') || '[]');
+            all = all.filter(s => s.id !== id);
+            localStorage.setItem('schedules_list', JSON.stringify(all));
+            refreshData();
+        }
+
+        // --- Calendar Rendering ---
+        function renderCalendar() {
+            calendarDays.innerHTML = '';
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            monthDisplay.textContent = `${year}년 ${month + 1}월`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            const startOffset = firstDay.getDay(); // 0 (Sun) to 6 (Sat)
+            const totalDays = lastDay.getDate();
+
+            // Prev Month Days
+            const prevLastDay = new Date(year, month, 0).getDate();
+            for (let i = startOffset - 1; i >= 0; i--) {
+                const d = prevLastDay - i;
+                createDayEl(d, true);
+            }
+
+            // Current Month Days
+            const today = new Date();
+            for (let i = 1; i <= totalDays; i++) {
+                const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === i;
+                createDayEl(i, false, isToday);
+            }
+
+            // Next Month Days
+            const endOffset = (7 - (calendarDays.children.length % 7)) % 7;
+            for (let i = 1; i <= endOffset; i++) {
+                createDayEl(i, true);
+            }
+        }
+
+        function createDayEl(num, isOther, isToday) {
+            const div = document.createElement('div');
+            div.className = `day ${isOther ? 'other-month' : ''} ${isToday ? 'today' : ''}`;
+
+            const numEl = document.createElement('span');
+            numEl.className = 'day-num';
+            numEl.textContent = num;
+            div.appendChild(numEl);
+
+            if (!isOther) {
+                const dateStr = formatDate(currentDate.getFullYear(), currentDate.getMonth(), num);
+                const dayEvents = schedules.filter(s => s.date === dateStr);
+
+                const dotContainer = document.createElement('div');
+                dotContainer.className = 'event-dot-container';
+                dayEvents.slice(0, 3).forEach(e => {
+                    const dot = document.createElement('div');
+                    dot.className = 'event-mini';
+                    dot.textContent = e.title;
+                    dotContainer.appendChild(dot);
+                });
+                if (dayEvents.length > 3) {
+                    const more = document.createElement('div');
+                    more.className = 'event-mini';
+                    more.style.background = 'transparent';
+                    more.textContent = `+${dayEvents.length - 3}개 더...`;
+                    dotContainer.appendChild(more);
+                }
+                div.appendChild(dotContainer);
+
+                div.addEventListener('click', () => {
+                    selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), num);
+                    renderEventList();
+                    // Mark as selected? (Optional UI polish)
+                });
+            }
+
+            calendarDays.appendChild(div);
+        }
+
+        function renderEventList() {
+            const dateStr = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+            selectedDateTitle.textContent = `${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 일정`;
+            eventListContainer.innerHTML = '';
+
+            const dayEvents = schedules.filter(s => s.date === dateStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+            if (dayEvents.length === 0) {
+                eventListContainer.innerHTML = '<div class="empty-msg">일정이 없습니다.</div>';
+                return;
+            }
+
+            dayEvents.forEach(e => {
+                const item = document.createElement('div');
+                item.className = 'schedule-item';
+
+                const catStyle = getCategoryStyle(e.category);
+
+                item.innerHTML = `
+                    <span class="cat-badge" style="background: ${catStyle.bg}; color: ${catStyle.color};">${e.category}</span>
+                    <div class="item-time">${e.time || '시간 미지정'}</div>
+                    <div class="item-title">${e.title}</div>
+                    ${e.notes ? `<div style="font-size:0.8rem; color:#666; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">${e.notes}</div>` : ''}
+                `;
+
+                item.addEventListener('click', () => {
+                    const canEdit = currentUser.role === 'admin' ||
+                        ['단장', '부단장', '서기', '회계', '단원'].some(r => (currentUser.role || '').includes(r));
+                    if (canEdit) {
+                        openEditModal(e);
+                    }
+                });
+
+                eventListContainer.appendChild(item);
+            });
+        }
+
+        // --- UI Event Listeners ---
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        btnOpenAdd.addEventListener('click', () => {
+            document.getElementById('modalTitle').textContent = '일정 등록';
+            scheduleForm.reset();
+            document.getElementById('scheduleId').value = '';
+            document.getElementById('schedDate').value = selectedDate.toISOString().split('T')[0];
+            document.getElementById('btnDelete').style.display = 'none';
+            scheduleModal.style.display = 'flex';
+        });
+
+        document.getElementById('btnCloseModal').addEventListener('click', () => {
+            scheduleModal.style.display = 'none';
+        });
+
+        function openEditModal(e) {
+            document.getElementById('modalTitle').textContent = '일정 수정';
+            document.getElementById('scheduleId').value = e.id;
+            document.getElementById('schedTitle').value = e.title;
+            document.getElementById('schedDate').value = e.date;
+            document.getElementById('schedTime').value = e.time || '';
+            document.getElementById('schedCategory').value = e.category;
+            document.getElementById('schedNotes').value = e.notes || '';
+            document.getElementById('btnDelete').style.display = 'block';
+            scheduleModal.style.display = 'flex';
+        }
+
+        document.getElementById('btnDelete').addEventListener('click', () => {
+            const id = document.getElementById('scheduleId').value;
+            if (confirm('정말로 이 일정을 삭제하시겠습니까?')) {
+                deleteSchedule(id);
+                scheduleModal.style.display = 'none';
+            }
+        });
+
+        scheduleForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Validate Org Selection BEFORE saving
+            // If User is NOT admin, org is already set.
+            // If User IS admin, they must have selected AT LEAST a church.
+            const church = document.getElementById('filterChurch').value;
+            const curia = document.getElementById('filterCuria').value;
+            const presidium = document.getElementById('filterPresidium').value;
+
+            if (!church) {
+                alert('일정을 등록할 성당을 전역 필터에서 먼저 선택해주세요.');
+                return;
+            }
+
+            const item = {
+                id: document.getElementById('scheduleId').value,
+                title: document.getElementById('schedTitle').value,
+                date: document.getElementById('schedDate').value,
+                time: document.getElementById('schedTime').value,
+                category: document.getElementById('schedCategory').value,
+                notes: document.getElementById('schedNotes').value,
+                church: church,
+                curia: curia,
+                presidiumName: presidium,
+                churchName: church, // For compatibility
+                curiaName: curia,   // For compatibility
+                author: currentUser.name || '알 수 없음'
+            };
+
+            saveSchedule(item);
+            scheduleModal.style.display = 'none';
+            alert('저장되었습니다.');
+        });
+
+        // --- Category Dynamic Logic ---
+        function loadCategories() {
+            const defaultCats = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
+            const stored = JSON.parse(localStorage.getItem('schedule_categories') || '[]');
+
+            if (stored.length === 0) {
+                localStorage.setItem('schedule_categories', JSON.stringify(defaultCats));
+                return defaultCats;
+            }
+            return stored;
+        }
+
+        function renderCategoryOptions() {
+            const select = document.getElementById('schedCategory');
+            const categories = loadCategories();
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+        }
+
+        function getCategoryStyle(catName) {
+            // Preset colors for common keywords
+            if (catName.includes('회합') || catName.includes('회의')) return { bg: '#e3f2fd', color: '#1976d2' };
+            if (catName.includes('행사') || catName.includes('교육')) return { bg: '#f3e5f5', color: '#7b1fa2' };
+            if (catName.includes('축일')) return { bg: '#fff3e0', color: '#e65100' };
+            if (catName.includes('기념')) return { bg: '#e8f5e9', color: '#2e7d32' };
+            return { bg: '#f5f5f5', color: '#616161' };
+        }
+
+        // Category Management UI Logic
+        const btnManageCategories = document.getElementById('btnManageCategories');
+        const categoryModal = document.getElementById('categoryModal');
+        const categoryList = document.getElementById('categoryList');
+
+        btnManageCategories.addEventListener('click', () => {
+            renderCategoryList();
+            if (categoryModal) categoryModal.style.display = 'flex';
+        });
+
+        if (document.getElementById('btnCloseCategoryModal')) {
+            document.getElementById('btnCloseCategoryModal').addEventListener('click', () => {
+                if (categoryModal) categoryModal.style.display = 'none';
+                renderCategoryOptions(); // Refresh options in schedule modal
+            });
+        }
+
+        function renderCategoryList() {
+            if (!categoryList) return;
+            const categories = loadCategories();
+            categoryList.innerHTML = '';
+            categories.forEach((cat, index) => {
+                const item = document.createElement('div');
+                item.className = 'category-list-item';
+                item.innerHTML = `
+                    <span>${cat}</span>
+                    <button class="btn-icon" onclick="removeCategory(${index})"><i class="fas fa-trash-alt"></i></button>
+                `;
+                categoryList.appendChild(item);
+            });
+        }
+
+        window.removeCategory = (index) => {
+            let categories = loadCategories();
+            if (confirm(`'${categories[index]}' 분류를 삭제하시겠습니까?`)) {
+                categories.splice(index, 1);
+                localStorage.setItem('schedule_categories', JSON.stringify(categories));
+                renderCategoryList();
+            }
+        };
+
+        document.getElementById('btnAddCategory').addEventListener('click', () => {
+            const input = document.getElementById('newCategoryName');
+            const val = input.value.trim();
+            if (!val) return;
+
+            let categories = loadCategories();
+            if (categories.includes(val)) {
+                alert('이미 존재하는 분류입니다.');
+                return;
+            }
+
+            categories.push(val);
+            localStorage.setItem('schedule_categories', JSON.stringify(categories));
+            input.value = '';
+            renderCategoryList();
+        });
+
+        // Initialize dynamic parts
+        renderCategoryOptions();
+
+
+        // --- Helper Helpers ---
+        function formatDate(y, m, d) {
+            const mm = (m + 1).toString().padStart(2, '0');
+            const dd = d.toString().padStart(2, '0');
+            return `${y}-${mm}-${dd}`;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,705 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입출내역 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <style>
+        /* Report specific overrides */
+        @media print {
+
+            .main-content {
+                padding: 0;
+            }
+
+            body {
+                background: white;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 100px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+
+            <!-- Filters -->
+            <div class="filter-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3
+                        style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
+                        입출내역 보고서
+                    </h3>
+                    <button id="btnClose"
+                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>성당</label>
+                        <select id="churchFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="churchInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>꾸리아</label>
+                        <select id="curiaFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="curiaInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>쁘레시디움</label>
+                        <select id="presidiumFilter" disabled>
+                            <option value="">선택</option>
+                        </select>
+                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>해당년도</label>
+                        <input type="number" id="yearFilter" min="2000" max="2100" style="text-align: center;">
+                    </div>
+                    <div class="filter-group">
+                        <label>기준일자</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="date" id="startDateFilter" style="width: 130px;">
+                            <span>~</span>
+                            <input type="date" id="endDateFilter" style="width: 130px;">
+                        </div>
+                    </div>
+                    <div class="filter-group"
+                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px;">
+                        <button id="btnSearch" class="btn btn-secondary"
+                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                        <button onclick="window.print()" class="btn-print"
+                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Content -->
+            <div id="reportContent" style="display: none;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <!-- Underlined Reference Date -->
+                    <h2 id="reportDateRange"
+                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; text-align: center;">
+                        2025년 1월 1일 ~ 2025년 1월 31일
+                    </h2>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">회차</th>
+                                <th style="width: 60px;">월</th>
+                                <th style="width: 60px;">일</th>
+                                <th style="width: 400px;">항목</th>
+                                <th style="width: 120px;">수입금액</th>
+                                <th style="width: 120px;">지출금액</th>
+                                <th style="width: 120px;">잔 액</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportBody">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="summary-container">
+                    <h4 style="margin-bottom: 15px; color: #555;">기간 요약</h4>
+                    <table class="summary-table">
+                        <tr>
+                            <th>전월 이월금</th>
+                            <td class="amount" id="summaryPrevBalance">0</td>
+                        </tr>
+                        <tr>
+                            <th>수입 누계 (이월포함)</th>
+                            <td class="amount blue-text" id="summaryIncome">0</td>
+                        </tr>
+                        <tr>
+                            <th>지출 누계</th>
+                            <td class="amount red-text" id="summaryExpense">0</td>
+                        </tr>
+                        <tr>
+                            <th style="background-color: #e8f5e9;">최종 잔 액</th>
+                            <td class="amount" id="summaryBalance" style="background-color: #e8f5e9; color: #2e7d32;">0
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div id="noDataMsg" style="text-align: center; color: #666; padding: 50px; display: none;">
+                데이터가 없습니다.
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+
+        let currentUser = null;
+        let isAdmin = false;
+
+        // Data
+        let allTransactions = [];
+        let allSummaries = {};
+
+        // DOM
+        const churchFilter = document.getElementById('churchFilter');
+        const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumFilter = document.getElementById('presidiumFilter');
+        const yearFilter = document.getElementById('yearFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+        const btnSearch = document.getElementById('btnSearch');
+        const btnClose = document.getElementById('btnClose');
+
+        const reportContent = document.getElementById('reportContent');
+        const reportBody = document.getElementById('reportBody');
+        const reportDateRange = document.getElementById('reportDateRange');
+        const noDataMsg = document.getElementById('noDataMsg');
+
+        // Inputs for non-admin
+        const churchInput = document.getElementById('churchInput');
+        const curiaInput = document.getElementById('curiaInput');
+        const presidiumInput = document.getElementById('presidiumInput');
+
+        // Init
+        yearFilter.value = new Date().getFullYear();
+
+        // --- Auth & Setup ---
+        initAuthObserver((user, profile) => { // Permission Check: Admin, President, VP, Secretary, Treasurer
+            currentUser = profile;
+            const allowedRoles = ['admin', '관리자', 'president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'];
+            const role = (profile.role || '').toLowerCase();
+            const isAdminRole = role === 'admin' || role === '관리자';
+
+            if (!allowedRoles.includes(role)) {
+                alert("접근 권한이 없습니다. (관리자 및 간부 전용)");
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            isAdmin = isAdminRole;
+            setupFilters(profile);
+
+            // Load initial data if not admin
+            if (!isAdmin) {
+                // Ensure inputs are set before loading
+                document.getElementById('churchInput').value = profile.churchName || profile.church || '';
+                document.getElementById('curiaInput').value = profile.curiaName || profile.curia || '';
+                document.getElementById('presidiumInput').value = profile.presidiumName || profile.presidium || '';
+            }
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+        }, () => {
+            alert("로그인이 필요합니다.");
+            window.location.href = 'index.html';
+        });
+
+
+        // --- Filters Setup ---
+        function setupFilters(profile) {
+            const churchFilter = document.getElementById('churchFilter');
+            const curiaFilter = document.getElementById('curiaFilter');
+            const presidiumFilter = document.getElementById('presidiumFilter');
+
+            const churchInput = document.getElementById('churchInput');
+            const curiaInput = document.getElementById('curiaInput');
+            const presidiumInput = document.getElementById('presidiumInput');
+
+            if (isAdmin) {
+                // Admin: Show Selects, Hide Inputs
+                if (churchFilter) {
+                    churchFilter.disabled = false;
+                    churchFilter.style.display = 'inline-block';
+                }
+                if (churchInput) churchInput.style.display = 'none';
+
+                if (curiaFilter) {
+                    curiaFilter.style.display = 'inline-block';
+                    // curiaFilter.disabled = true; // Wait for church selection
+                }
+                if (curiaInput) curiaInput.style.display = 'none';
+
+                if (presidiumFilter) {
+                    presidiumFilter.style.display = 'inline-block';
+                    // presidiumFilter.disabled = true; // Wait for curia selection
+                }
+                if (presidiumInput) presidiumInput.style.display = 'none';
+
+                loadAdminFilters();
+            } else {
+                // Non-Admin: Hide Selects, Show Inputs
+                if (churchFilter) churchFilter.style.display = 'none';
+                if (curiaFilter) curiaFilter.style.display = 'none';
+                if (presidiumFilter) presidiumFilter.style.display = 'none';
+
+                if (churchInput) {
+                    churchInput.style.display = 'inline-block';
+                    churchInput.value = profile.churchName || profile.church || '';
+                }
+                if (curiaInput) {
+                    curiaInput.style.display = 'inline-block';
+                    curiaInput.value = profile.curiaName || profile.curia || '';
+                }
+                if (presidiumInput) {
+                    presidiumInput.style.display = 'inline-block';
+                    presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                }
+            }
+        }
+
+        function getStoredPresidiaList() {
+            try {
+                return JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            } catch (e) {
+                console.error("Failed to load presidia list", e);
+                return [];
+            }
+        }
+
+        function loadAdminFilters() {
+            const presidia = getStoredPresidiaList();
+            const churchFilter = document.getElementById('churchFilter');
+            const curiaFilter = document.getElementById('curiaFilter');
+            const presidiumFilter = document.getElementById('presidiumFilter');
+
+            if (!churchFilter) return;
+
+            // Load Churches
+            // Extract church names, filter empty, unique, sort
+            const uniqueChurches = [...new Set(presidia.map(p => p.churchName).filter(c => c))].sort();
+
+            churchFilter.innerHTML = '<option value="">성당 선택</option>';
+            uniqueChurches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                churchFilter.appendChild(opt);
+            });
+
+            // Cascading dropdowns - Church Change
+            churchFilter.addEventListener('change', () => {
+                const selectedChurch = churchFilter.value;
+
+                if (curiaFilter) {
+                    curiaFilter.disabled = !selectedChurch;
+                    curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
+                    if (selectedChurch) {
+                        const churchPresidia = presidia.filter(p => p.churchName === selectedChurch);
+                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName).filter(c => c))].sort();
+                        uniqueCuriae.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c;
+                            opt.textContent = c;
+                            curiaFilter.appendChild(opt);
+                        });
+                    }
+                }
+
+                if (presidiumFilter) {
+                    presidiumFilter.disabled = true;
+                    presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                }
+            });
+
+            // Cascading dropdowns - Curia Change
+            if (curiaFilter) {
+                curiaFilter.addEventListener('change', () => {
+                    const selectedChurch = churchFilter.value;
+                    const selectedCuria = curiaFilter.value;
+
+                    if (presidiumFilter) {
+                        presidiumFilter.disabled = !selectedCuria;
+                        presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+
+                        if (selectedChurch && selectedCuria) {
+                            const targetPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
+                            const uniquePresidia = [...new Set(targetPresidia.map(p => p.presidiumName).filter(n => n))].sort();
+                            uniquePresidia.forEach(p => {
+                                const opt = document.createElement('option');
+                                opt.value = p;
+                                opt.textContent = p;
+                                presidiumFilter.appendChild(opt);
+                            });
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- Data Loading ---
+        function getFilterValues() {
+            const churchFilter = document.getElementById('churchFilter');
+            const curiaFilter = document.getElementById('curiaFilter');
+            const presidiumFilter = document.getElementById('presidiumFilter');
+
+            const churchInput = document.getElementById('churchInput');
+            const curiaInput = document.getElementById('curiaInput');
+            const presidiumInput = document.getElementById('presidiumInput');
+
+            if (isAdmin) {
+                return {
+                    year: document.getElementById('yearFilter').value,
+                    startDate: document.getElementById('startDateFilter').value,
+                    endDate: document.getElementById('endDateFilter').value,
+                    church: churchFilter.value,
+                    curia: curiaFilter.value,
+                    presidium: presidiumFilter.value,
+                    year: parseInt(yearFilter.value),
+                    startDate: startDateFilter.value,
+                    endDate: endDateFilter.value
+                };
+            } else {
+                return {
+                    church: currentUser.churchName || currentUser.church || '',
+                    curia: currentUser.curiaName || currentUser.curia || '',
+                    presidium: currentUser.presidiumName || currentUser.presidium || '',
+                    year: parseInt(yearFilter.value),
+                    startDate: startDateFilter.value,
+                    endDate: endDateFilter.value
+                };
+            }
+        }
+
+        function loadReport() {
+            const filters = getFilterValues();
+            if (!filters.church || !filters.curia || !filters.presidium) {
+                alert("성당, 꾸리아, 쁘레시디움을 모두 선택해주세요.");
+                return;
+            }
+
+            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
+            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
+            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+            const summaryData = allSummaries[summaryKey] || { initialBalance: 0 };
+
+            const initialCarryover = summaryData.initialBalance || 0; // Balance from previous YEAR
+
+            // All transactions for this Org+Year
+            let orgTrans = allTrans.filter(t =>
+                t.year == filters.year &&
+                t.church === filters.church &&
+                t.curia === filters.curia &&
+                t.presidium === filters.presidium
+            );
+
+            orgTrans.sort((a, b) => {
+                const dateA = new Date(a.year, a.month - 1, a.day);
+                const dateB = new Date(b.year, b.month - 1, b.day);
+                if (dateA - dateB !== 0) return dateA - dateB;
+                return (a.session || 0) - (b.session || 0);
+            });
+
+            // Date Range
+            let startDate = null;
+            let endDate = null;
+            if (filters.startDate) startDate = new Date(filters.startDate);
+            if (filters.endDate) endDate = new Date(filters.endDate);
+
+            if (startDate) startDate.setHours(0, 0, 0, 0);
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+
+            // Header: Underlined Date
+            let dateRangeText = `${filters.year}년`;
+            if (filters.startDate && filters.endDate) {
+                dateRangeText = `${filters.startDate} ~ ${filters.endDate}`;
+            } else if (filters.startDate) {
+                dateRangeText = `${filters.startDate} ~`;
+            }
+            reportDateRange.textContent = dateRangeText;
+
+            // --- Logic for Carryover & Totals ---
+            // 1. Calculate Balance before Start Date (Prev Carryover)
+            let prevBalance = initialCarryover;
+            let rangeIncomeTotal = 0;
+            let rangeExpenseTotal = 0;
+
+            // YTD (Cumulative) Totals
+            let ytdIncomeTotal = 0;
+            let ytdExpenseTotal = 0;
+
+            let expenseBreakdown = {}; // { 'ItemName': amount }
+            let incomeBreakdown = {};  // { 'ItemName': amount }
+            let displayTrans = []; // Transactions to show in main table
+            let currentBalance = 0;
+
+            // 2. Process Transactions
+            for (const t of orgTrans) {
+                const tDate = new Date(t.year, t.month - 1, t.day);
+                const amt = parseInt(t.amount) || 0;
+
+                // Date Range Check
+                let isBefore = false;
+                let isInRange = false;
+                let isYtd = false;
+
+                if (startDate && tDate < startDate) isBefore = true;
+                else if ((!startDate || tDate >= startDate) && (!endDate || tDate <= endDate)) isInRange = true;
+
+                if (!endDate || tDate <= endDate) isYtd = true;
+
+                // Carryover Calc
+                if (isBefore) {
+                    if (t.type === 'deposit') prevBalance += amt;
+                    else prevBalance -= amt;
+                }
+
+                // YTD Calc
+                if (isYtd) {
+                    if (t.type === 'deposit') ytdIncomeTotal += amt;
+                    else ytdExpenseTotal += amt;
+                }
+
+                // Range Display & Calc
+                if (isInRange) {
+                    displayTrans.push(t);
+                    if (t.type === 'deposit') {
+                        rangeIncomeTotal += amt;
+                        // Income Breakdown
+                        const itemKey = t.item || t.remarks || "기타 수입";
+                        if (!incomeBreakdown[itemKey]) incomeBreakdown[itemKey] = 0;
+                        incomeBreakdown[itemKey] += amt;
+                    } else {
+                        rangeExpenseTotal += amt;
+                        // Expense Breakdown
+                        const itemKey = t.item || t.remarks || "기타 지출";
+                        if (!expenseBreakdown[itemKey]) expenseBreakdown[itemKey] = 0;
+                        expenseBreakdown[itemKey] += amt;
+                    }
+                }
+            }
+
+            // Cumulative Totals
+            const totalCumulativeIncome = ytdIncomeTotal + initialCarryover;
+            const totalCumulativeExpense = ytdExpenseTotal;
+            const finalBalance = totalCumulativeIncome - totalCumulativeExpense;
+
+
+            // 3. Render Main Table
+            reportBody.innerHTML = '';
+
+            // 3.1 Prev Carryover Row
+            const trInit = document.createElement('tr');
+            trInit.innerHTML = `
+                <td></td>
+                <td></td>
+                <td></td>
+                <td style="text-align: left; padding-left: 20px;">전월 이월금</td>
+                <td class="amount">${prevBalance.toLocaleString()}</td>
+                <td class="amount"></td>
+                <td class="amount">${prevBalance.toLocaleString()}</td>
+            `;
+            reportBody.appendChild(trInit);
+
+            // 3.2 Transaction Rows
+            currentBalance = prevBalance;
+            displayTrans.forEach(t => {
+                const amt = parseInt(t.amount) || 0;
+                let inc = '', exp = '';
+                if (t.type === 'deposit') {
+                    currentBalance += amt;
+                    inc = amt.toLocaleString();
+                } else {
+                    currentBalance -= amt;
+                    exp = amt.toLocaleString();
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${t.session || ''}</td>
+                    <td>${t.month}</td>
+                    <td>${t.day}</td>
+                    <td style="text-align: left; padding-left: 10px;">${t.brief || t.item || ''}</td>
+                    <td class="amount">${inc}</td>
+                    <td class="amount">${exp}</td>
+                    <td class="amount">${currentBalance.toLocaleString()}</td>
+                `;
+                reportBody.appendChild(tr);
+            });
+
+            // 3.3 Period Total Row
+            const trPeriodTotal = document.createElement('tr');
+            trPeriodTotal.classList.add('total-row');
+            trPeriodTotal.style.borderTop = "2px solid #333";
+            trPeriodTotal.innerHTML = `
+                <td></td>
+                <td></td>
+                <td></td>
+                <td style="text-align: center;">월 계 (소계)</td>
+                <td class="amount">${rangeIncomeTotal.toLocaleString()}</td>
+                <td class="amount">${rangeExpenseTotal.toLocaleString()}</td>
+                <td class="amount"></td>
+            `;
+            reportBody.appendChild(trPeriodTotal);
+
+            // 3.4 Cumulative Total Row
+            const trCumulativeTotal = document.createElement('tr');
+            trCumulativeTotal.classList.add('total-row');
+            trCumulativeTotal.style.color = 'red';
+            trCumulativeTotal.style.borderTop = "1px solid red";
+            trCumulativeTotal.style.borderBottom = "2px double red";
+            trCumulativeTotal.innerHTML = `
+                <td></td>
+                <td></td>
+                <td></td>
+                <td style="text-align: center;">누 계</td>
+                <td class="amount">${totalCumulativeIncome.toLocaleString()}</td>
+                <td class="amount">${totalCumulativeExpense.toLocaleString()}</td>
+                <td class="amount">${finalBalance.toLocaleString()}</td>
+            `;
+            reportBody.appendChild(trCumulativeTotal);
+
+            // 4. Update Summary Table (Bottom) with VERTICAL Breakdown
+            const summaryTable = document.querySelector('.summary-table');
+            if (summaryTable) {
+                // Generate Breakdown Strings with <br>
+                let incomeBreakdownText = Object.entries(incomeBreakdown)
+                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                    .join('<br>');
+
+                let expenseBreakdownText = Object.entries(expenseBreakdown)
+                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                    .join('<br>');
+
+                // Add styling wrapper
+                // If there are items, adding a gap before the total
+                const incGap = incomeBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
+                const expGap = expenseBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
+
+                summaryTable.innerHTML = `
+                    <tr>
+                        <th style="background-color: #f5f5f5;">전월 이월금</th>
+                        <td class="amount" id="summaryPrevBalance" style="background-color: #f5f5f5;">${prevBalance.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <th style="vertical-align: top; padding-top: 10px;">수입 합계</th>
+                        <td class="amount blue-text" id="summaryIncome" style="vertical-align: top;">
+                            <div style="font-size: 0.85em; color: #555; font-weight: normal; margin-bottom: 4px;">${incomeBreakdownText}</div>
+                            ${incGap}
+                            <div style="font-weight: bold;">${rangeIncomeTotal.toLocaleString()}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="vertical-align: top; padding-top: 10px;">지출 합계</th>
+                        <td class="amount red-text" id="summaryExpense" style="vertical-align: top;">
+                            <div style="font-size: 0.85em; color: #555; font-weight: normal; margin-bottom: 4px;">${expenseBreakdownText}</div>
+                            ${expGap}
+                            <div style="font-weight: bold;">${rangeExpenseTotal.toLocaleString()}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="background-color: #e8f5e9; border-top: 2px solid #4CAF50;">잔 액</th>
+                        <td class="amount" id="summaryBalance" style="background-color: #e8f5e9; border-top: 2px solid #4CAF50; color: #2e7d32; font-weight: bold;">${currentBalance.toLocaleString()}</td>
+                    </tr>
+                `;
+            }
+
+            if (displayTrans.length === 0 && prevBalance === 0) {
+                // reportContent.style.display = 'none';
+                // noDataMsg.style.display = 'block';
+                // Keep report visible even if empty to show carryover
+                reportContent.style.display = 'block';
+                noDataMsg.style.display = 'none';
+            } else {
+                reportContent.style.display = 'block';
+                noDataMsg.style.display = 'none';
+            }
+        }
+
+        btnSearch.addEventListener('click', loadReport);
+        btnClose.addEventListener('click', () => {
+            window.location.href = 'dashboard.html';
+        });
+
+    </script>
+</body>
+
+</html>

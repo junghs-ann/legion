@@ -1,0 +1,661 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>협조단원 돌봄내역 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Print Styles */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            .dashboard-header,
+            .filter-container,
+            .btn-group,
+            .nav-menu {
+                display: none !important;
+            }
+
+            .main-content {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .report-container {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            table {
+                font-size: 8pt !important;
+            }
+
+            th,
+            td {
+                padding: 4px !important;
+            }
+        }
+
+        .report-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 1300px;
+            margin: 0 auto;
+            overflow-x: auto;
+        }
+
+        .filter-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 1000px;
+        }
+
+        .history-table th,
+        .history-table td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .history-table thead th {
+            background: #f1f3f5;
+            font-weight: 700;
+        }
+
+        .month-header {
+            background: #e9ecef !important;
+            font-size: 0.85rem;
+        }
+
+        .session-header {
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .group-row {
+            background: #fafafa;
+        }
+
+        .cared-text {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .none-text {
+            color: #999;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            border: none;
+        }
+
+        .btn-search {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-close {
+            background: #6c757d;
+            color: white;
+        }
+
+        .report-title {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            display: inline-block;
+            padding-bottom: 5px;
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            font-family: inherit;
+        }
+
+        .report-subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header no-print">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 100px 20px;">
+        <div class="report-container" style="max-width: 1400px; padding: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 class="report-title">협조단원 돌봄 내역</h3>
+                <button class="btn btn-close" onclick="location.href='dashboard.html'"
+                    style="padding: 8px 20px;">닫기</button>
+            </div>
+
+            <div class="filter-container" style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div class="form-group" style="width: 180px;">
+                        <label>성당</label>
+                        <select id="churchSelect">
+                            <option value="">성당 선택</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="width: 180px;">
+                        <label>꾸리아(Cu.)</label>
+                        <select id="curiaSelect" disabled>
+                            <option value="">꾸리아 선택</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="width: 180px;">
+                        <label>쁘레시디움(Pr.)</label>
+                        <select id="presidiumSelect" disabled>
+                            <option value="">쁘레시디움 선택</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="width: 120px;">
+                        <label>해당년도</label>
+                        <select id="yearSelect">
+                            <!-- Dynamic years -->
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: nowrap;">
+                    <div class="form-group" style="width: 250px; margin-bottom: 0;">
+                        <label>기준회차 범위 (시작 ~ 종료)</label>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="text" id="startSessionInput" placeholder="시작" list="startSessionList"
+                                autocomplete="off" style="flex: 1;">
+                            <span>~</span>
+                            <input type="text" id="endSessionInput" placeholder="종료" list="endSessionList"
+                                autocomplete="off" style="flex: 1;">
+                        </div>
+                        <datalist id="startSessionList"></datalist>
+                        <datalist id="endSessionList"></datalist>
+                    </div>
+                    <div class="form-group" style="width: 320px; margin-bottom: 0;">
+                        <label>기준일 범위</label>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="date" id="startDateInput" style="flex: 1;">
+                            <span>~</span>
+                            <input type="date" id="endDateInput" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 5px; height: 38px;">
+                        <button class="btn btn-search" id="btnSearch"
+                            style="height: 100%; padding: 0 15px; font-size: 0.9rem;"><i class="fas fa-search"></i>
+                            조회</button>
+                        <button class="btn btn-print" id="btnPrint"
+                            style="height: 100%; padding: 0 15px; background-color: #28a745; color: white; font-size: 0.9rem;"><i
+                                class="fas fa-print"></i> 인쇄</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="printArea">
+                <table class="history-table" id="historyTable">
+                    <thead id="tableHead">
+                        <!-- Dynamic columns -->
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="5" style="padding: 50px; color: #999;">회차 범위를 선택하고 조회 버튼을 눌러주세요.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+
+        let currentUser = null;
+        let presidiaList = [];
+        let attendanceList = [];
+        let membersList = [];
+        let auxiliaryList = [];
+        let careHistory = [];
+
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const startSessionInput = document.getElementById('startSessionInput');
+        const endSessionInput = document.getElementById('endSessionInput');
+        const startDateInput = document.getElementById('startDateInput');
+        const endDateInput = document.getElementById('endDateInput');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(currentUser, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            loadData();
+            setupYearSelector();
+            setupOrgSelectors();
+            setupEventListeners();
+        }, () => { location.href = 'index.html'; });
+
+        function setupYearSelector() {
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = '';
+            for (let y = currentYear; y >= 2024; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = `${y}년`;
+                yearSelect.appendChild(opt);
+            }
+            yearSelect.value = currentYear;
+        }
+
+        function loadData() {
+            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+        }
+
+        function setupOrgSelectors() {
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = c;
+                churchSelect.appendChild(opt);
+            });
+
+            if (!isAdmin) {
+                churchSelect.value = currentUser.churchName || currentUser.church || '';
+                churchSelect.disabled = true;
+                updateCuriaList();
+                curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
+                curiaSelect.disabled = true;
+                updatePresidiumList();
+                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumSelect.disabled = true;
+                updateSessionLists();
+            }
+        }
+
+        function updateCuriaList() {
+            const church = churchSelect.value;
+            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+            if (!church) { curiaSelect.disabled = true; return; }
+            const curias = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+            curias.forEach(cu => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = cu;
+                curiaSelect.appendChild(opt);
+            });
+            curiaSelect.disabled = false;
+        }
+
+        function updatePresidiumList() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            if (!curia) { presidiumSelect.disabled = true; return; }
+            const prs = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+            prs.forEach(pr => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = pr;
+                presidiumSelect.appendChild(opt);
+            });
+            presidiumSelect.disabled = false;
+        }
+
+        function updateSessionLists() {
+            const pr = presidiumSelect.value;
+            const selectedYear = yearSelect.value;
+            const startList = document.getElementById('startSessionList');
+            const endList = document.getElementById('endSessionList');
+            startList.innerHTML = endList.innerHTML = '';
+
+            if (!pr) return;
+
+            // Get sessions from careHistory for THIS presidium and selected YEAR
+            const prCareSessions = careHistory
+                .filter(c => c.presidium === pr && c.date.startsWith(selectedYear))
+                .map(c => ({ session: c.session, date: c.date }))
+                .sort((a, b) => parseInt(b.session) - parseInt(a.session));
+
+            prCareSessions.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = `${s.session}회 (${s.date})`;
+                startList.appendChild(opt.cloneNode(true));
+                endList.appendChild(opt.cloneNode(true));
+            });
+        }
+
+        function setupEventListeners() {
+            churchSelect.onchange = () => { updateCuriaList(); updateSessionLists(); };
+            curiaSelect.onchange = () => { updatePresidiumList(); updateSessionLists(); };
+            presidiumSelect.onchange = updateSessionLists;
+            yearSelect.onchange = updateSessionLists;
+
+            const handleSessionInput = (input) => {
+                const val = input.value;
+                const match = val.match(/^(\d+회)\s*\((.*?)\)$/);
+                if (match) {
+                    input.value = match[1];
+                    updateDateRange();
+                }
+            };
+
+            startSessionInput.oninput = () => handleSessionInput(startSessionInput);
+            endSessionInput.oninput = () => handleSessionInput(endSessionInput);
+
+            startSessionInput.onfocus = () => startSessionInput.value = '';
+            endSessionInput.onfocus = () => endSessionInput.value = '';
+
+            document.getElementById('btnSearch').onclick = renderReport;
+            document.getElementById('btnPrint').onclick = () => window.print();
+        }
+
+        function updateDateRange() {
+            const pr = presidiumSelect.value;
+            const startVal = startSessionInput.value.replace('회', '');
+            const endVal = endSessionInput.value.replace('회', '');
+
+            if (!pr || !startVal || !endVal) return;
+
+            const startRec = careHistory.find(c => c.presidium === pr && String(c.session) === startVal);
+            const endRec = careHistory.find(c => c.presidium === pr && String(c.session) === endVal);
+
+            if (startRec && endRec) {
+                startDateInput.value = startRec.date;
+                endDateInput.value = endRec.date;
+            }
+        }
+
+        function renderReport() {
+            const pr = presidiumSelect.value;
+            const startD = startDateInput.value;
+            const endD = endDateInput.value;
+
+            if (!pr || !startD || !endD) {
+                alert('조직과 기준일 범위를 정확히 선택해 주세요.');
+                return;
+            }
+
+            const minD = startD < endD ? startD : endD;
+            const maxD = startD < endD ? endD : startD;
+
+            // 1. Get relevant care records based on DATE range
+            const relevantRecords = careHistory
+                .filter(c => c.presidium === pr && c.date >= minD && c.date <= maxD)
+                .sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return parseInt(a.session) - parseInt(b.session);
+                });
+
+            if (relevantRecords.length === 0) {
+                alert('해당 범위에 등록된 돌봄 내역이 없습니다.');
+                return;
+            }
+
+            // 2. Build Columns (Monthly grouping)
+            const tableHead = document.getElementById('tableHead');
+            const months = {}; // { "2026-01": [rec1, rec2], ... }
+            relevantRecords.forEach(r => {
+                const mKey = r.date.substring(0, 7);
+                if (!months[mKey]) months[mKey] = [];
+                months[mKey].push(r);
+            });
+
+            let headHtml = '<tr><th colspan="2" rowspan="2">행동단원</th><th colspan="3" rowspan="2">협조단원</th>';
+            let subHeadHtml = '<tr>';
+
+            Object.entries(months).forEach(([mKey, recs]) => {
+                const [y, m] = mKey.split('-');
+                let monthTotal = 0;
+                recs.forEach(r => {
+                    // Calculate total from snapshot if available, else legacy
+                    if (r.careDataSnapshot) {
+                        monthTotal += r.careDataSnapshot.filter(s => s.checked === 'checked').length;
+                    } else {
+                        monthTotal += Object.values(r.careData || {}).filter(v => v === 'checked').length;
+                    }
+                });
+
+                headHtml += `<th colspan="${recs.length}" class="month-header">${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)</th>`;
+                recs.forEach(r => {
+                    const dateObj = new Date(r.date);
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    const day = dayNames[dateObj.getDay()];
+                    subHeadHtml += `<th class="session-header">${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})</th>`;
+                });
+            });
+            headHtml += '</tr>' + subHeadHtml + '</tr>';
+            tableHead.innerHTML = headHtml;
+
+            // 3. Build Rows (Snapshot based)
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            // NEW: Instead of using current auxiliaryList, 
+            // we gather all unique auxiliaries from the selected records' snapshots.
+            const uniqueAuxMap = new Map();
+            relevantRecords.forEach(r => {
+                if (r.careDataSnapshot) {
+                    r.careDataSnapshot.forEach(item => {
+                        if (!uniqueAuxMap.has(item.auxId)) {
+                            uniqueAuxMap.set(item.auxId, {
+                                id: item.auxId,
+                                name: item.name,
+                                baptismalName: item.baptismalName,
+                                gender: item.gender,
+                                activeMemberId: item.activeMemberId,
+                                activeMemberName: item.activeMemberName,
+                                activeMemberBaptismalName: item.activeMemberBaptismalName
+                            });
+                        }
+                    });
+                } else {
+                    // Legacy support: Use current list but filter by legacy careData keys
+                    Object.keys(r.careData).forEach(auxId => {
+                        if (!uniqueAuxMap.has(auxId)) {
+                            const realAux = auxiliaryList.find(a => String(a.id) === String(auxId));
+                            if (realAux) {
+                                uniqueAuxMap.set(auxId, {
+                                    id: auxId,
+                                    name: realAux.name,
+                                    baptismalName: realAux.baptismalName,
+                                    gender: realAux.gender,
+                                    activeMemberId: realAux.activeMemberId,
+                                    activeMemberName: realAux.activeMemberName,
+                                    activeMemberBaptismalName: realAux.activeMemberBaptismalName
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            const mergedAuxiliaries = Array.from(uniqueAuxMap.values());
+
+            // Group by active member for rowspan effect (as stored in snapshot)
+            const grouped = {};
+            mergedAuxiliaries.forEach(aux => {
+                const key = aux.activeMemberId || 'unknown';
+                if (!grouped[key]) grouped[key] = { name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
+                grouped[key].list.push(aux);
+            });
+
+            Object.values(grouped).forEach(g => {
+                // Sort by aux name within group for stability
+                g.list.sort((a, b) => a.name.localeCompare(b.name));
+
+                g.list.forEach((aux, idx) => {
+                    const tr = document.createElement('tr');
+                    if (idx === 0) tr.classList.add('group-row');
+
+                    let rowHtml = '';
+                    if (idx === 0) {
+                        rowHtml += `<td rowspan="${g.list.length}">${g.name}</td>`;
+                        rowHtml += `<td rowspan="${g.list.length}">${g.baptismal || '-'}</td>`;
+                    }
+                    rowHtml += `<td>${aux.name}</td>`;
+                    rowHtml += `<td>${aux.baptismalName || '-'}</td>`;
+                    rowHtml += `<td>${aux.gender || '-'}</td>`;
+
+                    // Care cells across relevant sessions
+                    relevantRecords.forEach(r => {
+                        let status = 'none';
+                        if (r.careDataSnapshot) {
+                            const snapItem = r.careDataSnapshot.find(s => String(s.auxId) === String(aux.id));
+                            status = snapItem ? snapItem.checked : 'none';
+                        } else {
+                            // Legacy support
+                            status = r.careData[aux.id] || 'none';
+                        }
+
+                        if (status === 'checked') {
+                            rowHtml += '<td class="cared-text">돌봄</td>';
+                        } else {
+                            rowHtml += '<td class="none-text">-</td>';
+                        }
+                    });
+
+                    tr.innerHTML = rowHtml;
+                    tableBody.appendChild(tr);
+                });
+            });
+
+            // No title subtitles per request
+        }
+    </script>
+</body>
+
+</html>

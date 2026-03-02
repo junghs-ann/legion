@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쁘레/아듀또리움 현황 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <style>
+        /* Report specific styles */
+        .attendance-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 4px;
+            font-size: 0.85rem;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        .attendance-table td {
+            padding: 10px 4px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .attendance-table td.text-left {
+            text-align: left !important;
+            padding-left: 8px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+        }
+
+        .badge-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-retire {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        @media print {
+
+            .dashboard-header,
+            .filter-section,
+            button,
+            .menu-toggle {
+                display: none !important;
+            }
+
+            .main-content {
+                padding: 0 !important;
+            }
+
+            .container {
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .attendance-table td {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu"></ul> <!-- script.js에 의해 동적 생성됨 -->
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
+        <div class="container"
+            style="width: 100%; max-width: 1600px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+
+            <div class="filter-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3
+                        style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
+                        쁘레/아듀또리움 현황
+                    </h3>
+                    <button onclick="location.href='dashboard.html'"
+                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
+                </div>
+
+                <div class="filter-row"
+                    style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <div class="filter-group">
+                        <label>성당</label>
+                        <select id="churchFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="churchInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>꾸리아</label>
+                        <select id="curiaFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="curiaInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>쁘레시디움</label>
+                        <select id="presidiumFilter" disabled>
+                            <option value="">전체</option>
+                        </select>
+                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                    </div>
+                    <div class="filter-group">
+                        <label>구분</label>
+                        <select id="typeFilter">
+                            <option value="전체">전체</option>
+                            <option value="쁘레또리움">쁘레또리움</option>
+                            <option value="아듀또리움">아듀또리움</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>상태</label>
+                        <select id="statusFilter">
+                            <option value="전체">전체</option>
+                            <option value="활동">활동</option>
+                            <option value="퇴단">퇴단</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>기준일자 범위(입단일)</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="date" id="startDateFilter" style="width: 140px;">
+                            <span>~</span>
+                            <input type="date" id="endDateFilter" style="width: 140px;">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>성명</label>
+                        <input type="text" id="nameFilter" placeholder="이름 입력" autocomplete="off"
+                            style="width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div class="filter-group"
+                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px; margin-left: auto;">
+                        <button id="btnSearch" class="btn btn-secondary"
+                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
+                        <button onclick="window.print()" class="btn-print"
+                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="statusContent" style="display: none; margin-top: 30px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 id="reportTitle" style="margin-bottom: 10px;">쁘레/아듀또리움 현황 내역</h2>
+                    <h3 id="reportDateRange"
+                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                    </h3>
+                </div>
+
+                <!-- 쁘레또리움 섹션 -->
+                <div id="praeSection">
+                    <h4 class="section-title"><i class="fas fa-crown"></i> 쁘레또리움 (Praetorium)</h4>
+                    <div style="overflow-x: auto;">
+                        <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">상태</th>
+                                    <th style="width: 150px;">성명</th>
+                                    <th style="width: 150px;">세례명</th>
+                                    <th style="width: 150px;">소속 쁘레시디움</th>
+                                    <th style="width: 120px;">입단일</th>
+                                    <th style="width: 120px;">퇴단일</th>
+                                    <th>참고사항</th>
+                                </tr>
+                            </thead>
+                            <tbody id="praeBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 아듀또리움 섹션 -->
+                <div id="adjSection" style="margin-top: 50px;">
+                    <h4 class="section-title"><i class="fas fa-shield-alt"></i> 아듀또리움 (Adjutorium)</h4>
+                    <div style="overflow-x: auto;">
+                        <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">상태</th>
+                                    <th style="width: 150px;">성명</th>
+                                    <th style="width: 150px;">세례명</th>
+                                    <th style="width: 150px;">성별</th>
+                                    <th style="width: 150px;">소속 쁘레시디움</th>
+                                    <th style="width: 120px;">입단일</th>
+                                    <th style="width: 120px;">퇴단일</th>
+                                    <th>참고사항</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adjBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="noDataMsg"
+                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">
+                해당 조건의 현황 데이터가 없습니다.
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let isAdmin = false;
+
+        const churchFilter = document.getElementById('churchFilter');
+        const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumFilter = document.getElementById('presidiumFilter');
+        const typeFilter = document.getElementById('typeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+        const nameFilter = document.getElementById('nameFilter');
+        const statusContent = document.getElementById('statusContent');
+        const praeBody = document.getElementById('praeBody');
+        const adjBody = document.getElementById('adjBody');
+        const praeSection = document.getElementById('praeSection');
+        const adjSection = document.getElementById('adjSection');
+        const noDataMsg = document.getElementById('noDataMsg');
+        const btnSearch = document.getElementById('btnSearch');
+
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            if (window.initCommonMenus) window.initCommonMenus(profile, logoutUser);
+
+            const role = String(profile.role || '').replace(/\s/g, '').toLowerCase();
+            isAdmin = (role === 'admin' || role === '관리자');
+
+            setupControls(profile);
+            setupEventListeners();
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function setupControls(profile) {
+            const ci = document.getElementById('churchInput');
+            const cui = document.getElementById('curiaInput');
+            const pi = document.getElementById('presidiumInput');
+
+            if (isAdmin) {
+                churchFilter.style.display = 'block';
+                ci.style.display = 'none';
+                churchFilter.disabled = false;
+                loadFilters();
+            } else {
+                churchFilter.style.display = 'none';
+                ci.style.display = 'block';
+                ci.value = profile.churchName || profile.church || '';
+
+                curiaFilter.style.display = 'none';
+                cui.style.display = 'block';
+                cui.value = profile.curiaName || profile.curia || '';
+
+                presidiumFilter.style.display = 'none';
+                pi.style.display = 'block';
+                pi.value = profile.presidiumName || profile.presidium || '';
+            }
+        }
+
+        function loadFilters() {
+            const churches = getChurches();
+            churchFilter.innerHTML = '<option value="">전체</option>';
+            churches.forEach(c => churchFilter.add(new Option(c, c)));
+
+            churchFilter.onchange = () => {
+                const selected = churchFilter.value;
+                curiaFilter.innerHTML = '<option value="">전체</option>';
+                presidiumFilter.innerHTML = '<option value="">전체</option>';
+                if (selected) {
+                    getCuriae(selected).forEach(c => curiaFilter.add(new Option(c, c)));
+                    curiaFilter.disabled = false;
+                } else {
+                    curiaFilter.disabled = true;
+                    presidiumFilter.disabled = true;
+                }
+            };
+
+            curiaFilter.onchange = () => {
+                const selectedChurch = churchFilter.value;
+                const selectedCuria = curiaFilter.value;
+                presidiumFilter.innerHTML = '<option value="">전체</option>';
+                if (selectedChurch && selectedCuria) {
+                    getPresidia(selectedChurch, selectedCuria).forEach(p => presidiumFilter.add(new Option(p.name, p.name)));
+                    presidiumFilter.disabled = false;
+                } else {
+                    presidiumFilter.disabled = true;
+                }
+            };
+        }
+
+        function loadReport() {
+            let church, curia, presidium;
+            if (isAdmin) {
+                church = churchFilter.value;
+                curia = curiaFilter.value;
+                presidium = presidiumFilter.value;
+            } else {
+                church = currentUser.churchName || currentUser.church || '';
+                curia = currentUser.curiaName || currentUser.curia || '';
+                presidium = currentUser.presidiumName || currentUser.presidium || '';
+            }
+
+            const type = typeFilter.value;
+            const status = statusFilter.value;
+            const start = startDateFilter.value;
+            const end = endDateFilter.value;
+            const name = nameFilter.value.trim();
+
+            const praeList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+            const adjList = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
+            const memberList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const membersMap = {}; memberList.forEach(m => membersMap[String(m.id)] = m);
+
+            // 쁘레또리움 필터링 (praetorium_list 사용)
+            let fPrae = praeList.filter(r => {
+                const matchC = !church || r.church === church;
+                const matchCu = !curia || r.curia === curia;
+                const matchP = !presidium || r.presidiumName === presidium;
+                const matchN = !name || (r.memberName || '').includes(name);
+                const s = r.status === 'active' ? '활동' : '퇴단';
+                const matchS = status === '전체' || s === status;
+                const matchD = (!start || r.joinDate >= start) && (!end || r.joinDate <= end);
+                return matchC && matchCu && matchP && matchN && matchS && matchD;
+            });
+
+            // 아듀또리움 필터링 (adjutorium_members_list 사용)
+            let fAdj = adjList.filter(r => {
+                const matchC = !church || (r.church || r.churchName) === church;
+                const matchCu = !curia || (r.curia || r.curiaName) === curia;
+                const matchP = !presidium || (r.presidium || r.presidiumName) === presidium;
+                const matchN = !name || (r.name || '').includes(name);
+                const s = r.withdrawalDate ? '퇴단' : '활동';
+                const matchS = status === '전체' || s === status;
+                const matchD = (!start || r.admissionDate >= start) && (!end || r.admissionDate <= end);
+                return matchC && matchCu && matchP && matchN && matchS && matchD;
+            });
+
+            // 구분 필터에 따른 섹션 표시 제어
+            const showPrae = (type === '전체' || type === '쁘레또리움');
+            const showAdj = (type === '전체' || type === '아듀또리움');
+
+            praeSection.style.display = showPrae ? 'block' : 'none';
+            adjSection.style.display = showAdj ? 'block' : 'none';
+
+            // 결과 영역 표시
+            statusContent.style.display = 'block';
+            noDataMsg.style.display = 'none';
+
+            document.getElementById('reportDateRange').textContent = (start || end) ? `${start || '초기'} ~ ${end || '현재'} (입단일 기준)` : '전 기간';
+
+            // 렌더링 쁘레
+            if (showPrae) {
+                praeBody.innerHTML = '';
+                if (fPrae.length === 0) {
+                    praeBody.innerHTML = '<tr><td colspan="7" style="padding:40px; color:#999; font-size:1.1rem;">해당 자료가 없습니다.</td></tr>';
+                } else {
+                    fPrae.sort((a, b) => b.joinDate.localeCompare(a.joinDate)).forEach(r => {
+                        const m = membersMap[String(r.memberId)] || {};
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><span class="badge-${r.status === 'active' ? 'active' : 'retire'}">${r.status === 'active' ? '활동' : '퇴단'}</span></td>
+                            <td>${r.memberName}</td>
+                            <td>${m.baptismalName || '-'}</td>
+                            <td>${r.presidiumName}</td>
+                            <td>${r.joinDate}</td>
+                            <td>${r.leaveDate || '-'}</td>
+                            <td class="text-left">${m.notes || '-'}</td>
+                        `;
+                        praeBody.appendChild(tr);
+                    });
+                }
+            }
+
+            // 렌더링 아듀
+            if (showAdj) {
+                adjBody.innerHTML = '';
+                if (fAdj.length === 0) {
+                    adjBody.innerHTML = '<tr><td colspan="8" style="padding:40px; color:#999; font-size:1.1rem;">해당 자료가 없습니다.</td></tr>';
+                } else {
+                    fAdj.sort((a, b) => (a.admissionDate || '').localeCompare(b.admissionDate || '')).forEach(r => {
+                        const tr = document.createElement('tr');
+                        const sClass = r.withdrawalDate ? 'retire' : 'active';
+                        const sText = r.withdrawalDate ? '퇴단' : '활동';
+                        tr.innerHTML = `
+                            <td><span class="badge-${sClass}">${sText}</span></td>
+                            <td>${r.name}</td>
+                            <td>${r.baptismalName || '-'}</td>
+                            <td>${r.gender || '-'}</td>
+                            <td>${r.presidium || r.presidiumName || '-'}</td>
+                            <td>${r.admissionDate || '-'}</td>
+                            <td>${r.withdrawalDate || '-'}</td>
+                            <td class="text-left">${r.notes || '-'}</td>
+                        `;
+                        adjBody.appendChild(tr);
+                    });
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            btnSearch.onclick = loadReport;
+            [typeFilter, statusFilter, startDateFilter, endDateFilter, nameFilter].forEach(f => {
+                f.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); loadReport(); } });
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,873 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쁘레또리움 관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .form-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-full-width {
+                grid-column: span 1;
+            }
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: white;
+        }
+
+        .form-group input:disabled,
+        .form-group select:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .form-btn-group {
+            margin-top: 30px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            min-width: 100px;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--hover-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #bfa130;
+        }
+
+        .btn-cancel {
+            background-color: #757575;
+        }
+
+        .btn-cancel:hover {
+            background-color: #616161;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+        }
+
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+
+        .unit-info-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+
+        .section-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .info-card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .info-item {
+            font-size: 0.9rem;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        /* History Table Styles */
+        .history-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .history-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .history-table tr:hover {
+            background-color: #f1f8ff;
+            cursor: pointer;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-retire {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content">
+        <div class="register-form-container">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 30px; padding-bottom: 15px;">
+                <h2 class="form-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">쁘레또리움 단원 관리
+                </h2>
+                <button type="button" class="btn-submit btn-cancel" onclick="location.href='dashboard.html'"
+                    style="padding: 8px 16px; font-size: 0.9rem; margin: 0;">닫 기</button>
+            </div>
+
+            <form id="praetoriumForm" onsubmit="return false;" autocomplete="off">
+                <!-- 소속 및 단원 검색 섹션 -->
+                <div class="unit-info-section">
+                    <div class="section-label"><i class="fas fa-search"></i> 소속 및 단원 검색</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>성당</label>
+                            <select id="churchSelect" name="church" required>
+                                <option value="">성당 선택</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>꾸리아 (Cu.)</label>
+                            <select id="curiaSelect" name="curia" required disabled>
+                                <option value="">꾸리아 선택</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>쁘레시디움 (Pr.)</label>
+                            <select id="presidiumSelect" name="presidiumName" required disabled>
+                                <option value="">쁘레시디움 선택</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>단원명 (세례명)</label>
+                            <select id="memberSelect" name="memberId" required disabled>
+                                <option value="">단원 선택</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 단원 기본 정보 (ReadOnly) -->
+                <div id="memberInfoDisplay" class="info-card" style="display: none;">
+                    <div class="section-label"><i class="fas fa-user-check"></i> 소속 단원 정보</div>
+                    <div class="info-grid">
+                        <div class="info-item"><span class="info-label">구분</span><span id="displayClassification"
+                                class="info-value">-</span></div>
+                        <div class="info-item"><span class="info-label">상태</span><span id="displayStatus"
+                                class="info-value">-</span></div>
+                        <div class="info-item"><span class="info-label">축일</span><span id="displayFeast"
+                                class="info-value">-</span></div>
+                        <div class="info-item"><span class="info-label">입단/전입일</span><span id="displayJoinDate"
+                                class="info-value">-</span></div>
+                        <div class="info-item"><span class="info-label">선서일</span><span id="displayPromiseDate"
+                                class="info-value">-</span></div>
+                        <div class="info-item"><span class="info-label">연락처</span><span id="displayPhone"
+                                class="info-value">-</span></div>
+                    </div>
+                </div>
+
+                <!-- 쁘레또리움 입단 정보 -->
+                <div id="praetoriumEntrySection" style="display: none;">
+                    <div class="unit-info-section">
+                        <div class="section-label"><i class="fas fa-calendar-alt"></i> 쁘레또리움 이력 관리</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>쁘레또리움 입단일</label>
+                                <input type="date" name="joinDate" id="joinDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>쁘레또리움 퇴단일</label>
+                                <input type="date" name="leaveDate" id="leaveDate">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-btn-group">
+                        <button type="button" id="btnSave" class="btn-submit">저 장</button>
+                        <button type="button" id="idDelete" class="btn-submit btn-delete" style="display: none;">삭
+                            제</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 쁘레또리움 이력 목록 (하단 테이블) -->
+            <div id="historySection" class="history-section" style="display: none;">
+                <div class="section-label"><i class="fas fa-list"></i> 소속 쁘레시디움 쁘레또리움 단원 명단</div>
+                <div style="overflow-x: auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>성명 (세례명)</th>
+                                <th>입단일</th>
+                                <th>퇴단일</th>
+                                <th>상태</th>
+                                <th>최종수정</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Data will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        // Logic variables
+        let selectedMember = null;
+        let currentUserProfile = null;
+        let currentPraetoriumRecord = null;
+
+        // DOM Elements
+        const form = document.getElementById('praetoriumForm');
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const memberSelect = document.getElementById('memberSelect');
+        const btnSave = document.getElementById('btnSave');
+        const btnDelete = document.getElementById('btnDelete') || document.getElementById('idDelete');
+        const historySection = document.getElementById('historySection');
+        const historyTableBody = document.getElementById('historyTableBody');
+
+        const memberInfoDisplay = document.getElementById('memberInfoDisplay');
+        const praetoriumEntrySection = document.getElementById('praetoriumEntrySection');
+
+        // 1. Initialize Auth & RBAC
+        initAuthObserver((user, profile) => {
+            currentUserProfile = profile;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            // [RBAC] Access Control Logic
+            const userRole = String(profile.role || '').replace(/\s/g, '').toLowerCase();
+            const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
+            const isOfficer = ['단장', '부단장', '서기', '회계'].some(r => userRole.includes(r));
+
+            const praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+            const isPraetoriumMember = praetoriumList.some(r => (r.memberId === profile.uid || r.memberId === profile.id) && r.status === 'active');
+
+            if (!isAdmin && !isOfficer && !isPraetoriumMember) {
+                alert('이 화면은 간부 또는 쁘레또리움 단원만 접근할 수 있습니다.');
+                window.location.href = "dashboard.html";
+                return;
+            }
+
+            const isReadOnly = !isAdmin && !isOfficer && isPraetoriumMember;
+            if (isReadOnly) {
+                // Hide save/delete buttons and disable inputs for non-officer praetorium members
+                btnSave.style.display = 'none';
+                btnDelete.style.display = 'none';
+                document.getElementById('joinDate').disabled = true;
+                document.getElementById('leaveDate').disabled = true;
+
+                // Add a notice badge
+                const titleArea = document.querySelector('.form-title');
+                if (titleArea) {
+                    const badge = document.createElement('span');
+                    badge.style = 'font-size: 0.8rem; background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px; margin-left:10px; font-weight:normal; vertical-align:middle;';
+                    badge.textContent = '조회 전용 모드';
+                    titleArea.appendChild(badge);
+                }
+            }
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+
+            // Organization Data Initialization
+            initOrgSelectors(profile, isAdmin);
+
+            // Show Delete button for Admin
+            if (isAdmin) {
+                // btnDelete logic handles it in record loading
+            }
+
+        }, () => {
+            window.location.href = "index.html";
+        });
+
+        // 2. Organization Selectors Logic
+        function initOrgSelectors(profile, isAdmin) {
+            const churches = getChurches();
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                churchSelect.appendChild(opt);
+            });
+
+            if (!isAdmin) {
+                const userChurch = profile.churchName || profile.church || '';
+                const userCuria = profile.curiaName || profile.curia || '';
+                const userPresidium = profile.presidiumName || profile.presidium || '';
+
+                if (userChurch) {
+                    churchSelect.value = userChurch;
+                    // [Selective Locking] 매칭 성공 시에만 비활성화
+                    if (churchSelect.value === userChurch) {
+                        churchSelect.disabled = true;
+                    } else {
+                        churchSelect.disabled = false;
+                    }
+
+                    loadCuriae(userChurch, userCuria);
+
+                    if (userCuria) {
+                        curiaSelect.value = userCuria;
+                        if (curiaSelect.value === userCuria) {
+                            curiaSelect.disabled = true;
+                        } else {
+                            curiaSelect.disabled = false;
+                        }
+
+                        loadPresidia(userChurch, userCuria, userPresidium);
+
+                        if (userPresidium) {
+                            presidiumSelect.value = userPresidium;
+                            if (presidiumSelect.value === userPresidium) {
+                                presidiumSelect.disabled = true;
+                                // Force data load on successful match
+                                loadMembers(userChurch, userPresidium);
+                                renderPraetoriumHistoryList(userChurch, userPresidium);
+                            } else {
+                                presidiumSelect.disabled = false;
+                            }
+                        }
+                    } else {
+                        curiaSelect.disabled = false;
+                    }
+                } else {
+                    churchSelect.disabled = false;
+                }
+            } else {
+                // Admin cascading
+                churchSelect.addEventListener('change', () => {
+                    const church = churchSelect.value;
+                    curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+                    curiaSelect.disabled = !church;
+                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    presidiumSelect.disabled = true;
+                    if (church) loadCuriae(church);
+                });
+
+                curiaSelect.addEventListener('change', () => {
+                    const church = churchSelect.value;
+                    const curia = curiaSelect.value;
+                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    presidiumSelect.disabled = !curia;
+                    memberSelect.innerHTML = '<option value="">단원 선택</option>';
+                    memberSelect.disabled = true;
+                    if (church && curia) loadPresidia(church, curia);
+                });
+            }
+
+            // Common cascading for Presidium -> Member
+            presidiumSelect.addEventListener('change', () => {
+                const church = churchSelect.value;
+                const presidium = presidiumSelect.value;
+                memberSelect.innerHTML = '<option value="">단원 선택</option>';
+                memberSelect.disabled = !presidium;
+                if (church && presidium) {
+                    loadMembers(church, presidium);
+                    renderPraetoriumHistoryList(church, presidium);
+                }
+                resetPraetoriumView();
+            });
+        }
+
+        function loadCuriae(church, preselect = null) {
+            const curiae = getCuriae(church);
+            curiae.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                if (preselect === c) opt.selected = true;
+                curiaSelect.appendChild(opt);
+            });
+            if (!preselect) curiaSelect.disabled = false;
+        }
+
+        function loadPresidia(church, curia, preselect = null) {
+            const presidia = getPresidia(church, curia);
+            presidia.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.name;
+                if (preselect === p.name) opt.selected = true;
+                presidiumSelect.appendChild(opt);
+            });
+            if (!preselect) presidiumSelect.disabled = false;
+
+            // If preselected, load members
+            if (preselect) {
+                loadMembers(church, preselect);
+            }
+        }
+
+        function loadMembers(church, presidium) {
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const filtered = allMembers.filter(m =>
+                m.churchName === church &&
+                m.presidiumName === presidium &&
+                m.classification === '행동단원' &&
+                m.status !== '퇴단' && m.status !== '전출'
+            ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+
+            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+            filtered.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.name} (${m.baptismalName})`;
+                memberSelect.appendChild(opt);
+            });
+            memberSelect.disabled = false;
+        }
+
+        // 3. Member Selection Logic
+        memberSelect.addEventListener('change', () => {
+            const memberId = memberSelect.value;
+            if (!memberId) {
+                resetPraetoriumView();
+                return;
+            }
+
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+            const member = allMembers.find(m => m.id === memberId);
+            if (member) {
+                selectMember(member);
+            }
+        });
+
+
+        function selectMember(member) {
+            selectedMember = member;
+
+            // Update Display
+            document.getElementById('displayClassification').textContent = member.classification;
+            document.getElementById('displayStatus').textContent = member.status;
+            document.getElementById('displayFeast').textContent = member.feastDate || '-';
+            document.getElementById('displayJoinDate').textContent = member.probationaryDate || '-';
+            document.getElementById('displayPromiseDate').textContent = member.promiseDate || '-';
+            document.getElementById('displayPhone').textContent = member.phone || '-';
+
+            memberInfoDisplay.style.display = 'block';
+            praetoriumEntrySection.style.display = 'block';
+
+            loadPraetoriumHistory(member.id);
+
+            // Focus on join date
+            document.getElementById('joinDate').focus();
+        }
+
+        function loadPraetoriumHistory(memberId) {
+            const praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+            // Get the most recent open record (no leave date) or just the latest record
+            const history = praetoriumList.filter(r => r.memberId === memberId)
+                .sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate));
+
+            currentPraetoriumRecord = history[0]; // Latest
+
+            if (currentPraetoriumRecord) {
+                document.getElementById('joinDate').value = currentPraetoriumRecord.joinDate;
+                document.getElementById('leaveDate').value = currentPraetoriumRecord.leaveDate || '';
+
+                if (currentUserProfile.role === 'admin') {
+                    btnDelete.style.display = 'inline-block';
+                }
+            } else {
+                document.getElementById('joinDate').value = '';
+                document.getElementById('leaveDate').value = '';
+                btnDelete.style.display = 'none';
+            }
+        }
+
+        function resetPraetoriumView() {
+            selectedMember = null;
+            currentPraetoriumRecord = null;
+            memberInfoDisplay.style.display = 'none';
+            praetoriumEntrySection.style.display = 'none';
+            btnDelete.style.display = 'none';
+
+            // Note: History list visibility is handled by Presidium selection
+        }
+
+        // 재입단 편의 기능: 기존 퇴단일보다 늦은 입단일 입력 시 퇴단일 자동 비우기
+        document.getElementById('joinDate').addEventListener('change', (e) => {
+            const newJoinDate = e.target.value;
+            if (!newJoinDate || !currentPraetoriumRecord || !currentPraetoriumRecord.leaveDate) return;
+
+            if (new Date(newJoinDate) > new Date(currentPraetoriumRecord.leaveDate)) {
+                // 기존 퇴단일보다 늦은 입단일이 입력되면 '재입단'으로 간주하여 퇴단일 칸을 비움
+                document.getElementById('leaveDate').value = '';
+            }
+        });
+
+        // 쁘레시디움 전체 이력 목록 렌더링
+        function renderPraetoriumHistoryList(church, presidium) {
+            const praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+            const history = praetoriumList.filter(r =>
+                r.church === church && r.presidiumName === presidium
+            ).sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate));
+
+            historyTableBody.innerHTML = '';
+            if (history.length === 0) {
+                historyTableBody.innerHTML = '<tr><td colspan="5" style="padding: 20px; color: #999;">등록된 이력이 없습니다.</td></tr>';
+            } else {
+                history.forEach(r => {
+                    const tr = document.createElement('tr');
+
+                    // Find member to get baptismal name if not in record
+                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+                    const member = allMembers.find(m => m.id === r.memberId);
+                    const displayName = member ? `${r.memberName} (${member.baptismalName})` : r.memberName;
+                    const statusText = r.status === 'active' ? '활동' : '퇴단';
+                    const statusClass = r.status === 'active' ? 'status-active' : 'status-retire';
+                    const lastUpdate = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-';
+
+                    tr.innerHTML = `
+                        <td>${displayName}</td>
+                        <td>${r.joinDate}</td>
+                        <td>${r.leaveDate || '-'}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td style="color: #888; font-size: 0.8rem;">${lastUpdate}</td>
+                    `;
+
+                    tr.addEventListener('click', () => {
+                        // Select this member and load data
+                        memberSelect.value = r.memberId;
+                        memberSelect.dispatchEvent(new Event('change'));
+                        // Scroll to top
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+
+                    historyTableBody.appendChild(tr);
+                });
+            }
+            historySection.style.display = 'block';
+        }
+
+        // 4. Save & Delete Logic
+        function handleSave() {
+            try {
+                if (!selectedMember) {
+                    alert('먼저 단원을 선택해 주세요.');
+                    return;
+                }
+
+                if (!confirm('저장하시겠습니까?')) return;
+
+                const joinDate = document.getElementById('joinDate').value;
+                const leaveDate = document.getElementById('leaveDate').value;
+
+                if (!joinDate) {
+                    alert('입단일을 입력해 주세요.');
+                    document.getElementById('joinDate').focus();
+                    return;
+                }
+
+                if (leaveDate && new Date(leaveDate) < new Date(joinDate)) {
+                    alert('퇴단일은 입단일보다 빠를 수 없습니다.');
+                    return;
+                }
+
+                const praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+                const latest = currentPraetoriumRecord;
+
+                if (latest && !latest.leaveDate && leaveDate) {
+                    // 1. 기존 이력 닫기 (퇴단)
+                    const idx = praetoriumList.findIndex(r => r.id === latest.id);
+                    if (idx > -1) {
+                        praetoriumList[idx].leaveDate = leaveDate;
+                        praetoriumList[idx].status = 'retire';
+                        praetoriumList[idx].updatedAt = new Date().toISOString();
+                        alert('쁘레또리움 퇴단 처리되었습니다.');
+                    }
+                } else if (latest && latest.leaveDate && !leaveDate) {
+                    // 2. 재입단 (새 레코드 생성)
+                    const newRecord = {
+                        id: 'prae_' + Date.now(),
+                        memberId: selectedMember.id,
+                        church: churchSelect.value,
+                        curia: curiaSelect.value,
+                        presidiumName: presidiumSelect.value,
+                        memberName: selectedMember.name,
+                        joinDate: joinDate,
+                        leaveDate: '',
+                        status: 'active',
+                        createdAt: new Date().toISOString()
+                    };
+                    praetoriumList.push(newRecord);
+                    alert('쁘레또리움 재입단 처리되었습니다.');
+                } else if (latest) {
+                    // 3. 기존 이력 수정
+                    const idx = praetoriumList.findIndex(r => r.id === latest.id);
+                    if (idx > -1) {
+                        praetoriumList[idx].joinDate = joinDate;
+                        praetoriumList[idx].leaveDate = leaveDate;
+                        praetoriumList[idx].status = leaveDate ? 'retire' : 'active';
+                        praetoriumList[idx].updatedAt = new Date().toISOString();
+                        alert('정보가 수정되었습니다.');
+                    }
+                } else {
+                    // 4. 최초 입단
+                    const newRecord = {
+                        id: 'prae_' + Date.now(),
+                        memberId: selectedMember.id,
+                        church: churchSelect.value,
+                        curia: curiaSelect.value,
+                        presidiumName: presidiumSelect.value,
+                        memberName: selectedMember.name,
+                        joinDate: joinDate,
+                        leaveDate: leaveDate || '',
+                        status: leaveDate ? 'retire' : 'active',
+                        createdAt: new Date().toISOString()
+                    };
+                    praetoriumList.push(newRecord);
+                    alert('쁘레또리움 입단 처리되었습니다.');
+                }
+
+                localStorage.setItem('praetorium_list', JSON.stringify(praetoriumList));
+                loadPraetoriumHistory(selectedMember.id);
+                renderPraetoriumHistoryList(churchSelect.value, presidiumSelect.value);
+            } catch (err) {
+                console.error('Save Error:', err);
+                alert('저장 중 오류가 발생했습니다: ' + err.message);
+            }
+        }
+
+        btnSave.addEventListener('click', handleSave);
+
+        btnDelete.addEventListener('click', () => {
+            if (!currentPraetoriumRecord) return;
+            if (confirm('해당 쁘레또리움 이력 정보를 삭제하시겠습니까? (행동단원 정보는 삭제되지 않습니다)')) {
+                let praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
+                praetoriumList = praetoriumList.filter(r => r.id !== currentPraetoriumRecord.id);
+                localStorage.setItem('praetorium_list', JSON.stringify(praetoriumList));
+                alert('삭제되었습니다.');
+                renderPraetoriumHistoryList(churchSelect.value, presidiumSelect.value);
+                resetPraetoriumView();
+            }
+        });
+
+        // 5. Enter Key Navigation
+        form.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const target = e.target;
+
+                // If focus is on a button, let the default button action happen
+                if (target.tagName === 'BUTTON' || target.type === 'submit') return;
+
+                // For all other inputs, prevent default ENTER behavior (which might be form submit)
+                e.preventDefault();
+
+                const focusableFields = Array.from(form.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled])'))
+                    .filter(el => window.getComputedStyle(el).display !== 'none');
+
+                const index = focusableFields.indexOf(target);
+                if (index > -1 && index < focusableFields.length - 1) {
+                    focusableFields[index + 1].focus();
+                } else if (index === focusableFields.length - 1) {
+                    // Last field: Trigger SAVE
+                    handleSave();
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>

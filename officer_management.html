@@ -1,0 +1,1112 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간부관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .form-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: white;
+        }
+
+        .form-group input[readonly] {
+            background-color: #f0f0f0;
+            cursor: not-allowed;
+        }
+
+        .form-btn-group {
+            margin-top: 40px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-submit:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-close {
+            background-color: #757575;
+        }
+
+        .btn-close:hover {
+            background-color: #616161;
+        }
+
+        .section-header {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header i {
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content" style="padding: 120px 20px;">
+        <div class="register-form-container">
+            <h2 class="form-title">
+                간부 관리
+                <span style="font-size: 0.9rem; color: #666; font-weight: normal;">간부 선임 및 정보 관리</span>
+            </h2>
+
+            <form id="officerForm">
+                <div class="form-grid">
+                    <!-- 소속 정보 세션 -->
+                    <div class="section-header"><i class="fas fa-sitemap"></i> 소속정보</div>
+
+                    <div class="form-group">
+                        <label>성당</label>
+                        <select name="church" id="churchSelect" required>
+                            <option value="">성당 선택</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>꾸리아(Cu.)</label>
+                        <select name="curia" id="curiaSelect" required disabled>
+                            <option value="">꾸리아 선택</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>쁘레시디움(Pr.)</label>
+                        <select name="presidium" id="presidiumSelect" required disabled>
+                            <option value="">쁘레시디움 선택</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <!-- 빈 칸 유지 (그리드 정렬용) -->
+                    </div>
+
+                    <!-- 간부 선임 세션 -->
+                    <div class="section-header"><i class="fas fa-user-tie"></i> 간부 선임 정보</div>
+
+                    <div class="form-group">
+                        <label>단원명 (검색/선택)</label>
+                        <select name="memberUid" id="memberSelect" required disabled>
+                            <option value="">단원 선택</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 20px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="margin-bottom: 0;">직급</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <select name="role" id="roleSelect" required style="width: 100%;">
+                                        <option value="">직급 선택</option>
+                                        <option value="단장">단장</option>
+                                        <option value="부단장">부단장</option>
+                                        <option value="서기">서기</option>
+                                        <option value="회계">회계</option>
+                                    </select>
+                                </div>
+                                <div
+                                    style="flex: 1.5; font-size: 0.8rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    (단원 및 직급 선택 시 자동 조회됩니다)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 단원 연동 정보 (수정 불가) -->
+                    <div class="section-header"><i class="fas fa-info-circle"></i> 단원 기본 정보 (수정 불가)</div>
+
+                    <div class="form-group">
+                        <label>성명</label>
+                        <input type="text" id="memberName" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>세례명</label>
+                        <input type="text" id="baptismalName" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>축일</label>
+                        <input type="text" id="feastDate" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>연락처</label>
+                        <input type="text" id="phone" readonly>
+                    </div>
+
+                    <!-- 임명 정보 세션 -->
+                    <div class="section-header"><i class="fas fa-calendar-alt"></i> 간부 임명 정보</div>
+
+                    <div class="form-group">
+                        <label>임명일 <span style="color: red; font-size: 0.8rem;">(필수 *)</span></label>
+                        <input type="text" name="appointmentDate" id="appointmentDate" placeholder="YYYY-MM-DD"
+                            maxlength="10" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>임명 만료일</label>
+                        <input type="text" name="appointmentExpiryDate" id="appointmentExpiryDate"
+                            placeholder="YYYY-MM-DD" maxlength="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label>재직기간 (자동계산)</label>
+                        <input type="text" id="tenureDisplay" readonly placeholder="날짜 입력 시 자동 계산">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>특이 및 참고사항</label>
+                        <textarea name="notes" rows="3" placeholder="기타 참고사항을 입력하세요"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-btn-group">
+                    <button type="submit" class="btn-submit">저 장</button>
+                    <button type="button" id="btnDelete" class="btn-submit"
+                        style="background-color: #f44336; display: none;">삭 제</button>
+                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">닫
+                        기</button>
+                </div>
+            </form>
+
+            <!-- [New] Officer List Table (User requested separate table) -->
+            <div class="section-header" style="margin-top:40px;"><i class="fas fa-list"></i> 간부 현황 목록</div>
+            <div id="officerListContainer">
+                <div style="text-align:center; padding:20px; color:#999;">조직을 선택하면 간부 명단이 표시됩니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        // Global State
+        let currentUser = null;
+        let membersList = [];
+        let presidiaList = [];
+        let isProcessingConflict = false; // Add for global focus/alert sync
+
+        // DOM Elements
+        const form = document.getElementById('officerForm');
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const memberSelect = document.getElementById('memberSelect');
+
+        const memberNameOutput = document.getElementById('memberName');
+        const baptismalNameOutput = document.getElementById('baptismalName');
+        const feastDateOutput = document.getElementById('feastDate');
+        const phoneOutput = document.getElementById('phone');
+
+        // === Init & Auth ===
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            loadBaseData();
+            setupPermissions();
+            setupEventListeners();
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, logoutUser);
+            }
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        function loadBaseData() {
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        }
+
+        function setupPermissions() {
+            // [Crucial] Allowed Roles Check
+            const allowedRoles = ['admin', '단장', '부단장', '서기', '회계', 'president', 'vicePresident', 'secretary', 'treasurer', '관리자'];
+            const userRole = String(currentUser.role || '').toLowerCase();
+            const isAllowed = allowedRoles.some(r => userRole.includes(r.toLowerCase()));
+
+            if (!isAllowed) {
+                alert('간부 관리 화면은 관리자 및 간부(단장, 부단장, 서기, 회계)만 접근 가능합니다.');
+                location.href = 'dashboard.html';
+                return;
+            }
+
+            const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
+
+            if (isAdmin) {
+                // Admin: Load all churches from registered presidia
+                churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                const uniqueChurches = [...new Set(presidiaList.map(p => p.churchName || p.church).filter(c => c))].sort();
+
+                if (uniqueChurches.length === 0) {
+                    console.warn('No presidia data found to populate church list.');
+                }
+
+                uniqueChurches.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    churchSelect.appendChild(opt);
+                });
+                churchSelect.disabled = false;
+                curiaSelect.disabled = false;
+                presidiumSelect.disabled = false;
+            } else {
+                // Officer: Lock to their own org from login profile
+                const userChurch = currentUser.church || currentUser.churchName;
+                const userCuria = currentUser.curia || currentUser.curiaName;
+                const userPresidium = currentUser.presidium || currentUser.presidiumName;
+
+                // Fixed Church
+                churchSelect.innerHTML = '';
+                const optC = document.createElement('option');
+                optC.value = userChurch;
+                optC.textContent = userChurch;
+                churchSelect.appendChild(optC);
+                churchSelect.value = userChurch;
+                churchSelect.disabled = true;
+
+                // Fixed Curia
+                curiaSelect.innerHTML = '';
+                const optCu = document.createElement('option');
+                optCu.value = userCuria;
+                optCu.textContent = userCuria;
+                curiaSelect.appendChild(optCu);
+                curiaSelect.value = userCuria;
+                curiaSelect.disabled = true;
+
+                // Fixed Presidium
+                presidiumSelect.innerHTML = '';
+                const optPr = document.createElement('option');
+                optPr.value = userPresidium;
+                optPr.textContent = userPresidium;
+                presidiumSelect.appendChild(optPr);
+                presidiumSelect.value = userPresidium;
+                presidiumSelect.disabled = true;
+
+                // Initial Member List Load
+                loadMembers();
+                loadExistingOfficer();
+            }
+        }
+
+        // === Event Handlers ===
+        function setupEventListeners() {
+            // [New] Global Enter Key Navigation
+            form.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const target = e.target;
+                    // Skip for textarea and submit button
+                    if (target.tagName === 'TEXTAREA' || target.type === 'submit' || target.type === 'button') return;
+
+                    e.preventDefault();
+                    const fields = Array.from(form.querySelectorAll('input, select, textarea, button'));
+                    const idx = fields.indexOf(target);
+
+                    if (idx > -1 && idx < fields.length - 1) {
+                        // Find next enabled and non-readonly field
+                        for (let i = idx + 1; i < fields.length; i++) {
+                            const next = fields[i];
+                            if (!next.disabled && !next.readOnly && next.type !== 'hidden' && next.offsetParent !== null) {
+                                next.focus();
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Organization Cascade (for Admin)
+            const userRole = String(currentUser.role || '').toLowerCase();
+            const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
+
+            if (isAdmin) {
+                churchSelect.addEventListener('change', () => {
+                    const church = churchSelect.value;
+                    curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    presidiumSelect.disabled = true;
+                    memberSelect.innerHTML = '<option value="">단원 선택</option>';
+                    memberSelect.disabled = true;
+                    resetMemberUI();
+
+                    if (church) {
+                        const curiae = [...new Set(presidiaList
+                            .filter(p => (p.churchName || p.church) === church)
+                            .map(p => p.curiaName || p.curia)
+                        )].sort();
+
+                        curiae.forEach(cu => {
+                            const opt = document.createElement('option');
+                            opt.value = cu;
+                            opt.textContent = cu;
+                            curiaSelect.appendChild(opt);
+                        });
+                        curiaSelect.disabled = false;
+                    } else {
+                        curiaSelect.disabled = true;
+                    }
+                });
+
+                curiaSelect.addEventListener('change', () => {
+                    const church = churchSelect.value;
+                    const curia = curiaSelect.value;
+                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    memberSelect.innerHTML = '<option value="">단원 선택</option>';
+                    memberSelect.disabled = true;
+                    resetMemberUI();
+
+                    if (curia) {
+                        const prs = presidiaList
+                            .filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia)
+                            .map(p => p.presidiumName || p.name || p.presidium)
+                            .sort();
+
+                        prs.forEach(pr => {
+                            const opt = document.createElement('option');
+                            opt.value = pr;
+                            opt.textContent = pr;
+                            presidiumSelect.appendChild(opt);
+                        });
+                        presidiumSelect.disabled = false;
+                    } else {
+                        presidiumSelect.disabled = true;
+                    }
+                });
+            }
+
+            presidiumSelect.addEventListener('change', loadMembers);
+
+            // Member Selection Logic
+            memberSelect.addEventListener('change', () => {
+                const mid = memberSelect.value;
+                if (!mid) {
+                    resetMemberUI();
+                    return;
+                }
+
+                const member = membersList.find(m => m.id === mid);
+                if (member) {
+                    memberNameOutput.value = member.name;
+                    baptismalNameOutput.value = member.baptismalName || '';
+                    feastDateOutput.value = member.feastDate || '';
+                    phoneOutput.value = member.phone || '';
+
+                    // [New] Automatically look for existing officer record for THIS member
+                    loadExistingOfficer();
+                }
+            });
+
+            // Date Auto-formatting
+            setupDateFormatting('appointmentDate');
+            setupDateFormatting('appointmentExpiryDate');
+
+            // Tenure Auto-calculation & Date Handling Initialization
+            const appDateInput = document.getElementsByName('appointmentDate')[0];
+            const expDateInput = document.getElementsByName('appointmentExpiryDate')[0];
+
+            // Restriction: Expiry Date requires Appointment Date
+            const validateDateSeq = (e) => {
+                if (isProcessingConflict) return false; // Prevent double alerts
+
+                if (appDateInput.value.length < 10) {
+                    alert('먼저 임명일(날짜 전체 10자리)을 입력해 주세요.');
+                    appDateInput.focus();
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    return false;
+                }
+                return true;
+            };
+
+            // Enhanced blocking for Expiry input
+            expDateInput.addEventListener('mousedown', (e) => validateDateSeq(e));
+            expDateInput.addEventListener('pointerdown', (e) => validateDateSeq(e));
+            expDateInput.addEventListener('focus', (e) => validateDateSeq(e));
+
+            // Unify formatting and validation
+            setupDateFormatting('appointmentDate');
+            setupDateFormatting('appointmentExpiryDate');
+
+            // [New] Existing Officer Auto-lookup
+            form.querySelector('select[name="role"]').addEventListener('change', loadExistingOfficer);
+            [churchSelect, curiaSelect, presidiumSelect].forEach(sel => {
+                sel.addEventListener('change', loadExistingOfficer);
+            });
+
+
+
+            // [New] Delete Logic
+            const btnDelete = document.getElementById('btnDelete');
+            btnDelete.addEventListener('click', handleDelete);
+
+            // Form Submit
+            form.addEventListener('submit', handleSave);
+        }
+
+        function updateDeleteButtonVisibility() {
+            const btnDelete = document.getElementById('btnDelete');
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+            const editId = form.getAttribute('data-edit-id');
+
+            if (isAdmin && editId) {
+                btnDelete.style.display = 'inline-block';
+            } else {
+                btnDelete.style.display = 'none';
+            }
+        }
+
+        function loadExistingOfficer() {
+            const church = String(churchSelect.value || '').trim();
+            const curia = String(curiaSelect.value || '').trim();
+            const presidium = String(presidiumSelect.value || '').trim();
+            const role = String(form.querySelector('select[name="role"]').value || '').trim();
+            const selectedMemberId = String(memberSelect.value || '').trim();
+
+            if (!church || !curia || !presidium) return;
+
+            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+
+            // 1. Position-based records (for the whole organization)
+            const orgRecords = officersList.filter(o => {
+                const oChurch = String(o.church || o.churchName || '').trim();
+                const oCuria = String(o.curia || o.curiaName || '').trim();
+                const oPresidium = String(o.presidium || o.presidiumName || '').trim();
+                return oChurch === church && oCuria === curia && oPresidium === presidium;
+            });
+
+            // 2. Role-specific records
+            const roleRecords = orgRecords.filter(o => String(o.role || '').trim() === role);
+
+            // [Crucial] Member-Centric Matching
+            if (role && selectedMemberId) {
+                const memberRecord = roleRecords.find(o =>
+                    String(o.memberId || o.memberUid || o.member || '').trim() === selectedMemberId
+                );
+
+                if (memberRecord) {
+                    form.querySelector('input[name="appointmentDate"]').value = memberRecord.appointmentDate || '';
+                    form.querySelector('input[name="appointmentExpiryDate"]').value = memberRecord.appointmentExpiryDate || '';
+                    form.querySelector('textarea[name="notes"]').value = memberRecord.notes || '';
+                    form.setAttribute('data-edit-id', memberRecord.id);
+                } else {
+                    // No history for this specific combination
+                    form.querySelector('input[name="appointmentDate"]').value = '';
+                    form.querySelector('input[name="appointmentExpiryDate"]').value = '';
+                    form.querySelector('textarea[name="notes"]').value = '';
+                    form.removeAttribute('data-edit-id');
+                }
+            }
+            // 3. Just Role-based fallback (When no specific member selected yet)
+            else if (role && !selectedMemberId) {
+                const today = new Date().toISOString().split('T')[0];
+                roleRecords.sort((a, b) => {
+                    const isActiveA = !a.appointmentExpiryDate || a.appointmentExpiryDate >= today;
+                    const isActiveB = !b.appointmentExpiryDate || b.appointmentExpiryDate >= today;
+                    if (isActiveA && !isActiveB) return -1;
+                    if (!isActiveA && isActiveB) return 1;
+                    return (b.appointmentDate || '').localeCompare(a.appointmentDate || '');
+                });
+
+                if (roleRecords.length > 0) {
+                    const target = roleRecords[0];
+                    const mId = target.memberId || target.memberUid || target.member || '';
+                    if (mId) {
+                        memberSelect.value = mId;
+                        // Manually trigger basic member info load
+                        const member = membersList.find(m => m.id === mId);
+                        if (member) {
+                            memberNameOutput.value = member.name;
+                            baptismalNameOutput.value = member.baptismalName || '';
+                            feastDateOutput.value = member.feastDate || '';
+                            phoneOutput.value = member.phone || '';
+                        }
+                    }
+                    form.querySelector('input[name="appointmentDate"]').value = target.appointmentDate || '';
+                    form.querySelector('input[name="appointmentExpiryDate"]').value = target.appointmentExpiryDate || '';
+                    form.querySelector('textarea[name="notes"]').value = target.notes || '';
+                    form.setAttribute('data-edit-id', target.id);
+                }
+            }
+
+            updateTenure();
+            updateDeleteButtonVisibility();
+            renderOfficerList(orgRecords);
+        }
+
+        function renderOfficerList(records) {
+            const listDiv = document.getElementById('officerListContainer');
+            if (!listDiv) return;
+
+            if (records.length === 0) {
+                listDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">조직을 선택하면 간부 명단이 표시됩니다.</div>';
+                return;
+            }
+
+            // Sorting: Active first, then by role, then by appointment date DESC
+            const today = new Date().toISOString().split('T')[0];
+            records.sort((a, b) => {
+                const isActiveA = !a.appointmentExpiryDate || a.appointmentExpiryDate >= today;
+                const isActiveB = !b.appointmentExpiryDate || b.appointmentExpiryDate >= today;
+                if (isActiveA && !isActiveB) return -1;
+                if (!isActiveA && isActiveB) return 1;
+
+                const roleOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+                const orderA = roleOrder[a.role] || 99;
+                const orderB = roleOrder[b.role] || 99;
+                if (orderA !== orderB) return orderA - orderB;
+
+                return (b.appointmentDate || '').localeCompare(a.appointmentDate || '');
+            });
+
+            let html = `
+                <div class="table-responsive">
+                    <table class="member-table" style="margin-top:20px; font-size:0.85rem; width:100%;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th>직급</th>
+                                <th>성명</th>
+                                <th>세례명</th>
+                                <th>연락처</th>
+                                <th>임명일</th>
+                                <th>만료일</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            records.forEach(o => {
+                const isActive = !o.appointmentExpiryDate || o.appointmentExpiryDate >= today;
+                const statusHtml = isActive ?
+                    '<span style="background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">활동중</span>' :
+                    '<span style="background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 4px;">만료</span>';
+
+                html += `
+                    <tr style="cursor: pointer; transition: background 0.2s;" onclick="setFormFromTable('${o.id}')" onmouseover="this.style.background='#f1f1f1'" onmouseout="this.style.background='white'">
+                        <td style="font-weight:bold;">${o.role}</td>
+                        <td>${o.name || '-'}</td>
+                        <td>${o.baptismalName || '-'}</td>
+                        <td>${o.phone || '-'}</td>
+                        <td>${o.appointmentDate || '-'}</td>
+                        <td>${o.appointmentExpiryDate || '-'}</td>
+                        <td>${statusHtml}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+            listDiv.innerHTML = html;
+        }
+
+        // Helper: When clicking a table row, populate the form
+        window.setFormFromTable = function (id) {
+            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            const record = officersList.find(o => o.id === id);
+            if (!record) return;
+
+            // Trigger member selection
+            const mId = record.memberId || record.memberUid || record.member || '';
+            if (mId) {
+                memberSelect.value = mId;
+                // Manually trigger the member change logic since we have the full data
+                const member = {
+                    id: mId,
+                    name: record.name,
+                    baptismalName: record.baptismalName,
+                    feastDate: record.feastDate,
+                    phone: record.phone
+                };
+                memberNameOutput.value = member.name || '';
+                baptismalNameOutput.value = member.baptismalName || '';
+                feastDateOutput.value = member.feastDate || '';
+                phoneOutput.value = member.phone || '';
+            }
+
+            form.querySelector('select[name="role"]').value = record.role || '';
+            form.querySelector('input[name="appointmentDate"]').value = record.appointmentDate || '';
+            form.querySelector('input[name="appointmentExpiryDate"]').value = record.appointmentExpiryDate || '';
+            form.querySelector('textarea[name="notes"]').value = record.notes || '';
+
+            form.setAttribute('data-edit-id', record.id);
+            updateTenure();
+            updateDeleteButtonVisibility();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        function updateTenure() {
+            const startStr = document.getElementsByName('appointmentDate')[0].value;
+            const endStr = document.getElementsByName('appointmentExpiryDate')[0].value;
+            const display = document.getElementById('tenureDisplay');
+
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!dateRegex.test(startStr) || !dateRegex.test(endStr)) {
+                display.value = "";
+                return;
+            }
+
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+
+            if (isNaN(start) || isNaN(end) || start > end) {
+                display.value = start > end ? "만료일이 임명일보다 빠를 수 없습니다" : "";
+                return;
+            }
+
+            // Precise calculation: Years, Months, Days
+            let years = end.getFullYear() - start.getFullYear();
+            let months = end.getMonth() - start.getMonth();
+            let days = end.getDate() - start.getDate();
+
+            if (days < 0) {
+                months--;
+                // Get days in the previous month of the 'end' date
+                const prevMonthEnd = new Date(end.getFullYear(), end.getMonth(), 0);
+                days += prevMonthEnd.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            let result = [];
+            if (years > 0) result.push(`${years}년`);
+            if (months > 0) result.push(`${months}개월`);
+            if (days > 0) result.push(`${days}일`);
+
+            display.value = result.length > 0 ? result.join(' ') : "당일";
+        }
+
+        function loadMembers() {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidium = presidiumSelect.value;
+
+            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+            resetMemberUI();
+
+            if (!church || !curia || !presidium) {
+                memberSelect.disabled = true;
+                return;
+            }
+
+            // Filter: Same Org + Active (Not retired/transferred)
+            const activeMembers = membersList.filter(m =>
+                (m.churchName === church || m.church === church) &&
+                (m.curiaName === curia || m.curia === curia) &&
+                (m.presidiumName === presidium || m.presidium === presidium) &&
+                m.status !== '퇴단' &&
+                m.status !== '전출' &&
+                m.status !== 'retire' &&
+                m.status !== 'transfer'
+            );
+
+            if (activeMembers.length > 0) {
+                activeMembers.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.name} (${m.baptismalName || '성명미상'})`;
+                    memberSelect.appendChild(opt);
+                });
+                memberSelect.disabled = false;
+            } else {
+                memberSelect.innerHTML = '<option value="">활동 중인 단원이 없습니다</option>';
+                memberSelect.disabled = true;
+            }
+        }
+
+        function resetMemberUI() {
+            memberNameOutput.value = '';
+            baptismalNameOutput.value = '';
+            feastDateOutput.value = '';
+            phoneOutput.value = '';
+        }
+
+        // === Helper: Date Formatting ===
+        function setupDateFormatting(name) {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (!input) return;
+
+            input.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val.length >= 8) {
+                    val = val.substring(0, 8);
+                    const formatted = `${val.substring(0, 4)}-${val.substring(4, 6)}-${val.substring(6, 8)}`;
+                    e.target.value = formatted;
+                }
+
+                // Dependency: If appointment date is incomplete, reset expiry
+                if (name === 'appointmentDate' && e.target.value.length < 10) {
+                    const expInput = document.getElementsByName('appointmentExpiryDate')[0];
+                    if (expInput) expInput.value = '';
+                }
+                updateTenure();
+            });
+
+            input.addEventListener('blur', (e) => {
+                const val = e.target.value;
+                if (val && !/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                    const digits = val.replace(/[^0-9]/g, '');
+                    if (digits.length === 8) {
+                        e.target.value = `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)}`;
+                    } else if (digits.length > 0) {
+                        alert("날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)");
+                        setTimeout(() => e.target.focus(), 10);
+                        return;
+                    }
+                }
+
+                // [Crucial] Real-time Duplicate Check
+                if (name === 'appointmentDate' && e.target.value.length === 10) {
+                    const conflict = checkDuplicateActivity();
+                    if (conflict) {
+                        // [Fix] Activate flag to suppress the "Enter Appointment Date first" alert on next field
+                        if (typeof isProcessingConflict !== 'undefined') isProcessingConflict = true;
+
+                        alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
+                        e.target.value = '';
+                        const expInput = document.getElementsByName('appointmentExpiryDate')[0];
+                        if (expInput) expInput.value = '';
+
+                        // Aggressive Focus Reset
+                        setTimeout(() => {
+                            input.focus();
+                            setTimeout(() => {
+                                if (document.activeElement !== input) input.focus();
+                                // Deactivate flag after some time to allow normal validation again
+                                if (typeof isProcessingConflict !== 'undefined') {
+                                    setTimeout(() => { isProcessingConflict = false; }, 100);
+                                }
+                            }, 100);
+                        }, 50);
+                    }
+                }
+                updateTenure();
+            });
+        }
+
+        // === Helper: Duplicate Check Logic ===
+        function checkDuplicateActivity() {
+            const today = new Date().toISOString().split('T')[0];
+            const editId = form.getAttribute('data-edit-id');
+            const church = (churchSelect.value || '').trim();
+            const curia = (curiaSelect.value || '').trim();
+            const presidium = (presidiumSelect.value || '').trim();
+            const role = (form.querySelector('select[name="role"]').value || '').trim();
+            const memberId = (memberSelect.value || '').trim();
+            const memberName = (document.getElementById('memberName').value || '').trim();
+            const expiryInput = form.querySelector('input[name="appointmentExpiryDate"]');
+            const appointmentExpiryDate = (expiryInput ? expiryInput.value : '').trim();
+
+            const isSavingAsExpired = appointmentExpiryDate && appointmentExpiryDate < today;
+            if (isSavingAsExpired) return null; // No conflict if saving as historic record
+
+            let officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+
+            const conflict = officersList.find(o => {
+                // Skip if same record
+                if (editId && String(o.id) === String(editId)) return false;
+
+                const oChurch = String(o.church || o.churchName || '').trim();
+                const oCuria = String(o.curia || o.curiaName || '').trim();
+                const oPresidium = String(o.presidium || o.presidiumName || '').trim();
+                const oRole = String(o.role || '').trim();
+                const oMemberId = String(o.memberId || o.memberUid || o.member || '').trim();
+                const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
+
+                const isSameOrg = (oChurch === church && oCuria === curia && oPresidium === presidium);
+                const isSameMember = (oMemberId === memberId);
+
+                return isSameOrg && isActive && isSameMember;
+            });
+
+            if (conflict) {
+                // Return conflict info if found
+                const isSameRole = String(conflict.role).trim() === role;
+                if (isSameRole) {
+                    return null; // Update case: Same person, Same Role (handled by handleSave overwrite)
+                }
+                return conflict;
+            }
+            return null;
+        }
+
+        // === Logic: Save ===
+        function handleSave(e) {
+            e.preventDefault();
+
+            // [Important] Gather all data from form elements
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Manual Overwrite for Absolute Integrity
+            data.name = (document.getElementById('memberName').value || '').trim();
+            data.baptismalName = (document.getElementById('baptismalName').value || '').trim();
+            data.feastDate = (document.getElementById('feastDate').value || '').trim();
+            data.phone = (document.getElementById('phone').value || '').trim();
+
+            data.church = (churchSelect.value || '').trim();
+            data.curia = (curiaSelect.value || '').trim();
+            data.presidium = (presidiumSelect.value || '').trim();
+            data.memberId = (memberSelect.value || '').trim();
+
+            const expiryInput = form.querySelector('input[name="appointmentExpiryDate"]');
+            data.appointmentExpiryDate = (expiryInput ? expiryInput.value : (data.appointmentExpiryDate || '')).trim();
+
+            const apptInput = form.querySelector('input[name="appointmentDate"]');
+            data.appointmentDate = (apptInput ? apptInput.value : (data.appointmentDate || '')).trim();
+
+            const today = new Date().toISOString().split('T')[0];
+            const editId = form.getAttribute('data-edit-id');
+
+            // 1. Conflict Check (Re-use shared logic)
+            const conflict = checkDuplicateActivity();
+            if (conflict) {
+                alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
+                return;
+            }
+
+            // 2. Perform Save (Update or Insert)
+            let officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            let targetIdx = -1;
+
+            if (editId) {
+                targetIdx = officersList.findIndex(o => String(o.id) === String(editId));
+            } else {
+                // Try to find by MemberId + Role + Org (Auto-Update case)
+                targetIdx = officersList.findIndex(o => {
+                    const isSameMember = String(o.memberId || o.memberUid || o.member || '').trim() === data.memberId;
+                    const isSameRole = String(o.role).trim() === String(data.role).trim();
+                    const oChurch = String(o.church || o.churchName || '').trim();
+                    const oCuria = String(o.curia || o.curiaName || '').trim();
+                    const oPresidium = String(o.presidium || o.presidiumName || '').trim();
+                    const isSameOrg = (oChurch === data.church && oCuria === data.curia && oPresidium === data.presidium);
+                    const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
+                    return isSameMember && isSameRole && isSameOrg && isActive;
+                });
+            }
+
+            if (targetIdx > -1) {
+                const existingId = officersList[targetIdx].id;
+                officersList[targetIdx] = { ...data, id: existingId };
+            } else {
+                data.id = 'off_' + Date.now();
+                officersList.push(data);
+            }
+
+            try {
+                localStorage.setItem('officers_list', JSON.stringify(officersList));
+
+                // [Sync] 유저 프로필 직책 동시 업데이트 (가입 정보 연동)
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                const targetUid = Object.keys(users).find(uid => {
+                    const u = users[uid];
+                    // 이름과 소속이 일치하는 유저 식별
+                    return u.name === data.name && u.church === data.church && u.presidiumName === data.presidium;
+                });
+
+                if (targetUid) {
+                    users[targetUid].role = data.role;
+                    localStorage.setItem('users', JSON.stringify(users));
+                    console.log(`User Profile Role Synced: ${data.name} -> ${data.role}`);
+                }
+
+                alert('간부 정보가 성공적으로 저장되었습니다.');
+                setTimeout(loadExistingOfficer, 100);
+            } catch (error) {
+                console.error('Save failed:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        function handleDelete() {
+            const editId = form.getAttribute('data-edit-id');
+            const role = form.querySelector('select[name="role"]').value;
+            const name = memberNameOutput.value;
+
+            if (!editId) {
+                alert('삭제할 정보를 선택(조회)해 주세요.');
+                return;
+            }
+
+            if (confirm(`현재 조회된 [${role} - ${name}] 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                let officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+
+                // Use String conversion for absolute ID matching
+                const idx = officersList.findIndex(o => String(o.id) === String(editId));
+
+                if (idx > -1) {
+                    officersList.splice(idx, 1);
+                    localStorage.setItem('officers_list', JSON.stringify(officersList));
+                    alert('성공적으로 삭제되었습니다.');
+
+                    // Clean up UI and reset edit state
+                    form.removeAttribute('data-edit-id');
+                    form.reset();
+                    resetMemberUI();
+
+                    // Refresh View
+                    setTimeout(loadExistingOfficer, 100);
+                } else {
+                    alert('삭제할 정보를 찾을 수 없습니다. (ID 미일치)');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

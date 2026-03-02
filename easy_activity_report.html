@@ -1,0 +1,1340 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간편활동보고 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .easy-container {
+            max-width: 1000px;
+            margin: 100px auto 100px;
+            padding: 20px;
+        }
+
+        .user-info-bar {
+            background: #f8faff;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid var(--secondary-color);
+        }
+
+        .info-labels {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-item .label {
+            font-size: 0.8rem;
+            color: #777;
+            margin-bottom: 2px;
+        }
+
+        .info-item .value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Admin style selects in info bar */
+        .info-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            background: #fdfdfd;
+        }
+
+        .entry-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 2px solid #ced4da;
+        }
+
+        .setup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .item-card {
+            background: #f8f9fa;
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .item-card:hover {
+            border-color: var(--secondary-color);
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .item-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .item-cat {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .easy-input {
+            width: 70px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-align: right;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .easy-input:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            background: #fff9f5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            background: #fdfdfd;
+            border: 2px dashed #eee;
+            border-radius: 12px;
+        }
+
+        .btn-setup {
+            background: #edf2f7;
+            color: #4a5568;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            word-break: keep-all;
+            text-align: center;
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+
+        .btn-setup:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        /* Modal Base Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .bottom-action {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        .btn-submit {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 60px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(46, 125, 50, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-submit:hover {
+            transform: scale(1.05);
+            background: #1b5e20;
+            box-shadow: 0 15px 30px rgba(46, 125, 50, 0.4);
+        }
+
+        .btn-delete-main {
+            background: #c53030;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: 0 6px 15px rgba(197, 48, 48, 0.3);
+            cursor: pointer;
+            display: none;
+            /* Initial hidden */
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-delete-main:hover {
+            transform: scale(1.05);
+            background: #9b2c2c;
+            box-shadow: 0 10px 20px rgba(197, 48, 48, 0.4);
+        }
+
+        /* Preset Settings Modal Styles */
+        .modal-body {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .preset-group {
+            margin-bottom: 25px;
+        }
+
+        .preset-group-title {
+            font-weight: bold;
+            padding: 10px 0;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #f1f3f5;
+            color: var(--primary-color);
+        }
+
+        .preset-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .preset-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .preset-checkbox:hover {
+            background: #f8f9fa;
+        }
+
+        .preset-checkbox input {
+            cursor: pointer;
+        }
+
+        /* Sort List Styles */
+        .sort-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed #eee;
+        }
+
+        .sort-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .sort-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8faff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .sort-item-meta {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sort-item-name {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .sort-btns {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-move {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .btn-move:hover {
+            background: #eee;
+            color: var(--primary-color);
+        }
+
+        /* Search Box in Modal */
+        .item-search-wrap {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .item-search-box {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+            background: #f8faff;
+        }
+
+        .item-search-box:focus {
+            border-color: var(--secondary-color);
+            background: white;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
+        }
+
+        .item-search-wrap i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 1.1rem;
+        }
+
+        .highlight-match {
+            background-color: #fff3cd !important;
+            color: #856404 !important;
+            border: 2px solid #ffeeba !important;
+            transform: scale(1.02);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="easy-container">
+        <!-- Unified Main Card -->
+        <div class="entry-card">
+            <!-- Header inside the card -->
+            <div
+                style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid var(--primary-color);">
+                <div>
+                    <h2 style="color: var(--primary-color); margin: 0; font-size: 1.8rem;"><i class="fas fa-bolt"></i>
+                        간편 활동 보고</h2>
+                    <p style="margin: 5px 0 0; color: #666; font-size: 0.95rem;">
+                        <i class="fas fa-info-circle" style="color: var(--secondary-color);"></i>
+                        출석한 행동단원만 활동 보고를 등록할 수 있습니다.
+                    </p>
+                </div>
+                <button onclick="location.href='dashboard.html'" class="btn-setup"
+                    style="background: #a0aec0; color: white; padding: 10px 20px;">
+                    <i class="fas fa-times"></i> 닫기
+                </button>
+            </div>
+
+            <!-- User Info Area (Select for Admin, Fixed for Member) -->
+            <!-- User Info Area (Select for Admin/Officer, Label-like for Member) -->
+            <div class="user-info-bar">
+                <div class="info-labels" id="adminSelectors" style="width: 100%; margin-right: 20px;">
+                    <div class="info-item">
+                        <div class="label">성당</div>
+                        <select id="selChurch" class="info-select"></select>
+                    </div>
+                    <div class="info-item" id="curiaItem">
+                        <div class="label">꾸리아</div>
+                        <select id="selCuria" class="info-select"></select>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">쁘레시디움</div>
+                        <select id="selPr" class="info-select"></select>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">단원 성명</div>
+                        <select id="selMember" class="info-select"></select>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">보고 주회합 회차</div>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <select id="selDate" class="info-select"></select>
+                            <button id="btnSearch" class="btn-setup"
+                                style="padding: 4px 10px; font-size: 0.8rem; background: var(--primary-color); color: white;">조회</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="btnOpenSetup" class="btn-setup">
+                    <i class="fas fa-cog"></i> 항목 설정
+                </button>
+            </div>
+
+            <!-- Entry Area Content -->
+            <div id="entryContent">
+                <div class="setup-header" style="margin-top: 20px;">
+                    <h3 style="margin:0;"><i class="fas fa-list-check"></i> 나의 활동 목록</h3>
+                    <span style="font-size: 0.85rem; color: #999;">설정된 활동만 표시됩니다.</span>
+                </div>
+
+                <div id="activityGrid" class="activity-grid">
+                    <!-- Dynamic Items -->
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display:none;">
+                    <i class="fas fa-magic fa-3x" style="margin-bottom: 15px;"></i><br>
+                    보고할 활동이 설정되지 않았습니다.<br>
+                    <strong>[항목 설정]</strong> 버튼을 눌러 자주 하는 활동을 추가해 보세요!
+                </div>
+
+                <div id="absentState" class="empty-state"
+                    style="display:none; border-color: #ffc107; background: #fffdf6;">
+                    <i class="fas fa-user-times fa-3x" style="margin-bottom: 15px; color: #ffc107;"></i><br>
+                    해당 주회합에 <strong>결석(또는 출석 미기입)</strong> 처리되어 활동 보고를 입력할 수 없습니다.<br>
+                    <span style="color: #e53935; font-weight: bold; margin-top: 10px; display: inline-block;">
+                        <i class="fas fa-exclamation-triangle"></i> 출석한 행동단원만 활동 보고 등록이 가능합니다.
+                    </span><br>
+                    먼저 출석 체크가 완료되었는지 확인해 주세요.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-action" style="display:flex; gap: 15px;">
+        <button id="btnDelete" class="btn-delete-main">
+            <i class="fas fa-trash-alt"></i> 삭제하기
+        </button>
+        <button id="btnSave" class="btn-submit">
+            <i class="fas fa-check-circle"></i> 활동 보고 저장
+        </button>
+    </div>
+
+    <!-- Preset Selection Modal -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 style="margin:0;">나의 활동 항목 설정</h3>
+            </div>
+            <div class="modal-body" id="presetBody">
+                <!-- Checkboxes per group -->
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn-secondary" id="btnCloseSetup">취소</button>
+                <button type="button" class="btn-primary" id="btnApplySetup">적용하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js";
+
+        let currentUser = null;
+        let currentPrAttendance = null; // Current week info
+        let activitySchema = [];
+        let myPresets = []; // User's selected item names
+        let tempInputData = {}; // [추가] 항목 설정 시 입력 데이터 임시 보관용
+
+        // --- Auth & Init ---
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                location.href = 'index.html';
+                return;
+            }
+
+            const role = (profile.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+            const canManageOthers = isAdmin || isOfficer;
+
+            // [New] Role-based Menu Control & Common Menus
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            document.getElementById('btnDelete').style.display = canManageOthers ? 'flex' : 'none';
+            setupUnifiedSelectors(isAdmin, isOfficer);
+        });
+
+        function setupUnifiedSelectors(isAdmin, isOfficer) {
+            const selChurch = document.getElementById('selChurch');
+            const selCuria = document.getElementById('selCuria');
+            const selPr = document.getElementById('selPr');
+            const selMember = document.getElementById('selMember');
+            const selDate = document.getElementById('selDate');
+            const btnSearch = document.getElementById('btnSearch');
+
+            // --- Shared Listeners ---
+            selMember.onchange = () => {
+                const member = selMember.options[selMember.selectedIndex];
+                if (!member || !member.dataset.uid) return;
+
+                const uid = member.dataset.uid;
+                updatePresets(uid);
+                renderEntryForm();
+                loadExistingData();
+            };
+
+            selDate.onchange = () => {
+                const opt = selDate.options[selDate.selectedIndex];
+                if (opt) {
+                    currentPrAttendance = {
+                        date: opt.value,
+                        session: opt.dataset.session
+                    };
+                }
+                // Refresh member list based on the newly selected date
+                syncMembers(selPr.value);
+            };
+
+            btnSearch.onclick = () => {
+                loadExistingData();
+                alert('해당 주차의 기록을 조회했습니다.');
+            };
+
+            // --- Population Logic by Role ---
+            if (isAdmin) {
+                // Admin: Full control
+                const churches = getChurches();
+                selChurch.innerHTML = churches.map(c => `<option value="${c}">${c}</option>`).join('');
+
+                selChurch.onchange = () => {
+                    const c = selChurch.value;
+                    updateSchema(c);
+                    const curiae = getCuriae(c);
+                    selCuria.innerHTML = curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
+                    selCuria.onchange();
+                };
+
+                selCuria.onchange = () => {
+                    const c = selChurch.value;
+                    const cu = selCuria.value;
+                    const presidia = getPresidia(c, cu);
+                    selPr.innerHTML = presidia.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                    selPr.onchange();
+                };
+
+                selPr.onchange = () => {
+                    const prName = selPr.value;
+                    syncDates(prName);
+                    syncMembers(prName);
+                };
+
+                selChurch.onchange();
+            } else {
+                // Officer/Member: Fixed Org
+                const churchVal = currentUser.churchName || currentUser.church;
+                const curiaVal = currentUser.curiaName || currentUser.curia;
+                const prName = currentUser.presidiumName || currentUser.presidium;
+
+                selChurch.innerHTML = `<option value="${churchVal}">${churchVal}</option>`;
+                selCuria.innerHTML = `<option value="${curiaVal}">${curiaVal}</option>`;
+                selPr.innerHTML = `<option value="${prName}">${prName}</option>`;
+
+                selChurch.disabled = true;
+                selCuria.disabled = true;
+                selPr.disabled = true;
+
+                updateSchema(churchVal);
+                syncDates(prName);
+                syncMembers(prName);
+
+                // If ordinary member (not officer), hide member select or disable it
+                if (!isOfficer) {
+                    selMember.disabled = true;
+                }
+            }
+        }
+
+        function syncDates(prName) {
+            const selDate = document.getElementById('selDate');
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            // date와 session이 있는 유효한 출석부 기록만 필터링
+            const myAttendance = allAttendance.filter(a => (a.presidium === prName || a.presidiumName === prName) && a.date && a.session)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            if (myAttendance.length > 0) {
+                selDate.innerHTML = myAttendance.map(a => `<option value="${a.date}" data-session="${a.session}">${a.date} (${a.session}회)</option>`).join('');
+                selDate.onchange();
+            } else {
+                selDate.innerHTML = '<option value="">기록 없음</option>';
+                currentPrAttendance = null;
+            }
+        }
+
+        function syncMembers(prName) {
+            const selMember = document.getElementById('selMember');
+            const selDateValue = document.getElementById('selDate').value;
+            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+
+            // Normalize: include current user if they match the presidium
+            let prMembers = allMembers.filter(m => (m.presidiumName === prName || m.presidium === prName));
+
+            // Filter: Show members who were active at the time of the selected reporting week
+            if (selDateValue && prMembers.length > 0) {
+                prMembers = prMembers.filter(m => {
+                    // 1. Join Date Check: Must have joined before or on the session date
+                    if (m.joinDate && m.joinDate > selDateValue) return false;
+
+                    // 2. Leave Date/Status Check:
+                    // If they have a leave date, they must have left AFTER the session date
+                    if (m.leaveDate) return m.leaveDate > selDateValue;
+
+                    // If they don't have a leave date but are marked as retired, 
+                    // we assume they are already gone (current state)
+                    if (m.status === 'retire') return false;
+
+                    // Otherwise, they are currently active and were active then
+                    return true;
+                });
+            }
+
+            if (prMembers.length > 0) {
+                selMember.innerHTML = prMembers.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || ''})</option>`).join('');
+
+                // If currentUser is in this list, auto-select them if it's the first sync or if it's the user's view
+                const myIdx = prMembers.findIndex(m => m.id === currentUser.id || m.id === currentUser.uid);
+                if (myIdx > -1) {
+                    selMember.selectedIndex = myIdx;
+                }
+
+                selMember.onchange();
+            } else {
+                // If no members in members_list, fallback to current user info
+                selMember.innerHTML = `<option value="${currentUser.memberName || currentUser.name}" data-uid="${currentUser.id || currentUser.uid}">${currentUser.memberName || currentUser.name}</option>`;
+                selMember.onchange();
+            }
+        }
+
+        function updateSchema(churchName) {
+            const fullSchema = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            activitySchema = fullSchema[churchName] || [];
+        }
+
+        function updatePresets(uid) {
+            const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
+            myPresets = allPresets[uid] || [];
+        }
+
+        function loadLatestAttendance(presidium) {
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const myAttendance = allAttendance.filter(a =>
+                (a.presidium === presidium || a.presidiumName === presidium)
+            ).sort((a, b) => b.date.localeCompare(a.date));
+
+            if (myAttendance.length > 0) {
+                currentPrAttendance = myAttendance[0];
+                document.getElementById('displayDate').textContent = `${currentPrAttendance.date} (${currentPrAttendance.session}회)`;
+            } else {
+                document.getElementById('displayDate').textContent = '등록된 주회합 정보 없음';
+            }
+        }
+
+        function renderEntryForm() {
+            const grid = document.getElementById('activityGrid');
+            const empty = document.getElementById('emptyState');
+            grid.innerHTML = '';
+
+            if (myPresets.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            // Flatten schema for easy lookup
+            const flatSchema = {};
+            activitySchema.forEach(group => {
+                group.items.forEach(item => {
+                    flatSchema[item.name] = { ...item, groupTitle: group.title };
+                });
+            });
+
+            // Render in the order of myPresets
+            myPresets.forEach(presetName => {
+                const item = flatSchema[presetName];
+                if (!item) return;
+
+                const card = document.createElement('div');
+                card.className = 'item-card';
+
+                // [추가] 임시 보관된 값이 있으면 복원, 없으면 0
+                const savedValue = tempInputData[item.name] !== undefined ? tempInputData[item.name] : "";
+
+                card.innerHTML = `
+                    <div class="item-info">
+                        <span class="item-cat">${item.groupTitle}</span>
+                        <span class="item-name">${item.name}</span>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" class="easy-input" data-name="${item.name}" value="${savedValue}" placeholder="0" min="0">
+                        <span style="font-size:0.8rem; color:#888;">${item.unit || '회'}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function loadExistingData() {
+            if (!currentPrAttendance) return;
+
+            const role = (currentUser.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+            const canManageOthers = isAdmin || isOfficer;
+
+            let targetName = "";
+            let churchVal = "", curiaVal = "", prVal = "";
+
+            if (canManageOthers) {
+                targetName = document.getElementById('selMember').value;
+                if (isAdmin) {
+                    churchVal = document.getElementById('selChurch').value;
+                    curiaVal = document.getElementById('selCuria').value;
+                    prVal = document.getElementById('selPr').value;
+                } else {
+                    churchVal = currentUser.churchName || currentUser.church;
+                    curiaVal = currentUser.curiaName || currentUser.curia;
+                    prVal = currentUser.presidiumName || currentUser.presidium;
+                }
+            } else {
+                targetName = (currentUser.memberName || currentUser.name);
+                churchVal = currentUser.churchName || currentUser.church;
+                curiaVal = currentUser.curiaName || currentUser.curia;
+                prVal = currentUser.presidiumName || currentUser.presidium;
+            }
+
+            // --- 1. 출석 여부 화면단 사전 검증 ---
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const attRecord = allAttendance.find(a =>
+                (a.presidium === prVal || a.presidiumName === prVal) &&
+                a.date === currentPrAttendance.date &&
+                String(a.session) === String(currentPrAttendance.session)
+            );
+
+            let isAttended = false;
+            if (attRecord && attRecord.attendanceData) {
+                let uid = null;
+                if (canManageOthers) {
+                    const selMember = document.getElementById('selMember');
+                    const opt = selMember.options[selMember.selectedIndex];
+                    if (opt) uid = opt.dataset.uid;
+                } else {
+                    uid = currentUser.id || currentUser.uid;
+                }
+
+                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
+                if (data) {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') isAttended = true;
+                } else {
+                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                    const memberObj = allMembers.find(m => m.name === targetName && (m.presidium === prVal || m.presidiumName === prVal)) ||
+                        allOfficers.find(o => o.name === targetName && (o.presidium === prVal || o.presidiumName === prVal));
+                    if (memberObj) {
+                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
+                        if (dataById) {
+                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
+                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                        }
+                    }
+                }
+            }
+
+            const grid = document.getElementById('activityGrid');
+            const empty = document.getElementById('emptyState');
+            const absentState = document.getElementById('absentState');
+            const btnSave = document.getElementById('btnSave');
+
+            if (!isAttended) {
+                // 결석이거나 출석 정보가 없으면 폼을 숨기고 안내 메시지 노출
+                grid.style.display = 'none';
+                empty.style.display = 'none';
+                absentState.style.display = 'block';
+                btnSave.disabled = true;
+                btnSave.style.opacity = '0.5';
+                document.getElementById('btnDelete').disabled = true;
+                document.getElementById('btnDelete').style.opacity = '0.5';
+                return; // 이후 로직 중단
+            }
+
+            // 출석한 경우 정상적으로 폼 노출
+            grid.style.display = 'grid'; // 원래 display 속성
+            absentState.style.display = 'none';
+            btnSave.disabled = false;
+            btnSave.style.opacity = '1';
+            renderEntryForm(); // 항목 다시 표시
+
+            // --- 2. 기존 데이터 로딩 ---
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const record = records.find(r =>
+                (r.churchName === churchVal || r.church === churchVal) &&
+                (r.presidiumName === prVal || r.presidium === prVal) &&
+                r.memberName === targetName &&
+                r.date === currentPrAttendance.date &&
+                String(r.session) === String(currentPrAttendance.session)
+            );
+
+            const inputs = document.querySelectorAll('.easy-input');
+            inputs.forEach(input => input.value = ""); // Reset first
+
+            // [핵심 수정] DB 기록과 현재 입력 중인 임시 데이터를 병합하여 표시
+            inputs.forEach(input => {
+                const name = input.dataset.name;
+                // 1. 먼저 임시 보관된(방금 입력한) 값이 있으면 우선 적용
+                if (tempInputData[name] !== undefined) {
+                    input.value = tempInputData[name];
+                }
+                // 2. 임시 값이 없고 DB에 기록된 값이 있으면 적용
+                else if (record && record.counts && record.counts[name] !== undefined) {
+                    input.value = record.counts[name];
+                }
+            });
+
+            if (record && record.counts) {
+                document.getElementById('btnDelete').disabled = false;
+                document.getElementById('btnDelete').style.opacity = "1";
+            } else {
+                document.getElementById('btnDelete').disabled = true;
+                document.getElementById('btnDelete').style.opacity = "0.5";
+            }
+
+            // [추가] 복원이 완료되었으므로 임시 데이터 비우기 (다음 모달 오픈 시 새로 채워짐)
+            tempInputData = {};
+        }
+
+        // --- Modal Setup ---
+        const setupModal = document.getElementById('setupModal');
+        const presetBody = document.getElementById('presetBody');
+
+        document.getElementById('btnOpenSetup').onclick = () => {
+            // [추가] 모달 열기 전 현재 입력된 값들을 임시 저장
+            const currentInputs = document.querySelectorAll('.easy-input');
+            tempInputData = {};
+            currentInputs.forEach(input => {
+                if (input.value !== "") {
+                    tempInputData[input.dataset.name] = input.value;
+                }
+            });
+
+            renderPresetOptions();
+            setupModal.style.display = 'flex';
+        };
+
+        document.getElementById('btnCloseSetup').onclick = () => setupModal.style.display = 'none';
+
+        function renderPresetOptions() {
+            presetBody.innerHTML = '';
+
+            // --- 0. Search Section ---
+            const searchWrap = document.createElement('div');
+            searchWrap.className = 'item-search-wrap';
+            searchWrap.innerHTML = `
+                <i class="fas fa-search"></i>
+                <input type="text" class="item-search-box" placeholder="활동 항목 검색 (예: 묵주, 미사...)" id="itemSearch">
+            `;
+            presetBody.appendChild(searchWrap);
+
+            // --- 1. Selection Section ---
+            const selectionTitle = document.createElement('h4');
+            selectionTitle.innerHTML = '<i class="fas fa-check-square"></i> 항목 선택';
+            selectionTitle.style.marginBottom = '15px';
+            presetBody.appendChild(selectionTitle);
+
+            const searchInput = searchWrap.querySelector('#itemSearch');
+            searchInput.oninput = () => {
+                const query = searchInput.value.trim().toLowerCase();
+                const allItemLabels = presetBody.querySelectorAll('.preset-checkbox');
+
+                let firstMatch = null;
+
+                allItemLabels.forEach(label => {
+                    const text = label.querySelector('span').textContent.toLowerCase();
+                    if (query !== "" && text.includes(query)) {
+                        label.classList.add('highlight-match');
+                        label.style.display = 'flex'; // Ensure it's visible if it was hidden by previous logic
+                        if (!firstMatch) firstMatch = label;
+                    } else {
+                        label.classList.remove('highlight-match');
+                        label.style.display = 'flex'; // Keep all items visible
+                    }
+                });
+
+                // Restore all groups visibility
+                const allGroups = presetBody.querySelectorAll('.preset-group');
+                allGroups.forEach(group => group.style.display = 'block');
+
+                // Scroll to the first match if it exists
+                if (firstMatch) {
+                    firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            };
+
+            activitySchema.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'preset-group';
+                groupDiv.innerHTML = `<div class="preset-group-title">${group.title}</div>`;
+
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'preset-items';
+
+                group.items.forEach(item => {
+                    if (item.isActive === false) return;
+                    const label = document.createElement('label');
+                    label.className = 'preset-checkbox';
+                    const checked = myPresets.includes(item.name) ? 'checked' : '';
+                    label.innerHTML = `
+                        <input type="checkbox" value="${item.name}" ${checked} onchange="updateSortUI()">
+                        <span>${item.name}</span>
+                    `;
+                    itemsDiv.appendChild(label);
+                });
+                groupDiv.appendChild(itemsDiv);
+                presetBody.appendChild(groupDiv);
+            });
+
+            // --- 2. Sorting Section ---
+            const sortSection = document.createElement('div');
+            sortSection.className = 'sort-section';
+            sortSection.id = 'sortSection';
+            presetBody.appendChild(sortSection);
+
+            window.updateSortUI = () => {
+                const checkedItems = Array.from(presetBody.querySelectorAll('input[type="checkbox"]:checked')).map(el => el.value);
+
+                // Keep the existing order for already checked items, add new ones at the end
+                const newOrder = myPresets.filter(p => checkedItems.includes(p));
+                checkedItems.forEach(item => {
+                    if (!newOrder.includes(item)) newOrder.push(item);
+                });
+                myPresets = newOrder;
+
+                const section = document.getElementById('sortSection');
+                section.innerHTML = `
+                    <h4 style="margin: 0 0 10px 0;"><i class="fas fa-sort-amount-down"></i> 항목 순서 정렬</h4>
+                    <p style="font-size: 0.8rem; color: #777; margin-bottom: 15px;">자주 보고하는 항목을 버튼을 이용해 위로 이동시키세요.</p>
+                    <div class="sort-list" id="sortList"></div>
+                `;
+
+                const list = document.getElementById('sortList');
+                myPresets.forEach((name, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'sort-item';
+                    item.innerHTML = `
+                        <span class="sort-item-name">${name}</span>
+                        <div class="sort-btns">
+                            <button class="btn-move" onclick="moveItem(${index}, -1)"><i class="fas fa-chevron-up"></i></button>
+                            <button class="btn-move" onclick="moveItem(${index}, 1)"><i class="fas fa-chevron-down"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            };
+
+            window.moveItem = (index, direction) => {
+                const newIndex = index + direction;
+                if (newIndex < 0 || newIndex >= myPresets.length) return;
+
+                const temp = myPresets[index];
+                myPresets[index] = myPresets[newIndex];
+                myPresets[newIndex] = temp;
+                updateSortUI();
+            };
+
+            updateSortUI();
+        }
+
+        document.getElementById('btnApplySetup').onclick = () => {
+            // Note: myPresets is already updated by updateSortUI during selection/sorting
+            const role = (currentUser.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+            const canManageOthers = isAdmin || isOfficer;
+
+            let targetId = "";
+            if (canManageOthers) {
+                const selMember = document.getElementById('selMember');
+                targetId = selMember.options[selMember.selectedIndex].dataset.uid;
+            } else {
+                targetId = currentUser.id || currentUser.uid;
+            }
+
+            const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
+            allPresets[targetId] = myPresets;
+            localStorage.setItem('user_activity_presets', JSON.stringify(allPresets));
+
+            renderEntryForm();
+            loadExistingData();
+
+            // [추가] 적용 후 임시 데이터 초기화 (loadExistingData에서 DB 값을 덮어쓸 수 있으므로 주의가 필요하나, 
+            // 신규 입력 중인 상황을 위해 loadExistingData 로직 확인 필요)
+            // loadExistingData() 내부에서 inputs.forEach(input => input.value = "") 로 초기화하므로 
+            // 새로 추가된 항목에 대해서는 tempInputData를 유지하거나 병합하는 처리가 필요할 수 있음.
+
+            setupModal.style.display = 'none';
+        };
+
+        // --- Save Logic ---
+        document.getElementById('btnSave').onclick = () => {
+            if (!currentPrAttendance) return;
+
+            const inputs = document.querySelectorAll('.easy-input');
+            const easyCounts = {};
+
+            inputs.forEach(input => {
+                const val = parseInt(input.value) || 0;
+                // [수정] 0이더라도 간편활동 화면에 있는 항목이면 명시적으로 기록 (나중에 병합 시 덮어쓰기 위해)
+                easyCounts[input.dataset.name] = val;
+            });
+
+            const role = (currentUser.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+            const canManageOthers = isAdmin || isOfficer;
+
+            let targetName = "";
+            let churchVal = "", curiaVal = "", prVal = "";
+
+            if (canManageOthers) {
+                targetName = document.getElementById('selMember').value;
+                if (isAdmin) {
+                    churchVal = document.getElementById('selChurch').value;
+                    curiaVal = document.getElementById('selCuria').value;
+                    prVal = document.getElementById('selPr').value;
+                } else {
+                    churchVal = currentUser.churchName || currentUser.church;
+                    curiaVal = currentUser.curiaName || currentUser.curia;
+                    prVal = currentUser.presidiumName || currentUser.presidium;
+                }
+            } else {
+                targetName = (currentUser.memberName || currentUser.name);
+                churchVal = currentUser.churchName || currentUser.church;
+                curiaVal = currentUser.curiaName || currentUser.curia;
+                prVal = currentUser.presidiumName || currentUser.presidium;
+            }
+
+            // [추가] 필수값 검증 (매칭 실패 방지)
+            if (!targetName || !prVal) {
+                return alert('단원 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+            }
+
+            // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
+            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            const attRecord = allAttendance.find(a =>
+                (a.presidium === prVal || a.presidiumName === prVal) &&
+                a.date === currentPrAttendance.date &&
+                String(a.session) === String(currentPrAttendance.session)
+            );
+
+            let isAttended = false;
+            if (attRecord && attRecord.attendanceData) {
+                let uid = null;
+                if (canManageOthers) {
+                    const selMember = document.getElementById('selMember');
+                    const opt = selMember.options[selMember.selectedIndex];
+                    if (opt) uid = opt.dataset.uid;
+                } else {
+                    uid = currentUser.id || currentUser.uid;
+                }
+
+                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
+                if (data) {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') isAttended = true;
+                } else {
+                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
+                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                    const memberObj = allMembers.find(m => m.name === targetName && (m.presidium === prVal || m.presidiumName === prVal)) ||
+                        allOfficers.find(o => o.name === targetName && (o.presidium === prVal || o.presidiumName === prVal));
+                    if (memberObj) {
+                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
+                        if (dataById) {
+                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
+                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                        }
+                    }
+                }
+            }
+
+            if (!isAttended) {
+                return alert('해당 주회합에 출석(또는 지각) 처리된 단원만 간편 활동 보고를 등록할 수 있습니다.\n먼저 출석 상태를 확인해 주세요.');
+            }
+
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+
+            // [수정] 여러 중복 레코드가 있을 수 있으므로 filter를 사용해 모두 찾아낸 후 제거
+            const existingRecord = records.find(r =>
+                (r.churchName === churchVal || r.church === churchVal) &&
+                (r.presidiumName === prVal || r.presidium === prVal) &&
+                r.memberName === targetName &&
+                r.date === currentPrAttendance.date &&
+                String(r.session) === String(currentPrAttendance.session)
+            );
+
+            let finalCounts = {};
+            if (existingRecord && existingRecord.counts) {
+                // [핵심 로직 수정] 기존 데이터에서 간편활동 UI에 있는 항목은 무조건 덮어쓰고, 없는 항목은 유지함
+                finalCounts = { ...existingRecord.counts, ...easyCounts };
+            } else {
+                finalCounts = easyCounts;
+            }
+
+            // 0인 항목은 최종 저장 시 제거 (데이터 효율을 위함, 원하시면 0도 남길 수 있으나 보통은 제거)
+            for (const key in finalCounts) {
+                if (finalCounts[key] === 0) delete finalCounts[key];
+            }
+
+            const newRecord = {
+                id: existingRecord ? existingRecord.id : Date.now(),
+                churchName: churchVal,
+                curiaName: curiaVal,
+                presidiumName: prVal,
+                memberName: targetName,
+                session: currentPrAttendance.session,
+                date: currentPrAttendance.date,
+                counts: finalCounts,
+                timestamp: new Date().toISOString()
+            };
+
+            // [수정] 동일 조건의 모든 기존/중복 레코드를 신뢰성 있게 제거
+            const filteredRecords = records.filter(r =>
+                !(
+                    (r.churchName === churchVal || r.church === churchVal) &&
+                    (r.presidiumName === prVal || r.presidium === prVal) &&
+                    r.memberName === targetName &&
+                    r.date === currentPrAttendance.date &&
+                    String(r.session) === String(currentPrAttendance.session)
+                )
+            );
+
+            filteredRecords.push(newRecord);
+            localStorage.setItem('activity_records', JSON.stringify(filteredRecords));
+
+            alert('활동 보고가 성공적으로 저장되었습니다.');
+            location.href = 'dashboard.html';
+        };
+
+        // --- Delete Logic ---
+        document.getElementById('btnDelete').onclick = () => {
+            if (!currentPrAttendance) return;
+
+            const role = (currentUser.role || '').toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(role);
+            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+            const canManageOthers = isAdmin || isOfficer;
+
+            if (!canManageOthers) return;
+
+            const targetName = document.getElementById('selMember').value;
+            const date = currentPrAttendance.date;
+            const session = currentPrAttendance.session;
+
+            if (!confirm(`[${targetName}] 단원의 ${date} (${session}회) 활동 보고를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                return;
+            }
+
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const filtered = records.filter(r =>
+                !(r.memberName === targetName && r.date === date && r.session === session)
+            );
+
+            if (records.length === filtered.length) {
+                alert('삭제할 데이터가 이미 없거나 찾을 수 없습니다.');
+                return;
+            }
+
+            localStorage.setItem('activity_records', JSON.stringify(filtered));
+            alert('활동 보고가 삭제되었습니다.');
+
+            // UI 초기화
+            const inputs = document.querySelectorAll('.easy-input');
+            inputs.forEach(input => input.value = "");
+            loadExistingData();
+        };
+
+    </script>
+</body>
+
+</html>
