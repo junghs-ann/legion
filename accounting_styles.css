@@ -161,9 +161,17 @@
     color: white;
 }
 
+.btn-edit:hover {
+    background-color: #1976D2;
+}
+
 .btn-delete {
     background-color: #f44336;
     color: white;
+}
+
+.btn-delete:hover {
+    background-color: #D32F2F;
 }
 
 /* Data Table */
@@ -342,4 +350,158 @@
 
 .blue-text {
     color: #1976d2;
+}
+
+/* 모바일 대응 레이아웃 수정 */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 15px !important;
+        padding: 5px;
+    }
+
+    .filter-group {
+        min-width: 100% !important;
+    }
+
+    .filter-group label {
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100% !important;
+        padding: 12px 10px;
+        font-size: 1rem;
+    }
+
+    .filter-group[style*="justify-content: flex-end"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        margin-top: 10px;
+        gap: 10px;
+    }
+
+    .filter-group .btn {
+        width: 100% !important;
+        margin-bottom: 0px;
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    /* Table Responsiveness for Accounting Reports */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 15px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+    }
+
+    .ledger-table {
+        min-width: 850px;
+        /* Ensure columns don't squash */
+        font-size: 0.85rem;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .ledger-table th,
+    .ledger-table td {
+        padding: 10px 4px !important;
+        white-space: nowrap !important;
+        /* Prevent amounts from wrapping */
+        background-color: #fff;
+    }
+
+    .ledger-table th {
+        background-color: var(--primary-color) !important;
+        color: white;
+    }
+
+    /* Sticky Columns Logic */
+    .ledger-table th:nth-child(1),
+    .ledger-table td:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        width: 45px !important;
+        min-width: 45px !important;
+    }
+
+    .ledger-table th:nth-child(2),
+    .ledger-table td:nth-child(2) {
+        position: sticky;
+        left: 45px;
+        z-index: 5;
+        width: 35px !important;
+        min-width: 35px !important;
+    }
+
+    .ledger-table th:nth-child(3),
+    .ledger-table td:nth-child(3) {
+        position: sticky;
+        left: 80px;
+        z-index: 5;
+        width: 35px !important;
+        min-width: 35px !important;
+    }
+
+    .ledger-table th:nth-child(4),
+    .ledger-table td:nth-child(4) {
+        position: sticky;
+        left: 115px;
+        z-index: 5;
+        width: 75px !important;
+        min-width: 75px !important;
+        white-space: normal !important;
+        text-align: left !important;
+        border-right: 2px solid #ddd !important;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Widen Amount Columns */
+    .ledger-table th:nth-child(5),
+    .ledger-table td:nth-child(5),
+    .ledger-table th:nth-child(6),
+    .ledger-table td:nth-child(6),
+    .ledger-table th:nth-child(7),
+    .ledger-table td:nth-child(7) {
+        width: 140px !important;
+        min-width: 140px !important;
+    }
+
+    /* Header z-index higher than columns */
+    .ledger-table thead th {
+        z-index: 10 !important;
+    }
+
+    .ledger-table thead th:nth-child(1),
+    .ledger-table thead th:nth-child(2),
+    .ledger-table thead th:nth-child(3),
+    .ledger-table thead th:nth-child(4) {
+        z-index: 15 !important;
+    }
+
+    /* Summary Section Mobile Adjustments */
+    .summary-container {
+        padding: 15px;
+    }
+
+    .summary-table {
+        max-width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .summary-table th {
+        width: 120px;
+        padding: 8px;
+    }
+
+    .summary-table td {
+        padding: 8px;
+    }
 }

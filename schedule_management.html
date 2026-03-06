@@ -1,12 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>일정 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260304_1500">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260304_1500">
     <style>
         .schedule-container {
             background: white;
@@ -39,7 +40,8 @@
         /* Layout Grid */
         .schedule-layout {
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: 1fr;
+            /* 달력이 전체 너비를 사용하도록 변경 */
             gap: 30px;
         }
 
@@ -70,9 +72,12 @@
 
         .filter-group label {
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #4a5568;
             white-space: nowrap;
+            width: 95px;
+            /* 레이블 너비를 공지사항 화면과 통일 */
+            display: inline-block;
         }
 
         .filter-group select {
@@ -134,8 +139,11 @@
 
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            /* 텍스트 길이에 상관없이 균등 분할 */
             border-bottom: 1px solid #edf2f7;
+            min-width: 700px;
+            /* 모바일에서 글자가 찌그러지지 않도록 최소 너비 확보 */
         }
 
         .weekday {
@@ -172,6 +180,12 @@
 
         .day:hover {
             background: #fdfdfd;
+        }
+
+        .calendar-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .day.today {
@@ -224,6 +238,14 @@
             text-overflow: ellipsis;
             background: #ebf8ff;
             color: #2b6cb0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .event-mini:hover {
+            background: #bee3f8;
+            color: #2c5282;
+            text-decoration: underline;
         }
 
         /* Event List (Right Side) */
@@ -536,13 +558,13 @@
             <!-- 조직 필터 영역 -->
             <div class="org-filter-section">
                 <div class="filter-group">
-                    <label>성당</label>
+                    <label>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;당</label>
                     <select id="filterChurch">
                         <option value="">성당 선택</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>꾸리아</label>
+                    <label>꾸&nbsp;&nbsp;&nbsp;리&nbsp;&nbsp;&nbsp;아</label>
                     <select id="filterCuria" disabled>
                         <option value="">꾸리아 선택</option>
                     </select>
@@ -563,29 +585,26 @@
                         <div class="current-month" id="monthDisplay">2024년 3월</div>
                         <button class="nav-btn" id="nextMonth">다음달 <i class="fas fa-chevron-right"></i></button>
                     </div>
-                    <div class="calendar-grid" id="calendarWeekdays">
-                        <div class="weekday sun">일</div>
-                        <div class="weekday">월</div>
-                        <div class="weekday">화</div>
-                        <div class="weekday">수</div>
-                        <div class="weekday">목</div>
-                        <div class="weekday">금</div>
-                        <div class="weekday sat">토</div>
-                    </div>
-                    <div class="calendar-grid" id="calendarDays" style="border-top: none;">
-                        <!-- JS로 채움 -->
+                    <div class="calendar-scroll-container">
+                        <div class="calendar-grid" id="calendarWeekdays">
+                            <div class="weekday sun">일</div>
+                            <div class="weekday">월</div>
+                            <div class="weekday">화</div>
+                            <div class="weekday">수</div>
+                            <div class="weekday">목</div>
+                            <div class="weekday">금</div>
+                            <div class="weekday sat">토</div>
+                        </div>
+                        <div class="calendar-grid" id="calendarDays" style="border-top: none;">
+                            <!-- JS로 채움 -->
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right: Event List Area -->
-                <div class="event-list-card">
-                    <div class="list-title" id="selectedDateTitle">오늘의 일정</div>
-                    <div id="eventListContainer">
-                        <!-- JS로 채움 -->
-                    </div>
-                </div>
             </div>
         </div>
+    </div>
+    </div>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -635,7 +654,7 @@
                 <div class="btn-group">
                     <button type="button" id="btnDelete" class="btn-delete"
                         style="display:none; margin-right: auto;">삭제</button>
-                    <button type="button" class="btn-secondary" id="btnCloseModal">취소</button>
+                    <button type="button" class="btn-secondary" id="btnCloseModal">닫기</button>
                     <button type="submit" class="btn-primary">저장</button>
                 </div>
             </form>
@@ -665,10 +684,10 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260304_1500"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver } from "./auth.js?v=20260304_1500";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260304_1500";
 
         let currentUser = null;
         let schedules = [];
@@ -713,7 +732,7 @@
             }
 
             renderCalendar();
-            renderEventList();
+            // renderEventList() 호출 삭제
         }, () => { location.href = 'index.html'; });
 
         // --- Organization Filter Logic ---
@@ -829,7 +848,7 @@
         function refreshData() {
             loadSchedules();
             renderCalendar();
-            renderEventList();
+            // renderEventList() 호출 삭제
         }
 
         // --- Data Logic ---
@@ -947,6 +966,17 @@
                     const dot = document.createElement('div');
                     dot.className = 'event-mini';
                     dot.textContent = e.title;
+
+                    // 직접 클릭 기능 추가
+                    dot.addEventListener('click', (ev) => {
+                        ev.stopPropagation(); // 날짜 칸 클릭 이벤트 전파 방지
+                        const canEdit = currentUser.role === 'admin' ||
+                            ['단장', '부단장', '서기', '회계', '단원'].some(r => (currentUser.role || '').includes(r));
+                        if (canEdit) {
+                            openEditModal(e);
+                        }
+                    });
+
                     dotContainer.appendChild(dot);
                 });
                 if (dayEvents.length > 3) {

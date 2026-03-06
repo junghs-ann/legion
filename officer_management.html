@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -36,9 +36,69 @@
             gap: 20px;
         }
 
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .scroll-guide {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 5px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+            word-break: keep-all;
+            line-height: 1.4;
+        }
+
         @media (max-width: 768px) {
+            .scroll-guide {
+                display: flex;
+            }
+
+            .member-table {
+                min-width: 650px !important;
+            }
+
+            .member-table th,
+            .member-table td {
+                white-space: nowrap !important;
+                word-break: keep-all !important;
+                padding: 10px 8px !important;
+                font-size: 0.8rem !important;
+            }
+
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .form-title {
+                flex-direction: column;
+                align-items: flex-start !important;
+                font-size: 1.3rem !important;
+                gap: 5px;
+                white-space: nowrap;
+            }
+
+            .form-title span {
+                display: block;
+                font-size: 0.8rem !important;
+                margin-top: 2px;
+            }
+
+            .btn-submit {
+                padding: 10px 20px !important;
+                font-size: 0.95rem !important;
+                white-space: nowrap !important;
+                min-width: auto !important;
+                flex: 1;
+            }
+
+            .form-btn-group {
+                gap: 10px;
             }
         }
 
@@ -315,8 +375,8 @@
                     <button type="submit" class="btn-submit">저 장</button>
                     <button type="button" id="btnDelete" class="btn-submit"
                         style="background-color: #f44336; display: none;">삭 제</button>
-                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">닫
-                        기</button>
+                    <button type="button" class="btn-submit btn-close"
+                        onclick="location.href='dashboard.html'">닫기</button>
                 </div>
             </form>
 
@@ -328,9 +388,9 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         // Global State
         let currentUser = null;
@@ -713,8 +773,11 @@
             });
 
             let html = `
-                <div class="table-responsive">
-                    <table class="member-table" style="margin-top:20px; font-size:0.85rem; width:100%;">
+                <div class="scroll-guide" style="margin-top: 20px;">
+                    <i class="fas fa-info-circle"></i> <span>목록을 좌우로 밀어서(스크롤) 확인해 주세요.</span>
+                </div>
+                <div class="table-responsive" style="margin-top: 5px;">
+                    <table class="member-table" style="font-size:0.85rem; width:100%;">
                         <thead>
                             <tr style="background-color: #f8f9fa;">
                                 <th>직급</th>

@@ -1,16 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>복무 기록부 생성 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260306_1520">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .selection-container {
             max-width: 800px;
-            margin: 160px auto 0;
+            margin: 110px auto 80px;
             padding: 40px;
             background: white;
             border-radius: 12px;
@@ -38,16 +38,20 @@
             font-size: 0.95rem;
         }
 
-        .filter-item select {
+        .filter-item select,
+        .filter-item input[type="text"] {
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 1rem;
             background-color: #fbfbfb;
             transition: all 0.3s;
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        .filter-item select:focus {
+        .filter-item select:focus,
+        .filter-item input[type="text"]:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
             outline: none;
@@ -61,13 +65,19 @@
         }
 
         .btn-action {
-            padding: 15px 40px;
+            padding: 12px 25px;
             border-radius: 8px;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
             border: none;
             transition: transform 0.2s, background 0.3s;
+            word-break: keep-all;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
         }
 
         .btn-generate {
@@ -93,6 +103,120 @@
             color: #666;
             margin-top: 20px;
             font-size: 0.95rem;
+            word-break: keep-all;
+            line-height: 1.6;
+            padding: 0 10px;
+        }
+
+        /* Gold Border for Search Inputs */
+        .filter-item input#presidiumInput,
+        .filter-item input#memberSearch {
+            border: 1.5px solid #d4a017 !important;
+            transition: all 0.2s;
+        }
+
+        .filter-item input#presidiumInput:focus,
+        .filter-item input#memberSearch:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(212, 160, 23, 0.3);
+        }
+
+        /* Custom Searchable Dropdown Styles */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item.active {
+            background-color: #f8f9fa;
+            color: #d4a017;
+            font-weight: bold;
+        }
+
+        .dropdown-item .sub-text {
+            display: block;
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* Responsive Styles */
+
+        /* Responsive Styles - Always at the bottom to ensure overrides */
+        @media (max-width: 768px) {
+            .selection-container {
+                margin-top: 90px !important;
+                padding: 25px 20px !important;
+                width: 95% !important;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
+            }
+
+            .btn-group {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: center !important;
+                gap: 8px !important;
+            }
+
+            .btn-action {
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                height: 40px !important;
+                padding: 0 2px !important;
+                font-size: 0.82rem !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 2px !important;
+                overflow: hidden !important;
+            }
+
+            .filter-item label {
+                font-size: 0.9rem !important;
+            }
         }
     </style>
 </head>
@@ -172,7 +296,7 @@
 
     <div class="selection-container">
         <h2 style="color: var(--primary-color); margin-bottom: 10px;">복무 기록부 생성</h2>
-        <p class="guide-text">인쇄할 단원을 선택한 후 '생성' 버튼을 눌러주세요.<br>별도의 인쇄 화면이 열립니다.</p>
+        <p class="guide-text">복무 기록부를 인쇄할 단원을 선택한 후,<br>'생성' 버튼을 눌러주세요.</p>
 
         <div class="filter-grid">
             <div class="filter-item">
@@ -189,15 +313,18 @@
             </div>
             <div class="filter-item">
                 <label>쁘레시디움</label>
-                <select id="presidiumFilter">
-                    <option value="">전체</option>
-                </select>
+                <div class="search-container" id="presidiumSearchContainer">
+                    <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off">
+                    <div id="presidiumDropdown" class="custom-dropdown"></div>
+                </div>
             </div>
             <div class="filter-item">
                 <label>단원명 (행동단원 우선/입단일 최신순)</label>
-                <select id="memberFilter">
-                    <option value="">단원 선택</option>
-                </select>
+                <div class="search-container" id="memberSearchContainer">
+                    <input type="text" id="memberSearch" placeholder="단원명 검색 또는 선택" autocomplete="off">
+                    <div id="memberDropdown" class="custom-dropdown"></div>
+                    <input type="hidden" id="memberFilter">
+                </div>
             </div>
         </div>
 
@@ -207,17 +334,24 @@
         </div>
     </div>
 
+    <script src="script.js?v=20260306_1520"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
-        const presidiumFilter = document.getElementById('presidiumFilter');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+        const memberSearch = document.getElementById('memberSearch');
+        const memberDropdown = document.getElementById('memberDropdown');
         const memberFilter = document.getElementById('memberFilter');
         const btnCreate = document.getElementById('btnCreate');
+
+        let currentPresidia = [];
+        let currentMembers = [];
 
         initAuthObserver((user, profile) => {
             currentUser = profile;
@@ -282,29 +416,120 @@
             const updatePresidium = () => {
                 const church = churchFilter.value;
                 const curia = curiaFilter.value;
-                presidiumFilter.innerHTML = '<option value="">전체</option>';
+
+                currentPresidia = [];
                 if (church && curia) {
-                    const prs = presidia.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
-                    prs.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = opt.textContent = p;
-                        presidiumFilter.appendChild(opt);
-                    });
-                    if (!isAdmin) { presidiumFilter.value = profile.presidiumName || profile.presidium; presidiumFilter.disabled = true; }
+                    currentPresidia = presidia.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+
+                    if (!isAdmin) {
+                        presidiumInput.value = profile.presidiumName || profile.presidium;
+                        presidiumInput.disabled = true;
+                    } else {
+                        presidiumInput.value = '';
+                    }
                 }
+                renderDropdown('');
                 updateMembers();
             };
+
+            const renderDropdown = (searchText) => {
+                const filter = searchText.toLowerCase();
+                const filtered = currentPresidia.filter(p => p.toLowerCase().includes(filter));
+
+                presidiumDropdown.innerHTML = '';
+                if (filtered.length > 0) {
+                    filtered.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'dropdown-item';
+                        div.textContent = p;
+                        div.onclick = () => {
+                            presidiumInput.value = p;
+                            presidiumDropdown.style.display = 'none';
+                            updateMembers();
+                        };
+                        presidiumDropdown.appendChild(div);
+                    });
+                } else {
+                    presidiumDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                }
+            };
+
+            const renderMemberDropdown = (searchText) => {
+                const filter = searchText.toLowerCase();
+                const filtered = currentMembers.filter(m =>
+                    (m.name || '').toLowerCase().includes(filter) ||
+                    (m.baptismalName || '').toLowerCase().includes(filter)
+                );
+
+                memberDropdown.innerHTML = '';
+                if (filtered.length > 0) {
+                    filtered.forEach(m => {
+                        const div = document.createElement('div');
+                        div.className = 'dropdown-item';
+                        div.innerHTML = `
+                            ${m.name} (${m.baptismalName || '-'})
+                            <span class="sub-text" style="color: #666; font-size: 0.8rem;">
+                                ${m.statusText} | ${m.probationaryDate || '-'}
+                            </span>
+                        `;
+                        div.onclick = () => {
+                            memberSearch.value = `${m.name} (${m.baptismalName || '-'})`;
+                            memberFilter.value = m.id || m.uid || m.name;
+                            memberDropdown.style.display = 'none';
+                        };
+                        memberDropdown.appendChild(div);
+                    });
+                } else {
+                    memberDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                }
+            };
+
+            // Dropdown Event Listeners
+            presidiumInput.onfocus = () => {
+                if (!presidiumInput.disabled && currentPresidia.length > 0) {
+                    renderDropdown(presidiumInput.value);
+                    presidiumDropdown.style.display = 'block';
+                }
+            };
+
+            presidiumInput.oninput = (e) => {
+                renderDropdown(e.target.value);
+                presidiumDropdown.style.display = 'block';
+                updateMembers();
+            };
+
+            memberSearch.onfocus = () => {
+                if (!memberSearch.disabled && currentMembers.length > 0) {
+                    renderMemberDropdown(memberSearch.value);
+                    memberDropdown.style.display = 'block';
+                }
+            };
+
+            memberSearch.oninput = (e) => {
+                renderMemberDropdown(e.target.value);
+                memberDropdown.style.display = 'block';
+            };
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('presidiumSearchContainer').contains(e.target)) {
+                    presidiumDropdown.style.display = 'none';
+                }
+                if (!document.getElementById('memberSearchContainer').contains(e.target)) {
+                    memberDropdown.style.display = 'none';
+                }
+            });
 
             const updateMembers = () => {
                 const members = JSON.parse(localStorage.getItem('members_list') || '[]');
                 const church = churchFilter.value;
                 const curia = curiaFilter.value;
-                const presidium = presidiumFilter.value;
+                const presidium = presidiumInput.value.trim();
 
                 const filtered = members.filter(m =>
                     (m.churchName === church || m.church === church) &&
                     (m.curiaName === curia || m.curia === curia) &&
-                    (m.presidiumName === presidium || m.presidium === presidium)
+                    (!presidium || m.presidiumName === presidium || m.presidium === presidium)
                 ).sort((a, b) => {
                     const aActive = !(a.retiredDate || a.transferDate);
                     const bActive = !(b.retiredDate || b.transferDate);
@@ -312,24 +537,28 @@
                     return (b.probationaryDate || "").localeCompare(a.probationaryDate || "");
                 });
 
-                memberFilter.innerHTML = '<option value="">단원 선택</option>';
-                filtered.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id || m.uid || m.name;
-                    opt.textContent = `${m.name} (${m.baptismalName || '-'})`;
-                    memberFilter.appendChild(opt);
-                });
+                currentMembers = filtered.map(m => ({
+                    ...m,
+                    statusText: !(m.retiredDate || m.transferDate) ? '활동' : '퇴단'
+                }));
+
+                memberFilter.value = '';
+                memberSearch.value = '';
+                renderMemberDropdown('');
 
                 if (!isAdmin && !['단장', '부단장', '서기', '회계'].includes(profile.role)) {
-                    memberFilter.value = profile.id || profile.uid;
-                    memberFilter.disabled = true;
+                    const myId = profile.id || profile.uid;
+                    const me = currentMembers.find(m => (m.id || m.uid) === myId);
+                    if (me) {
+                        memberSearch.value = `${me.name} (${me.baptismalName || '-'})`;
+                        memberFilter.value = myId;
+                        memberSearch.disabled = true;
+                    }
                 }
             };
 
             churchFilter.onchange = updateCuria;
             curiaFilter.onchange = updatePresidium;
-            presidiumFilter.onchange = updateMembers;
-
             updateCuria();
         }
     </script>

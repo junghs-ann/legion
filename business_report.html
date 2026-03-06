@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업보고서 생성 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .selection-container {
@@ -157,6 +157,118 @@
             color: #666;
             font-weight: bold;
         }
+
+        /* 반응형 스타일 추가 */
+        @media screen and (max-width: 768px) {
+            .selection-container {
+                margin: 100px 15px 30px;
+                padding: 25px 20px;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+                /* 모바일에서 1열로 변경 */
+                gap: 15px;
+            }
+
+            .filter-item {
+                grid-column: span 1 !important;
+                /* 모든 아이템을 1열로 강제 */
+            }
+
+            .btn-action {
+                width: 100%;
+                justify-content: center;
+                padding: 15px 20px;
+            }
+
+            #modeContainer div {
+                flex-direction: column;
+                /* 라디오 버튼 세로 정렬 */
+                align-items: flex-start !important;
+                gap: 12px !important;
+            }
+
+            .range-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .range-separator {
+                text-align: center;
+                margin: 2px 0;
+            }
+        }
+
+        /* 커스텀 모달 스타일 추가 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.15s ease-out;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        .custom-modal-message {
+            font-size: 1.05rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            /* 한국어 단어 단위 줄바꿈 */
+        }
+
+        .btn-modal-confirm {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 40px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(15px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
@@ -304,172 +416,197 @@
                 <label>보고서 회차 (제목용)</label>
                 <input type="number" id="brSession" placeholder="예: 25" style="width: 100%;">
             </div>
+            <div class="btn-group">
+                <button class="btn-action btn-generate" id="btnGenerate">
+                    <i class="fas fa-magic"></i> <span id="btnText">사업보고서 생성</span>
+                </button>
+            </div>
         </div>
 
-        <div class="btn-group">
-            <button class="btn-action btn-generate" id="btnGenerate">
-                <i class="fas fa-magic"></i> <span id="btnText">사업보고서 생성</span>
-            </button>
+        <!-- 커스텀 모달 추가 -->
+        <div id="customModal" class="custom-modal-overlay">
+            <div class="custom-modal">
+                <div id="modalMessage" class="custom-modal-message"></div>
+                <button id="modalConfirmBtn" class="btn-modal-confirm">확인</button>
+            </div>
         </div>
-    </div>
 
-    <script src="script.js"></script>
-    <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        <script src="script.js?v=20260303_1255_fix"></script>
+        <script type="module">
+            import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+            import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
-        let currentUser = null;
-        let userProfile = null;
+            let currentUser = null;
+            let userProfile = null;
 
-        const churchSelect = document.getElementById('churchSelect');
-        const curiaSelect = document.getElementById('curiaSelect');
-        const presidiumSelect = document.getElementById('presidiumSelect');
-        const startDate = document.getElementById('startDate');
-        const endDate = document.getElementById('endDate');
-        const startSess = document.getElementById('startSess');
-        const endSess = document.getElementById('endSess');
-        const btnGenerate = document.getElementById('btnGenerate');
+            const churchSelect = document.getElementById('churchSelect');
+            const curiaSelect = document.getElementById('curiaSelect');
+            const presidiumSelect = document.getElementById('presidiumSelect');
+            const startDate = document.getElementById('startDate');
+            const endDate = document.getElementById('endDate');
+            const startSess = document.getElementById('startSess');
+            const endSess = document.getElementById('endSess');
+            const btnGenerate = document.getElementById('btnGenerate');
 
-        const btnText = document.getElementById('btnText');
-        const reportModeRadios = document.getElementsByName('reportMode');
+            // 커스텀 알림 함수
+            window.showCustomAlert = (message) => {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('customModal');
+                    const msgEl = document.getElementById('modalMessage');
+                    const btn = document.getElementById('modalConfirmBtn');
 
-        initAuthObserver((user, profile) => {
-            if (!user) { location.href = "index.html"; return; }
-            currentUser = user; userProfile = profile;
+                    msgEl.textContent = message;
+                    modal.style.display = 'flex';
 
-            // [New] Role-based Menu Control & Common Menus
-            if (window.initCommonMenus) {
-                window.initCommonMenus(userProfile, () => {
-                    import("./auth.js").then(auth => auth.logoutUser());
+                    const close = () => {
+                        modal.style.display = 'none';
+                        btn.removeEventListener('click', close);
+                        resolve();
+                    };
+                    btn.addEventListener('click', close);
                 });
-            }
+            };
 
-            initFilters(); checkPermissions(); setupEnterToNext();
+            const btnText = document.getElementById('btnText');
+            const reportModeRadios = document.getElementsByName('reportMode');
 
-            const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
-            const isOfficer = officerRoles.some(r => (userProfile.role || '').toLowerCase().includes(r.toLowerCase()));
-            if (!isOfficer) {
-                document.getElementById('modeContainer').style.display = 'none';
-                reportModeRadios[1].checked = true;
-            }
+            initAuthObserver((user, profile) => {
+                if (!user) { location.href = "index.html"; return; }
+                currentUser = user; userProfile = profile;
 
-            const currentMode = document.querySelector('input[name="reportMode"]:checked').value;
-            btnText.textContent = currentMode === 'create' ? '사업보고서 생성' : '사업보고서 조회(열람)';
-        }, () => { location.href = "index.html"; });
+                // [New] Role-based Menu Control & Common Menus
+                if (window.initCommonMenus) {
+                    window.initCommonMenus(userProfile, () => {
+                        import("./auth.js").then(auth => auth.logoutUser());
+                    });
+                }
 
-        reportModeRadios.forEach(r => {
-            r.addEventListener('change', () => {
-                btnText.textContent = r.value === 'create' ? '사업보고서 생성' : '사업보고서 조회(열람)';
+                initFilters(); checkPermissions(); setupEnterToNext();
+
+                const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
+                const isOfficer = officerRoles.some(r => (userProfile.role || '').toLowerCase().includes(r.toLowerCase()));
+                if (!isOfficer) {
+                    document.getElementById('modeContainer').style.display = 'none';
+                    reportModeRadios[1].checked = true;
+                }
+
+                const currentMode = document.querySelector('input[name="reportMode"]:checked').value;
+                btnText.textContent = currentMode === 'create' ? '사업보고서 생성' : '사업보고서 조회(열람)';
+            }, () => { location.href = "index.html"; });
+
+            reportModeRadios.forEach(r => {
+                r.addEventListener('change', () => {
+                    btnText.textContent = r.value === 'create' ? '사업보고서 생성' : '사업보고서 조회(열람)';
+                });
             });
-        });
 
-        function initFilters() {
-            const churches = getChurches();
-            churchSelect.innerHTML = '<option value="">성당 선택</option>';
-            churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
+            function initFilters() {
+                const churches = getChurches();
+                churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
 
-            if (userProfile.role !== '관리자' && userProfile.role !== 'admin') {
-                churchSelect.value = userProfile.church || ''; churchSelect.disabled = true;
-                updateCuriaList(userProfile.church);
-                curiaSelect.value = userProfile.curia || userProfile.curiaName || ''; curiaSelect.disabled = true;
-                updatePresidiumList(userProfile.church, curiaSelect.value);
-                presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
-                updateSessionLists();
-            } else {
-                churchSelect.addEventListener('change', () => { updateCuriaList(churchSelect.value); updatePresidiumList('', ''); });
-                curiaSelect.addEventListener('change', () => { updatePresidiumList(churchSelect.value, curiaSelect.value); });
-            }
-        }
-
-        function updateCuriaList(c) {
-            curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
-            if (!c) return;
-            getCuriae(c).forEach(cr => { const opt = document.createElement('option'); opt.value = cr; opt.textContent = cr; curiaSelect.appendChild(opt); });
-        }
-
-        function updatePresidiumList(c, cr) {
-            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-            if (!c || !cr) return;
-            getPresidia(c, cr).forEach(p => { const opt = document.createElement('option'); opt.value = p.name; opt.textContent = p.name; presidiumSelect.appendChild(opt); });
-        }
-
-        function checkPermissions() {
-            btnGenerate.disabled = false;
-        }
-
-        presidiumSelect.addEventListener('change', updateSessionLists);
-
-        function updateSessionLists() {
-            const pr = presidiumSelect.value;
-            startSess.innerHTML = '<option value="">시작 회차 선택</option>';
-            endSess.innerHTML = '<option value="">종료 회차 선택</option>';
-
-            if (!pr) return;
-
-            const attList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            // date와 session이 있는 유효한 출석부 기록만 필터링
-            const filteredAtts = attList.filter(a => (a.presidiumName || a.presidium) === pr && a.session && a.date)
-                .sort((a, b) => parseInt(b.session || 0) - parseInt(a.session || 0));
-
-            filteredAtts.forEach(a => {
-                const optText = `${a.session}회 (${a.date})`;
-                const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
-                const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
-                startSess.add(opt1);
-                endSess.add(opt2);
-            });
-        }
-
-        startSess.addEventListener('change', () => {
-            const opt = startSess.options[startSess.selectedIndex];
-            if (opt && opt.dataset.date) startDate.value = opt.dataset.date;
-        });
-
-        endSess.addEventListener('change', () => {
-            const opt = endSess.options[endSess.selectedIndex];
-            if (opt && opt.dataset.date) endDate.value = opt.dataset.date;
-        });
-
-        function setupEnterToNext() {
-            const ins = [churchSelect, curiaSelect, presidiumSelect, startSess, endSess, document.getElementById('brSession')];
-            ins.forEach((input, i) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = ins[i + 1]; if (next) next.focus(); else if (!btnGenerate.disabled) btnGenerate.focus(); } }); });
-        }
-
-        btnGenerate.addEventListener('click', () => {
-            const c = churchSelect.value, p = presidiumSelect.value, s = startDate.value, e = endDate.value;
-            const ss = startSess.value, es = endSess.value;
-            const mode = document.querySelector('input[name="reportMode"]:checked').value;
-
-            if (!c || !p || !s || !e) { alert('모든 항목을 채워주세요.'); return; }
-            if (parseInt(ss) > parseInt(es)) { alert('회차 범위를 확인해주세요.'); return; }
-
-            if (mode === 'view') {
-                const reportHistory = JSON.parse(localStorage.getItem('business_report_status') || '[]');
-                const found = reportHistory.find(r =>
-                    r.church === c && r.presidium === p && r.startSess === ss && r.endSess === es
-                );
-
-                if (!found) {
-                    alert('해당 기간의 사업보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
-                    return;
+                if (userProfile.role !== '관리자' && userProfile.role !== 'admin') {
+                    churchSelect.value = userProfile.church || ''; churchSelect.disabled = true;
+                    updateCuriaList(userProfile.church);
+                    curiaSelect.value = userProfile.curia || userProfile.curiaName || ''; curiaSelect.disabled = true;
+                    updatePresidiumList(userProfile.church, curiaSelect.value);
+                    presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
+                    updateSessionLists();
+                } else {
+                    churchSelect.addEventListener('change', () => { updateCuriaList(churchSelect.value); updatePresidiumList('', ''); });
+                    curiaSelect.addEventListener('change', () => { updatePresidiumList(churchSelect.value, curiaSelect.value); });
                 }
             }
 
-            const width = 1200; const height = 900;
-            const left = (window.screen.width / 2) - (width / 2);
-            const top = (window.screen.height / 2) - (height / 2);
+            function updateCuriaList(c) {
+                curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+                if (!c) return;
+                getCuriae(c).forEach(cr => { const opt = document.createElement('option'); opt.value = cr; opt.textContent = cr; curiaSelect.appendChild(opt); });
+            }
 
-            const brSess = document.getElementById('brSession').value;
+            function updatePresidiumList(c, cr) {
+                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                if (!c || !cr) return;
+                getPresidia(c, cr).forEach(p => { const opt = document.createElement('option'); opt.value = p.name; opt.textContent = p.name; presidiumSelect.appendChild(opt); });
+            }
 
-            let url = `business_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curiaSelect.value)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
-            if (ss) url += `&ss=${ss}`;
-            if (es) url += `&es=${es}`;
-            if (brSess) url += `&brSess=${brSess}`;
+            function checkPermissions() {
+                btnGenerate.disabled = false;
+            }
 
-            window.open(url, 'BusinessReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
-        });
+            presidiumSelect.addEventListener('change', updateSessionLists);
 
-    </script>
+            function updateSessionLists() {
+                const pr = presidiumSelect.value;
+                startSess.innerHTML = '<option value="">시작 회차 선택</option>';
+                endSess.innerHTML = '<option value="">종료 회차 선택</option>';
+
+                if (!pr) return;
+
+                const attList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+                // date와 session이 있는 유효한 출석부 기록만 필터링
+                const filteredAtts = attList.filter(a => (a.presidiumName || a.presidium) === pr && a.session && a.date)
+                    .sort((a, b) => parseInt(b.session || 0) - parseInt(a.session || 0));
+
+                filteredAtts.forEach(a => {
+                    const optText = `${a.session}회 (${a.date})`;
+                    const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
+                    const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
+                    startSess.add(opt1);
+                    endSess.add(opt2);
+                });
+            }
+
+            startSess.addEventListener('change', () => {
+                const opt = startSess.options[startSess.selectedIndex];
+                if (opt && opt.dataset.date) startDate.value = opt.dataset.date;
+            });
+
+            endSess.addEventListener('change', () => {
+                const opt = endSess.options[endSess.selectedIndex];
+                if (opt && opt.dataset.date) endDate.value = opt.dataset.date;
+            });
+
+            function setupEnterToNext() {
+                const ins = [churchSelect, curiaSelect, presidiumSelect, startSess, endSess, document.getElementById('brSession')];
+                ins.forEach((input, i) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = ins[i + 1]; if (next) next.focus(); else if (!btnGenerate.disabled) btnGenerate.focus(); } }); });
+            }
+
+            btnGenerate.addEventListener('click', () => {
+                const c = churchSelect.value, p = presidiumSelect.value, s = startDate.value, e = endDate.value;
+                const ss = startSess.value, es = endSess.value;
+                const mode = document.querySelector('input[name="reportMode"]:checked').value;
+
+                if (!c || !p || !s || !e) { window.showCustomAlert('모든 항목을 채워주세요.'); return; }
+                if (parseInt(ss) > parseInt(es)) { window.showCustomAlert('회차 범위를 확인해주세요.'); return; }
+
+                if (mode === 'view') {
+                    const reportHistory = JSON.parse(localStorage.getItem('business_report_status') || '[]');
+                    const found = reportHistory.find(r =>
+                        r.church === c && r.presidium === p && r.startSess === ss && r.endSess === es
+                    );
+
+                    if (!found) {
+                        window.showCustomAlert('해당 기간의 사업보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
+                        return;
+                    }
+                }
+
+                const width = 1200; const height = 900;
+                const left = (window.screen.width / 2) - (width / 2);
+                const top = (window.screen.height / 2) - (height / 2);
+
+                const brSess = document.getElementById('brSession').value;
+
+                let url = `business_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curiaSelect.value)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+                if (ss) url += `&ss=${ss}`;
+                if (es) url += `&es=${es}`;
+                if (brSess) url += `&brSess=${brSess}`;
+
+                window.open(url, 'BusinessReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+            });
+
+        </script>
 </body>
 
 </html>

@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메인 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -94,12 +94,22 @@
     </header>
 
     <div class="dashboard-container">
-        <!-- 웰컴 배너가 제거되었습니다. -->
+        <div class="welcome-card"
+            style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; margin-top: 50px; border: 1px solid var(--border-color);">
+            <i class="fas fa-church" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 20px;"></i>
+            <h2 style="font-family: 'Noto Serif KR', serif; color: var(--primary-color); margin-bottom: 15px;">반갑습니다!
+            </h2>
+            <p style="color: #666; font-size: 1.1rem; line-height: 1.6; word-break: keep-all;">
+                레지오 마리애 관리시스템에 오신 것을<br>
+                환영합니다.<br>
+                상단 메뉴 버튼(<i class="fas fa-bars"></i>)을 눌러 원하시는 메뉴를 선택해 주세요.
+            </p>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         // Auth Guard & Role Check
         initAuthObserver((user, profile) => {
@@ -119,7 +129,6 @@
             alert("로그인이 필요합니다.");
             window.location.href = "index.html";
         });
-
     </script>
 </body>
 

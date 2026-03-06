@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 돌봄내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Print Styles */
@@ -60,8 +60,8 @@
             border-radius: 8px;
             border: 1px solid #e9ecef;
             margin-bottom: 25px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
+            flex-direction: column;
             gap: 15px;
         }
 
@@ -82,6 +82,7 @@
             padding: 8px 12px;
             border: 1px solid #ced4da;
             border-radius: 4px;
+            width: 100%;
         }
 
         .history-table {
@@ -139,6 +140,7 @@
             cursor: pointer;
             font-weight: 500;
             border: none;
+            white-space: nowrap;
         }
 
         .btn-search {
@@ -161,7 +163,7 @@
             border-bottom: 2px solid var(--secondary-color);
             display: inline-block;
             padding-bottom: 5px;
-            margin: 0 0 10px 0;
+            margin: 0;
             font-size: 1.5rem;
             font-family: inherit;
         }
@@ -170,6 +172,387 @@
             color: #666;
             margin-bottom: 25px;
             font-size: 0.95rem;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            /* Slightly more rounded */
+        }
+
+        /* [쁘레시디움 커스텀 검색창 스타일] */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        #presidiumInput {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #fff;
+        }
+
+        #presidiumInput:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 2200;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 0.95rem;
+            color: #333;
+            text-align: left;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f7ff;
+            color: var(--primary-color);
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* 하단 버튼 그룹 스타일 */
+        .bottom-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            justify-content: center;
+        }
+
+        .btn-action {
+            flex: 1;
+            max-width: 200px;
+            height: 48px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-search {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-search:hover {
+            background-color: #e68a00;
+            transform: translateY(-2px);
+        }
+
+        .btn-print {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-print:hover {
+            background-color: #000;
+            transform: translateY(-2px);
+        }
+
+        .btn-close {
+            background-color: #666;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background-color: #444;
+            transform: translateY(-2px);
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 100px 10px !important;
+            }
+
+            .report-container {
+                padding: 15px !important;
+                border-radius: 8px;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .report-title {
+                font-size: 1.2rem !important;
+                text-align: center;
+                width: 100%;
+                border-bottom: none;
+            }
+
+            .filter-container {
+                padding: 15px;
+            }
+
+            .filter-row {
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .form-group {
+                width: 100% !important;
+            }
+
+            .bottom-actions {
+                flex-direction: row !important;
+                justify-content: center !important;
+                gap: 8px !important;
+            }
+
+            .btn-action {
+                flex: 1 !important;
+                max-width: 120px !important;
+                height: 42px !important;
+                font-size: 0.95rem !important;
+                padding: 0 8px !important;
+                gap: 5px !important;
+            }
+
+            .history-table {
+                font-size: 0.75rem !important;
+                min-width: 1000px !important;
+                /* Slightly reduced for better fit */
+                /* 가로 스크롤 확보 */
+            }
+
+            .history-table th,
+            .history-table td {
+                padding: 6px 2px !important;
+            }
+
+            /* 날짜 입력창 넘침 방지 */
+            .filter-row .form-group {
+                width: 100% !important;
+                max-width: 100%;
+                margin-right: 0 !important;
+            }
+
+            #startDateInput,
+            #endDateInput {
+                font-size: 0.75rem !important;
+                /* Slightly smaller for mobile */
+                padding: 8px 4px !important;
+                /* Reduced padding */
+                min-width: 0;
+                /* Allow shrinking */
+                flex: 1;
+            }
+
+            .filter-row span {
+                font-size: 0.8rem;
+                margin: 0 2px;
+            }
+        }
+
+        /* [테이블 레이아웃 최적화] */
+        .report-table-wrapper {
+            overflow-x: auto;
+            position: relative;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        /* 고정 컬럼 스타일 (행동단원 이름, 협조단원 이름 - 총 2개로 축소) */
+
+        /* 바디 셀 설정 */
+        .history-table td:nth-child(1) {
+            position: sticky !important;
+            left: 0;
+            z-index: 10;
+            background-color: #fff !important;
+            width: 80px;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .history-table td:nth-child(2) {
+            /* 세례명은 고정 제외 */
+            width: 90px;
+        }
+
+        .history-table td:nth-child(3) {
+            position: sticky !important;
+            left: 80px;
+            /* 첫번째 컬럼 너비만큼 띄움 */
+            z-index: 10;
+            background-color: #fff !important;
+            width: 80px;
+            border-right: 2px solid #333 !important;
+        }
+
+        .history-table td:nth-child(4),
+        .history-table td:nth-child(5) {
+            /* 협조단원 세례명/성별 고정 제외 */
+            width: 90px;
+        }
+
+        /* 1행 헤더 (행동단원/협조단원) - 고정 제외하여 꼬임 방지 */
+        .history-table thead tr:first-child th {
+            position: static !important;
+            background-color: #f1f3f5 !important;
+            z-index: 1;
+        }
+
+        /* 2행 헤더 (이름/세례명/성별...) - 이름 칸만 고정 */
+        .history-table thead tr:nth-child(2) th:nth-child(1) {
+            position: sticky !important;
+            top: 0;
+            /* 세로 스택 방지 */
+            left: 0;
+            z-index: 12;
+            background-color: #f8f9fa !important;
+            width: 80px;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .history-table thead tr:nth-child(2) th:nth-child(3) {
+            position: sticky !important;
+            top: 0;
+            left: 80px;
+            z-index: 12;
+            background-color: #f8f9fa !important;
+            width: 80px;
+            border-right: 2px solid #333 !important;
+        }
+
+        /* 일반 헤더 공통 스타일 */
+        .history-table thead th {
+            background-color: #f8f9fa !important;
+            position: sticky;
+            top: 0;
+            z-index: 11;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        /* [커스텀 알림/모달 스타일] */
+        #customAlertModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            transform: translateY(20px);
+            animation: slideUp 0.3s forwards;
+        }
+
+        .modal-icon {
+            font-size: 3.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .modal-message {
+            font-size: 1.15rem;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+
+        .modal-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-button:hover {
+            background-color: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -247,18 +630,16 @@
     </header>
 
     <div class="main-content" style="padding: 100px 20px;">
-        <div class="report-container" style="max-width: 1400px; padding: 40px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div class="report-container">
+            <div class="report-header" style="margin-bottom: 25px; text-align: center;">
                 <h3 class="report-title">협조단원 돌봄 내역</h3>
-                <button class="btn btn-close" onclick="location.href='dashboard.html'"
-                    style="padding: 8px 20px;">닫기</button>
             </div>
 
-            <div class="filter-container" style="display: flex; flex-direction: column; gap: 15px;">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div class="filter-container">
+                <div class="filter-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <div class="form-group" style="width: 180px;">
                         <label>성당</label>
-                        <select id="churchSelect">
+                        <select id="churchSelect" disabled>
                             <option value="">성당 선택</option>
                         </select>
                     </div>
@@ -268,11 +649,13 @@
                             <option value="">꾸리아 선택</option>
                         </select>
                     </div>
-                    <div class="form-group" style="width: 180px;">
-                        <label>쁘레시디움(Pr.)</label>
-                        <select id="presidiumSelect" disabled>
-                            <option value="">쁘레시디움 선택</option>
-                        </select>
+                    <div class="form-group" style="width: 250px;">
+                        <label>쁘레시디움(Pr.) (검색 기능)</label>
+                        <div class="search-container">
+                            <input type="text" id="presidiumInput" placeholder="쁘레시디움 검색 (예: 천사)">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                        </div>
+                        <select id="presidiumSelect" style="display: none;"></select>
                     </div>
                     <div class="form-group" style="width: 120px;">
                         <label>해당년도</label>
@@ -282,76 +665,98 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: nowrap;">
-                    <div class="form-group" style="width: 250px; margin-bottom: 0;">
-                        <label>기준회차 범위 (시작 ~ 종료)</label>
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <input type="text" id="startSessionInput" placeholder="시작" list="startSessionList"
-                                autocomplete="off" style="flex: 1;">
+                <div class="filter-row"
+                    style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px;">
+                    <!-- 기준회차 범위 삭제됨 (사용자 요청) -->
+                    <div class="form-group date-range-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+                        <label>기준일 범위 (조회 기간)</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="date" id="startDateInput" style="flex: 1; min-height: 38px; padding: 8px;">
                             <span>~</span>
-                            <input type="text" id="endSessionInput" placeholder="종료" list="endSessionList"
-                                autocomplete="off" style="flex: 1;">
-                        </div>
-                        <datalist id="startSessionList"></datalist>
-                        <datalist id="endSessionList"></datalist>
-                    </div>
-                    <div class="form-group" style="width: 320px; margin-bottom: 0;">
-                        <label>기준일 범위</label>
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <input type="date" id="startDateInput" style="flex: 1;">
-                            <span>~</span>
-                            <input type="date" id="endDateInput" style="flex: 1;">
+                            <input type="date" id="endDateInput" style="flex: 1; min-height: 38px; padding: 8px;">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 5px; height: 38px;">
-                        <button class="btn btn-search" id="btnSearch"
-                            style="height: 100%; padding: 0 15px; font-size: 0.9rem;"><i class="fas fa-search"></i>
-                            조회</button>
-                        <button class="btn btn-print" id="btnPrint"
-                            style="height: 100%; padding: 0 15px; background-color: #28a745; color: white; font-size: 0.9rem;"><i
-                                class="fas fa-print"></i> 인쇄</button>
-                    </div>
+                </div>
+
+                <div class="bottom-actions">
+                    <button class="btn-action btn-search" id="btnSearch">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
+                    <button class="btn-action btn-print" id="btnPrint">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
+                    <button class="btn-action btn-close" onclick="location.href='dashboard.html'">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
 
             <div id="printArea">
-                <table class="history-table" id="historyTable">
-                    <thead id="tableHead">
-                        <!-- Dynamic columns -->
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="5" style="padding: 50px; color: #999;">회차 범위를 선택하고 조회 버튼을 눌러주세요.</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="report-table-wrapper">
+                    <table class="history-table" id="historyTable">
+                        <thead id="tableHead">
+                            <!-- Dynamic columns -->
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="5" style="padding: 100px; color: #999; text-align: center;">회차 범위를 선택하고 조회
+                                    버튼을 눌러주세요.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- [커스텀 알림 모달 HTML] -->
+            <div id="customAlertModal">
+                <div class="modal-content">
+                    <div class="modal-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div id="customAlertMessage" class="modal-message">
+                        여기에 메시지가 표시됩니다.
+                    </div>
+                    <button onclick="closeAlert()" class="modal-button">확인</button>
+                </div>
             </div>
 
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
+        let isAdmin = false;
+
+        const churchSelect = document.getElementById('churchSelect');
+        const curiaSelect = document.getElementById('curiaSelect');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+        const presidiumSelect = document.getElementById('presidiumSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const startDateInput = document.getElementById('startDateInput');
+        const endDateInput = document.getElementById('endDateInput');
+
         let presidiaList = [];
         let attendanceList = [];
         let membersList = [];
         let auxiliaryList = [];
         let careHistory = [];
+        let currentPrList = []; // 실시간 검색용 리스트
 
-        const churchSelect = document.getElementById('churchSelect');
-        const curiaSelect = document.getElementById('curiaSelect');
-        const presidiumSelect = document.getElementById('presidiumSelect');
-        const yearSelect = document.getElementById('yearSelect');
-        const startSessionInput = document.getElementById('startSessionInput');
-        const endSessionInput = document.getElementById('endSessionInput');
-        const startDateInput = document.getElementById('startDateInput');
-        const endDateInput = document.getElementById('endDateInput');
+        function loadData() {
+            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+        }
 
         initAuthObserver((user, profile) => {
             currentUser = profile;
+            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
@@ -376,19 +781,19 @@
                 yearSelect.appendChild(opt);
             }
             yearSelect.value = currentYear;
-        }
 
-        function loadData() {
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+            // Set default date range (current month)
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            startDateInput.value = firstDay;
+            endDateInput.value = lastDay;
         }
 
         function setupOrgSelectors() {
-            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
-            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
+            // Fix: Check both churchName and church property
+            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(c => c).sort();
+            churchSelect.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = c;
@@ -402,9 +807,11 @@
                 curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
                 curiaSelect.disabled = true;
                 updatePresidiumList();
-                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium || '';
-                presidiumSelect.disabled = true;
-                updateSessionLists();
+                presidiumInput.value = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumInput.disabled = true;
+                // updateSessionLists() is no longer needed for filters
+            } else {
+                churchSelect.disabled = false;
             }
         }
 
@@ -412,7 +819,7 @@
             const church = churchSelect.value;
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) { curiaSelect.disabled = true; return; }
-            const curias = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+            const curias = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].filter(cu => cu).sort();
             curias.forEach(cu => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = cu;
@@ -424,88 +831,83 @@
         function updatePresidiumList() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
-            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-            if (!curia) { presidiumSelect.disabled = true; return; }
-            const prs = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
-            prs.forEach(pr => {
-                const opt = document.createElement('option');
-                opt.value = opt.textContent = pr;
-                presidiumSelect.appendChild(opt);
-            });
-            presidiumSelect.disabled = false;
+            presidiumInput.value = '';
+            currentPrList = [];
+            if (!curia) return;
+            currentPrList = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
         }
 
+        // [New] 커스텀 검색 드롭다운 렌더링
+        function renderDropdown(list, searchText = '') {
+            presidiumDropdown.innerHTML = '';
+            if (list.length > 0) {
+                list.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.textContent = p;
+                    div.onclick = () => {
+                        presidiumInput.value = p;
+                        presidiumDropdown.style.display = 'none';
+                    };
+                    presidiumDropdown.appendChild(div);
+                });
+                presidiumDropdown.style.display = 'block';
+            } else {
+                presidiumDropdown.innerHTML = `<div class="no-result">"${searchText}"와 일치하는<br>쁘레시디움이 없습니다.</div>`;
+                presidiumDropdown.style.display = 'block';
+            }
+        }
+
+        function showCustomAlert(message) {
+            document.getElementById('customAlertMessage').innerText = message;
+            document.getElementById('customAlertModal').style.display = 'flex';
+        }
+
+        window.closeAlert = function () {
+            document.getElementById('customAlertModal').style.display = 'none';
+        };
+
         function updateSessionLists() {
-            const pr = presidiumSelect.value;
-            const selectedYear = yearSelect.value;
-            const startList = document.getElementById('startSessionList');
-            const endList = document.getElementById('endSessionList');
-            startList.innerHTML = endList.innerHTML = '';
-
-            if (!pr) return;
-
-            // Get sessions from careHistory for THIS presidium and selected YEAR
-            const prCareSessions = careHistory
-                .filter(c => c.presidium === pr && c.date.startsWith(selectedYear))
-                .map(c => ({ session: c.session, date: c.date }))
-                .sort((a, b) => parseInt(b.session) - parseInt(a.session));
-
-            prCareSessions.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = `${s.session}회 (${s.date})`;
-                startList.appendChild(opt.cloneNode(true));
-                endList.appendChild(opt.cloneNode(true));
-            });
+            // This function is kept empty or removed as session filter is gone
         }
 
         function setupEventListeners() {
-            churchSelect.onchange = () => { updateCuriaList(); updateSessionLists(); };
-            curiaSelect.onchange = () => { updatePresidiumList(); updateSessionLists(); };
-            presidiumSelect.onchange = updateSessionLists;
-            yearSelect.onchange = updateSessionLists;
+            churchSelect.onchange = () => { updateCuriaList(); updatePresidiumList(); };
+            curiaSelect.onchange = () => { updatePresidiumList(); };
+            yearSelect.onchange = () => { }; // No longer affects sessions
 
-            const handleSessionInput = (input) => {
-                const val = input.value;
-                const match = val.match(/^(\d+회)\s*\((.*?)\)$/);
-                if (match) {
-                    input.value = match[1];
-                    updateDateRange();
-                }
+            // 커스텀 검색 이벤트
+            presidiumInput.onfocus = () => {
+                if (currentPrList.length > 0) renderDropdown(currentPrList);
             };
+            presidiumInput.oninput = (e) => {
+                const searchText = e.target.value.toLowerCase().trim();
+                const filtered = currentPrList.filter(p => p.toLowerCase().includes(searchText));
+                renderDropdown(filtered, searchText);
+            };
+            document.addEventListener('click', (e) => {
+                if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                    presidiumDropdown.style.display = 'none';
+                }
+            });
 
-            startSessionInput.oninput = () => handleSessionInput(startSessionInput);
-            endSessionInput.oninput = () => handleSessionInput(endSessionInput);
-
-            startSessionInput.onfocus = () => startSessionInput.value = '';
-            endSessionInput.onfocus = () => endSessionInput.value = '';
+            // startSessionInput, endSessionInput removed
 
             document.getElementById('btnSearch').onclick = renderReport;
             document.getElementById('btnPrint').onclick = () => window.print();
         }
 
         function updateDateRange() {
-            const pr = presidiumSelect.value;
-            const startVal = startSessionInput.value.replace('회', '');
-            const endVal = endSessionInput.value.replace('회', '');
-
-            if (!pr || !startVal || !endVal) return;
-
-            const startRec = careHistory.find(c => c.presidium === pr && String(c.session) === startVal);
-            const endRec = careHistory.find(c => c.presidium === pr && String(c.session) === endVal);
-
-            if (startRec && endRec) {
-                startDateInput.value = startRec.date;
-                endDateInput.value = endRec.date;
-            }
+            // Function removed as we use manual date range now
         }
 
         function renderReport() {
-            const pr = presidiumSelect.value;
+            const pr = presidiumInput.value;
             const startD = startDateInput.value;
             const endD = endDateInput.value;
 
             if (!pr || !startD || !endD) {
-                alert('조직과 기준일 범위를 정확히 선택해 주세요.');
+                showCustomAlert('조직과 기준일 범위를 정확히 선택해 주세요.');
                 return;
             }
 
@@ -521,7 +923,7 @@
                 });
 
             if (relevantRecords.length === 0) {
-                alert('해당 범위에 등록된 돌봄 내역이 없습니다.');
+                showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
                 return;
             }
 
@@ -534,8 +936,19 @@
                 months[mKey].push(r);
             });
 
-            let headHtml = '<tr><th colspan="2" rowspan="2">행동단원</th><th colspan="3" rowspan="2">협조단원</th>';
-            let subHeadHtml = '<tr>';
+            let row1Html = `
+                <tr>
+                    <th colspan="2" style="background-color: #f1f3f5;">행동단원</th>
+                    <th colspan="3" style="background-color: #f1f3f5;">협조단원</th>
+            `;
+            let row2Html = `
+                <tr>
+                    <th>이름</th>
+                    <th>세례명</th>
+                    <th>이름</th>
+                    <th>세례명</th>
+                    <th>성별</th>
+            `;
 
             Object.entries(months).forEach(([mKey, recs]) => {
                 const [y, m] = mKey.split('-');
@@ -549,16 +962,16 @@
                     }
                 });
 
-                headHtml += `<th colspan="${recs.length}" class="month-header">${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)</th>`;
+                row1Html += `<th colspan="${recs.length}" class="month-header">${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)</th>`;
                 recs.forEach(r => {
                     const dateObj = new Date(r.date);
                     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
                     const day = dayNames[dateObj.getDay()];
-                    subHeadHtml += `<th class="session-header">${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})</th>`;
+                    row2Html += `<th class="session-header">${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})</th>`;
                 });
             });
-            headHtml += '</tr>' + subHeadHtml + '</tr>';
-            tableHead.innerHTML = headHtml;
+
+            tableHead.innerHTML = row1Html + '</tr>' + row2Html + '</tr>';
 
             // 3. Build Rows (Snapshot based)
             const tableBody = document.getElementById('tableBody');
@@ -619,13 +1032,13 @@
 
                 g.list.forEach((aux, idx) => {
                     const tr = document.createElement('tr');
-                    if (idx === 0) tr.classList.add('group-row');
+                    // Removed group-row class as we are repeating data now
 
                     let rowHtml = '';
-                    if (idx === 0) {
-                        rowHtml += `<td rowspan="${g.list.length}">${g.name}</td>`;
-                        rowHtml += `<td rowspan="${g.list.length}">${g.baptismal || '-'}</td>`;
-                    }
+                    // Repeated active member data for sticky column alignment
+                    rowHtml += `<td>${g.name}</td>`;
+                    rowHtml += `<td>${g.baptismal || '-'}</td>`;
+
                     rowHtml += `<td>${aux.name}</td>`;
                     rowHtml += `<td>${aux.baptismalName || '-'}</td>`;
                     rowHtml += `<td>${aux.gender || '-'}</td>`;
@@ -642,9 +1055,9 @@
                         }
 
                         if (status === 'checked') {
-                            rowHtml += '<td class="cared-text">돌봄</td>';
+                            rowHtml += '<td style="color: var(--secondary-color); font-weight: bold;">돌봄</td>';
                         } else {
-                            rowHtml += '<td class="none-text">-</td>';
+                            rowHtml += '<td style="color: #ccc;">-</td>';
                         }
                     });
 

@@ -1,23 +1,168 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>입출내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260306_1520">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260306_1520">
     <style>
         /* Report specific overrides */
         @media print {
-
             .main-content {
                 padding: 0;
             }
 
             body {
                 background: white;
+            }
+
+            .filter-section,
+            .btn-section {
+                display: none !important;
+            }
+        }
+
+        /* Filter & Button Refinement */
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+
+        .btn-section {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-section .btn.btn-search {
+            background-color: #d4a017;
+            color: white;
+        }
+
+        .btn-section .btn.btn-print {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-section .btn.btn-close {
+            background-color: #666;
+            color: white;
+        }
+
+        .btn-section .btn {
+            flex: none;
+            width: 130px;
+            height: 42px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            /* Prevent text wrapping */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-section .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Gold Border for Presidium Input */
+        .filter-group input#presidiumInput {
+            border: 1.5px solid #d4a017 !important;
+            transition: all 0.2s;
+        }
+
+        .filter-group input#presidiumInput:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(212, 160, 23, 0.3);
+        }
+
+        /* Searchable Dropdown Styles */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            z-index: 1000;
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95rem;
+            color: #333;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: #d4a017;
+            font-weight: bold;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Responsive Styles - Always at the bottom to ensure overrides */
+        @media (max-width: 768px) {
+            .filter-group {
+                min-width: 100% !important;
+            }
+
+            .btn-section {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                width: 100% !important;
+            }
+
+            .btn-section .btn {
+                width: auto !important;
+                min-width: 0 !important;
+                flex: 1 1 0 !important;
+                height: 40px !important;
+                padding: 0 2px !important;
+                font-size: 0.82rem !important;
+                gap: 2px !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
             }
         }
     </style>
@@ -96,19 +241,17 @@
         </ul>
     </header>
 
-    <div class="main-content" style="padding: 100px 20px; align-items: flex-start;">
+    <div class="main-content" style="padding: 85px 15px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 200px;">
 
             <!-- Filters -->
             <div class="filter-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="margin-bottom: 20px;">
                     <h3
                         style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
-                        입출내역 보고서
+                        입출내역
                     </h3>
-                    <button id="btnClose"
-                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
                 </div>
 
                 <div class="filter-row">
@@ -128,10 +271,10 @@
                     </div>
                     <div class="filter-group">
                         <label>쁘레시디움</label>
-                        <select id="presidiumFilter" disabled>
-                            <option value="">선택</option>
-                        </select>
-                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                        <div class="search-container">
+                            <input type="text" id="presidiumInput" placeholder="선택 또는 검색" autocomplete="off">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                        </div>
                     </div>
                     <div class="filter-group">
                         <label>해당년도</label>
@@ -139,24 +282,29 @@
                     </div>
                     <div class="filter-group">
                         <label>기준일자</label>
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="date" id="startDateFilter" style="width: 130px;">
+                        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                            <input type="date" id="startDateFilter" style="flex: 1; min-width: 130px;">
                             <span>~</span>
-                            <input type="date" id="endDateFilter" style="width: 130px;">
+                            <input type="date" id="endDateFilter" style="flex: 1; min-width: 130px;">
                         </div>
                     </div>
-                    <div class="filter-group"
-                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px;">
-                        <button id="btnSearch" class="btn btn-secondary"
-                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
-                        <button onclick="window.print()" class="btn-print"
-                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
-                    </div>
+                </div>
+
+                <div class="btn-section">
+                    <button id="btnSearch" class="btn btn-search">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
+                    <button onclick="window.print()" class="btn btn-print">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
+                    <button id="btnClose" class="btn btn-close">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
 
-            <!-- Report Content -->
-            <div id="reportContent" style="display: none;">
+            <!-- Report Content (Moved Inside Container) -->
+            <div id="reportContent" style="display: none; margin-top: 30px;">
                 <div style="text-align: center; margin-bottom: 20px;">
                     <!-- Underlined Reference Date -->
                     <h2 id="reportDateRange"
@@ -165,7 +313,7 @@
                     </h2>
                 </div>
 
-                <div style="overflow-x: auto;">
+                <div class="table-responsive">
                     <table class="ledger-table">
                         <thead>
                             <tr>
@@ -207,16 +355,18 @@
                     </table>
                 </div>
             </div>
+
             <div id="noDataMsg" style="text-align: center; color: #666; padding: 50px; display: none;">
                 데이터가 없습니다.
             </div>
-
         </div>
+
+    </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260306_1520"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -228,7 +378,8 @@
         // DOM
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
-        const presidiumFilter = document.getElementById('presidiumFilter');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
         const yearFilter = document.getElementById('yearFilter');
         const startDateFilter = document.getElementById('startDateFilter');
         const endDateFilter = document.getElementById('endDateFilter');
@@ -243,7 +394,6 @@
         // Inputs for non-admin
         const churchInput = document.getElementById('churchInput');
         const curiaInput = document.getElementById('curiaInput');
-        const presidiumInput = document.getElementById('presidiumInput');
 
         // Init
         yearFilter.value = new Date().getFullYear();
@@ -286,53 +436,28 @@
 
         // --- Filters Setup ---
         function setupFilters(profile) {
-            const churchFilter = document.getElementById('churchFilter');
-            const curiaFilter = document.getElementById('curiaFilter');
-            const presidiumFilter = document.getElementById('presidiumFilter');
-
-            const churchInput = document.getElementById('churchInput');
-            const curiaInput = document.getElementById('curiaInput');
-            const presidiumInput = document.getElementById('presidiumInput');
+            const role = (profile.role || '').toLowerCase();
+            const isAdminRole = role === 'admin' || role === '관리자';
 
             if (isAdmin) {
-                // Admin: Show Selects, Hide Inputs
                 if (churchFilter) {
-                    churchFilter.disabled = false;
                     churchFilter.style.display = 'inline-block';
+                    churchFilter.disabled = false; // Re-enable for selection
                 }
                 if (churchInput) churchInput.style.display = 'none';
-
                 if (curiaFilter) {
                     curiaFilter.style.display = 'inline-block';
-                    // curiaFilter.disabled = true; // Wait for church selection
+                    curiaFilter.disabled = true; // Wait for church
                 }
                 if (curiaInput) curiaInput.style.display = 'none';
-
-                if (presidiumFilter) {
-                    presidiumFilter.style.display = 'inline-block';
-                    // presidiumFilter.disabled = true; // Wait for curia selection
-                }
-                if (presidiumInput) presidiumInput.style.display = 'none';
-
                 loadAdminFilters();
             } else {
-                // Non-Admin: Hide Selects, Show Inputs
                 if (churchFilter) churchFilter.style.display = 'none';
                 if (curiaFilter) curiaFilter.style.display = 'none';
-                if (presidiumFilter) presidiumFilter.style.display = 'none';
-
-                if (churchInput) {
-                    churchInput.style.display = 'inline-block';
-                    churchInput.value = profile.churchName || profile.church || '';
-                }
-                if (curiaInput) {
-                    curiaInput.style.display = 'inline-block';
-                    curiaInput.value = profile.curiaName || profile.curia || '';
-                }
-                if (presidiumInput) {
-                    presidiumInput.style.display = 'inline-block';
-                    presidiumInput.value = profile.presidiumName || profile.presidium || '';
-                }
+                if (churchInput) { churchInput.style.display = 'inline-block'; churchInput.value = profile.churchName || profile.church || ''; }
+                if (curiaInput) { curiaInput.style.display = 'inline-block'; curiaInput.value = profile.curiaName || profile.curia || ''; }
+                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                if (!isAdminRole) presidiumInput.readOnly = true;
             }
         }
 
@@ -345,108 +470,112 @@
             }
         }
 
+        let currentPresidia = [];
+
         function loadAdminFilters() {
             const presidia = getStoredPresidiaList();
-            const churchFilter = document.getElementById('churchFilter');
-            const curiaFilter = document.getElementById('curiaFilter');
-            const presidiumFilter = document.getElementById('presidiumFilter');
-
             if (!churchFilter) return;
 
-            // Load Churches
-            // Extract church names, filter empty, unique, sort
-            const uniqueChurches = [...new Set(presidia.map(p => p.churchName).filter(c => c))].sort();
+            // Property mapping check (handle both .churchName and .church)
+            const uniqueChurches = [...new Set(presidia.map(p => p.churchName || p.church).filter(c => c))].sort();
 
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
             uniqueChurches.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
+                opt.value = c; opt.textContent = c;
                 churchFilter.appendChild(opt);
             });
 
-            // Cascading dropdowns - Church Change
+            // Re-enable in case it's inherited from setupFilters logic
+            churchFilter.disabled = false;
+
             churchFilter.addEventListener('change', () => {
                 const selectedChurch = churchFilter.value;
-
                 if (curiaFilter) {
-                    curiaFilter.disabled = !selectedChurch;
                     curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
+                    curiaFilter.disabled = !selectedChurch;
                     if (selectedChurch) {
-                        const churchPresidia = presidia.filter(p => p.churchName === selectedChurch);
-                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName).filter(c => c))].sort();
+                        const churchPresidia = presidia.filter(p => (p.churchName || p.church) === selectedChurch);
+                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName || p.curia).filter(c => c))].sort();
                         uniqueCuriae.forEach(c => {
-                            const opt = document.createElement('option');
-                            opt.value = c;
-                            opt.textContent = c;
+                            const opt = document.createElement('option'); opt.value = c; opt.textContent = c;
                             curiaFilter.appendChild(opt);
                         });
                     }
                 }
-
-                if (presidiumFilter) {
-                    presidiumFilter.disabled = true;
-                    presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                }
+                clearPresidium();
             });
 
-            // Cascading dropdowns - Curia Change
-            if (curiaFilter) {
-                curiaFilter.addEventListener('change', () => {
-                    const selectedChurch = churchFilter.value;
-                    const selectedCuria = curiaFilter.value;
+            curiaFilter.addEventListener('change', () => {
+                const selectedChurch = churchFilter.value;
+                const selectedCuria = curiaFilter.value;
+                if (selectedChurch && selectedCuria) {
+                    currentPresidia = presidia.filter(p =>
+                        (p.churchName || p.church) === selectedChurch &&
+                        (p.curiaName || p.curia) === selectedCuria
+                    ).map(p => p.presidiumName || p.presidium).filter(n => n).sort();
+                } else {
+                    currentPresidia = [];
+                }
+                clearPresidium();
+            });
+        }
 
-                    if (presidiumFilter) {
-                        presidiumFilter.disabled = !selectedCuria;
-                        presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
+        function clearPresidium() {
+            presidiumInput.value = '';
+            presidiumDropdown.style.display = 'none';
+        }
 
-                        if (selectedChurch && selectedCuria) {
-                            const targetPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
-                            const uniquePresidia = [...new Set(targetPresidia.map(p => p.presidiumName).filter(n => n))].sort();
-                            uniquePresidia.forEach(p => {
-                                const opt = document.createElement('option');
-                                opt.value = p;
-                                opt.textContent = p;
-                                presidiumFilter.appendChild(opt);
-                            });
-                        }
-                    }
+        presidiumInput.onfocus = showPresidiumList;
+        presidiumInput.oninput = showPresidiumList;
+
+        function showPresidiumList() {
+            if (!isAdmin) return;
+            const val = presidiumInput.value.toLowerCase();
+            const filtered = currentPresidia.filter(p => p.toLowerCase().includes(val));
+
+            presidiumDropdown.innerHTML = '';
+            if (filtered.length > 0) {
+                filtered.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = p;
+                    item.onclick = () => {
+                        presidiumInput.value = p;
+                        presidiumDropdown.style.display = 'none';
+                    };
+                    presidiumDropdown.appendChild(item);
                 });
+                presidiumDropdown.style.display = 'block';
+            } else {
+                presidiumDropdown.style.display = 'none';
             }
         }
 
+        document.addEventListener('click', e => {
+            if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                presidiumDropdown.style.display = 'none';
+            }
+        });
+
         // --- Data Loading ---
         function getFilterValues() {
-            const churchFilter = document.getElementById('churchFilter');
-            const curiaFilter = document.getElementById('curiaFilter');
-            const presidiumFilter = document.getElementById('presidiumFilter');
+            const year = parseInt(yearFilter.value);
+            const startDate = startDateFilter.value;
+            const endDate = endDateFilter.value;
 
-            const churchInput = document.getElementById('churchInput');
-            const curiaInput = document.getElementById('curiaInput');
-            const presidiumInput = document.getElementById('presidiumInput');
-
+            let church, curia, presidium;
             if (isAdmin) {
-                return {
-                    year: document.getElementById('yearFilter').value,
-                    startDate: document.getElementById('startDateFilter').value,
-                    endDate: document.getElementById('endDateFilter').value,
-                    church: churchFilter.value,
-                    curia: curiaFilter.value,
-                    presidium: presidiumFilter.value,
-                    year: parseInt(yearFilter.value),
-                    startDate: startDateFilter.value,
-                    endDate: endDateFilter.value
-                };
+                church = churchFilter.value;
+                curia = curiaFilter.value;
+                presidium = presidiumInput.value;
             } else {
-                return {
-                    church: currentUser.churchName || currentUser.church || '',
-                    curia: currentUser.curiaName || currentUser.curia || '',
-                    presidium: currentUser.presidiumName || currentUser.presidium || '',
-                    year: parseInt(yearFilter.value),
-                    startDate: startDateFilter.value,
-                    endDate: endDateFilter.value
-                };
+                church = currentUser.churchName || currentUser.church || '';
+                curia = currentUser.curiaName || currentUser.curia || '';
+                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
             }
+
+            return { year, startDate, endDate, church, curia, presidium };
         }
 
         function loadReport() {

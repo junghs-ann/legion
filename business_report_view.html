@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -17,7 +17,8 @@
         body {
             background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 80px 20px 20px;
+            /* 상단 헤더 공간 확보 */
         }
 
         .no-print-zone {
@@ -232,12 +233,100 @@
             right: 15mm;
             top: -5mm;
         }
+
+        /* 커스텀 모달 스타일 추가 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            /* 최상단 유지 */
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .custom-modal-message {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            /* 단어 단위 줄바꿈으로 한국어 가독성 향상 */
+        }
+
+        .custom-modal-btns {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .btn-confirm {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #eee;
+            color: #666;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="no-print no-print-zone"
-        style="position: sticky; top: 0; z-index: 9999; background: #f0f2f5; padding: 10px; border-bottom: 2px solid #ccc; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; min-height: 60px;">
+        style="position: sticky; top: 0; z-index: 9999; background: #f0f2f5; padding: 10px; border-bottom: 2px solid #ccc; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; min-height: 60px;">
         <div id="approvalZone"
             style="display: flex; align-items: center; gap: 10px; background: white; padding: 8px 15px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); flex-wrap: wrap; justify-content: center;">
             <span id="reportStatusBadge"
@@ -258,6 +347,17 @@
                     class="fas fa-print"></i> 인쇄하기</button>
             <button class="btn-action btn-close" onclick="window.close()" style="display: flex;"><i
                     class="fas fa-times"></i> 창 닫기</button>
+        </div>
+    </div>
+
+    <!-- 커스텀 모달 구조 추가 -->
+    <div id="customModal" class="custom-modal-overlay no-print">
+        <div class="custom-modal">
+            <div id="modalMessage" class="custom-modal-message"></div>
+            <div id="modalBtnGroup" class="custom-modal-btns">
+                <button id="modalConfirmBtn" class="modal-btn btn-confirm">확인</button>
+                <button id="modalCancelBtn" class="modal-btn btn-cancel">취소</button>
+            </div>
         </div>
     </div>
 
@@ -889,9 +989,9 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         const urlParams = new URLSearchParams(window.location.search);
         const church = urlParams.get('church');
@@ -1797,7 +1897,55 @@
                     }
                 };
 
-                const saveStatus = (status, signer = null) => {
+                const modalOverlay = document.getElementById('customModal');
+                const modalMessage = document.getElementById('modalMessage');
+                const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+                const modalCancelBtn = document.getElementById('modalCancelBtn');
+
+                window.showCustomAlert = (message) => {
+                    return new Promise((resolve) => {
+                        modalMessage.textContent = message;
+                        modalCancelBtn.style.display = 'none';
+                        modalConfirmBtn.style.maxWidth = '100%';
+                        modalOverlay.style.display = 'flex';
+
+                        const handleConfirm = () => {
+                            modalOverlay.style.display = 'none';
+                            modalConfirmBtn.removeEventListener('click', handleConfirm);
+                            resolve(true);
+                        };
+                        modalConfirmBtn.addEventListener('click', handleConfirm);
+                    });
+                };
+
+                window.showCustomConfirm = (message) => {
+                    return new Promise((resolve) => {
+                        modalMessage.textContent = message;
+                        modalCancelBtn.style.display = 'block';
+                        modalConfirmBtn.style.maxWidth = '120px';
+                        modalOverlay.style.display = 'flex';
+
+                        const handleConfirm = () => {
+                            modalOverlay.style.display = 'none';
+                            cleanup();
+                            resolve(true);
+                        };
+                        const handleCancel = () => {
+                            modalOverlay.style.display = 'none';
+                            cleanup();
+                            resolve(false);
+                        };
+                        const cleanup = () => {
+                            modalConfirmBtn.removeEventListener('click', handleConfirm);
+                            modalCancelBtn.removeEventListener('click', handleCancel);
+                        };
+
+                        modalConfirmBtn.addEventListener('click', handleConfirm);
+                        modalCancelBtn.addEventListener('click', handleCancel);
+                    });
+                };
+
+                const saveStatus = async (status, signer = null) => {
                     let history = JSON.parse(localStorage.getItem('business_report_status') || '[]');
                     const idx = history.findIndex(h =>
                         h.church === reportKey.church &&
@@ -1836,31 +1984,31 @@
                     localStorage.setItem('business_report_status', JSON.stringify(history));
                     renderStatus();
 
-                    if (status === 'approved') alert('사업보고서가 최종 승인되었습니다.');
-                    else if (status === 'finalized') alert('사업보고서가 확정(저장)되었습니다. 이제 단장님 승인이 가능합니다.');
+                    if (status === 'approved') await window.showCustomAlert('사업보고서가 최종 승인되었습니다.');
+                    else if (status === 'finalized') await window.showCustomAlert('사업보고서가 확정(저장)되었습니다. 이제 단장님 승인이 가능합니다.');
 
                     location.reload();
                 };
 
-                document.getElementById('btnFinalize').onclick = () => {
-                    if (confirm('현재 내용으로 사업보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 이 내용을 조회할 수 있습니다.')) {
+                document.getElementById('btnFinalize').onclick = async () => {
+                    if (await window.showCustomConfirm('현재 내용으로 사업보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 이 내용을 조회할 수 있습니다.')) {
                         saveStatus('finalized');
                     }
                 };
 
-                document.getElementById('btnApprove').onclick = () => {
-                    if (confirm('이 사업보고서를 최종 승인하시겠습니까?\n승인 시 내용 수정이 제한됩니다.')) {
+                document.getElementById('btnApprove').onclick = async () => {
+                    if (await window.showCustomConfirm('이 사업보고서를 최종 승인하시겠습니까?\n승인 시 내용 수정이 제한됩니다.')) {
                         saveStatus('approved', userProfile.name);
                     }
                 };
 
-                document.getElementById('btnCancelApprove').onclick = () => {
+                document.getElementById('btnCancelApprove').onclick = async () => {
                     const currentStatus = getStatusData()?.status;
                     const msg = (currentStatus === 'approved')
                         ? '승인을 취소하고 다시 수정하시겠습니까?'
                         : '확정을 취소하고 다시 수정하시겠습니까?';
 
-                    if (confirm(msg)) {
+                    if (await window.showCustomConfirm(msg)) {
                         let history = JSON.parse(localStorage.getItem('business_report_status') || '[]');
                         const idx = history.findIndex(h =>
                             h.church === reportKey.church &&
@@ -1871,7 +2019,7 @@
                         if (idx >= 0) {
                             history.splice(idx, 1);
                             localStorage.setItem('business_report_status', JSON.stringify(history));
-                            alert('취소되었습니다.');
+                            await window.showCustomAlert('취소되었습니다.');
                             location.reload();
                         }
                     }

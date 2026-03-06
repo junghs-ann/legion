@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+/* === Version: 20260303_1305_ledger_colors === */
 
 :root {
     --primary-color: #2E7D32;
@@ -22,19 +22,27 @@
     padding: 0;
 }
 
+/* Fix iOS disabled input faint text */
+input:disabled,
+textarea:disabled,
+select:disabled {
+    opacity: 1 !important;
+    -webkit-text-fill-color: #333;
+    color: #333;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Noto Sans KR', sans-serif;
     color: var(--text-color);
     margin: 0;
     padding: 0;
-    height: 100vh;
-    overflow-x: hidden;
+    min-height: 100vh;
+    height: auto;
     background-color: #f5f5f5;
-    /* 텍스트 선택 방지 (앱 느낌 강조) */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
 }
 
 /* === Login Page Background === */
@@ -176,6 +184,8 @@ body {
     z-index: 10005;
     border-bottom: 2px solid var(--primary-color);
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    justify-content: space-between;
+    /* Ensure spacing between logo and menu */
 }
 
 .brand-logo {
@@ -201,11 +211,14 @@ body {
     align-items: center;
     margin: 0;
     padding: 0;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
+    /* Change from absolute to relative */
+    left: 0;
+    transform: none;
     z-index: 10006;
-    gap: 25px;
+    gap: 20px;
+    flex-grow: 1;
+    justify-content: center;
 }
 
 .nav-item {
@@ -378,7 +391,7 @@ body {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     .dashboard-header {
         flex-direction: row;
         justify-content: space-between;
@@ -403,8 +416,13 @@ body {
         top: 70px;
         left: 0;
         width: 100%;
+        transform: none !important;
         background-color: #ffffff;
         flex-direction: column;
+        justify-content: flex-start;
+        /* Override desktop center alignment */
+        height: auto;
+        overflow-x: hidden;
         gap: 0;
         max-height: 0;
         overflow-y: auto;
@@ -412,11 +430,16 @@ body {
         padding: 0;
         border-bottom: 2px solid var(--secondary-color);
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        z-index: 10006;
+        background-color: #ffffff;
+        opacity: 1;
     }
 
     .nav-menu.active {
         max-height: calc(100vh - 70px);
-        padding-bottom: 20px;
+        min-height: calc(100vh - 70px);
+        padding-bottom: 50px;
+        /* More space at bottom */
     }
 
     .nav-item {
@@ -481,10 +504,12 @@ body {
 
     .dashboard-body {
         padding-top: 85px;
+        background-attachment: scroll;
+        /* 모바일에서 배경 고정 해제 (스크롤 호환성) */
     }
 
-    .welcome-banner h1 {
-        font-size: 1.8rem;
+    .login-body {
+        background-attachment: scroll;
     }
 
     .dashboard-container {
@@ -499,4 +524,10 @@ body {
     .card {
         padding: 30px 20px;
     }
+}
+
+/* Scroll prevention for active menu */
+.no-scroll {
+    overflow: hidden !important;
+    height: 100vh !important;
 }

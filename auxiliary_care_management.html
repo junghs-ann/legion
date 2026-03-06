@@ -1,13 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 돌봄 관리 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        @media (max-width: 768px) {
+            .mobile-br {
+                display: inline !important;
+            }
+        }
+
         .register-form-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 30px;
@@ -122,6 +128,78 @@
             border-radius: 6px;
             font-weight: bold;
         }
+
+        /* Responsive adjustments for mobile */
+        @media (max-width: 768px) {
+            .form-grid-header {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .col-span-2,
+            .col-span-3,
+            .col-span-6 {
+                grid-column: span 1 !important;
+            }
+
+            .form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .form-group label {
+                flex: none;
+                text-align: left;
+                width: 100%;
+                margin-bottom: 5px;
+            }
+
+            .form-group input,
+            .form-group select {
+                width: 100%;
+                max-width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            .summary-box {
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .register-form-container {
+                padding: 15px;
+            }
+
+            .care-table th,
+            .care-table td {
+                padding: 8px 4px;
+                font-size: 0.85rem;
+            }
+
+            .care-table th,
+            .care-table td:nth-child(2),
+            .care-table td:nth-child(4) {
+                word-break: keep-all;
+            }
+
+            /* 성명 칸 너비 확대 및 줄바꿈 방지 */
+            .care-table td:nth-child(1),
+            .care-table td:nth-child(3) {
+                width: 70px !important;
+                white-space: nowrap !important;
+            }
+
+            /* 돌봄여부 칸 너비 축소 */
+            .care-table th:nth-child(5),
+            .care-table td:nth-child(5) {
+                width: 50px !important;
+                padding: 8px 1px !important;
+            }
+        }
     </style>
 </head>
 
@@ -228,8 +306,9 @@
                 </div>
                 <div class="form-group col-span-3">
                     <label>회차</label>
-                    <input type="text" id="sessionInput" placeholder="회차 선택" list="sessionList" autocomplete="off">
-                    <datalist id="sessionList"></datalist>
+                    <select id="sessionInput">
+                        <option value="">회차 선택</option>
+                    </select>
                 </div>
                 <div class="form-group col-span-3">
                     <label>날짜</label>
@@ -249,7 +328,7 @@
                             <th style="width: 180px;">세례명</th>
                             <th style="width: 150px;">성명</th>
                             <th style="width: 180px;">세례명</th>
-                            <th style="width: 100px;">돌봄여부</th>
+                            <th style="width: 100px;">돌봄<span class="mobile-br" style="display:none;"><br></span>여부</th>
                         </tr>
                     </thead>
                     <tbody id="careTableBody">
@@ -273,9 +352,9 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
         let presidiaList = [];
@@ -369,13 +448,15 @@
 
         function updateSessionList() {
             const pr = presidiumSelect.value;
-            sessionList.innerHTML = '';
+            sessionInput.innerHTML = '<option value="">회차 선택</option>';
             if (!pr) return;
             const prAttendance = attendanceList.filter(a => a.presidium === pr).sort((a, b) => parseInt(b.session) - parseInt(a.session));
             prAttendance.forEach(a => {
                 const opt = document.createElement('option');
-                opt.value = `${a.session}회 (${a.date})`;
-                sessionList.appendChild(opt);
+                opt.value = a.session; // Store just the session number in value
+                opt.textContent = `${a.session}회 (${a.date})`;
+                opt.dataset.date = a.date; // Store date in data attribute
+                sessionInput.appendChild(opt);
             });
         }
 
@@ -388,53 +469,26 @@
             curiaSelect.onchange = () => { updatePresidiumList(); updateSessionList(); };
             presidiumSelect.onchange = updateSessionList;
 
-            sessionInput.onfocus = () => {
-                // To show ALL options in datalist without browser filtering, clear the value on focus
-                // This solves the issue where the list is hidden or only shows the current item
-                sessionInput.value = '';
-                dateInput.value = '';
-                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
-                btnDelete.style.display = 'none';
-                updateCaredCount();
-            };
+            sessionInput.onchange = (e) => {
+                const sessionNum = sessionInput.value;
+                if (!sessionNum) {
+                    dateInput.value = '';
+                    tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                    btnDelete.style.display = 'none';
+                    updateCaredCount();
+                    return;
+                }
 
-            sessionInput.oninput = (e) => {
-                const val = sessionInput.value;
-                if (!val) return;
+                // Extract date from selected option
+                const selectedOpt = sessionInput.options[sessionInput.selectedIndex];
+                const extractedDate = selectedOpt.dataset.date;
+                dateInput.value = extractedDate;
 
-                // Match pattern "917회 (2026-01-06)"
-                const fullMatch = val.match(/^(\d+회)\s*\((.*?)\)$/);
-
-                if (fullMatch) {
-                    const cleanSession = fullMatch[1];
-                    const extractedDate = fullMatch[2];
-
-                    // Update input to show only the session number part
-                    sessionInput.value = cleanSession;
-                    dateInput.value = extractedDate;
-
-                    const sessionNum = cleanSession.replace('회', '');
-                    const pr = presidiumSelect.value;
-                    const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
-                    if (record) {
-                        loadCareList(record);
-                        updateDeleteButtonState(record.session);
-                    }
-                    // Crucial: remove focus to prevent browser from showing datalist again immediately with filtered value
-                    sessionInput.blur();
-                } else {
-                    // Manual typing check
-                    const match = val.match(/^(\d+)회$/);
-                    if (match) {
-                        const sessionNum = match[1];
-                        const pr = presidiumSelect.value;
-                        const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
-                        if (record) {
-                            dateInput.value = record.date;
-                            loadCareList(record);
-                            updateDeleteButtonState(record.session);
-                        }
-                    }
+                const pr = presidiumSelect.value;
+                const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
+                if (record) {
+                    loadCareList(record);
+                    updateDeleteButtonState(record.session);
                 }
             };
 
@@ -455,10 +509,9 @@
 
         function deleteCareData() {
             const pr = presidiumSelect.value;
-            const sessionVal = sessionInput.value;
-            const match = sessionVal.match(/(\d+)회/);
-            if (!match) return;
-            const session = match[1];
+            const session = sessionInput.value;
+
+            if (!session) return;
 
             if (!confirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
 
@@ -587,16 +640,13 @@
 
         function saveCareData() {
             const pr = presidiumSelect.value;
-            const sessionVal = sessionInput.value;
+            const session = sessionInput.value;
             const date = dateInput.value;
-            const match = sessionVal.match(/(\d+)회/);
 
-            if (!pr || !match || !date) {
+            if (!pr || !session || !date) {
                 alert('회차 정보를 확인해 주세요.');
                 return;
             }
-
-            const session = match[1];
 
             // NEW: Structure with Snapshot
             const careData = {}; // Keeping for legacy support

@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단원 등록 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Reuse styles from presidium_register.html for consistency */
@@ -46,6 +46,23 @@
 
             .form-full-width {
                 grid-column: span 1;
+            }
+
+            .form-title {
+                font-size: 1.4rem !important;
+                white-space: nowrap !important;
+                flex-shrink: 0;
+            }
+
+            .btn-submit {
+                padding: 5px 10px !important;
+                font-size: 0.8rem !important;
+                min-width: 50px !important;
+            }
+
+            #leaveDateNotice {
+                word-break: keep-all !important;
+                line-height: 1.4;
             }
         }
 
@@ -388,9 +405,9 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         // Define Organization Data Logic
         const initOrgSelectors = () => {

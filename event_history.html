@@ -1,51 +1,384 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사관리내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260303_1255_fix">
     <style>
-        /* Report specific styles */
+        /* [쁘레시디움 커스텀 검색창 스타일] */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        #presidiumInput {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #fff;
+        }
+
+        #presidiumInput:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 2200;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 0.95rem;
+            color: #333;
+            text-align: left;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f7ff;
+            color: var(--primary-color);
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* 하단 버튼 그룹 스타일 */
+        .bottom-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .btn-action {
+            flex: 1;
+            max-width: 200px;
+            height: 48px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-search {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-search:hover {
+            background-color: #e68a00;
+            transform: translateY(-2px);
+        }
+
+        .btn-print {
+            background-color: #333;
+            color: white;
+        }
+
+        .btn-print:hover {
+            background-color: #000;
+            transform: translateY(-2px);
+        }
+
+        .btn-close {
+            background-color: #666;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background-color: #444;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .filter-section h2 {
+                font-size: 1.2rem !important;
+                word-break: keep-all !important;
+                line-height: 1.4 !important;
+            }
+
+            .filter-row {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 15px !important;
+                padding: 15px !important;
+            }
+
+            .filter-group {
+                width: 100% !important;
+            }
+
+            /* 날짜 입력 컨테이너 최적화 */
+            .date-filter-group {
+                display: flex !important;
+                gap: 5px !important;
+                align-items: center !important;
+                flex-wrap: wrap !important;
+            }
+
+            .filter-group input[type="date"] {
+                flex: 1 !important;
+                min-width: 120px !important;
+                padding: 8px !important;
+                font-size: 0.9rem !important;
+            }
+
+            .bottom-actions {
+                flex-direction: row !important;
+                /* 한 줄 배치 */
+                justify-content: center !important;
+                gap: 8px !important;
+            }
+
+            .btn-action {
+                flex: 1 !important;
+                max-width: 120px !important;
+                height: 42px !important;
+                font-size: 0.95rem !important;
+                padding: 0 8px !important;
+                gap: 5px !important;
+            }
+
+            .main-content {
+                padding: 100px 10px !important;
+            }
+
+            .container {
+                padding: 15px !important;
+            }
+
+            .attendance-table {
+                font-size: 0.8rem !important;
+            }
+
+            /* 모바일에서 참여자 셀 너비 조정 */
+            .attendee-cell {
+                min-width: 300px !important;
+                white-space: normal !important;
+                word-break: keep-all !important;
+                text-align: left !important;
+                line-height: 1.4 !important;
+            }
+
+            .attendance-table {
+                min-width: 1100px !important;
+                /* 스크롤 강제 */
+            }
+        }
+
+        /* [테이블 레이아웃 최적화] */
+        .report-table-wrapper {
+            overflow-x: auto;
+            position: relative;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        /* 고정 컬럼 스타일 (구분, 종류) */
+        .attendance-table th:nth-child(1),
+        .attendance-table td:nth-child(1) {
+            position: sticky !important;
+            left: 0;
+            z-index: 10;
+            background-color: #fff !important;
+            border-right: 1px solid #eee;
+            width: 55px;
+            /* 너비 축소 */
+        }
+
+        .attendance-table th:nth-child(2),
+        .attendance-table td:nth-child(2) {
+            position: sticky !important;
+            left: 55px;
+            /* 구분 너비(55px)만큼 이동 */
+            z-index: 10;
+            background-color: #fff !important;
+            border-right: 2px solid #ddd;
+            width: 85px;
+            /* 너비 축소 */
+        }
+
+        /* 헤더 배경색 및 우선순위 */
+        .attendance-table thead th {
+            background-color: #f8f9fa !important;
+            position: sticky;
+            top: 0;
+            z-index: 11;
+        }
+
+        .attendance-table thead th:nth-child(1),
+        .attendance-table thead th:nth-child(2) {
+            z-index: 12;
+        }
+
+        /* 스크롤 시 고정 열 그림자 효과 */
+        .attendance-table td:nth-child(2)::after,
+        .attendance-table th:nth-child(2)::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -10px;
+            width: 10px;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0.05), transparent);
+        }
+
+        /* 참여자 셀 스타일 보강 */
+        .attendee-cell {
+            text-align: left;
+            white-space: normal;
+            word-break: keep-all;
+            padding: 12px !important;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .group-header-bg {
+            background-color: #f1f3f5 !important;
+            font-weight: bold;
+            text-align: left;
+            padding: 10px 20px !important;
+            /* 여백 조정 */
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            /* 크기 축소 */
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+
+        .attendance-table td,
         .attendance-table th {
+            border-bottom: 1px solid #eee;
+            padding: 12px 8px;
+            height: 50px;
+            vertical-align: middle;
+        }
+
+        /* [커스텀 알림/모달 스타일] */
+        #customAlertModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            transform: translateY(20px);
+            animation: slideUp 0.3s forwards;
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .modal-message {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+
+        .modal-button {
             background-color: var(--primary-color);
             color: white;
-            padding: 12px 4px;
-            font-size: 0.85rem;
-            border: 1px solid #ddd;
-            white-space: nowrap;
-        }
-
-        .attendance-table td {
-            padding: 10px 4px;
-            border: 1px solid #ddd;
-            text-align: center;
-            font-size: 0.9rem;
-            vertical-align: middle;
-            white-space: nowrap;
-            /* 추가: 셀 내용도 줄바꿈 방지 */
-            /* 추가: 병합된 셀의 텍스트 중앙 정렬 */
-        }
-
-        /* Group Header Style */
-        .group-header-bg {
-            background-color: #f0f4f8;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 12px;
+            font-size: 1rem;
             font-weight: bold;
-            color: var(--primary-color);
-            text-align: left !important;
-            padding-left: 15px !important;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .attendee-cell {
-            text-align: left !important;
-            font-size: 0.75rem !important;
-            max-width: 250px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .modal-button:hover {
+            background-color: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         @media print {
@@ -153,53 +486,66 @@
             style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
 
             <div class="filter-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3
-                        style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
-                        행사(행사/교육/피정)관리 내역
-                    </h3>
-                    <button onclick="location.href='dashboard.html'"
-                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
+                <div style="margin-bottom: 25px;">
+                    <h2
+                        style="color: var(--primary-color); border-bottom: 3px solid var(--secondary-color); display:inline-block; padding-bottom: 8px; margin: 0; font-size: 1.5rem;">
+                        행사(행사/교육/피정) 관리 내역
+                    </h2>
                 </div>
 
                 <div class="filter-row"
-                    style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                    <div class="filter-group">
-                        <label>성당</label>
-                        <select id="churchFilter" disabled>
-                            <option value="">선택</option>
+                    style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 25px; border-radius: 12px; border: 1px solid #eee;">
+                    <div class="filter-group" style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;"><i
+                                class="fas fa-church"></i> 성당</label>
+                        <select id="churchFilter"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;" disabled>
+                            <option value="">성당 선택</option>
                         </select>
-                        <input type="text" id="churchInput" style="display:none;" readonly>
                     </div>
-                    <div class="filter-group">
-                        <label>꾸리아</label>
-                        <select id="curiaFilter" disabled>
-                            <option value="">선택</option>
+
+                    <div class="filter-group" style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;"><i
+                                class="fas fa-users"></i> 꾸리아</label>
+                        <select id="curiaFilter"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;" disabled>
+                            <option value="">꾸리아 선택</option>
                         </select>
-                        <input type="text" id="curiaInput" style="display:none;" readonly>
                     </div>
-                    <div class="filter-group">
-                        <label>쁘레시디움</label>
-                        <select id="presidiumFilter" disabled>
-                            <option value="">선택</option>
-                        </select>
-                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+
+                    <div class="filter-group" style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;"><i
+                                class="fas fa-list-alt"></i> 쁘레시디움 (검색 기능)</label>
+                        <div class="search-container">
+                            <input type="text" id="presidiumInput" placeholder="쁘레시디움 검색 (예: 천사)" class="nav-enter">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                        </div>
+                        <select id="presidiumFilter" style="display: none;"></select>
                     </div>
-                    <div class="filter-group">
-                        <label>기준일자 범위</label>
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="date" id="startDateFilter" style="width: 140px;">
-                            <span>~</span>
-                            <input type="date" id="endDateFilter" style="width: 140px;">
+
+                    <div class="filter-group" style="flex: 1.5; min-width: 280px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;"><i
+                                class="fas fa-calendar-check"></i> 기준일자 범위</label>
+                        <div class="date-filter-group" style="display: flex; gap: 8px; align-items: center;">
+                            <input type="date" id="startDateFilter" class="nav-enter"
+                                style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;">
+                            <span style="color: #888;">~</span>
+                            <input type="date" id="endDateFilter" class="nav-enter"
+                                style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;">
                         </div>
                     </div>
-                    <div class="filter-group"
-                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px; margin-left: auto;">
-                        <button id="btnSearch" class="btn btn-secondary"
-                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
-                        <button onclick="window.print()" class="btn-print"
-                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
-                    </div>
+                </div>
+
+                <div class="bottom-actions">
+                    <button id="btnSearch" class="btn-action btn-search">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
+                    <button onclick="window.print()" class="btn-action btn-print">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
+                    <button onclick="location.href='dashboard.html'" class="btn-action btn-close">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
 
@@ -211,18 +557,18 @@
                     </h3>
                 </div>
 
-                <div style="overflow-x: auto;">
-                    <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                <div class="report-table-wrapper">
+                    <table class="attendance-table">
                         <thead>
                             <tr>
-                                <th style="width: 90px;">구분</th>
-                                <th style="width: 160px;">종류</th>
-                                <th style="width: 110px;">참석/총인원</th>
-                                <th style="width: 100px;">일자</th>
-                                <th style="width: 180px;">행사명</th>
-                                <th style="width: 100px;">주관</th>
-                                <th style="width: 120px;">장소</th>
-                                <th>참여자</th>
+                                <th style="width: 55px;">구분</th>
+                                <th style="width: 85px;">종류</th>
+                                <th style="width: 65px;">일자</th>
+                                <th style="width: 160px;">행사명</th>
+                                <th style="width: 85px;">주관</th>
+                                <th style="width: 85px;">장소</th>
+                                <th style="width: 100px;">참석/<br>총인원</th>
+                                <th style="min-width: 300px;">참여자</th>
                             </tr>
                         </thead>
                         <tbody id="reportBody"></tbody>
@@ -237,9 +583,22 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- [커스텀 알림 모달 HTML] -->
+    <div id="customAlertModal">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div id="customAlertMessage" class="modal-message">
+                여기에 메시지가 표시됩니다.
+            </div>
+            <button onclick="closeAlert()" class="modal-button">확인</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -247,6 +606,8 @@
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
         const presidiumFilter = document.getElementById('presidiumFilter');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
         const startDateFilter = document.getElementById('startDateFilter');
         const endDateFilter = document.getElementById('endDateFilter');
         const btnSearch = document.getElementById('btnSearch');
@@ -283,28 +644,24 @@
             location.href = 'index.html';
         });
 
-        function setupControls(profile) {
-            const ci = document.getElementById('churchInput');
-            const cui = document.getElementById('curiaInput');
-            const pi = document.getElementById('presidiumInput');
+        let currentPresidia = [];
 
+        function setupControls(profile) {
             if (isAdmin) {
-                churchFilter.style.display = 'block';
-                ci.style.display = 'none';
                 churchFilter.disabled = false;
                 loadChurches();
             } else {
-                churchFilter.style.display = 'none';
-                ci.style.display = 'block';
-                ci.value = profile.churchName || profile.church || '';
+                // 비관리자의 경우 자신의 소속으로 고정 (커스텀 검색창에도 반영)
+                churchFilter.innerHTML = `<option value="${profile.churchName || profile.church}">${profile.churchName || profile.church}</option>`;
+                churchFilter.value = profile.churchName || profile.church;
+                churchFilter.disabled = true;
 
-                curiaFilter.style.display = 'none';
-                cui.style.display = 'block';
-                cui.value = profile.curiaName || profile.curia || '';
+                curiaFilter.innerHTML = `<option value="${profile.curiaName || profile.curia}">${profile.curiaName || profile.curia}</option>`;
+                curiaFilter.value = profile.curiaName || profile.curia;
+                curiaFilter.disabled = true;
 
-                presidiumFilter.style.display = 'none';
-                pi.style.display = 'block';
-                pi.value = profile.presidiumName || profile.presidium || '';
+                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                presidiumInput.disabled = true;
             }
         }
 
@@ -321,9 +678,9 @@
             churchFilter.onchange = () => {
                 const selected = churchFilter.value;
                 curiaFilter.innerHTML = '<option value="">선택</option>';
-                presidiumFilter.innerHTML = '<option value="">선택</option>';
+                presidiumInput.value = '';
+                currentPresidia = [];
                 curiaFilter.disabled = !selected;
-                presidiumFilter.disabled = true;
                 if (selected) {
                     const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
                     curiae.forEach(c => {
@@ -337,27 +694,70 @@
             curiaFilter.onchange = () => {
                 const selectedChurch = churchFilter.value;
                 const selectedCuria = curiaFilter.value;
-                presidiumFilter.innerHTML = '<option value="">선택</option>';
-                presidiumFilter.disabled = !selectedCuria;
+                presidiumInput.value = '';
+                currentPresidia = [];
                 if (selectedChurch && selectedCuria) {
-                    const prs = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
-                    prs.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = opt.textContent = p;
-                        presidiumFilter.appendChild(opt);
-                    });
+                    currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
                 }
             };
+
+            // 커스텀 검색창 로직 구현
+            presidiumInput.onfocus = () => {
+                if (currentPresidia.length > 0) renderDropdown(currentPresidia);
+            };
+
+            presidiumInput.oninput = (e) => {
+                const searchText = e.target.value.toLowerCase().trim();
+                const filtered = currentPresidia.filter(p => p.toLowerCase().includes(searchText));
+                renderDropdown(filtered, searchText);
+            };
+
+            // 외부 클릭 시 드롭다운 닫기
+            document.addEventListener('click', (e) => {
+                if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                    presidiumDropdown.style.display = 'none';
+                }
+            });
         }
+
+        function renderDropdown(list, searchText = '') {
+            presidiumDropdown.innerHTML = '';
+            if (list.length > 0) {
+                list.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.textContent = p;
+                    div.onclick = () => {
+                        presidiumInput.value = p;
+                        presidiumDropdown.style.display = 'none';
+                    };
+                    presidiumDropdown.appendChild(div);
+                });
+                presidiumDropdown.style.display = 'block';
+            } else {
+                presidiumDropdown.innerHTML = `<div class="no-result">"${searchText}"와 일치하는<br>쁘레시디움이 없습니다.</div>`;
+                presidiumDropdown.style.display = 'block';
+            }
+        }
+
+        function showCustomAlert(message) {
+            document.getElementById('customAlertMessage').innerText = message;
+            const modal = document.getElementById('customAlertModal');
+            modal.style.display = 'flex';
+        }
+
+        window.closeAlert = function () {
+            document.getElementById('customAlertModal').style.display = 'none';
+        };
 
         function loadReport() {
             let church, curia, presidium;
             if (isAdmin) {
                 church = churchFilter.value;
                 curia = curiaFilter.value;
-                presidium = presidiumFilter.value;
+                presidium = presidiumInput.value; // [Fix] presidiumFilter 대신 실제 값이 입력된 presidiumInput 참조
                 if (!church || !curia || !presidium) {
-                    alert("성당, 꾸리아, 쁘레시디움을 모두 선택해 주세요.");
+                    showCustomAlert("성당, 꾸리아, 쁘레시디움을 모두 선택해 주세요.");
                     return;
                 }
             } else {
@@ -456,11 +856,11 @@
                         tr.innerHTML = `
                             ${categoryTd}
                             ${typeTd}
-                            <td>${e.attendanceCount}/${e.totalCount || 0}</td>
-                            <td>${e.eventDate}</td>
-                            <td style="text-align:left;">${e.eventName}</td>
-                            <td>${e.organizer || '-'}</td>
-                            <td>${e.venue || '-'}</td>
+                            <td style="text-align:center;">${e.eventDate ? e.eventDate.substring(5) : '-'}</td>
+                            <td style="text-align:center;">${e.eventName}</td>
+                            <td style="text-align:center;">${e.organizer || '-'}</td>
+                            <td style="text-align:center;">${e.venue || '-'}</td>
+                            <td style="text-align:center;">${e.attendanceCount}/${e.totalCount || 0}</td>
                             <td class="attendee-cell" title="${e.attendeeNames || ''}">${e.attendeeNames || '-'}</td>
                         `;
                         reportBody.appendChild(tr);

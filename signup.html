@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <style>
         /* Specific styles for signup to match login theme */
         .signup-container {
@@ -205,9 +205,10 @@
             </div>
         </div>
     </div>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
-        import { registerUser, logoutUser } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { registerUser, logoutUser } from "./auth.js?v=20260303_1210";
 
         const churchSelect = document.getElementById('church-select');
         const curiaSelect = document.getElementById('curia-select');

@@ -177,20 +177,20 @@ export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
     const adminExists = Object.values(users).some(u => u.email === 'admin');
 
     if (!adminExists) {
-        const uid = 'admin_seed';
+        const uid = 'user_kjxhgb6d5'; // Match backup_data.json UID
         const adminUser = {
             uid: uid,
-            email: 'admin@legion.app',
+            email: 'jhsann@legion.app',
             password: '1234',
             name: '관리자',
             role: 'admin',
             status: 'active',
             churchName: '본부',
-            presidiumName: '직속',
-            createdAt: new Date().toISOString()
+            presidiumName: '관리자(본부)',
+            createdAt: '2026-02-10T07:09:24.504Z'
         };
         users[uid] = adminUser;
         localStorage.setItem('users', JSON.stringify(users));
-        console.log("Default admin account created: admin / 1234");
+        console.log("Default admin account seeded: jhsann@legion.app / 1234");
     }
 })();

@@ -1,3 +1,163 @@
+// === Version: 20260304_1945_global_modal ===
+console.log("Legion Script Loaded: 20260304_1945_global_modal");
+
+// === Global Custom Modal CSS Injection ===
+(function injectGlobalModalCSS() {
+    const css = `
+        .global-custom-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 10010;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Sans KR', sans-serif;
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .global-custom-modal-content {
+            background-color: white;
+            padding: 0;
+            border-radius: 8px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            word-break: keep-all;
+            line-height: 1.6;
+            overflow: hidden;
+            animation: modalSlideUp 0.3s ease;
+        }
+        @keyframes modalSlideUp {
+            from { transform: translateY(20px); }
+            to { transform: translateY(0); }
+        }
+        .global-custom-modal-header {
+            background-color: #2e7d32;
+            height: 6px;
+            width: 100%;
+            border-bottom: 2px solid #D4AF37;
+        }
+        .global-custom-modal-body {
+            padding: 30px 25px 20px;
+        }
+        .global-custom-modal-message {
+            margin-bottom: 25px;
+            font-size: 1.05rem;
+            color: #222;
+            font-weight: 500;
+        }
+        .global-custom-modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 0 25px 25px;
+        }
+        .global-custom-modal-btn {
+            padding: 12px 30px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .global-custom-modal-btn-confirm {
+            background-color: #2e7d32;
+            color: white;
+        }
+        .global-custom-modal-btn-confirm:hover {
+            background-color: #1b5e20;
+            transform: translateY(-1px);
+        }
+        .global-custom-modal-btn-cancel {
+            background-color: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        .global-custom-modal-btn-cancel:hover {
+            background-color: #eee;
+        }
+    `;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+})();
+
+// === Global Custom Modal Implementation ===
+window.showGlobalAlert = function (message) {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('globalCustomModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'globalCustomModal';
+            modal.className = 'global-custom-modal';
+            modal.innerHTML = `
+                <div class="global-custom-modal-content">
+                    <div class="global-custom-modal-header"></div>
+                    <div class="global-custom-modal-body">
+                        <div id="globalCustomModalMessage" class="global-custom-modal-message"></div>
+                    </div>
+                    <div class="global-custom-modal-buttons">
+                        <button id="globalCustomModalCancel" class="global-custom-modal-btn global-custom-modal-btn-cancel" style="display: none;">취소</button>
+                        <button id="globalCustomModalConfirm" class="global-custom-modal-btn global-custom-modal-btn-confirm">확인</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const msgEl = document.getElementById('globalCustomModalMessage');
+        const confirmBtn = document.getElementById('globalCustomModalConfirm');
+        const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        msgEl.innerHTML = message.replace(/\n/g, '<br>');
+        cancelBtn.style.display = 'none';
+        modal.style.display = 'flex';
+
+        confirmBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve();
+        };
+    });
+};
+
+window.showGlobalConfirm = function (message) {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('globalCustomModal');
+        if (!modal) {
+            // Re-use logic to create if not exists
+            showGlobalAlert('');
+            modal = document.getElementById('globalCustomModal');
+        }
+
+        const msgEl = document.getElementById('globalCustomModalMessage');
+        const confirmBtn = document.getElementById('globalCustomModalConfirm');
+        const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        msgEl.innerHTML = message.replace(/\n/g, '<br>');
+        cancelBtn.style.display = 'inline-block';
+        modal.style.display = 'flex';
+
+        confirmBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve(true);
+        };
+        cancelBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve(false);
+        };
+    });
+};
 // === Global State for Unsaved Changes ===
 window.isDirty = false;
 window.setDirty = (dirty) => {
@@ -18,13 +178,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Intercept menu clicks to check for unsaved data
-    const handleNavigation = (e) => {
+    const handleNavigation = async (e) => {
         if (window.isDirty) {
-            if (!confirm('저장하지 않은 변경 사항이 있습니다. 이동하시겠습니까?')) {
-                e.preventDefault();
-                return false;
+            e.preventDefault();
+            const targetUrl = e.currentTarget.href;
+            if (await window.showGlobalConfirm('저장하지 않은 변경 사항이 있습니다. 이동하시겠습니까?')) {
+                window.setDirty(false);
+                window.location.href = targetUrl;
             }
-            window.setDirty(false); // Reset if user confirms
+            return false;
         }
     };
 
@@ -44,11 +206,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Mobile Menu Toggle
         menuToggle.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
+            const isActive = navMenu.classList.toggle('active');
+            // Toggle body scroll
+            if (isActive) {
+                document.body.classList.add('no-scroll');
+            } else {
+                document.body.classList.remove('no-scroll');
+            }
         });
 
         // Mobile Submenu Accordion
-        if (window.innerWidth <= 768) {
+        if (window.innerWidth <= 1024) {
             navItems.forEach(item => {
                 const link = item.querySelector('.nav-link');
                 const subMenu = item.querySelector('.sub-menu');
@@ -84,15 +252,90 @@ document.addEventListener('DOMContentLoaded', () => {
  * @param {Function} logoutUser - auth.js의 로그아웃 함수
  */
 // === Global Logout Handler ===
-window.handleLogout = () => {
+window.handleLogout = async () => {
     if (window.isDirty) {
-        if (!confirm('저장하지 않은 데이터가 있습니다. 로그아웃 하시겠습니까?')) return;
+        if (!(await window.showGlobalConfirm('저장하지 않은 데이터가 있습니다. 로그아웃 하시겠습니까?'))) return;
     }
-    // auth.js의 logoutUser가 전역에 노출되지 않으므로, 
-    // 실제 로그아웃 처리는 auth.js를 임포트한 곳에서 주입해주거나 직접 이동 처리
     localStorage.removeItem('currentUser');
     window.location.href = "index.html";
 };
+
+// === Emergency Force Refresh Function (Global) ===
+window.forceDataRefresh = async function () {
+    console.log("Force Refresh Triggered...");
+    try {
+        const overlay = document.getElementById('dataSyncOverlay');
+        if (overlay) overlay.style.display = 'flex';
+
+        const ts = Date.now();
+        const rand = Math.random().toString(36).substring(7);
+        const response = await fetch(`./backup_data.json?v=${ts}&rand=${rand}`, {
+            cache: 'no-store',
+            headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        });
+
+        if (!response.ok) throw new Error('Backup fetch failed');
+        const backupData = await response.json();
+
+        if (backupData && typeof backupData === 'object') {
+            for (const key in backupData) {
+                if (key === 'currentUser' && localStorage.getItem('currentUser')) continue;
+                const value = backupData[key];
+                localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+            }
+            console.log("Force Sync success!");
+            sessionStorage.setItem('data_initialized', 'true');
+            await window.showGlobalAlert("✅ 데이터가 성공적으로 갱신되었습니다!");
+
+            if (typeof window.loadData === 'function') {
+                window.loadData();
+                if (typeof window.setupOrgSelectors === 'function') await window.setupOrgSelectors();
+            } else {
+                window.location.reload();
+            }
+            return true;
+        }
+    } catch (error) {
+        console.error("Force Sync Critical Error:", error);
+        await window.showGlobalAlert("데이터를 가져오는데 실패했습니다. 네트워크 상태를 확인해 주세요.");
+    } finally {
+        const overlay = document.getElementById('dataSyncOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+    return true;
+};
+
+// === Auto Data Initialization (For New Devices/Mobile) ===
+window.dataReady = (async function () {
+    const isAlreadyInitialized = sessionStorage.getItem('data_initialized');
+
+    // 데이터 유효성 정밀 체크 함수
+    const checkMissing = () => {
+        try {
+            const p = localStorage.getItem('presidia_list');
+            const m = localStorage.getItem('members_list');
+            // 존재하지 않거나, '[]' 이거나, 파싱했을 때 길이가 0인 경우 체크
+            if (!p || p === '[]' || p === 'null') return true;
+            if (!m || m === '[]' || m === 'null') return true;
+
+            const pArr = JSON.parse(p);
+            if (!Array.isArray(pArr) || pArr.length === 0) return true;
+
+            return false;
+        } catch (e) { return true; }
+    };
+
+    if (!isAlreadyInitialized || checkMissing()) {
+        console.log("Mobile Sync: Initializing or data invalid.");
+        await window.forceDataRefresh();
+    }
+    return true;
+})();
+
+// Removed old definition
+// (Cleared legacy block)
+
+// === End of Global Initialization ===
 
 window.initCommonMenus = (profile, logoutUser) => {
     // 약간의 지연을 주어 DOM 상태가 안정된 후 실행

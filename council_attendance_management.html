@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>평의회 출석 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -214,8 +214,68 @@
 
         @media (max-width: 768px) {
             .form-grid-header {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr;
+                gap: 12px;
             }
+
+            .page-header-container {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 5px;
+            }
+
+            .page-header-container h2 {
+                white-space: nowrap;
+                font-size: 1.3rem;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                /* Reduced padding */
+                font-size: 0.85rem;
+                /* Reduced font size */
+                flex: 1;
+                justify-content: center;
+                white-space: nowrap !important;
+                /* Prevent awkward wrapping */
+            }
+
+            .btn-group {
+                gap: 8px;
+            }
+
+            .register-form-container {
+                padding: 15px;
+            }
+
+            .attendance-table {
+                min-width: 800px;
+                /* Enable horizontal scroll */
+            }
+
+            .attendance-table th,
+            .attendance-table td {
+                white-space: nowrap !important;
+                /* Prevent awkward wrapping */
+                padding: 12px 8px !important;
+            }
+
+            .scroll-guide {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+                background-color: #f1f3f5;
+                padding: 10px 15px;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                color: #555;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* Desktop guide hidden */
+        .scroll-guide {
+            display: none;
         }
     </style>
 </head>
@@ -297,10 +357,10 @@
 
     <main class="main-content" style="padding: 40px 20px;">
         <div class="register-form-container">
-            <div
+            <div class="page-header-container"
                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px;">
                 <h2 style="color: var(--primary-color); margin: 0; font-family: 'Noto Serif KR', serif;">평의회 출석 관리</h2>
-                <div style="font-size: 0.9rem; color: #666;">꾸리아 평의회 참석 여부 등록 및 관리</div>
+                <div style="font-size: 0.9rem; color: #666; word-break: keep-all;">꾸리아 평의회 참석 여부 등록 및 관리</div>
             </div>
 
             <div class="form-grid-header">
@@ -324,23 +384,7 @@
                 </div>
                 <div class="form-group">
                     <label>기준일자</label>
-                    <div class="custom-dropdown-container">
-                        <div style="position: relative; display: flex; gap: 4px;">
-                            <div style="position: relative; flex: 1;">
-                                <input type="text" id="baseDateInput" placeholder="YYYY-MM-DD" autocomplete="off"
-                                    style="width: 100%; padding-right: 30px;">
-                                <i class="fas fa-chevron-down"
-                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;"></i>
-                            </div>
-                            <input type="date" id="nativeDatePicker"
-                                style="position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none;">
-                            <button type="button" class="btn btn-close" id="btnShowCalendar"
-                                style="padding: 10px; min-width: 44px;">
-                                <i class="fas fa-calendar-alt"></i>
-                            </button>
-                        </div>
-                        <div id="dateHistoryList" class="custom-dropdown-list"></div>
-                    </div>
+                    <input type="date" id="baseDateInput">
                 </div>
                 <div class="form-group">
                     <label>회차</label>
@@ -358,7 +402,14 @@
                             <i class="fas fa-search"></i> 조회
                         </button>
                     </div>
+
                 </div>
+            </div>
+
+            <!-- 모바일용 가로 스크롤 안내 -->
+            <div class="scroll-guide" style="margin-top: 5px;">
+                <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+                <span>출석체크 하려면 표를 <b>좌우로 밀어서(스크롤)</b> 확인해 주세요.</span>
             </div>
 
             <div style="overflow-x: auto;">
@@ -393,10 +444,10 @@
         </div>
     </main>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
-        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         // Global State
         let currentUser = null;
@@ -411,9 +462,6 @@
         const presidiumSelect = document.getElementById('presidiumSelect');
         const sessionInput = document.getElementById('sessionInput');
         const baseDateInput = document.getElementById('baseDateInput');
-        const nativeDatePicker = document.getElementById('nativeDatePicker');
-        const btnShowCalendar = document.getElementById('btnShowCalendar');
-        const dateHistoryList = document.getElementById('dateHistoryList');
         const attendanceBody = document.getElementById('attendanceBody');
         const btnSave = document.getElementById('btnSave');
         const btnDelete = document.getElementById('btnDelete');
@@ -531,8 +579,7 @@
         function updateHistoryList() {
             const allSaved = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
             const customSessionList = document.getElementById('customSessionList');
-            const dateHistoryList = document.getElementById('dateHistoryList');
-            if (!customSessionList || !dateHistoryList) return;
+            if (!customSessionList) return;
 
             const recordMap = new Map(); // session + '|' + date -> record
             allSaved.forEach(r => {
@@ -549,37 +596,20 @@
             });
 
             customSessionList.innerHTML = '';
-            dateHistoryList.innerHTML = '';
+
+            if (sortedKeys.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'dropdown-item';
+                emptyDiv.style.textAlign = 'center';
+                emptyDiv.style.color = '#888';
+                emptyDiv.innerHTML = '<span style="font-size:0.9rem;">저장된 과거 기록이 없습니다.<br>새로운 회차(숫자)를 직접 입력하세요.</span>';
+                customSessionList.appendChild(emptyDiv);
+                return;
+            }
 
             sortedKeys.forEach(key => {
                 const record = recordMap.get(key);
                 const [s, date] = key.split('|');
-
-                // 기준일자 목록 아이템: [일자 (회차회)]
-                const dateDiv = document.createElement('div');
-                dateDiv.className = 'dropdown-item';
-                dateDiv.innerHTML = `
-                    <span class="session-num">${date}</span>
-                    <span class="session-date">(${s}회차)</span>
-                `;
-                dateDiv.onclick = (e) => {
-                    e.stopPropagation();
-                    // 모든 필드 연동 (성당, 꾸리아 포함)
-                    if (record.church) {
-                        churchSelect.value = record.church;
-                        updateCuriaList();
-                        if (record.curia) {
-                            curiaSelect.value = record.curia;
-                            updatePresidiumList();
-                            if (record.presidium) presidiumSelect.value = record.presidium;
-                        }
-                    }
-                    baseDateInput.value = date;
-                    sessionInput.value = s;
-                    dateHistoryList.style.display = 'none';
-                    loadAttendanceList(); // 선택 즉시 조회
-                };
-                dateHistoryList.appendChild(dateDiv);
 
                 // 회차 목록 아이템 (기존 유지)
                 const sessDiv = document.createElement('div');
@@ -715,7 +745,7 @@
 
                 const finalOfficers = [];
                 for (const key in grouped) {
-                    const candidates = grouped[key].filter(o => o.appointmentDate <= baseDate);
+                    const candidates = grouped[key].filter(o => o.appointmentDate && o.appointmentDate <= baseDate);
                     if (candidates.length === 0) continue;
 
                     const activeAtBase = candidates.filter(o => !o.appointmentExpiryDate || o.appointmentExpiryDate >= baseDate);
@@ -900,39 +930,30 @@
             });
             presidiumSelect.addEventListener('change', clearAttendanceTable);
 
-            baseDateInput.addEventListener('click', () => {
-                updateHistoryList();
-                dateHistoryList.style.display = 'block';
-            });
-
-            btnShowCalendar.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                nativeDatePicker.showPicker();
-            });
-
-            nativeDatePicker.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    baseDateInput.value = e.target.value;
-                    sessionInput.value = ''; // 새로운 일자 선택 시 회차 초기화
-                    clearAttendanceTable();
-                    // 날짜만 선택했을 때는 회차 입력이 필요하므로 자동 조회는 하지 않음 (사용자 흐름 방해 방지)
-                }
-            });
-
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.custom-dropdown-container')) {
-                    dateHistoryList.style.display = 'none';
-                    customSessionList.style.display = 'none';
+                    const customSessionList = document.getElementById('customSessionList');
+                    if (customSessionList) customSessionList.style.display = 'none';
                 }
             });
 
+            const customSessionListLocal = document.getElementById('customSessionList');
             sessionInput.addEventListener('click', () => {
                 updateHistoryList();
-                customSessionList.style.display = 'block';
+                if (customSessionListLocal) customSessionListLocal.style.display = 'block';
             });
 
             sessionInput.addEventListener('input', clearAttendanceTable);
+
+            // [핵심 패치] 모바일 환경에서 키보드를 닫거나 다른 곳을 터치했을 때(포커스 잃음) 자동으로 조회 실행
+            sessionInput.addEventListener('blur', () => {
+                if (sessionInput.value.trim() !== '') {
+                    setTimeout(() => {
+                        loadAttendanceList();
+                    }, 200);
+                }
+            });
+
             baseDateInput.addEventListener('input', () => {
                 sessionInput.value = ''; // 직접 날짜 입력 시 회차 초기화
                 clearAttendanceTable();
@@ -948,6 +969,7 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (input === sessionInput) {
+                            if (customSessionListLocal) customSessionListLocal.style.display = 'none';
                             loadAttendanceList(); // 마지막 '회차' 필드에서 엔터 시 즉시 조회
                         } else {
                             const next = inputs[index + 1];

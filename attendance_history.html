@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출결내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260306_1635">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260306_1635">
     <style>
         /* Report specific styles */
         .summary-info {
@@ -73,6 +73,261 @@
         .attendance-table td.group-cell {
             background-color: #fdfdfd;
             font-weight: bold;
+        }
+
+        /* Sticky Column Styles */
+        .table-wrapper {
+            overflow-x: auto;
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .attendance-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            min-width: 600px;
+            /* Ensure columns have space */
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            border: 1px solid #ddd;
+            background: white;
+        }
+
+        .attendance-table th {
+            z-index: 20 !important;
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .attendance-table th:nth-child(1),
+        .attendance-table th:nth-child(2),
+        .attendance-table th:nth-child(4) {
+            z-index: 25 !important;
+            background-color: var(--primary-color) !important;
+        }
+
+        /* First Column (Session) */
+        .attendance-table th:nth-child(1),
+        .attendance-table td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            width: 60px;
+            min-width: 60px;
+        }
+
+        .attendance-table th:nth-child(1) {
+            background-color: var(--primary-color) !important;
+        }
+
+        .attendance-table td:nth-child(1) {
+            background-color: #fff !important;
+        }
+
+        /* Second Column (Date) */
+        .attendance-table th:nth-child(2),
+        .attendance-table td:nth-child(2) {
+            position: sticky;
+            left: 60px;
+            /* First col width */
+            z-index: 10;
+            width: 75px;
+            min-width: 75px;
+        }
+
+        .attendance-table th:nth-child(2) {
+            background-color: var(--primary-color) !important;
+        }
+
+        .attendance-table td:nth-child(2) {
+            background-color: #fff !important;
+        }
+
+        /* Fourth Column (Name) - Skipping 3rd (Rank) */
+        .attendance-table th:nth-child(4),
+        .attendance-table td:nth-child(4) {
+            position: sticky;
+            left: 135px;
+            /* 60 + 75 */
+            z-index: 10;
+            width: 100px;
+            min-width: 100px;
+            border-right: 2px solid #ddd !important;
+        }
+
+        .attendance-table th:nth-child(4) {
+            background-color: var(--primary-color) !important;
+        }
+
+        .attendance-table td:nth-child(4) {
+            background-color: #fff !important;
+        }
+
+        /* Group headers in sticky columns should stay opaque */
+        .attendance-table .group-cell.sticky-fix {
+            background-color: #f1f3f5 !important;
+            z-index: 15;
+        }
+
+        /* Custom Searchable Dropdown Styles */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .no-result {
+            padding: 12px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .filter-group input[type="text"],
+        .filter-group input[type="number"],
+        .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Gold Border for Presidium Input */
+        .filter-group input#presidiumInput {
+            border: 1.5px solid #d4a017 !important;
+            transition: all 0.2s;
+        }
+
+        .filter-group input#presidiumInput:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(212, 160, 23, 0.3);
+        }
+
+        .btn-group-bottom button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-group-bottom button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .summary-info {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .main-content {
+                padding: 85px 10px !important;
+            }
+
+            .container {
+                padding: 15px !important;
+            }
+
+            .filter-row {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 15px !important;
+            }
+
+            .filter-group {
+                width: 100% !important;
+            }
+
+            .filter-group div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+
+            .filter-group select,
+            .filter-group input {
+                width: 100% !important;
+                padding: 12px !important;
+            }
+
+            h3 {
+                font-size: 1.2rem;
+            }
+
+            .filter-section div:first-child {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px;
+            }
+
+            .filter-section button {
+                width: 100%;
+            }
+
+            .btn-group-bottom {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: center;
+                gap: 8px !important;
+                width: 100%;
+            }
+
+            .btn-group-bottom button {
+                min-width: 0 !important;
+                flex: 1 1 0;
+                height: 40px !important;
+                padding: 0 2px !important;
+                font-size: 0.85rem !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                overflow: hidden;
+            }
         }
 
         @media print {
@@ -187,15 +442,6 @@
                     <h3
                         style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
                         출결내역 보고서</h3>
-                    <button onclick="location.href='dashboard.html'"
-                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;">
-                    <button id="btnSearch"
-                        style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
-                    <button onclick="window.print()"
-                        style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
                 </div>
 
                 <div class="filter-row"
@@ -216,10 +462,11 @@
                     </div>
                     <div class="filter-group">
                         <label>쁘레시디움</label>
-                        <select id="presidiumFilter" disabled>
-                            <option value="">선택</option>
-                        </select>
-                        <input type="text" id="presidiumInput" style="display:none;" readonly>
+                        <div class="search-container" id="presidiumSearchContainer">
+                            <select id="presidiumFilter" style="display:none;"></select>
+                            <input type="text" id="presidiumInput" placeholder="선택" autocomplete="off">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                        </div>
                     </div>
                     <div class="filter-group">
                         <label>해당년도</label>
@@ -228,22 +475,31 @@
                     <div class="filter-group">
                         <label>기준회차</label>
                         <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="text" id="startSessionFilter" placeholder="회차 선택"
-                                style="width: 120px; text-align: center;" list="sessionList" autocomplete="off">
+                            <select id="startSessionFilter" style="width: 130px; text-align: center;">
+                                <option value="">회차 선택</option>
+                            </select>
                             <span>~</span>
-                            <input type="text" id="endSessionFilter" placeholder="회차 선택"
-                                style="width: 120px; text-align: center;" list="sessionList" autocomplete="off">
-                            <datalist id="sessionList"></datalist>
+                            <select id="endSessionFilter" style="width: 130px; text-align: center;">
+                                <option value="">회차 선택</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="filter-group">
-                        <label>기준일자</label>
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="date" id="startDateFilter" style="width: 130px;">
-                            <span>~</span>
-                            <input type="date" id="endDateFilter" style="width: 130px;">
-                        </div>
-                    </div>
+                </div>
+
+                <div class="btn-group-bottom"
+                    style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <button id="btnSearch"
+                        style="height: 42px; width: 130px; background-color: #d4a017; color: white; border: none; padding: 0 25px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
+                    <button onclick="window.print()"
+                        style="height: 42px; width: 130px; background-color: #333; color: white; border: none; padding: 0 25px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
+                    <button onclick="location.href='dashboard.html'"
+                        style="height: 42px; width: 130px; background-color: #666; color: white; border: none; padding: 0 25px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
 
@@ -251,7 +507,7 @@
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h2 id="reportTitle" style="margin-bottom: 10px;">주회합 출결내역 보고서</h2>
                     <h3 id="reportDateRange"
-                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 180px; font-weight: normal; font-size: 0.95rem; line-height: 1.4; word-break: keep-all; white-space: nowrap;">
                     </h3>
                 </div>
 
@@ -259,7 +515,8 @@
                     <div class="summary-card">
                         <h4>조회 요약</h4>
                         <div class="summary-item"><span>회차 범위</span><span id="sumSessionRange">-</span></div>
-                        <div class="summary-item"><span>총 회합 횟수</span><span id="sumTotalSessions">0회</span></div>
+                        <div class="summary-item"><span>총 회합 횟수</span><span id="sumTotalSessions">0회</span>
+                        </div>
                         <div class="summary-item"><span>간부</span><span id="sumOfficerStat">-</span></div>
                         <div class="summary-item"><span>단원</span><span id="sumMemberStat">-</span></div>
                         <div class="summary-item"><span>평균 출석률</span><span id="sumAvgRate">0%</span></div>
@@ -273,15 +530,15 @@
                     </div>
                 </div>
 
-                <div style="overflow-x: auto;">
-                    <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                <div class="table-wrapper">
+                    <table class="attendance-table">
                         <thead>
                             <tr>
-                                <th style="width: 70px;">회차</th>
-                                <th style="width: 110px;">날짜</th>
+                                <th>회차</th>
+                                <th>날짜</th>
                                 <th style="width: 80px;">직급</th>
-                                <th style="width: 100px;">성명</th>
-                                <th style="width: 120px;">세례명</th>
+                                <th style="width: 90px;">성명</th>
+                                <th style="min-width: 120px;">세례명</th>
                                 <th style="width: 80px;">출석여부</th>
                             </tr>
                         </thead>
@@ -291,32 +548,31 @@
             </div>
 
             <div id="noDataMsg"
-                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">해당 기간의 출결
+                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">해상 기간의 출결
                 데이터가 없습니다.</div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260306_1635"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
-        const presidiumFilter = document.getElementById('presidiumFilter');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
         const yearFilter = document.getElementById('yearFilter');
         const startSessionFilter = document.getElementById('startSessionFilter');
         const endSessionFilter = document.getElementById('endSessionFilter');
-        const startDateFilter = document.getElementById('startDateFilter');
-        const endDateFilter = document.getElementById('endDateFilter');
         const btnSearch = document.getElementById('btnSearch');
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
-        const sessionDatalist = document.getElementById('sessionList');
 
+        let currentPresidia = [];
         yearFilter.value = new Date().getFullYear();
 
         initAuthObserver((user, profile) => {
@@ -325,7 +581,7 @@
             isAdmin = (profile.role === 'admin' || profile.role === '관리자');
             setupControls(profile);
             if (!isAdmin) {
-                updateSessionDatalists();
+                updateSessionSelects();
             }
         }, () => {
             location.href = 'index.html';
@@ -334,7 +590,8 @@
         function setupControls(profile) {
             const ci = document.getElementById('churchInput');
             const cui = document.getElementById('curiaInput');
-            const pi = document.getElementById('presidiumInput');
+            const searchContainer = document.getElementById('presidiumSearchContainer');
+
             if (isAdmin) {
                 churchFilter.style.display = 'block'; ci.style.display = 'none'; churchFilter.disabled = false; loadChurches();
             } else {
@@ -342,13 +599,13 @@
                 ci.value = profile.churchName || profile.church || '';
                 curiaFilter.style.display = 'none'; cui.style.display = 'block';
                 cui.value = profile.curiaName || profile.curia || '';
-                presidiumFilter.style.display = 'none'; pi.style.display = 'block';
-                pi.value = profile.presidiumName || profile.presidium || '';
 
-                // Ensure currentUser reflects these values for other functions
+                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                presidiumInput.disabled = true;
+
                 currentUser.churchName = ci.value;
                 currentUser.curiaName = cui.value;
-                currentUser.presidiumName = pi.value;
+                currentUser.presidiumName = presidiumInput.value;
             }
         }
 
@@ -367,49 +624,106 @@
             };
             curiaFilter.onchange = () => {
                 const selectedChurch = churchFilter.value; const selectedCuria = curiaFilter.value;
-                if (!selectedCuria) { presidiumFilter.disabled = true; return; }
-                const prs = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
-                presidiumFilter.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                prs.forEach(p => presidiumFilter.add(new Option(p, p)));
-                presidiumFilter.disabled = false; updateSessionDatalists();
+                currentPresidia = [];
+                presidiumInput.value = '';
+                if (!selectedCuria) { presidiumInput.disabled = true; return; }
+
+                currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
+                presidiumInput.disabled = false;
+                renderDropdown('');
+                updateSessionSelects();
             };
-            presidiumFilter.onchange = updateSessionDatalists;
+
+            const renderDropdown = (searchText) => {
+                const filter = searchText.toLowerCase();
+                const filtered = currentPresidia.filter(p => p.toLowerCase().includes(filter));
+
+                presidiumDropdown.innerHTML = '';
+                if (filtered.length > 0) {
+                    filtered.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'dropdown-item';
+                        div.textContent = p;
+                        div.onclick = () => {
+                            presidiumInput.value = p;
+                            presidiumDropdown.style.display = 'none';
+                            updateSessionSelects();
+                        };
+                        presidiumDropdown.appendChild(div);
+                    });
+                } else {
+                    presidiumDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                }
+            };
+
+            presidiumInput.onfocus = () => {
+                if (!presidiumInput.disabled && currentPresidia.length > 0) {
+                    renderDropdown(presidiumInput.value);
+                    presidiumDropdown.style.display = 'block';
+                }
+            };
+
+            presidiumInput.oninput = (e) => {
+                renderDropdown(e.target.value);
+                presidiumDropdown.style.display = 'block';
+                updateSessionSelects();
+            };
+
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('presidiumSearchContainer').contains(e.target)) {
+                    presidiumDropdown.style.display = 'none';
+                }
+            });
         }
 
-        function updateSessionDatalists() {
+        function updateSessionSelects() {
             let church, curia, presidium;
             if (isAdmin) {
                 church = churchFilter.value;
                 curia = curiaFilter.value;
-                presidium = presidiumFilter.value;
+                presidium = presidiumInput.value;
             } else {
                 church = currentUser.churchName || currentUser.church || '';
                 curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = currentUser.presidiumName || currentUser.presidium || '';
+                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
             }
-            if (!church || !curia || !presidium) { sessionDatalist.innerHTML = ''; return; }
+
+            if (!church || !curia || !presidium) {
+                startSessionFilter.innerHTML = '<option value="">회차 선택</option>';
+                endSessionFilter.innerHTML = '<option value="">회차 선택</option>';
+                return;
+            }
             const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
             const uniqueSessions = []; const seen = new Set();
             attendanceList.filter(a => (a.presidium === presidium || a.presidiumName === presidium) && a.date && a.session)
                 .sort((a, b) => parseInt(b.session) - parseInt(a.session))
                 .forEach(a => { if (!seen.has(a.session)) { seen.add(a.session); uniqueSessions.push(a); } });
-            sessionDatalist.innerHTML = uniqueSessions.map(a => `<option value="${parseInt(a.session)}회 (${a.date})">`).join('');
+
+            const optionsHtml = '<option value="">회차 선택</option>' + uniqueSessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
+            startSessionFilter.innerHTML = optionsHtml;
+            endSessionFilter.innerHTML = optionsHtml;
         }
 
         function loadReport() {
-            const year = parseInt(yearFilter.value); const startSess = parseInt(startSessionFilter.value) || null; const endSess = parseInt(endSessionFilter.value) || null;
-            const start = startDateFilter.value; const end = endDateFilter.value;
+            const year = parseInt(yearFilter.value);
+            const startSess = parseInt(startSessionFilter.value) || null;
+            const endSess = parseInt(endSessionFilter.value) || null;
+
             let church, curia, presidium;
             if (isAdmin) {
                 church = churchFilter.value;
                 curia = curiaFilter.value;
-                presidium = presidiumFilter.value;
+                presidium = presidiumInput.value;
             } else {
                 church = currentUser.churchName || currentUser.church || '';
                 curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = currentUser.presidiumName || currentUser.presidium || '';
+                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
             }
-            if (!church || !curia || !presidium) return;
+
+            if (!church || !curia || !presidium) {
+                alert('성당, 꾸리아, 쁘레시디움을 모두 선택해 주세요.');
+                return;
+            }
 
             const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
             const membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
@@ -421,9 +735,9 @@
                 return term ? term.role : '단원';
             }
 
-            let filtered = attendanceList.filter(a => a.presidium === presidium && new Date(a.date).getFullYear() === year);
-            if (start) filtered = filtered.filter(a => a.date >= start); if (end) filtered = filtered.filter(a => a.date <= end);
-            if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess); if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
+            let filtered = attendanceList.filter(a => (a.presidium === presidium || a.presidiumName === presidium) && new Date(a.date).getFullYear() === year);
+            if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess);
+            if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
             filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
 
             if (filtered.length === 0) { reportContent.style.display = 'none'; noDataMsg.style.display = 'block'; return; }
@@ -458,7 +772,7 @@
 
                     const tr = document.createElement('tr');
                     if (firstRow) tr.classList.add('group-header-row');
-                    tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
+                    tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date.substring(5) : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
                     reportBody.appendChild(tr); firstRow = false;
                 });
             });
@@ -475,17 +789,10 @@
         }
 
         btnSearch.onclick = loadReport;
-        [yearFilter, startSessionFilter, endSessionFilter, startDateFilter, endDateFilter].forEach((f, i, arr) => {
+        [yearFilter, startSessionFilter, endSessionFilter].forEach((f, i, arr) => {
             f.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i < arr.length - 1) arr[i + 1].focus(); else loadReport(); } };
         });
 
-        function syncSession(input, target) {
-            const sess = parseInt(input.value); if (!sess) return;
-            const match = JSON.parse(localStorage.getItem('attendance_list') || '[]').find(a => a.presidium === (isAdmin ? presidiumFilter.value : currentUser.presidiumName) && parseInt(a.session) === sess);
-            if (match) target.value = match.date;
-        }
-        startSessionFilter.oninput = () => syncSession(startSessionFilter, startDateFilter);
-        endSessionFilter.oninput = () => syncSession(endSessionFilter, endDateFilter);
     </script>
 </body>
 

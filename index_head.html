@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>濡쒓렇??- ?덉???留덈━??愿由ъ떆?ㅽ뀥</title>
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+</head>
+
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <h1>?덉???留덈━??愿由ъ떆?ㅽ뀥</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" placeholder="?꾩씠?붾? ?낅젰?섏꽭?? required>
+                </div>
+                <div class="form-group">
+                    <input type="password" placeholder="鍮꾨?踰덊샇瑜??낅젰?섏꽭?? required>
+                </div>
+                <button type="submit" class="login-btn">濡쒓렇??/button>
+                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                    <a href="signup.html"
+                        style="color: var(--secondary-color); text-decoration: none; font-weight: 500;">怨꾩젙???놁쑝?좉???
+                        ?뚯썝媛??/a>
+                    <button type="button" id="exitBtn"
+                        style="margin-top: 10px; background: none; border: 1px solid #ddd; color: #888; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s;">
+                        <i class="fas fa-power-off"></i> ?쒖뒪??醫낅즺
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        // ?쒖뒪??醫낅즺 踰꾪듉 ?몃뱾??        document.getElementById('exitBtn')?.addEventListener('click', function () {
+            if (confirm('?덉쟾??醫낅즺瑜??꾪빐 釉뚮씪?곗? ??쓣 ?レ쑝?쒓쿋?듬땲源?\n(?뺤씤???꾨Ⅴ?쒕㈃ 醫낅즺 ?덈궡媛 ?쒖떆?⑸땲??)')) {
+                // 釉뚮씪?곗? 蹂댁븞 ?뺤콉???遺遺꾩쓽 寃쎌슦 ???섎룞 ?リ린媛 ?꾩슂?⑥쓣 ?덈궡
+                alert('?덉쟾?섍쾶 醫낅즺?섏뿀?듬땲?? ?댁젣 釉뚮씪?곗? ???먮뒗 李쎌쓣 ?レ븘二쇱꽭?? ?댁슜??二쇱뀛??媛먯궗?⑸땲??');
+                window.close(); // ?쒕룄???대낫吏留??섎룞 ?リ린 ?덈궡媛 ??以묒슂
+            }
+        });
+    </script>
+    <script src="script.js?v=20260303_1255_fix"></script>
+    <script type="module">
+        import { loginUser, initAuthObserver } from "./auth.js?v=20260303_1210";
+
+        // Auto-redirect if already logged in
+        initAuthObserver((user, profile) => {
+            if (user) {
+                window.location.href = "dashboard.html";
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const username = this.querySelector('input[type="text"]').value;
+            const password = this.querySelector('input[type="password"]').value;
+
+            // Construct email from username
+            const email = `${username}@legion.app`;
+
+            try {
+                await loginUser(email, password);
+                // Redirect is handled by checking auth state on dashboard, 
+                // but we can force move here for UX speed
+                window.location.href = "dashboard.html";
+            } catch (error) {
+                alert("濡쒓렇???ㅽ뙣: ?꾩씠???먮뒗 鍮꾨?踰덊샇瑜??뺤씤?댁＜?몄슂.");
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,13 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간편활동보고 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=20260306_2320">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #2e7d32;
+            --secondary-color: #d4a017;
+        }
+
         .easy-container {
             max-width: 1000px;
             margin: 100px auto 100px;
@@ -50,13 +55,15 @@
 
         /* Admin style selects in info bar */
         .info-select {
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
             border: 1px solid #ddd;
             font-weight: bold;
             font-size: 0.9rem;
             color: var(--primary-color);
             background: #fdfdfd;
+            height: 38px;
+            box-sizing: border-box;
         }
 
         .entry-card {
@@ -230,56 +237,167 @@
         }
 
         .bottom-action {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
+            position: fixed !important;
+            bottom: 25px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 94% !important;
+            max-width: 550px !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(15px) !important;
+            padding: 12px 20px !important;
+            border-radius: 30px !important;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 12px !important;
+            z-index: 10000 !important;
+            border: 1.5px solid rgba(212, 160, 23, 0.3) !important;
+            flex-wrap: nowrap !important;
+        }
+
+        .btn-submit,
+        .btn-delete-main,
+        .btn-close-floating {
+            padding: 8px 20px !important;
+            border-radius: 35px !important;
+            font-size: 0.88rem !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            transition: all 0.3s !important;
+            white-space: nowrap !important;
+            border: none !important;
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12) !important;
+            height: 36px !important;
+            /* 미세하게 더 컴팩트한 높이 */
         }
 
         .btn-submit {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 15px 60px;
-            border-radius: 40px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            box-shadow: 0 10px 25px rgba(46, 125, 50, 0.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s;
+            background: #2e7d32 !important;
+            color: white !important;
         }
 
         .btn-submit:hover {
-            transform: scale(1.05);
-            background: #1b5e20;
-            box-shadow: 0 15px 30px rgba(46, 125, 50, 0.4);
+            background: #1b5e20 !important;
+            transform: translateY(-2px) !important;
         }
 
         .btn-delete-main {
-            background: #c53030;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 40px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            box-shadow: 0 6px 15px rgba(197, 48, 48, 0.3);
-            cursor: pointer;
+            background: #d32f2f !important;
+            color: white !important;
             display: none;
-            /* Initial hidden */
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
         }
 
         .btn-delete-main:hover {
-            transform: scale(1.05);
-            background: #9b2c2c;
-            box-shadow: 0 10px 20px rgba(197, 48, 48, 0.4);
+            background: #b71c1c !important;
+            transform: translateY(-2px) !important;
+        }
+
+        .btn-close-floating {
+            background: #718096 !important;
+            color: white !important;
+        }
+
+        .btn-close-floating:hover {
+            background: #4a5568 !important;
+            transform: translateY(-2px) !important;
+        }
+
+        /* [추가] 커스텀 검색 드롭다운 스타일 */
+        .search-container {
+            position: relative;
+            width: 100%;
+            min-width: 180px;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white !important;
+            border: 1.5px solid #d4a017 !important;
+            border-top: none !important;
+            border-radius: 0 0 8px 8px;
+            margin-top: -2px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 10px 12px !important;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #eee !important;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #333;
+            background: white !important;
+        }
+
+        .dropdown-item:hover {
+            background-color: #fcf4d9 !important;
+            color: #d4a017 !important;
+            font-weight: bold;
+        }
+
+        .no-result {
+            padding: 10px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive Design for Mobile */
+        @media (max-width: 768px) {
+            .bottom-action {
+                bottom: 25px;
+                gap: 8px;
+                padding: 12px 15px;
+            }
+        }
+
+        .entry-card {
+            padding: 20px;
+        }
+
+        .user-info-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .info-labels {
+            gap: 15px;
+        }
+
+        /* Header optimization for mobile */
+        .entry-card>div:first-child h2 {
+            font-size: 1.4rem !important;
+            /* Reduce title size */
+        }
+
+        .entry-card>div:first-child .btn-setup {
+            padding: 6px 12px !important;
+            /* Reduce close button size */
+            font-size: 0.9rem !important;
+        }
+
+        .item-name,
+        .item-cat,
+        .entry-card p {
+            word-break: keep-all !important;
+            /* Natural Korean wrapping */
+            line-height: 1.4;
         }
 
         /* Preset Settings Modal Styles */
@@ -418,6 +536,63 @@
             transform: scale(1.02);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
+
+        /* 커스텀 모달 스타일 추가 */
+        .custom-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            word-break: keep-all;
+            /* 한글 줄바꿈 최적화 */
+        }
+
+        .custom-modal-message {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .custom-modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .custom-modal-btn {
+            padding: 10px 25px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .custom-modal-btn-confirm {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .custom-modal-btn-cancel {
+            background-color: #e9ecef;
+            color: #495057;
+        }
     </style>
 </head>
 
@@ -509,51 +684,55 @@
                     </p>
                 </div>
                 <button onclick="location.href='dashboard.html'" class="btn-setup"
-                    style="background: #a0aec0; color: white; padding: 10px 20px;">
-                    <i class="fas fa-times"></i> 닫기
+                    style="background: transparent; color: #a0aec0; width: 40px; height: 40px; border-radius: 50%; padding: 0; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-left: 10px; flex-shrink: 0;">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <!-- User Info Area (Select for Admin, Fixed for Member) -->
             <!-- User Info Area (Select for Admin/Officer, Label-like for Member) -->
             <div class="user-info-bar">
-                <div class="info-labels" id="adminSelectors" style="width: 100%; margin-right: 20px;">
+                <div class="info-labels" id="adminSelectors" style="width: 100%;">
                     <div class="info-item">
                         <div class="label">성당</div>
-                        <select id="selChurch" class="info-select"></select>
+                        <select id="selChurch" class="info-select" style="width: 180px;"></select>
                     </div>
                     <div class="info-item" id="curiaItem">
                         <div class="label">꾸리아</div>
-                        <select id="selCuria" class="info-select"></select>
+                        <select id="selCuria" class="info-select" style="width: 180px;"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">쁘레시디움</div>
-                        <select id="selPr" class="info-select"></select>
+                        <div class="search-container" id="prSearchContainer" style="width: 180px;">
+                            <input type="text" id="prInput" class="info-select" placeholder="입력/선택" autocomplete="off"
+                                style="border: 1.5px solid #d4a017 !important; width: 100%;">
+                            <input type="hidden" id="selPr">
+                            <div id="prDropdown" class="custom-dropdown"></div>
+                        </div>
                     </div>
                     <div class="info-item">
                         <div class="label">단원 성명</div>
-                        <select id="selMember" class="info-select"></select>
+                        <select id="selMember" class="info-select" style="width: 180px;"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">보고 주회합 회차</div>
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <select id="selDate" class="info-select"></select>
-                            <button id="btnSearch" class="btn-setup"
-                                style="padding: 4px 10px; font-size: 0.8rem; background: var(--primary-color); color: white;">조회</button>
-                        </div>
+                        <select id="selDate" class="info-select" style="width: 180px;"></select>
                     </div>
                 </div>
-                <button id="btnOpenSetup" class="btn-setup">
-                    <i class="fas fa-cog"></i> 항목 설정
-                </button>
             </div>
 
             <!-- Entry Area Content -->
             <div id="entryContent">
-                <div class="setup-header" style="margin-top: 20px;">
+                <div class="setup-header"
+                    style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin:0;"><i class="fas fa-list-check"></i> 나의 활동 목록</h3>
-                    <span style="font-size: 0.85rem; color: #999;">설정된 활동만 표시됩니다.</span>
+                    <button id="btnOpenSetup" class="btn-setup"
+                        style="background: var(--secondary-color); color: white;">
+                        <i class="fas fa-cog"></i> 항목 설정
+                    </button>
                 </div>
+                <span style="font-size: 0.85rem; color: #999; display: block; margin-top: 5px; margin-bottom: 10px;">설정된
+                    활동만 표시됩니다.</span>
 
                 <div id="activityGrid" class="activity-grid">
                     <!-- Dynamic Items -->
@@ -578,12 +757,15 @@
         </div>
     </div>
 
-    <div class="bottom-action" style="display:flex; gap: 15px;">
-        <button id="btnDelete" class="btn-delete-main">
-            <i class="fas fa-trash-alt"></i> 삭제하기
-        </button>
+    <div class="bottom-action">
         <button id="btnSave" class="btn-submit">
-            <i class="fas fa-check-circle"></i> 활동 보고 저장
+            <i class="fas fa-save"></i> 저장
+        </button>
+        <button id="btnDelete" class="btn-delete-main">
+            <i class="fas fa-trash-alt"></i> 삭제
+        </button>
+        <button onclick="location.href='dashboard.html'" class="btn-close-floating">
+            <i class="fas fa-times"></i> 닫기
         </button>
     </div>
 
@@ -603,9 +785,21 @@
         </div>
     </div>
 
+    <!-- Custom Modal for Alerts/Confirms -->
+    <div id="customModal" class="custom-modal">
+        <div class="custom-modal-content">
+            <div id="customModalMessage" class="custom-modal-message"></div>
+            <div class="custom-modal-buttons">
+                <button id="customModalConfirm" class="custom-modal-btn custom-modal-btn-confirm">확인</button>
+                <button id="customModalCancel" class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260306_2320"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let currentPrAttendance = null; // Current week info
@@ -614,10 +808,10 @@
         let tempInputData = {}; // [추가] 항목 설정 시 입력 데이터 임시 보관용
 
         // --- Auth & Init ---
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
             if (!currentUser) {
-                alert('로그인이 필요합니다.');
+                await showCustomAlert('로그인이 필요합니다.');
                 location.href = 'index.html';
                 return;
             }
@@ -641,10 +835,43 @@
         function setupUnifiedSelectors(isAdmin, isOfficer) {
             const selChurch = document.getElementById('selChurch');
             const selCuria = document.getElementById('selCuria');
-            const selPr = document.getElementById('selPr');
+            const prInput = document.getElementById('prInput');
+            const prDropdown = document.getElementById('prDropdown');
+            const selPr = document.getElementById('selPr'); // Hidden
             const selMember = document.getElementById('selMember');
             const selDate = document.getElementById('selDate');
             const btnSearch = document.getElementById('btnSearch');
+
+            // --- Search Listeners ---
+            prInput.onfocus = () => { if (!prInput.disabled) showPrDropdown(); };
+            prInput.oninput = () => { showPrDropdown(prInput.value); };
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#prSearchContainer')) prDropdown.style.display = 'none';
+            });
+
+            window.showPrDropdown = (filter = '') => {
+                const c = selChurch.value;
+                const cu = selCuria.value;
+                if (!cu) return;
+                const list = getPresidia(c, cu).map(p => p.name).sort();
+                const filtered = filter ? list.filter(n => n.includes(filter)) : list;
+                if (filtered.length === 0) {
+                    prDropdown.innerHTML = '<div class="no-result">일치하는 쁘레시디움 없음</div>';
+                } else {
+                    prDropdown.innerHTML = filtered.map(n => `<div class="dropdown-item" data-name="${n}">${n}</div>`).join('');
+                    prDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                        item.onclick = () => {
+                            const name = item.dataset.name;
+                            prInput.value = name;
+                            selPr.value = name;
+                            prDropdown.style.display = 'none';
+                            syncDates(name);
+                            syncMembers(name);
+                        };
+                    });
+                }
+                prDropdown.style.display = 'block';
+            };
 
             // --- Shared Listeners ---
             selMember.onchange = () => {
@@ -669,10 +896,7 @@
                 syncMembers(selPr.value);
             };
 
-            btnSearch.onclick = () => {
-                loadExistingData();
-                alert('해당 주차의 기록을 조회했습니다.');
-            };
+            // [삭제] btnSearch가 제거되었으므로 관련 이벤트 핸들러도 삭제합니다.
 
             // --- Population Logic by Role ---
             if (isAdmin) {
@@ -689,17 +913,14 @@
                 };
 
                 selCuria.onchange = () => {
-                    const c = selChurch.value;
-                    const cu = selCuria.value;
-                    const presidia = getPresidia(c, cu);
-                    selPr.innerHTML = presidia.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                    selPr.onchange();
-                };
-
-                selPr.onchange = () => {
-                    const prName = selPr.value;
-                    syncDates(prName);
-                    syncMembers(prName);
+                    // Curia 변경 시 쁘레시디움 입력값 초기화
+                    prInput.value = '';
+                    selPr.value = '';
+                    prDropdown.style.display = 'none';
+                    // 회차 및 단원 목록 비움
+                    selDate.innerHTML = '';
+                    selMember.innerHTML = '';
+                    renderEntryForm(); // 빈 폼 렌더링
                 };
 
                 selChurch.onchange();
@@ -1156,8 +1377,49 @@
             setupModal.style.display = 'none';
         };
 
+        // --- Custom Dialog Logic ---
+        window.showCustomAlert = (message) => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const msgEl = document.getElementById('customModalMessage');
+                const confirmBtn = document.getElementById('customModalConfirm');
+                const cancelBtn = document.getElementById('customModalCancel');
+
+                msgEl.innerText = message;
+                cancelBtn.style.display = 'none';
+                modal.style.display = 'flex';
+
+                confirmBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    resolve();
+                };
+            });
+        };
+
+        window.showCustomConfirm = (message) => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const msgEl = document.getElementById('customModalMessage');
+                const confirmBtn = document.getElementById('customModalConfirm');
+                const cancelBtn = document.getElementById('customModalCancel');
+
+                msgEl.innerText = message;
+                cancelBtn.style.display = 'inline-block';
+                modal.style.display = 'flex';
+
+                confirmBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    resolve(true);
+                };
+                cancelBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    resolve(false);
+                };
+            });
+        };
+
         // --- Save Logic ---
-        document.getElementById('btnSave').onclick = () => {
+        document.getElementById('btnSave').onclick = async () => {
             if (!currentPrAttendance) return;
 
             const inputs = document.querySelectorAll('.easy-input');
@@ -1197,7 +1459,8 @@
 
             // [추가] 필수값 검증 (매칭 실패 방지)
             if (!targetName || !prVal) {
-                return alert('단원 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+                await showCustomAlert('단원 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+                return;
             }
 
             // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
@@ -1239,7 +1502,8 @@
             }
 
             if (!isAttended) {
-                return alert('해당 주회합에 출석(또는 지각) 처리된 단원만 간편 활동 보고를 등록할 수 있습니다.\n먼저 출석 상태를 확인해 주세요.');
+                await showCustomAlert('해당 주회합에 출석(또는 지각) 처리된 단원만 간편 활동 보고를 등록할 수 있습니다.\n먼저 출석 상태를 확인해 주세요.');
+                return;
             }
 
             const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
@@ -1292,12 +1556,12 @@
             filteredRecords.push(newRecord);
             localStorage.setItem('activity_records', JSON.stringify(filteredRecords));
 
-            alert('활동 보고가 성공적으로 저장되었습니다.');
+            await showCustomAlert('활동 보고가 성공적으로 저장되었습니다.');
             location.href = 'dashboard.html';
         };
 
         // --- Delete Logic ---
-        document.getElementById('btnDelete').onclick = () => {
+        document.getElementById('btnDelete').onclick = async () => {
             if (!currentPrAttendance) return;
 
             const role = (currentUser.role || '').toLowerCase();
@@ -1311,7 +1575,7 @@
             const date = currentPrAttendance.date;
             const session = currentPrAttendance.session;
 
-            if (!confirm(`[${targetName}] 단원의 ${date} (${session}회) 활동 보고를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+            if (!(await showCustomConfirm(`[${targetName}] 단원의 ${date} (${session}회) 활동 보고를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`))) {
                 return;
             }
 
@@ -1321,12 +1585,12 @@
             );
 
             if (records.length === filtered.length) {
-                alert('삭제할 데이터가 이미 없거나 찾을 수 없습니다.');
+                await showCustomAlert('삭제할 데이터가 이미 없거나 찾을 수 없습니다.');
                 return;
             }
 
             localStorage.setItem('activity_records', JSON.stringify(filtered));
-            alert('활동 보고가 삭제되었습니다.');
+            await showCustomAlert('활동 보고가 삭제되었습니다.');
 
             // UI 초기화
             const inputs = document.querySelectorAll('.easy-input');

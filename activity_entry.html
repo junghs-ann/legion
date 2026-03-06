@@ -1,19 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동보고 등록 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=20260306_1720">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .entry-container {
             max-width: 1200px;
             margin: 180px auto 0;
             /* 바닥 마진 제거 */
-            padding: 20px 20px 250px;
-            /* 바닥 패딩을 250px로 대폭 확대하여 스크롤 확보 */
+            padding: 20px 20px 350px;
+            /* 바닥 패딩을 350px로 더 확대하여 하단 버튼이 절대 가리지 않게 함 */
         }
 
         .info-card {
@@ -213,16 +213,22 @@
 
         .summary-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 15px 30px;
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            bottom: 25px;
+            /* 화면 하단에서 띄워서 시스템 바 간섭 방지 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 15px 20px;
+            border-radius: 25px;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 9999;
+            border: 1.5px solid rgba(212, 160, 23, 0.2);
         }
 
         .total-info {
@@ -241,7 +247,7 @@
         }
 
         .total-value {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: bold;
             color: var(--primary-color);
         }
@@ -314,6 +320,53 @@
         .btn-save:disabled {
             background: #ccc;
             cursor: not-allowed;
+            box-shadow: none;
+            animation: none;
+        }
+
+        /* [추가] 프리미엄 버튼 공통 스타일 */
+        .btn-premium {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 25px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+            flex: 1;
+            max-width: 140px;
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-premium:active {
+            transform: translateY(0);
+        }
+
+        .btn-premium.save {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-premium.delete {
+            background: #dc3545;
+            color: white;
+            display: none;
+            /* JS에서 제어 */
+        }
+
+        .btn-premium.close {
+            background: #6c757d;
+            color: white;
         }
 
         @media (max-width: 768px) {
@@ -322,16 +375,100 @@
             }
 
             .summary-bar {
-                padding: 10px 15px;
-            }
-
-            .total-info {
+                padding: 15px;
+                flex-direction: column;
                 gap: 15px;
             }
 
-            .total-value {
-                font-size: 1.1rem;
+            .total-info {
+                width: 100%;
+                justify-content: space-around;
+                gap: 10px;
             }
+
+            .action-group-bottom {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                flex-wrap: nowrap;
+            }
+
+            .btn-premium {
+                padding: 10px 15px;
+                font-size: 0.95rem;
+                min-width: 80px;
+            }
+        }
+
+        @keyframes pulse-save {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            }
+
+            50% {
+                transform: scale(1.03);
+                /* 확대 배율 축소 */
+                box-shadow: 0 10px 30px rgba(46, 125, 50, 0.5);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            }
+        }
+
+        /* [추가] 커스텀 검색 드롭다운 스타일 */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white !important;
+            border: 1.5px solid #d4a017 !important;
+            border-top: none !important;
+            border-radius: 0 0 8px 8px;
+            margin-top: -2px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px !important;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #eee !important;
+            text-align: left;
+            font-size: 0.95rem;
+            color: #333;
+            background: white !important;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none !important;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item.active {
+            background-color: #fcf4d9 !important;
+            color: #d4a017 !important;
+            font-weight: bold;
+        }
+
+        .no-result {
+            padding: 12px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
         }
     </style>
 </head>
@@ -410,17 +547,16 @@
     </header>
 
     <div class="entry-container">
-        <div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="color: var(--primary-color); margin: 0;"><i class="fas fa-edit"></i> 단원 활동 보고 등록</h2>
-            <div style="display: flex; gap: 10px;">
-                <button type="button" id="btnSaveQuick" class="btn-quick-save">
-                    <i class="fas fa-save"></i> 지금 바로 저장
-                </button>
-                <button onclick="location.href='dashboard.html'" class="btn"
-                    style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px;">
-                    <i class="fas fa-times"></i> 닫기
-                </button>
-            </div>
+        <div
+            style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; border-bottom: 2px solid var(--secondary-color); padding-bottom: 15px;">
+            <h2 style="color: var(--primary-color); margin: 0; white-space: nowrap; font-size: 1.5rem;"><i
+                    class="fas fa-edit"></i> 단원 활동 보고</h2>
+            <button onclick="location.href='dashboard.html'"
+                style="background: none; border: none; color: #999; font-size: 1.5rem; cursor: pointer; transition: all 0.2s; padding: 5px; display: flex; align-items: center; justify-content: center;"
+                onmouseover="this.style.color='#333'; this.style.transform='rotate(90deg)'"
+                onmouseout="this.style.color='#999'; this.style.transform='rotate(0deg)'" title="나가기">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
         <!-- 필터 영역: 성당, 꾸리아, 쁘레시디움, 회차, 날짜, 성명 -->
@@ -439,9 +575,12 @@
             </div>
             <div class="form-group">
                 <label>쁘레시디움</label>
-                <select id="presidiumSelect">
-                    <option value="">쁘레시디움 선택</option>
-                </select>
+                <div class="search-container" id="presidiumSearchContainer">
+                    <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                        style="border: 1.5px solid #d4a017 !important; border-radius: 6px !important;">
+                    <input type="hidden" id="presidiumSelect">
+                    <div id="presidiumDropdown" class="custom-dropdown"></div>
+                </div>
             </div>
             <div class="form-group">
                 <label>주회합 날짜</label>
@@ -455,9 +594,12 @@
             </div>
             <div class="form-group">
                 <label>단원 성명</label>
-                <select id="memberSelect" style="border-color: var(--primary-color); font-weight: bold;">
-                    <option value="">단원 선택</option>
-                </select>
+                <div class="search-container" id="memberSearchContainer">
+                    <input type="text" id="memberInput" placeholder="단원 입력 또는 선택" autocomplete="off"
+                        style="border: 1.5px solid #d4a017 !important; border-radius: 6px !important;">
+                    <input type="hidden" id="memberSelect">
+                    <div id="memberDropdown" class="custom-dropdown"></div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -509,14 +651,23 @@
                 <span class="total-value" id="grandTotalCount">0 <span>건</span></span>
             </div>
         </div>
-        <button id="btnSaveReport" class="btn-save">
-            <i class="fas fa-check-circle"></i> 활동 보고 저장
-        </button>
+        <div class="action-group-bottom" style="display: flex; gap: 10px;">
+            <button id="btnSaveReport" class="btn-premium save">
+                <i class="fas fa-save"></i> 저 장
+            </button>
+            <button id="btnDeleteReport" class="btn-premium delete">
+                <i class="fas fa-trash-alt"></i> 삭 제
+            </button>
+            <button onclick="location.href='dashboard.html'" class="btn-premium close">
+                <i class="fas fa-times"></i> 닫 기
+            </button>
+        </div>
     </div>
 
+    <script src="script.js?v=20260306_1750"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver } from "./auth.js?v=20260306_1720";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260306_1720";
 
         let currentUser = null;
         let activitySchemaMap = {}; // 성당별 스키마 맵
@@ -525,10 +676,14 @@
 
         const churchSelect = document.getElementById('churchSelect');
         const curiaSelect = document.getElementById('curiaSelect');
-        const presidiumSelect = document.getElementById('presidiumSelect');
-        const reportDateSelect = document.getElementById('reportDate'); // Changed from reportDateInput
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+        const presidiumSelect = document.getElementById('presidiumSelect'); // Hidden
+        const memberInput = document.getElementById('memberInput');
+        const memberDropdown = document.getElementById('memberDropdown');
+        const memberSelect = document.getElementById('memberSelect'); // Hidden
+        const reportDateSelect = document.getElementById('reportDate');
         const sessionInput = document.getElementById('sessionNumber');
-        const memberSelect = document.getElementById('memberSelect');
 
         // 인증 상태 감시자 초기화
         initAuthObserver((user, profile) => {
@@ -569,7 +724,8 @@
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
+                opt.value = c;
+                opt.textContent = c;
                 churchSelect.appendChild(opt);
             });
 
@@ -585,18 +741,20 @@
                 curiaSelect.value = userCuria;
                 curiaSelect.disabled = true;
 
-                updatePresidiumList(userChurch, userCuria);
-                const userPr = currentUser.presidiumName || currentUser.presidium;
-                presidiumSelect.value = userPr;
-                presidiumSelect.disabled = true;
+                // updatePresidiumList(userChurch, userCuria); // Custom dropdown will handle this
+                presidiumInput.value = currentUser.presidiumName || currentUser.presidium;
+                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium;
+                presidiumInput.disabled = true;
+
 
                 updateMeetingDates(); // [수정] 출석 날짜 목록 로드 (내부에서 초기화 처리 포함)
 
                 if (role === 'member' || role === '단원') {
                     // 일반 단원은 본인 이름 고정
                     setTimeout(() => {
+                        memberInput.value = `[단원] ${currentUser.memberName || currentUser.name} (${currentUser.baptismalName || ''})`;
                         memberSelect.value = currentUser.memberName || currentUser.name;
-                        memberSelect.disabled = true;
+                        memberInput.disabled = true;
                         // 입력을 위해 폼 렌더링 호출
                         handleChurchSelection(userChurch);
                     }, 100);
@@ -620,7 +778,8 @@
             const curiae = getCuriae(churchName);
             curiae.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
+                opt.value = c;
+                opt.textContent = c;
                 curiaSelect.appendChild(opt);
             });
         }
@@ -632,14 +791,12 @@
          * @param {string} curiaName - 선택된 꾸리아 이름.
          */
         function updatePresidiumList(churchName, curiaName) {
-            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+            // This function is now mostly for internal logic, the UI is handled by showPresidiumDropdown
+            // presidiumSelect is a hidden input, so we just clear its value
+            presidiumSelect.value = '';
+            presidiumInput.value = '';
             if (!churchName || !curiaName) return;
-            const presidia = getPresidia(churchName, curiaName);
-            presidia.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.name; opt.textContent = p.name;
-                presidiumSelect.appendChild(opt);
-            });
+            // The actual list for dropdown is generated by showPresidiumDropdown
         }
 
         /**
@@ -650,7 +807,8 @@
             const presidium = presidiumSelect.value;
             reportDateSelect.innerHTML = '<option value="">날짜 선택</option>';
             sessionInput.value = '';
-            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+            memberSelect.value = ''; // Clear hidden memberSelect
+            memberInput.value = ''; // Clear memberInput
 
             if (!presidium) return;
 
@@ -701,7 +859,9 @@
                 sessionInput.value = '';
             }
 
-            memberSelect.innerHTML = '<option value="">단원 선택</option>';
+            // memberSelect is a hidden input, so we don't clear its options, just its value
+            memberSelect.value = '';
+            memberInput.value = '';
             if (!presidium || !reportDate) return;
 
             const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
@@ -745,6 +905,8 @@
             members.forEach(m => combinedSource.push({ id: m.id, name: m.name, role: '단원', baptismalName: m.baptismalName }));
 
             // 3. 목록 렌더링 (출석한 'P' 상태인 사람만 순서대로 추가)
+            // We don't render to memberSelect directly, but store the filtered list for showMemberDropdown
+            const availableMembersForDropdown = [];
             let presentCount = 0;
             combinedSource.forEach(m => {
                 const data = attendanceRecord.attendanceData[m.id] || attendanceRecord.attendanceData[m.name];
@@ -752,14 +914,13 @@
 
                 const status = (typeof data === 'object') ? data.status : data;
                 if (status === 'P' || status === 'L') {
-                    const opt = document.createElement('option');
-                    opt.value = m.name;
-                    opt.dataset.uid = m.id; // ID 속성 추가하여 검증 시 사용 용이하게 함
-                    opt.textContent = `[${m.role}] ${m.name} (${m.baptismalName || ''})`;
-                    memberSelect.appendChild(opt);
+                    availableMembersForDropdown.push(m);
                     presentCount++;
                 }
             });
+            // Store this list globally or pass it to showMemberDropdown
+            memberSelect.dataset.availableMembers = JSON.stringify(availableMembersForDropdown);
+
 
             console.log(`[MemberList Update] Mirroring attendance record: ${presentCount} members loaded.`);
 
@@ -797,26 +958,28 @@
             churchSelect.addEventListener('change', (e) => {
                 updateCuriaList(e.target.value);
                 updatePresidiumList('', ''); // 쁘레시디움 목록 초기화
-                memberSelect.innerHTML = '<option value="">단원 선택</option>'; // 단원 목록 초기화
+                memberSelect.value = ''; // 단원 목록 초기화
+                memberInput.value = '';
                 handleChurchSelection(e.target.value);
             });
 
             // 꾸리아 선택 변경 시 쁘레시디움 목록 업데이트
             curiaSelect.addEventListener('change', (e) => {
                 updatePresidiumList(churchSelect.value, e.target.value);
-                memberSelect.innerHTML = '<option value="">단원 선택</option>'; // 단원 목록 초기화
+                memberSelect.value = ''; // 단원 목록 초기화
+                memberInput.value = '';
             });
 
             // 쁘레시디움 선택 변경 시 출석 날짜 목록 업데이트
-            presidiumSelect.addEventListener('change', () => {
-                updateMeetingDates();
-            });
+            // This is now triggered by the custom dropdown selection
+            // presidiumSelect.addEventListener('change', updateMeetingDates);
 
             // 주회합 날짜 변경 시 단원 목록 업데이트
             reportDateSelect.addEventListener('change', updateMemberList);
 
             // [추가] 단원 선택 변경 시 기존 데이터 로드
-            memberSelect.addEventListener('change', loadExistingReport);
+            // This is now triggered by the custom dropdown selection
+            // memberSelect.addEventListener('change', loadExistingReport);
 
             // 활동 입력 필드 변경 시 총계 계산
             const grid = document.getElementById('activityGrid');
@@ -871,8 +1034,78 @@
             });
 
             // 저장 버튼 클릭 이벤트
-            document.getElementById('btnSaveReport').onclick = saveReport;
-            document.getElementById('btnSaveQuick').onclick = saveReport; // 상단 퀵 저장 버튼 연결
+            presidiumInput.addEventListener('focus', () => {
+                if (!presidiumInput.disabled) showPresidiumDropdown();
+            });
+            presidiumInput.addEventListener('input', () => {
+                showPresidiumDropdown(presidiumInput.value);
+            });
+            memberInput.addEventListener('focus', () => {
+                if (!memberInput.disabled) showMemberDropdown();
+            });
+            memberInput.addEventListener('input', () => {
+                showMemberDropdown(memberInput.value);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#presidiumSearchContainer')) presidiumDropdown.style.display = 'none';
+                if (!e.target.closest('#memberSearchContainer')) memberDropdown.style.display = 'none';
+            });
+
+            document.getElementById('btnSaveReport').addEventListener('click', saveReport);
+            const btnDelete = document.getElementById('btnDeleteReport');
+            if (btnDelete) btnDelete.addEventListener('click', deleteReport);
+        }
+
+        function showPresidiumDropdown(filter = '') {
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            if (!curia) return;
+
+            const list = getPresidia(church, curia).map(p => p.name).sort();
+            const filtered = filter ? list.filter(n => n.includes(filter)) : list;
+
+            if (filtered.length === 0) {
+                presidiumDropdown.innerHTML = '<div class="no-result">일치하는 쁘레시디움이 없습니다.</div>';
+            } else {
+                presidiumDropdown.innerHTML = filtered.map(name => `<div class="dropdown-item" data-name="${name}">${name}</div>`).join('');
+                presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const name = item.dataset.name;
+                        presidiumInput.value = name;
+                        presidiumSelect.value = name;
+                        presidiumDropdown.style.display = 'none';
+                        updateMeetingDates();
+                    });
+                });
+            }
+            presidiumDropdown.style.display = 'block';
+        }
+
+        function showMemberDropdown(filter = '') {
+            const availableMembers = JSON.parse(memberSelect.dataset.availableMembers || '[]');
+            const filtered = filter ? availableMembers.filter(m =>
+                m.name.includes(filter) || (m.baptismalName && m.baptismalName.includes(filter))
+            ) : availableMembers;
+
+            if (filtered.length === 0) {
+                memberDropdown.innerHTML = '<div class="no-result">일치하는 단원이 없거나 출석자가 아닙니다.</div>';
+            } else {
+                memberDropdown.innerHTML = filtered.map(m => `<div class="dropdown-item" data-name="${m.name}" data-uid="${m.id}">${`[${m.role}] ${m.name} (${m.baptismalName || ''})`}</div>`).join('');
+                memberDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        memberDropdown.style.display = 'none'; // Close other
+                        const name = item.dataset.name;
+                        const uid = item.dataset.uid;
+                        memberInput.value = item.textContent; // Display full text
+                        memberSelect.value = name; // Store just the name for logic
+                        memberSelect.dataset.uid = uid; // Store UID for attendance check
+                        // Trigger load
+                        loadExistingReport();
+                    });
+                });
+            }
+            memberDropdown.style.display = 'block';
         }
 
         /**
@@ -893,15 +1126,15 @@
             const absState = document.getElementById('absentState');
             const grid = document.getElementById('activityGrid');
             const btnSaveReport = document.getElementById('btnSaveReport');
-            const btnSaveQuick = document.getElementById('btnSaveQuick');
+            const btnDeleteReport = document.getElementById('btnDeleteReport');
+            const isAdmin = currentUser.role?.toLowerCase() === 'admin' || currentUser.role === '관리자';
 
             if (!memberName || !date || !session) {
                 absState.style.display = 'none';
                 grid.style.display = 'grid';
                 btnSaveReport.disabled = false;
                 btnSaveReport.style.opacity = '1';
-                btnSaveQuick.disabled = false;
-                btnSaveQuick.style.opacity = '1';
+                btnDeleteReport.style.display = 'none'; // Hide delete if no member/date
                 calculateTotals();
                 return;
             }
@@ -916,8 +1149,9 @@
 
             let isAttended = false;
             if (attRecord && attRecord.attendanceData) {
-                const selectedOpt = memberSelect.options[memberSelect.selectedIndex];
-                const uid = selectedOpt ? selectedOpt.dataset.uid : null;
+                // memberSelect가 input으로 바뀌었으므로 dataset.uid 등은 직접 넘겨받은 값을 사용해야 함
+                // dropdown - click 이벤트에서 uid를 어딘가 저장해둬야 함. 일단 memberSelect.dataset.uid에 저장하도록 수정함
+                const uid = memberSelect.dataset.uid;
 
                 const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
                 if (data) {
@@ -944,8 +1178,6 @@
                 grid.style.display = 'none';
                 btnSaveReport.disabled = true;
                 btnSaveReport.style.opacity = '0.5';
-                btnSaveQuick.disabled = true;
-                btnSaveQuick.style.opacity = '0.5';
                 calculateTotals();
                 return; // 이후 로직 수행 안함
             } else {
@@ -953,8 +1185,6 @@
                 grid.style.display = 'grid';
                 btnSaveReport.disabled = false;
                 btnSaveReport.style.opacity = '1';
-                btnSaveQuick.disabled = false;
-                btnSaveQuick.style.opacity = '1';
             }
 
             // 2. 저장된 기록 검색
@@ -968,19 +1198,36 @@
             // 3. 데이터가 있으면 폼에 채우기
             if (record && record.counts) {
                 console.log(`[LoadReport] Found existing record for ${memberName} (${session}차)`);
-                inputs.forEach(input => {
-                    const itemName = input.dataset.name;
-                    if (record.counts[itemName] !== undefined) {
-                        input.value = record.counts[itemName];
-                    }
-                });
+                btnDeleteReport.style.display = isAdmin ? 'flex' : 'none'; // Only Admin can see Delete button
             } else {
                 console.log(`[LoadReport] No existing record for ${memberName} (${session}차)`);
+                btnDeleteReport.style.display = 'none'; // Hide delete button
             }
 
             // 4. 합계 계산 및 정렬 적용 (데이터 로드 후 즉시 반영)
             calculateTotals();
             if (currentSortMode === 'activity') reorderCards();
+        }
+
+        /**
+         * @function deleteReport
+         * @description 현재 선택된 주회합/단원의 활동 보고 기록을 삭제합니다.
+         */
+        function deleteReport() {
+            const memberName = memberSelect.value;
+            const date = reportDateSelect.value;
+            const session = sessionInput.value;
+
+            if (!confirm(`${memberName} 단원의 ${date} (${session}회) 활동보고를 삭제하시겠습니까?`)) return;
+
+            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const filtered = records.filter(r =>
+                !(r.memberName === memberName && r.date === date && r.session === session)
+            );
+
+            localStorage.setItem('activity_records', JSON.stringify(filtered));
+            alert('삭제되었습니다.');
+            loadExistingReport(); // UI 갱신
         }
 
         /**

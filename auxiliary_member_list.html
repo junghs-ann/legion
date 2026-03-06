@@ -1,27 +1,32 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>협조단원 명부 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <title>협조단원 내역 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260303_1255_fix">
     <style>
         /* Report specific styles */
         .attendance-table th {
             background-color: var(--primary-color);
             color: white;
-            padding: 12px 4px;
-            font-size: 0.9rem;
+            padding: 10px 8px;
+            /* Increased side padding */
+            font-size: 0.85rem;
             border: 1px solid #ddd;
+            white-space: nowrap;
+            /* Prevent vertical wrapping */
+            text-align: center;
         }
 
         .attendance-table td {
-            padding: 10px 4px;
+            padding: 8px 6px;
             border: 1px solid #ddd;
             text-align: center;
+            font-size: 0.9rem;
         }
 
         /* Grouping Style */
@@ -73,6 +78,154 @@
                 background: white;
             }
         }
+
+        /* 모바일 및 가로 보기(Landscape) 대응 - 브레이크포인트를 1024px로 확대 */
+        @media (max-width: 1024px) {
+            .attendance-table {
+                min-width: 1100px;
+                font-size: 0.8rem !important;
+                border-collapse: separate;
+                border-spacing: 0;
+            }
+
+            .attendance-table th,
+            .attendance-table td {
+                padding: 8px 4px !important;
+                background-color: #fff;
+            }
+
+            .attendance-table th {
+                background-color: var(--primary-color) !important;
+            }
+
+            /* 1행 헤더 (행동단원/협조단원) - 고정 제외하여 엉킴 방지 */
+            .attendance-table thead tr:first-child th {
+                position: static !important;
+            }
+
+            /* 가로 스크롤 시 이름 열 고정 */
+            /* 1번째 열 (행동단원 성명) */
+            .attendance-table th:nth-child(1),
+            .attendance-table td:nth-child(1) {
+                position: sticky !important;
+                left: 0;
+                z-index: 10 !important;
+                background-color: #fff !important;
+                border-right: 2px solid #ddd !important;
+                width: 100px !important;
+                min-width: 100px !important;
+            }
+
+            .attendance-table th:nth-child(1) {
+                background-color: var(--primary-color) !important;
+                z-index: 20 !important;
+            }
+
+            /* 3번째 열 (협조단원 성명) */
+            /* 행동단원 비중이 크므로 2열(세례명)은 고정하지 않고 3열만 추가 고정 */
+            .attendance-table th:nth-child(3),
+            .attendance-table td:nth-child(3) {
+                position: sticky !important;
+                left: 100px;
+                /* 1열(100px)만 고정하고 2열은 스크롤됨 */
+                z-index: 10 !important;
+                background-color: #fff !important;
+                border-left: 2px solid #ddd !important;
+                /* 구분 경계 추가 */
+                border-right: 2px solid #ddd !important;
+                width: 100px !important;
+                min-width: 100px !important;
+                box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            }
+
+            .attendance-table th:nth-child(3) {
+                background-color: var(--primary-color) !important;
+                z-index: 20 !important;
+            }
+
+            .attendance-table thead tr:nth-child(2) th:nth-child(1) {
+                z-index: 15 !important;
+            }
+
+            .table-responsive {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            /* 버튼 레이아웃 조정 */
+            .button-row {
+                flex-direction: row !important;
+                /* 가로로 배치 */
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .button-row button {
+                width: auto !important;
+                flex: 1;
+                max-width: 120px;
+                height: 40px !important;
+                padding: 0 10px !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* 커스텀 드롭다운 스타일 */
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .custom-dropdown div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .custom-dropdown div:hover {
+            background-color: #f8f9fa;
+        }
+
+        .custom-dropdown div:last-child {
+            border-bottom: none;
+        }
+
+        /* 입력창 스타일 */
+        .filter-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
     </style>
 </head>
 
@@ -108,7 +261,7 @@
                     <li><a href="event_history.html">행사관리내역</a></li>
                     <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
                     <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
-                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 내역</a></li>
                     <li><a href="member_status_active.html">단원 현황</a></li>
                     <li><a href="officer_status.html">간부현황</a></li>
                     <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
@@ -149,112 +302,115 @@
         </ul>
     </header>
 
-    <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
+    <div class="main-content" style="padding: 100px 15px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 25px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto;">
             <div class="filter-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
                         style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
-                        협조단원 명부 내역
+                        협조단원 명부
                     </h3>
-                    <button onclick="location.href='dashboard.html'"
-                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
                 </div>
 
                 <div class="filter-row"
                     style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                    <div class="filter-group">
+                    <div class="filter-group" style="width: 100%; max-width: 200px;">
                         <label>성당</label>
-                        <select id="churchFilter" disabled>
+                        <select id="churchFilter" disabled style="width: 100%; padding: 8px;">
                             <option value="">선택</option>
                         </select>
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group" style="width: 100%; max-width: 200px;">
                         <label>꾸리아</label>
-                        <select id="curiaFilter" disabled>
+                        <select id="curiaFilter" disabled style="width: 100%; padding: 8px;">
                             <option value="">선택</option>
                         </select>
                     </div>
-                    <div class="filter-group">
-                        <label>쁘레시디움</label>
-                        <select id="presidiumFilter" disabled>
-                            <option value="">선택</option>
-                        </select>
+                    <div class="filter-group" style="width: 100%; max-width: 250px;">
+                        <label>쁘레시디움 (검색 가능)</label>
+                        <div class="custom-select-wrapper">
+                            <input type="text" id="presidiumSearch" placeholder="쁘레시디움 검색..." autocomplete="off">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                            <input type="hidden" id="presidiumFilter">
+                        </div>
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group" style="width: 100%; max-width: 150px;">
                         <label>행동단원명</label>
                         <select id="activeMemberFilter"
-                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
+                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                             <option value="all">전체</option>
                         </select>
                     </div>
-                    <div class="filter-group">
+                    <div class="filter-group" style="width: 100%; max-width: 120px;">
                         <label>상태 구분</label>
                         <select id="statusFilter"
-                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
+                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                             <option value="all">전체</option>
                             <option value="active">활동중</option>
                             <option value="retired">퇴단/전출</option>
                         </select>
                     </div>
-                    <div class="filter-group"
-                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px;">
-                        <button id="btnSearch" class="btn btn-secondary"
-                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
-                        <button onclick="window.print()" class="btn-print"
-                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
-                    </div>
+                </div>
+
+                <!-- 버튼 영역을 필터 바로 아래로 이동 -->
+                <div class="button-row" style="margin-top: 20px; border-top: none; padding-top: 0;">
+                    <button id="btnSearch"
+                        style="background-color: var(--secondary-color); color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">조회</button>
+                    <button onclick="window.print()"
+                        style="background-color: #333; color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">인쇄</button>
+                    <button onclick="location.href='dashboard.html'"
+                        style="background-color: #666; color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">닫기</button>
                 </div>
             </div>
+        </div>
 
-            <div id="reportContent" style="display: none; margin-top: 30px;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 id="reportTitle" style="margin-bottom: 10px;">협조단원 명부 내역</h2>
-                    <h3 id="reportOrgInfo"
-                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
-                    </h3>
-                </div>
-
-                <div style="overflow-x: auto;">
-                    <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th colspan="2">행 동 단 원</th>
-                                <th colspan="11">협 조 단 원</th>
-                            </tr>
-                            <tr>
-                                <th style="width: 100px;">성명</th>
-                                <th style="width: 120px;">세례명</th>
-                                <th style="width: 80px;">성명</th>
-                                <th style="width: 100px;">세례명</th>
-                                <th style="width: 40px;">성별</th>
-                                <th style="width: 90px;">입단일</th>
-                                <th style="width: 60px;">축일</th>
-                                <th style="width: 90px;">생년월일</th>
-                                <th style="width: 110px;">전화번호</th>
-                                <th style="width: 150px;">주 소</th>
-                                <th style="width: 50px;">구 분</th>
-                                <th style="width: 90px;">퇴단일</th>
-                                <th>특이 및 참고사항</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportBody"></tbody>
-                    </table>
-                </div>
+        <div id="reportContent" style="display: none; margin-top: 30px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 id="reportTitle" style="margin-bottom: 10px;">협조단원 내역</h2>
+                <h3 id="reportOrgInfo"
+                    style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                </h3>
             </div>
 
+            <div class="table-responsive">
+                <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th colspan="2">행 동 단 원</th>
+                            <th colspan="11">협 조 단 원</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 100px; min-width: 100px;">성명</th>
+                            <th style="width: 120px; min-width: 120px;">세례명</th>
+                            <th style="width: 100px; min-width: 100px;">성명</th>
+                            <th style="width: 120px; min-width: 120px;">세례명</th>
+                            <th style="width: 60px; min-width: 60px;">성별</th>
+                            <th style="width: 100px; min-width: 100px;">입단일</th>
+                            <th style="width: 70px; min-width: 70px;">축일</th>
+                            <th style="width: 100px; min-width: 100px;">생년월일</th>
+                            <th style="width: 110px; min-width: 110px;">전화번호</th>
+                            <th style="width: 200px; min-width: 150px;">주 소</th>
+                            <th style="width: 60px; min-width: 60px;">구 분</th>
+                            <th style="width: 100px; min-width: 100px;">퇴단일</th>
+                            <th style="min-width: 150px;">특이 및 참고사항</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportBody"></tbody>
+                </table>
+            </div>
             <div id="noDataMsg"
-                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">
+                style="text-align: center; color: #666; padding: 40px; display: none; font-size: 1.1rem;">
                 등록된 협조단원 정보가 없습니다.
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
+        // 전역 변수 선언 (TDZ 방지를 위해 상단 이동)
         let currentUser = null;
         let isAdmin = false;
         let membersList = [];
@@ -263,6 +419,8 @@
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumSearch = document.getElementById('presidiumSearch');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
         const presidiumFilter = document.getElementById('presidiumFilter');
         const activeMemberFilter = document.getElementById('activeMemberFilter');
         const statusFilter = document.getElementById('statusFilter');
@@ -270,24 +428,6 @@
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
-
-        initAuthObserver((user, profile) => {
-            currentUser = profile;
-
-            // [New] Role-based Menu Control & Common Menus
-            if (window.initCommonMenus) {
-                window.initCommonMenus(currentUser, () => {
-                    import("./auth.js").then(auth => auth.logoutUser());
-                });
-            }
-
-            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
-            loadInitialData();
-            setupControls(profile);
-            setupEventListeners();
-        }, () => {
-            location.href = 'index.html';
-        });
 
         function loadInitialData() {
             membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
@@ -325,7 +465,7 @@
         }
 
         function loadChurches() {
-            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(Boolean).sort();
             churchFilter.innerHTML = '<option value="">선택</option>';
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -336,11 +476,12 @@
             churchFilter.onchange = () => {
                 const selected = churchFilter.value;
                 curiaFilter.innerHTML = '<option value="">선택</option>';
-                presidiumFilter.innerHTML = '<option value="">선택</option>';
+                presidiumSearch.value = '';
+                presidiumFilter.value = '';
                 curiaFilter.disabled = !selected;
-                presidiumFilter.disabled = true;
+                presidiumSearch.disabled = true;
                 if (selected) {
-                    const curiae = [...new Set(presidiaList.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
+                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === selected).map(p => p.curiaName || p.curia))].filter(Boolean).sort();
                     curiae.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = opt.textContent = c;
@@ -353,34 +494,25 @@
             curiaFilter.onchange = () => {
                 const selectedChurch = churchFilter.value;
                 const selectedCuria = curiaFilter.value;
-                presidiumFilter.innerHTML = '<option value="">선택</option>';
-                presidiumFilter.disabled = !selectedCuria;
-                if (selectedChurch && selectedCuria) {
-                    const prs = presidiaList.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
-                    prs.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = opt.textContent = p;
-                        presidiumFilter.appendChild(opt);
-                    });
-                }
+                presidiumSearch.value = '';
+                presidiumFilter.value = '';
+                presidiumSearch.disabled = !selectedCuria;
                 updateActiveMemberFilter();
             };
-
-            presidiumFilter.onchange = updateActiveMemberFilter;
         }
 
         function updateActiveMemberFilter() {
-            let presidium;
+            let presidiumValue;
             if (isAdmin) {
-                presidium = presidiumFilter.value;
+                presidiumValue = presidiumFilter.value;
             } else {
-                presidium = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumValue = currentUser.presidiumName || currentUser.presidium || '';
             }
 
             activeMemberFilter.innerHTML = '<option value="all">전체</option>';
-            if (!presidium) return;
+            if (!presidiumValue) return;
 
-            const listInPresidium = auxiliaryList.filter(a => a.presidium === presidium);
+            const listInPresidium = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidiumValue);
             const activeMemberIds = [...new Set(listInPresidium.map(a => a.activeMemberId))];
 
             activeMemberIds.forEach(id => {
@@ -414,7 +546,7 @@
             const targetStatus = statusFilter.value;
             const todayStr = new Date().toISOString().split('T')[0];
 
-            let filtered = auxiliaryList.filter(a => a.presidium === presidium);
+            let filtered = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidium);
 
             if (targetId !== 'all') {
                 filtered = filtered.filter(a => String(a.activeMemberId) === String(targetId));
@@ -501,10 +633,49 @@
             });
         }
 
+        function renderDropdown(filterText = '') {
+            const selectedChurch = churchFilter.value;
+            const selectedCuria = curiaFilter.value;
+            if (!selectedChurch || !selectedCuria) return;
+
+            const filtered = presidiaList.filter(p =>
+                (p.churchName || p.church) === selectedChurch &&
+                (p.curiaName || p.curia) === selectedCuria &&
+                (p.presidiumName || p.presidium || '').includes(filterText)
+            ).map(p => p.presidiumName || p.presidium).sort();
+
+            presidiumDropdown.innerHTML = '';
+            if (filtered.length > 0) {
+                filtered.forEach(name => {
+                    const div = document.createElement('div');
+                    div.textContent = name;
+                    div.onclick = () => {
+                        presidiumSearch.value = name;
+                        presidiumFilter.value = name;
+                        presidiumDropdown.style.display = 'none';
+                        updateActiveMemberFilter();
+                    };
+                    presidiumDropdown.appendChild(div);
+                });
+                presidiumDropdown.style.display = 'block';
+            } else {
+                presidiumDropdown.style.display = 'none';
+            }
+        }
+
         function setupEventListeners() {
             btnSearch.onclick = loadReport;
 
-            const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumFilter, activeMemberFilter, statusFilter] : [activeMemberFilter, statusFilter]);
+            presidiumSearch.onfocus = () => renderDropdown(presidiumSearch.value);
+            presidiumSearch.oninput = () => renderDropdown(presidiumSearch.value);
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select-wrapper')) {
+                    presidiumDropdown.style.display = 'none';
+                }
+            });
+
+            const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumSearch, activeMemberFilter, statusFilter] : [activeMemberFilter, statusFilter]);
             fields.forEach((f, idx) => {
                 f.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
@@ -518,6 +689,24 @@
                 });
             });
         }
+
+        // 마지막에 초기화 호출
+        initAuthObserver((user, profile) => {
+            currentUser = profile;
+
+            if (window.initCommonMenus) {
+                window.initCommonMenus(currentUser, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
+            loadInitialData();
+            setupControls(profile);
+            setupEventListeners();
+        }, () => {
+            location.href = 'index.html';
+        });
     </script>
 </body>
 

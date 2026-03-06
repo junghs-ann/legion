@@ -1,161 +1,273 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아듀또리움 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             max-width: 950px;
-            margin: 0 auto;
-            text-align: left;
+            margin: 20px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .form-title {
-            font-family: 'Noto Serif KR', serif;
-            color: var(--primary-color);
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 15px;
-            font-size: 1.5rem;
+        .form-title-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid #bda86c;
+            /* 하단 골드/브라운 라인 */
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+        }
+
+        .form-title-group {
+            display: flex;
+            flex-direction: column;
+            /* 소제목이 아래로 출력되도록 */
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .form-title {
+            font-size: 1.4rem;
+            /* 약간 축소 */
+            color: #2e7d32;
+            margin: 0;
+            font-weight: bold;
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+        }
+
+        .form-subtitle {
+            font-size: 0.85rem;
+            color: #666;
+            /* 회색으로 변경 */
+            font-weight: 500;
+        }
+
+        .btn-close-header {
+            background-color: #757575;
+            color: white;
+            border: none;
+            padding: 6px 15px;
+            /* 축소 */
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            /* 축소 */
+            cursor: pointer;
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+        }
+
+        .unit-info-section {
+            margin-bottom: 40px;
+        }
+
+        .section-label {
+            color: #2e7d32;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            /* 기본 3열 */
+            gap: 20px 30px;
+        }
+
+        .form-group.full-width {
+            grid-column: span 3;
         }
 
         @media (max-width: 768px) {
             .form-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .form-group.full-width {
+                grid-column: span 1;
+            }
+
+            .register-form-container {
+                padding: 15px;
             }
         }
 
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 500;
+            font-weight: 600;
             color: #333;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        input,
+        select,
+        textarea {
             width: 100%;
-            padding: 10px;
+            padding: 10px 12px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 0.95rem;
-            background-color: white;
-        }
-
-        .form-group input[readonly],
-        .form-group select[disabled] {
-            background-color: #f5f5f5;
-        }
-
-        .section-header {
-            grid-column: 1 / -1;
-            margin-top: 20px;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            color: var(--primary-color);
-            font-weight: 600;
             font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #2e7d32;
+            outline: none;
+            box-shadow: 0 0 4px rgba(46, 125, 50, 0.2);
         }
 
         .form-btn-group {
-            margin-top: 30px;
-            text-align: center;
             display: flex;
             justify-content: center;
             gap: 15px;
+            margin-top: 40px;
         }
 
         .btn-submit {
-            background-color: var(--primary-color);
+            background-color: #2e7d32;
             color: white;
             border: none;
-            padding: 12px 40px;
+            padding: 10px 30px;
+            /* 기존 12px 60px에서 대폭 축소 */
             border-radius: 4px;
             font-size: 1rem;
-            font-weight: 600;
+            /* 약간 축소 */
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
 
         .btn-submit:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
+            background-color: #1b5e20;
         }
 
-        .btn-close {
-            background-color: #757575;
+        .btn-delete {
+            background-color: #dc3545;
+            padding: 10px 20px;
+            /* 축소 */
         }
 
+        /* 테이블 최적화 */
         .table-container {
-            margin-top: 40px;
             overflow-x: auto;
+            /* 가로 스크롤 허용 */
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 15px;
         }
 
         .status-table {
             width: 100%;
-            border-collapse: collapse;
+            table-layout: fixed;
+            /* 레이아웃 고정 */
+            min-width: 550px;
+            /* 최소 너비 확보 */
             font-size: 0.85rem;
+            border-collapse: collapse;
         }
 
         .status-table th,
         .status-table td {
-            padding: 12px;
-            border: 1px solid #ddd;
+            padding: 8px 4px;
             text-align: center;
+            border-bottom: 1px solid #eee;
+            border-right: 1px solid #eee;
         }
 
         .status-table th {
             background-color: #f8f9fa;
-            font-weight: 600;
+            word-break: keep-all;
+            /* 제목 단어 단위 줄바꿈 */
+            white-space: normal;
         }
 
-        .status-table tr:hover {
-            background-color: #f1f1f1;
-            cursor: pointer;
+        /* 성명 컬럼 고정 */
+        .status-table th:nth-child(1),
+        .status-table td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: #f8f9fa;
+            width: 95px;
+            border-right: 2px solid #ddd;
         }
 
-        .badge-retired {
-            background-color: #f44336;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
+        .status-table td:nth-child(1) {
+            background-color: #fff;
+            font-weight: 500;
+        }
+
+        /* 개별 컬럼 너비 */
+        .status-table th:nth-child(2),
+        .status-table td:nth-child(2),
+        /* 입단 */
+        .status-table th:nth-child(3),
+        .status-table td:nth-child(3) {
+            /* 퇴단 */
+            width: 85px;
+        }
+
+        .status-table th:nth-child(4),
+        .status-table td:nth-child(4) {
+            /* 상태 */
+            width: 50px;
+        }
+
+        .status-table th:nth-child(5),
+        .status-table td:nth-child(5) {
+            /* 수정 */
+            width: 50px;
+        }
+
+        .status-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #2e7d32;
+            padding: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
         }
 
         .badge-active {
-            background-color: #4CAF50;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .badge-retired {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -233,118 +345,126 @@
         </ul>
     </header>
 
-    <div class="main-content" style="padding: 120px 20px;">
+    <div class="main-content">
         <div class="register-form-container">
-            <h2 class="form-title">
-                <div>
-                    아듀또리움 관리
-                    <span style="font-size: 0.9rem; color: #666; font-weight: normal;">아듀또리움 단원 정보 및 이력 관리</span>
+            <!-- 헤더 영역 -->
+            <div class="form-title-container">
+                <div class="form-title-group">
+                    <h2 class="form-title">아듀또리움 관리</h2>
+                    <span class="form-subtitle">아듀또리움 단원 정보 및 이력 관리</span>
                 </div>
-                <button type="button" class="btn-submit btn-close"
-                    style="padding: 8px 20px; font-size: 0.9rem; margin: 0;" onclick="location.href='dashboard.html'">닫
-                    기</button>
-            </h2>
+                <button type="button" class="btn-close-header" onclick="location.href='dashboard.html'">닫 기</button>
+            </div>
 
-            <form id="adjutoriumForm">
-                <div class="form-grid">
-                    <!-- 소속 정보 -->
-                    <div class="section-header"><i class="fas fa-sitemap"></i> 소속 정보</div>
-
-                    <div class="form-group">
-                        <label>성당</label>
-                        <select id="churchSelect" name="church" required>
-                            <option value="">성당 선택</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>꾸리아(Cu.)</label>
-                        <select id="curiaSelect" name="curia" required disabled>
-                            <option value="">꾸리아 선택</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>쁘레시디움(Pr.)</label>
-                        <select id="presidiumSelect" name="presidium" required disabled>
-                            <option value="">쁘레시디움 선택</option>
-                        </select>
-                    </div>
-
-                    <!-- 단원 정보 -->
-                    <div class="section-header"><i class="fas fa-user-check"></i> 아듀또리움 단원 상세 정보</div>
-
-                    <div class="form-group">
-                        <label>성명</label>
-                        <input type="text" id="nameInput" name="name" list="adjNameDatalist" required
-                            placeholder="성명 (또는 성명(세례명) 선택)" autocomplete="off">
-                        <datalist id="adjNameDatalist"></datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>세례명</label>
-                        <input type="text" name="baptismalName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>성별</label>
-                        <select name="gender" required>
-                            <option value="남">남</option>
-                            <option value="여">여</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>축일</label>
-                        <input type="text" name="feastDate" placeholder="MM.DD">
-                    </div>
-                    <div class="form-group">
-                        <label>생년월일</label>
-                        <input type="text" name="birthDate" placeholder="YYYY-MM-DD">
-                    </div>
-                    <div class="form-group">
-                        <label>연락처</label>
-                        <input type="tel" name="phone" placeholder="010-0000-0000">
-                    </div>
-                    <div class="form-group" style="grid-column: span 3;">
-                        <label>주소</label>
-                        <input type="text" name="address">
-                    </div>
-                    <div class="form-group">
-                        <label>입단일</label>
-                        <input type="text" name="admissionDate" placeholder="YYYY-MM-DD" required>
-                    </div>
-                    <div class="form-group">
-                        <label>퇴단일</label>
-                        <input type="text" id="withdrawalDate" name="withdrawalDate" placeholder="YYYY-MM-DD">
-                    </div>
-                    <div></div>
-                    <div class="form-group" style="grid-column: span 3;">
-                        <label>특이 및 참고사항</label>
-                        <textarea name="notes" rows="3" placeholder="기타 참고사항을 입력하세요"></textarea>
+            <form id="adjutoriumForm" onsubmit="return false;" autocomplete="off">
+                <!-- 소속 정보 섹션 -->
+                <div class="unit-info-section">
+                    <div class="section-label"><i class="fas fa-sitemap"></i> 소속 정보</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>성당</label>
+                            <select id="churchSelect" name="church" required>
+                                <option value="">성당 선택</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>꾸리아(Cu.)</label>
+                            <select id="curiaSelect" name="curia" required disabled>
+                                <option value="">꾸리아 선택</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>쁘레시디움(Pr.)</label>
+                            <select id="presidiumSelect" name="presidium" required disabled>
+                                <option value="">쁘레시디움 선택</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-btn-group">
-                    <input type="hidden" name="id" id="memberId">
-                    <button type="submit" class="btn-submit">저 장</button>
-                    <button type="button" id="btnDelete" class="btn-submit"
-                        style="background-color: #f44336; display: none;">삭 제</button>
+                <!-- 아듀또리움 단원 상세 정보 섹션 (직접 입력형) -->
+                <div class="unit-info-section">
+                    <div class="section-label"><i class="fas fa-user-check"></i> 아듀또리움 단원 상세 정보</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>성명</label>
+                            <input type="text" id="nameInput" name="name" list="adjNameDatalist" required
+                                placeholder="성명 입력 또는 선택" autocomplete="off">
+                            <datalist id="adjNameDatalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label>세례명</label>
+                            <input type="text" id="baptismalName" name="baptismalName">
+                        </div>
+                        <div class="form-group">
+                            <label>성별</label>
+                            <select id="gender" name="gender">
+                                <option value="남">남</option>
+                                <option value="여">여</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>축일</label>
+                            <input type="text" id="feastDate" name="feastDate" placeholder="MM.DD">
+                        </div>
+                        <div class="form-group">
+                            <label>생년월일</label>
+                            <input type="text" id="birthDate" name="birthDate" placeholder="YYYY-MM-DD">
+                        </div>
+                        <div class="form-group">
+                            <label>연락처</label>
+                            <input type="tel" id="phone" name="phone" placeholder="010-0000-0000">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>주소</label>
+                            <input type="text" id="address" name="address">
+                        </div>
+
+                        <div class="form-group">
+                            <label>입단일</label>
+                            <input type="text" id="admissionDate" name="admissionDate" placeholder="YYYY-MM-DD"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>퇴단일</label>
+                            <input type="text" id="withdrawalDate" name="withdrawalDate" placeholder="YYYY-MM-DD">
+                        </div>
+                        <div></div> <!-- Spacer for 3-column alignment -->
+
+                        <div class="form-group full-width">
+                            <label>특이 및 참고사항</label>
+                            <textarea id="notes" name="notes" rows="4" placeholder="기타 참고사항을 입력하세요"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-btn-group">
+                        <input type="hidden" name="id" id="memberId">
+                        <button type="button" id="btnSave" class="btn-submit">저 장</button>
+                        <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭
+                            제</button>
+                    </div>
                 </div>
             </form>
 
-            <div class="table-container">
-                <div class="section-header"><i class="fas fa-list"></i> 아듀또리움 단원 현황 및 이력</div>
+            <!-- 명단 리스트 섹션 -->
+            <div id="historySection" class="table-container">
+                <div class="section-label" style="margin-bottom: 5px; border-bottom: none;"><i class="fas fa-list"></i>
+                    아듀또리움 단원 명단</div>
                 <table class="status-table">
                     <thead>
                         <tr>
-                            <th>성명</th>
-                            <th>세례명</th>
-                            <th>성별</th>
-                            <th>연락처</th>
+                            <th>성명 (세례명)</th>
                             <th>입단일</th>
                             <th>퇴단일</th>
                             <th>상태</th>
+                            <th>수정</th>
                         </tr>
                     </thead>
                     <tbody id="adjutoriumTableBody">
                         <tr>
-                            <td colspan="7" style="color: #999;">조직을 선택하면 아듀또리움 단원 목록이 표시됩니다.</td>
+                            <td colspan="5" style="padding: 30px; color: #999;">조직을 선택하면 단원 목록이 표시됩니다.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -352,14 +472,15 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         // --- State ---
         let currentUser = null;
         let adjutoriumList = [];
+        let membersList = [];
         let editId = null;
         let isAdmin = false;
 
@@ -369,45 +490,42 @@
         const curiaSelect = document.getElementById('curiaSelect');
         const presidiumSelect = document.getElementById('presidiumSelect');
         const nameInput = document.getElementById('nameInput');
-        const withdrawalDateInput = document.getElementById('withdrawalDate');
-        const tableBody = document.getElementById('adjutoriumTableBody');
         const adjNameDatalist = document.getElementById('adjNameDatalist');
+
+        const baptismalNameInput = document.getElementById('baptismalName');
+        const genderSelect = document.getElementById('gender');
+        const feastDateInput = document.getElementById('feastDate');
+        const birthDateInput = document.getElementById('birthDate');
+        const phoneInput = document.getElementById('phone');
+        const addressInput = document.getElementById('address');
+        const admissionDateInput = document.getElementById('admissionDate');
+        const withdrawalDateInput = document.getElementById('withdrawalDate');
+        const notesInput = document.getElementById('notes');
         const memberIdInput = document.getElementById('memberId');
+
+        const btnSave = document.getElementById('btnSave');
         const btnDelete = document.getElementById('btnDelete');
+        const tableBody = document.getElementById('adjutoriumTableBody');
+        const historySection = document.getElementById('historySection');
 
         // --- Initialization ---
         initAuthObserver((user, profile) => {
             currentUser = profile;
-
-            // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, logoutUser);
             }
-
             loadData();
             setupPermissions();
             setupEventListeners();
+            setupInputFormatting(); // 입력 포맷팅 초기화
         }, () => {
             location.href = 'index.html';
         });
 
         function loadData() {
             adjutoriumList = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
-        }
-
-        function setupNavMenu() {
-            const navMenu = document.querySelector('.nav-menu');
-            const myPageLi = document.createElement('li');
-            myPageLi.className = 'nav-item';
-            myPageLi.innerHTML = '<a href="my_page.html" class="nav-link"><i class="fas fa-user-circle"></i> 내 정보</a>';
-            navMenu.appendChild(myPageLi);
-
-            const logoutLi = document.createElement('li');
-            logoutLi.className = 'nav-item';
-            logoutLi.innerHTML = '<span class="nav-link">로그아웃</span>';
-            logoutLi.style.cursor = 'pointer';
-            logoutLi.addEventListener('click', logoutUser);
-            navMenu.appendChild(logoutLi);
+            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+            updateDatalist();
         }
 
         function setupPermissions() {
@@ -417,78 +535,49 @@
             const isOfficer = officerRoles.some(r => role.includes(r.toLowerCase()));
 
             if (isAdmin) {
-                // Admin: Full Access with selection
                 const churches = getChurches();
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
-                churches.forEach(c => {
-                    const opt = new Option(c, c);
-                    churchSelect.add(opt);
-                });
+                churches.forEach(c => churchSelect.add(new Option(c, c)));
                 churchSelect.disabled = false;
-                curiaSelect.disabled = true;
-                presidiumSelect.disabled = true;
             } else if (isOfficer) {
-                // Officer: Automatically set to their organization
                 const uc = currentUser.church || currentUser.churchName;
                 const ucu = currentUser.curia || currentUser.curiaName;
                 const upr = currentUser.presidium || currentUser.presidiumName;
 
                 if (!uc || !ucu || !upr) {
-                    alert('로그인 정보에 소속 정보(성당, 꾸리아, 쁘레시디움)가 부족합니다. 관리자에게 문의하세요.');
-                    location.href = 'dashboard.html';
+                    showGlobalAlert('로그인 정보에 소속 정보가 부족합니다. 관리자에게 문의해 주세요.').then(() => {
+                        location.href = 'dashboard.html';
+                    });
                     return;
                 }
 
                 setFixedOption(churchSelect, uc);
                 setFixedOption(curiaSelect, ucu);
                 setFixedOption(presidiumSelect, upr);
-
                 renderTable();
-                updateDatalist();
             } else {
-                // Regular Member: No access to registration
-                alert('아듀또리움 관리 권한이 없습니다. (관리자 또는 간부 전용)');
-                location.href = 'dashboard.html';
+                showGlobalAlert('아듀또리움 관리 권한이 없습니다. 상급 단원 또는 관리자에게 문의해 주세요.').then(() => {
+                    location.href = 'dashboard.html';
+                });
             }
         }
 
         function setFixedOption(select, value) {
             select.innerHTML = '';
-            const opt = new Option(value, value);
-            select.add(opt);
+            select.add(new Option(value, value));
             select.value = value;
             select.disabled = true;
         }
 
         function setupEventListeners() {
-            // Enter key moves to next field
+            // Enter key navigation
             form.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    const target = e.target;
-                    if (target.tagName === 'TEXTAREA' || target.type === 'submit' || target.type === 'button') return;
-
+                    if (e.target.tagName === 'TEXTAREA' || e.target.type === 'button') return;
                     e.preventDefault();
-
-                    // [New] 입단일 필드에서 Enter 입력 시 즉시 유효성 검사
-                    if (target.name === 'admissionDate') {
-                        const prevWD = target.dataset.prevWithdrawalDate;
-                        const currentVal = target.value.trim();
-                        if (prevWD && currentVal && currentVal < prevWD) {
-                            alert(`입단일(${currentVal})은 이전 퇴단일(${prevWD})보다 빠를 수 없습니다.\n날짜를 다시 확인해 주세요.`);
-                            target.focus();
-                            return; // 다음 필드로 이동하지 않음
-                        }
-                    }
-
-                    const fields = Array.from(form.querySelectorAll('input, select, textarea'));
-                    const enabledFields = fields.filter(f => !f.disabled && !f.readOnly && f.type !== 'hidden');
-                    const idx = enabledFields.indexOf(target);
-
-                    if (idx > -1 && idx < enabledFields.length - 1) {
-                        enabledFields[idx + 1].focus();
-                    } else if (idx === enabledFields.length - 1) {
-                        form.querySelector('button[type="submit"]').focus();
-                    }
+                    const fields = Array.from(form.querySelectorAll('input, select, textarea')).filter(f => !f.disabled && !f.readOnly && f.type !== 'hidden');
+                    const idx = fields.indexOf(e.target);
+                    if (idx > -1 && idx < fields.length - 1) fields[idx + 1].focus();
                 }
             });
 
@@ -497,11 +586,7 @@
                 curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
                 presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
                 curiaSelect.disabled = !c;
-                presidiumSelect.disabled = true;
-
-                if (c) {
-                    getCuriae(c).forEach(cu => curiaSelect.add(new Option(cu, cu)));
-                }
+                if (c) getCuriae(c).forEach(cu => curiaSelect.add(new Option(cu, cu)));
             });
 
             curiaSelect.addEventListener('change', () => {
@@ -509,203 +594,149 @@
                 const cu = curiaSelect.value;
                 presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
                 presidiumSelect.disabled = !cu;
-
-                if (c && cu) {
-                    getPresidia(c, cu).forEach(pr => presidiumSelect.add(new Option(pr.name, pr.name)));
-                }
+                if (c && cu) getPresidia(c, cu).forEach(pr => presidiumSelect.add(new Option(pr.name, pr.name)));
             });
 
             presidiumSelect.addEventListener('change', () => {
                 renderTable();
-                updateDatalist();
-            });
-
-            nameInput.addEventListener('input', () => {
-                let nameVal = nameInput.value.trim();
-                const church = churchSelect.value;
-                const presidium = presidiumSelect.value;
-
-                if (!nameVal || !presidium) return;
-
-                // [New] '이름 (세례명)' 형식으로 선택된 경우 파싱
-                let baptismalHint = '';
-                if (nameVal.includes(' (') && nameVal.endsWith(')')) {
-                    const parts = nameVal.split(' (');
-                    nameVal = parts[0].trim();
-                    baptismalHint = parts[1].replace(')', '').trim();
-
-                    nameInput.value = nameVal; // 이름 필드에는 이름만 남김
-                    if (baptismalHint) {
-                        const bapEl = form.elements['baptismalName'];
-                        if (bapEl) bapEl.value = baptismalHint;
-                    }
-                }
-
-                // 해당 Pr 내에서 같은 이름의 단원 검색 (최신 입단일순 정렬)
-                const matches = adjutoriumList.filter(a =>
-                    a.church === church &&
-                    a.presidium === presidium &&
-                    a.name === nameVal
-                ).sort((a, b) => (b.admissionDate || '').localeCompare(a.admissionDate || ''));
-
-                if (matches.length > 0) {
-                    const target = matches[0];
-                    if (target.withdrawalDate) {
-                        // 퇴단 상태인 경우 재가입 유도
-                        if (confirm(`'${nameVal}' 단원은 퇴단(퇴단일: ${target.withdrawalDate}) 상태입니다. 재가입 처리하시겠습니까?\n(재가입 시 이전 기록은 보존되며 새로운 입단 기록이 생성됩니다.)`)) {
-                            loadForRejoin(target);
-                        } else {
-                            loadForEdit(target);
-                        }
-                    } else {
-                        // 활동 중인 경우 수정 모드
-                        loadForEdit(target);
-                    }
-                } else {
-                    // 신규 입력인 경우 ID 및 일부 필드 초기화 (세례명이 힌트로 들어왔다면 유지)
-                    editId = null;
-                    memberIdInput.value = '';
-                }
-            });
-
-            form.addEventListener('submit', handleSave);
-
-            if (btnDelete) {
-                btnDelete.addEventListener('click', handleDelete);
-            }
-
-            // Auto formatters
-            setupFormatters();
-        }
-
-
-
-        function loadForEdit(member) {
-            editId = member.id;
-            memberIdInput.value = editId;
-            fillForm(member);
-
-            // [New] 관리자이고 수정 모드일 때만 삭제 버튼 노출
-            if (isAdmin && btnDelete) {
-                btnDelete.style.display = 'inline-block';
-            }
-        }
-
-        function loadForRejoin(member) {
-            editId = null; // 신규 레코드로 저장하기 위해 null 설정
-            memberIdInput.value = '';
-            fillForm(member);
-            withdrawalDateInput.value = ''; // 퇴단일 자동 클리어
-
-            if (btnDelete) btnDelete.style.display = 'none';
-
-            // [New] 이전 퇴단일을 입단일 필드에 데이터 속성으로 저장 (유효성 검사용)
-            const admissionDateInput = form.elements['admissionDate'];
-            if (admissionDateInput) {
-                admissionDateInput.dataset.prevWithdrawalDate = member.withdrawalDate || '';
-            }
-
-            alert(`재가입 모드입니다. 새로운 입단일은 이전 퇴단일(${member.withdrawalDate}) 이후여야 합니다.`);
-        }
-
-        function fillForm(m) {
-            const fields = ['baptismalName', 'gender', 'feastDate', 'birthDate', 'phone', 'address', 'admissionDate', 'withdrawalDate', 'notes'];
-            fields.forEach(f => {
-                const el = form.elements[f];
-                if (el) el.value = m[f] || '';
-            });
-        }
-
-        function resetFormDetails(clearName = true) {
-            if (clearName) nameInput.value = '';
-            const fields = ['baptismalName', 'gender', 'feastDate', 'birthDate', 'phone', 'address', 'admissionDate', 'withdrawalDate', 'notes'];
-            fields.forEach(f => {
-                const el = form.elements[f];
-                if (el) el.value = '';
-            });
-            editId = null;
-            memberIdInput.value = '';
-            if (btnDelete) btnDelete.style.display = 'none';
-        }
-
-        function handleDelete() {
-            if (!editId) return;
-            if (!isAdmin) {
-                alert('삭제 권한이 없습니다.');
-                return;
-            }
-
-            if (confirm('정말로 이 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
-                adjutoriumList = adjutoriumList.filter(a => a.id !== editId);
-                localStorage.setItem('adjutorium_members_list', JSON.stringify(adjutoriumList));
-                alert('삭제되었습니다.');
                 resetFormDetails();
-                renderTable();
                 updateDatalist();
-            }
+            });
+
+            // Name Input & Datalist Logic
+            nameInput.addEventListener('input', () => {
+                const val = nameInput.value;
+                const matched = adjutoriumList.find(a =>
+                    a.church === churchSelect.value &&
+                    a.presidium === presidiumSelect.value &&
+                    a.name === val
+                );
+                if (matched) {
+                    if (matched.withdrawalDate && !editId) {
+                        showGlobalConfirm(`'${val}' 단원은 이미 아듀또리움 이력이 있습니다.\n기존 정보를 불러와서 수정하시겠습니까?`).then(confirmed => {
+                            if (confirmed) loadForEdit(matched);
+                        });
+                    } else {
+                        loadForEdit(matched);
+                    }
+                }
+            });
+
+            btnSave.addEventListener('click', handleSave);
+            if (btnDelete) btnDelete.addEventListener('click', handleDelete);
         }
 
-        function handleSave(e) {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
+        function updateDatalist() {
+            const church = churchSelect.value;
+            const presidium = presidiumSelect.value;
+            if (!church || !presidium) return;
 
-            data.church = churchSelect.value;
-            data.curia = curiaSelect.value;
-            data.presidium = presidiumSelect.value;
+            const names = [...new Set(adjutoriumList
+                .filter(a => a.church === church && a.presidium === presidium)
+                .map(a => a.name))
+            ].sort();
 
-            if (!data.church || !data.presidium || !data.name || !data.admissionDate) {
-                alert('필수 항목(성당, 쁘레시디움, 성명, 입단일)을 입력해 주세요.');
-                return;
-            }
+            adjNameDatalist.innerHTML = '';
+            names.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n;
+                adjNameDatalist.appendChild(opt);
+            });
+        }
 
-            // [New] 재가입 시 날짜 유효성 체크
-            const admissionDateInput = form.elements['admissionDate'];
-            const prevWithdrawalDate = admissionDateInput ? admissionDateInput.dataset.prevWithdrawalDate : '';
+        function loadForEdit(a) {
+            editId = a.id;
+            memberIdInput.value = editId;
+            nameInput.value = a.name || '';
+            baptismalNameInput.value = a.baptismalName || '';
+            genderSelect.value = a.gender || '남';
+            feastDateInput.value = a.feastDate || '';
+            birthDateInput.value = a.birthDate || '';
+            phoneInput.value = a.phone || '';
+            addressInput.value = a.address || '';
+            admissionDateInput.value = a.admissionDate || '';
+            withdrawalDateInput.value = a.withdrawalDate || '';
+            notesInput.value = a.notes || '';
 
-            if (prevWithdrawalDate && data.admissionDate < prevWithdrawalDate) {
-                alert(`입단일(${data.admissionDate})은 이전 퇴단일(${prevWithdrawalDate})보다 빠를 수 없습니다.\n날짜를 다시 확인해 주세요.`);
-                admissionDateInput.focus();
-                return;
-            }
+            if (isAdmin) btnDelete.style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-            // 중복 체크 (활동 중인 중복 이름 방지)
-            if (!editId) {
-                const activeDuplicate = adjutoriumList.find(a =>
-                    a.church === data.church &&
-                    a.presidium === data.presidium &&
-                    a.name === data.name &&
-                    (!a.withdrawalDate || a.withdrawalDate === '')
-                );
-                if (activeDuplicate) {
-                    alert('해당 쁘레시디움에 이미 활동 중인 동일한 이름의 단원이 존재합니다.');
-                    return;
-                }
-            }
+        function handleSave() {
+            const church = churchSelect.value;
+            const presidium = presidiumSelect.value;
+            const name = nameInput.value.trim();
+
+            if (!church || !presidium) return showGlobalAlert('단원 정보를 조회하거나 저장하려면\n먼저 성당과 꾸리아, 쁘레시디움을 선택해 주세요.');
+            if (!name) return showGlobalAlert('입력하신 정보에 성명이 빠져 있습니다.\n단원의 성명을 입력한 후 다시 시도해 주세요.');
+            if (!admissionDateInput.value) return showGlobalAlert('입단일 정보가 누락되었습니다.\n입단일은 필수 입력 사항입니다.');
+
+            const data = {
+                id: editId || ('adj_' + Date.now()),
+                church,
+                curia: curiaSelect.value,
+                presidium,
+                name,
+                baptismalName: baptismalNameInput.value.trim(),
+                gender: genderSelect.value,
+                feastDate: feastDateInput.value.trim(),
+                birthDate: birthDateInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                address: addressInput.value.trim(),
+                admissionDate: admissionDateInput.value,
+                withdrawalDate: withdrawalDateInput.value,
+                notes: notesInput.value.trim(),
+                updatedAt: new Date().toISOString()
+            };
 
             if (editId) {
-                // 수정
                 const idx = adjutoriumList.findIndex(a => a.id === editId);
-                if (idx > -1) {
-                    adjutoriumList[idx] = { ...adjutoriumList[idx], ...data, updatedAt: new Date().toISOString() };
-                }
+                if (idx > -1) adjutoriumList[idx] = data;
             } else {
-                // 신규 저장 (재가입 포함)
-                data.id = 'adj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                data.createdAt = new Date().toISOString();
+                data.createdAt = data.updatedAt;
                 adjutoriumList.push(data);
             }
 
             localStorage.setItem('adjutorium_members_list', JSON.stringify(adjutoriumList));
-            alert('저장되었습니다.');
+            showGlobalAlert('아듀또리움 단원 정보가 성공적으로 저장되었습니다.').then(() => {
+                resetFormDetails();
+                renderTable();
+                updateDatalist();
+            });
+        }
 
-            // [Fix] 저장 후 데이터 속성 초기화
-            const adEl = form.elements['admissionDate'];
-            if (adEl) delete adEl.dataset.prevWithdrawalDate;
+        function handleDelete() {
+            if (!editId || !isAdmin) return;
+            showGlobalConfirm('선택한 단원의 정보를 정말로 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.').then(confirmed => {
+                if (confirmed) {
+                    adjutoriumList = adjutoriumList.filter(a => a.id !== editId);
+                    localStorage.setItem('adjutorium_members_list', JSON.stringify(adjutoriumList));
+                    showGlobalAlert('정보가 정상적으로 삭제되었습니다.').then(() => {
+                        resetFormDetails();
+                        renderTable();
+                        updateDatalist();
+                    });
+                }
+            });
+        }
 
-            resetFormDetails();
-            renderTable();
-            updateDatalist();
+        function resetFormDetails() {
+            editId = null;
+            memberIdInput.value = '';
+
+            // 폼 전체 리셋 대신 개별 필드 초기화 (소속 정보 유지 목적)
+            nameInput.value = '';
+            baptismalNameInput.value = '';
+            genderSelect.value = '남';
+            feastDateInput.value = '';
+            birthDateInput.value = '';
+            phoneInput.value = '';
+            addressInput.value = '';
+            admissionDateInput.value = '';
+            withdrawalDateInput.value = '';
+            notesInput.value = '';
+
+            btnDelete.style.display = 'none';
         }
 
         function renderTable() {
@@ -713,7 +744,7 @@
             const presidium = presidiumSelect.value;
 
             if (!presidium) {
-                tableBody.innerHTML = '<tr><td colspan="7" style="color: #999;">조직을 선택하면 아듀또리움 단원 목록이 표시됩니다.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" style="padding: 30px; color: #999;">조직을 선택하면 단원 목록이 표시됩니다.</td></tr>';
                 return;
             }
 
@@ -722,76 +753,68 @@
 
             tableBody.innerHTML = '';
             if (filtered.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="7">등록된 단원이 없습니다.</td></tr>';
-                return;
-            }
-
-            filtered.forEach(a => {
-                const tr = document.createElement('tr');
-                const isRetired = a.withdrawalDate && a.withdrawalDate !== '';
-                tr.innerHTML = `
-                    <td>${a.name}</td>
-                    <td>${a.baptismalName}</td>
-                    <td>${a.gender}</td>
-                    <td>${a.phone || '-'}</td>
-                    <td>${a.admissionDate}</td>
-                    <td>${a.withdrawalDate || '-'}</td>
-                    <td><span class="${isRetired ? 'badge-retired' : 'badge-active'}">${isRetired ? '퇴단' : '활동'}</span></td>
-                `;
-                tr.onclick = () => loadForEdit(a);
-                tableBody.appendChild(tr);
-            });
-        }
-
-        function updateDatalist() {
-            const church = churchSelect.value;
-            const presidium = presidiumSelect.value;
-            adjNameDatalist.innerHTML = '';
-
-            if (!presidium) return;
-
-            const seen = new Set();
-            adjutoriumList.forEach(a => {
-                if (a.church === church && a.presidium === presidium) {
-                    const label = `${a.name} (${a.baptismalName || ''})`;
-                    if (!seen.has(label)) {
-                        const opt = document.createElement('option');
-                        opt.value = label;
-                        adjNameDatalist.appendChild(opt);
-                        seen.add(label);
-                    }
-                }
-            });
-        }
-
-        function setupFormatters() {
-            // YYYY-MM-DD formatters
-            const dates = form.querySelectorAll('input[placeholder="YYYY-MM-DD"]');
-            dates.forEach(el => {
-                el.addEventListener('input', (e) => {
-                    if (e.inputType === 'deleteContentBackward') return;
-                    let v = el.value.replace(/[^0-9]/g, '');
-                    if (v.length === 8) el.value = `${v.substring(0, 4)}-${v.substring(4, 6)}-${v.substring(6, 8)}`;
+                tableBody.innerHTML = '<tr><td colspan="5" style="padding: 30px;">등록된 단원이 없습니다.</td></tr>';
+            } else {
+                filtered.forEach(a => {
+                    const tr = document.createElement('tr');
+                    const isRetired = a.withdrawalDate && a.withdrawalDate !== '';
+                    tr.innerHTML = `
+                        <td>${a.name} (${a.baptismalName || ''})</td>
+                        <td>${a.admissionDate}</td>
+                        <td>${a.withdrawalDate || '-'}</td>
+                        <td><span class="${isRetired ? 'badge-retired' : 'badge-active'}">${isRetired ? '퇴단' : '활동'}</span></td>
+                        <td><i class="fas fa-edit" style="color: #2e7d32; cursor: pointer;"></i></td>
+                    `;
+                    tr.onclick = () => loadForEdit(a);
+                    tableBody.appendChild(tr);
                 });
+            }
+        }
+
+        // 3. Input Formatting
+        function setupInputFormatting() {
+            // 날짜 포맷팅 (YYYY-MM-DD)
+            const dateInputs = [admissionDateInput, withdrawalDateInput, birthDateInput];
+            dateInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/\D/g, ''); // 숫자 이외 제거
+                    if (val.length > 8) val = val.slice(0, 8);
+
+                    if (val.length > 6) {
+                        val = `${val.slice(0, 4)}-${val.slice(4, 6)}-${val.slice(6)}`;
+                    } else if (val.length > 4) {
+                        val = `${val.slice(0, 4)}-${val.slice(4)}`;
+                    }
+                    e.target.value = val;
+                });
+
+                // 포커스 아웃 시 유효성 체크 및 보정은 생략 (사용자 편의성 우선)
             });
 
-            // MM.DD formatter
-            const feast = form.querySelector('input[name="feastDate"]');
-            feast.addEventListener('input', (e) => {
-                if (e.inputType === 'deleteContentBackward') return;
-                let v = feast.value.replace(/[^0-9]/g, '');
-                if (v.length === 4) feast.value = `${v.substring(0, 2)}.${v.substring(2, 4)}`;
-            });
+            // 축일 포맷팅 (MM.DD.)
+            feastDateInput.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length > 4) val = val.slice(0, 4);
 
-            // Phone formatter
-            const phone = form.querySelector('input[name="phone"]');
-            phone.addEventListener('input', (e) => {
-                if (e.inputType === 'deleteContentBackward') return;
-                let v = phone.value.replace(/[^0-9]/g, '');
-                if (v.length >= 10) {
-                    if (v.length === 10) phone.value = `${v.substring(0, 3)}-${v.substring(3, 6)}-${v.substring(6)}`;
-                    else phone.value = `${v.substring(0, 3)}-${v.substring(3, 7)}-${v.substring(7)}`;
+                if (val.length > 2) {
+                    val = `${val.slice(0, 2)}.${val.slice(2)}.`;
+                } else if (val.length > 0) {
+                    val = `${val}`;
                 }
+                e.target.value = val;
+            });
+
+            // 연락처 포맷팅 (010-0000-0000)
+            phoneInput.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length > 11) val = val.slice(0, 11);
+
+                if (val.length > 7) {
+                    val = `${val.slice(0, 3)}-${val.slice(3, 7)}-${val.slice(7)}`;
+                } else if (val.length > 3) {
+                    val = `${val.slice(0, 3)}-${val.slice(3)}`;
+                }
+                e.target.value = val;
             });
         }
     </script>

@@ -1,0 +1,36 @@
+{
+    "hosting": {
+        "public": ".",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**",
+            "*.bat",
+            "*.ps1",
+            "*.py",
+            "*.txt",
+            "push_error.txt"
+        ],
+        "headers": [
+            {
+                "source": "**/*.html",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+                    }
+                ]
+            }
+        ],
+        "rewrites": [
+            {
+                "source": "!backup_data.json",
+                "destination": "/index.html"
+            },
+            {
+                "source": "**",
+                "destination": "/index.html"
+            }
+        ]
+    }
+}

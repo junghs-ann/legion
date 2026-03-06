@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -16,29 +16,43 @@
         body {
             background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 80px 20px 20px;
+            /* 상단 헤더 공간 확보 */
+            font-family: 'Noto Sans KR', sans-serif;
         }
 
         /* 컨트롤 패널 (화면용) */
         .no-print-zone {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            justify-content: flex-end;
+            gap: 12px;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            position: fixed;
+            /* 상단 고정으로 변경 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #f0f2f5;
+            padding: 10px 20px;
+            border-bottom: 2px solid #ccc;
+            z-index: 9999;
+            box-sizing: border-box;
         }
 
         .btn-action {
-            padding: 12px 25px;
+            padding: 10px 20px;
             border-radius: 50px;
             border: none;
             cursor: pointer;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 1rem;
+            gap: 6px;
+            font-size: 0.95rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .btn-print {
@@ -271,6 +285,118 @@
             background-color: white;
             z-index: 10;
         }
+
+        /* 커스텀 모달 스타일 추가 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .custom-modal-message {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            /* 단어 단위로 줄바꿈하여 어색한 끊김 방지 */
+        }
+
+        .custom-modal-btns {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .btn-confirm {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #eee;
+            color: #666;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 110px 10px 10px;
+                /* 모바일 대응 */
+            }
+
+            .no-print-zone {
+                padding: 5px 10px;
+                gap: 8px;
+            }
+
+            .btn-action {
+                padding: 8px 16px;
+                font-size: 0.85rem;
+            }
+
+            #approvalZone {
+                margin-right: 0 !important;
+                width: 100%;
+                justify-content: flex-end;
+                padding: 4px 10px !important;
+                gap: 5px !important;
+            }
+        }
     </style>
 </head>
 
@@ -290,6 +416,17 @@
         </div>
         <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄하기</button>
         <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 창 닫기</button>
+    </div>
+
+    <!-- 커스텀 모달 구조 추가 -->
+    <div id="customModal" class="custom-modal-overlay no-print">
+        <div class="custom-modal">
+            <div id="modalMessage" class="custom-modal-message"></div>
+            <div id="modalBtnGroup" class="custom-modal-btns">
+                <button id="modalConfirmBtn" class="modal-btn btn-confirm">확인</button>
+                <button id="modalCancelBtn" class="modal-btn btn-cancel">취소</button>
+            </div>
+        </div>
     </div>
 
     <div id="reportDisplay">
@@ -599,8 +736,9 @@
         </div>
     </div>
 
+    <script src="script.js?v=20260304_1525"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
+        import { initAuthObserver } from "./auth.js?v=20260304_1525";
 
         // URL 파라미터 파싱
         const urlParams = new URLSearchParams(window.location.search);
@@ -611,13 +749,61 @@
 
         let userProfile = null;
 
+        // 커스텀 모달 관련 함수
+        const modalOverlay = document.getElementById('customModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+
+        window.showCustomAlert = (message) => {
+            return new Promise((resolve) => {
+                modalMessage.textContent = message;
+                modalCancelBtn.style.display = 'none';
+                modalConfirmBtn.style.maxWidth = '100%';
+                modalOverlay.style.display = 'flex';
+
+                const handleConfirm = () => {
+                    modalOverlay.style.display = 'none';
+                    modalConfirmBtn.removeEventListener('click', handleConfirm);
+                    resolve(true);
+                };
+                modalConfirmBtn.addEventListener('click', handleConfirm);
+            });
+        };
+
+        window.showCustomConfirm = (message) => {
+            return new Promise((resolve) => {
+                modalMessage.textContent = message;
+                modalCancelBtn.style.display = 'block';
+                modalConfirmBtn.style.maxWidth = '120px';
+                modalOverlay.style.display = 'flex';
+
+                const handleConfirm = () => {
+                    modalOverlay.style.display = 'none';
+                    cleanup();
+                    resolve(true);
+                };
+                const handleCancel = () => {
+                    modalOverlay.style.display = 'none';
+                    cleanup();
+                    resolve(false);
+                };
+                const cleanup = () => {
+                    modalConfirmBtn.removeEventListener('click', handleConfirm);
+                    modalCancelBtn.removeEventListener('click', handleCancel);
+                };
+
+                modalConfirmBtn.addEventListener('click', handleConfirm);
+                modalCancelBtn.addEventListener('click', handleCancel);
+            });
+        };
+
         initAuthObserver((user, profile) => {
             userProfile = profile;
             if (church && pr && start && end) {
                 generateReport(church, pr, start, end);
             } else {
-                alert('잘못된 접근입니다.');
-                window.close();
+                window.showCustomAlert('잘못된 접근입니다.').then(() => window.close());
             }
         }, () => { window.close(); });
 
@@ -1387,25 +1573,25 @@
 
                 localStorage.setItem('monthly_report_status', JSON.stringify(history));
                 renderStatus();
-                if (status === 'Approved') alert('보고서가 최종 승인되었습니다.');
-                else if (status === 'Draft' && !signer) alert('보고서가 생성(저장)되었습니다. 이제 단원들이 조회할 수 있습니다.');
-                else alert('승인이 취소되었습니다. 다시 수정이 가능합니다.');
+                if (status === 'Approved') window.showCustomAlert('보고서가 최종 승인되었습니다.');
+                else if (status === 'Draft' && !signer) window.showCustomAlert('보고서가 생성(저장)되었습니다. 이제 단원들이 조회할 수 있습니다.');
+                else window.showCustomAlert('승인이 취소되었습니다. 다시 수정이 가능합니다.');
             };
 
-            document.getElementById('btnFinalize').onclick = () => {
-                if (confirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
+            document.getElementById('btnFinalize').onclick = async () => {
+                if (await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
                     saveStatus('Draft');
                 }
             };
 
-            document.getElementById('btnApprove').onclick = () => {
-                if (confirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
+            document.getElementById('btnApprove').onclick = async () => {
+                if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
                     saveStatus('Approved', userProfile.name);
                 }
             };
 
-            document.getElementById('btnCancelApprove').onclick = () => {
-                if (confirm('승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
+            document.getElementById('btnCancelApprove').onclick = async () => {
+                if (await window.showCustomConfirm('승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
                     saveStatus('Draft', null);
                 }
             };

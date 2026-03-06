@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쁘레/아듀또리움 현황 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=20260306_1520">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=7">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260306_1520">
     <style>
         /* Report specific styles */
         .attendance-table th {
@@ -88,6 +88,227 @@
                 font-size: 0.75rem;
             }
         }
+
+        /* Mobile & Tablet Responsive Styles */
+
+        /* 커스텀 드롭다운 스타일 */
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-select-wrapper input#presidiumSearch {
+            border: 1.5px solid #d4a017 !important;
+            transition: all 0.2s;
+        }
+
+        .custom-select-wrapper input#presidiumSearch:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(212, 160, 23, 0.3);
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .custom-dropdown div {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95rem;
+            color: #333;
+            transition: background 0.2s;
+        }
+
+        .custom-dropdown div:hover {
+            background-color: #f8f9fa;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .button-row button {
+            width: 130px;
+            height: 42px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .button-row button.btn-search {
+            background-color: #d4a017;
+            color: white;
+        }
+
+        .button-row button.btn-print {
+            background-color: #333;
+            color: white;
+        }
+
+        .button-row button.btn-close {
+            background-color: #666;
+            color: white;
+        }
+
+        .button-row button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Responsive Styles - Always at the bottom to ensure overrides */
+        @media (max-width: 1200px) {
+            .main-content {
+                padding: 80px 10px !important;
+            }
+
+            .container {
+                padding: 15px !important;
+                border-radius: 0;
+            }
+
+            .filter-row {
+                padding: 15px !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+
+            .filter-group {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            .filter-group select,
+            .filter-group input {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            .filter-group div[style*="display: flex"] {
+                flex-direction: row !important;
+                gap: 5px;
+            }
+
+            .filter-group input[type="date"] {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .attendance-table {
+                min-width: 1000px;
+                font-size: 0.8rem !important;
+                border-collapse: separate;
+                border-spacing: 0;
+            }
+
+            .attendance-table th,
+            .attendance-table td {
+                padding: 8px 4px !important;
+                background-color: #fff;
+            }
+
+            .attendance-table th {
+                background-color: var(--primary-color) !important;
+                color: white !important;
+            }
+
+            /* Sticky Status & Name columns */
+            .attendance-table th:nth-child(1) {
+                position: sticky;
+                left: 0;
+                z-index: 10;
+                width: 60px !important;
+                min-width: 60px !important;
+                border-right: 1px solid #ddd !important;
+            }
+
+            .attendance-table td:nth-child(1) {
+                position: sticky;
+                left: 0;
+                z-index: 5;
+                width: 60px !important;
+                min-width: 60px !important;
+                background-color: inherit !important;
+                /* Row background preserved */
+                border-right: 1px solid #ddd !important;
+            }
+
+            .attendance-table th:nth-child(2) {
+                position: sticky;
+                left: 60px;
+                z-index: 10;
+                width: 100px !important;
+                min-width: 100px !important;
+                border-right: 2px solid #ddd !important;
+            }
+
+            .attendance-table td:nth-child(2) {
+                position: sticky;
+                left: 60px;
+                z-index: 5;
+                width: 100px !important;
+                min-width: 100px !important;
+                background-color: #fff !important;
+                border-right: 2px solid #ddd !important;
+                box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            }
+
+            .table-responsive {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .button-row {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                width: 100% !important;
+                margin-left: 0 !important;
+            }
+
+            .button-row button {
+                width: auto !important;
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                height: 40px !important;
+                padding: 0 2px !important;
+                font-size: 0.82rem !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 2px !important;
+                overflow: hidden !important;
+            }
+        }
     </style>
 </head>
 
@@ -95,7 +316,7 @@
     <header class="dashboard-header">
         <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
         <div class="menu-toggle"><i class="fas fa-bars"></i></div>
-        <ul class="nav-menu"></ul> <!-- script.js에 의해 동적 생성됨 -->
+        <ul class="nav-menu"></ul> <!-- script.js?v=20260303_1255_fix에 의해 동적 생성됨 -->
     </header>
 
     <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
@@ -108,8 +329,6 @@
                         style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
                         쁘레/아듀또리움 현황
                     </h3>
-                    <button onclick="location.href='dashboard.html'"
-                        style="background-color: #666; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">닫기</button>
                 </div>
 
                 <div class="filter-row"
@@ -128,11 +347,14 @@
                         </select>
                         <input type="text" id="curiaInput" style="display:none;" readonly>
                     </div>
-                    <div class="filter-group">
-                        <label>쁘레시디움</label>
-                        <select id="presidiumFilter" disabled>
-                            <option value="">전체</option>
-                        </select>
+                    <div class="filter-group" style="width: 100%; max-width: 250px;">
+                        <label>쁘레시디움(Pr.) (검색 기능)</label>
+                        <div class="custom-select-wrapper">
+                            <input type="text" id="presidiumSearch" placeholder="쁘레시디움 검색 (예: 천사)" autocomplete="off"
+                                style="width: 100%; padding: 8px; border-radius: 4px;">
+                            <div id="presidiumDropdown" class="custom-dropdown"></div>
+                            <input type="hidden" id="presidiumFilter">
+                        </div>
                         <input type="text" id="presidiumInput" style="display:none;" readonly>
                     </div>
                     <div class="filter-group">
@@ -164,13 +386,19 @@
                         <input type="text" id="nameFilter" placeholder="이름 입력" autocomplete="off"
                             style="width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
-                    <div class="filter-group"
-                        style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 10px; margin-left: auto;">
-                        <button id="btnSearch" class="btn btn-secondary"
-                            style="height: 38px; background-color: var(--secondary-color); color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">조회</button>
-                        <button onclick="window.print()" class="btn-print"
-                            style="height: 38px; background-color: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">인쇄</button>
-                    </div>
+                </div>
+
+                <!-- 버튼 영역을 레퍼런스 스타일로 업데이트 -->
+                <div class="button-row">
+                    <button id="btnSearch" class="btn-search">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
+                    <button onclick="window.print()" class="btn-print">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
+                    <button onclick="location.href='dashboard.html'" class="btn-close">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
 
@@ -178,20 +406,20 @@
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h2 id="reportTitle" style="margin-bottom: 10px;">쁘레/아듀또리움 현황 내역</h2>
                     <h3 id="reportDateRange"
-                        style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
+                        style="display: inline-block; padding-bottom: 5px; min-width: 300px; font-weight: normal;">
                     </h3>
                 </div>
 
                 <!-- 쁘레또리움 섹션 -->
                 <div id="praeSection">
                     <h4 class="section-title"><i class="fas fa-crown"></i> 쁘레또리움 (Praetorium)</h4>
-                    <div style="overflow-x: auto;">
+                    <div class="table-responsive">
                         <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
-                                    <th style="width: 100px;">상태</th>
-                                    <th style="width: 150px;">성명</th>
-                                    <th style="width: 150px;">세례명</th>
+                                    <th style="width: 60px;">상태</th>
+                                    <th style="width: 100px;">성명</th>
+                                    <th style="width: 120px;">세례명</th>
                                     <th style="width: 150px;">소속 쁘레시디움</th>
                                     <th style="width: 120px;">입단일</th>
                                     <th style="width: 120px;">퇴단일</th>
@@ -206,13 +434,13 @@
                 <!-- 아듀또리움 섹션 -->
                 <div id="adjSection" style="margin-top: 50px;">
                     <h4 class="section-title"><i class="fas fa-shield-alt"></i> 아듀또리움 (Adjutorium)</h4>
-                    <div style="overflow-x: auto;">
+                    <div class="table-responsive">
                         <table class="attendance-table" style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
-                                    <th style="width: 100px;">상태</th>
-                                    <th style="width: 150px;">성명</th>
-                                    <th style="width: 150px;">세례명</th>
+                                    <th style="width: 60px;">상태</th>
+                                    <th style="width: 100px;">성명</th>
+                                    <th style="width: 120px;">세례명</th>
                                     <th style="width: 150px;">성별</th>
                                     <th style="width: 150px;">소속 쁘레시디움</th>
                                     <th style="width: 120px;">입단일</th>
@@ -233,16 +461,18 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260306_1520"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
+        const presidiumSearch = document.getElementById('presidiumSearch');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
         const presidiumFilter = document.getElementById('presidiumFilter');
         const typeFilter = document.getElementById('typeFilter');
         const statusFilter = document.getElementById('statusFilter');
@@ -270,6 +500,35 @@
             location.href = 'index.html';
         });
 
+        function renderPresidiumDropdown(filterText = '') {
+            if (!isAdmin) return;
+            const selectedChurch = churchFilter.value;
+            const selectedCuria = curiaFilter.value;
+            if (!selectedChurch || !selectedCuria) return;
+
+            const allPresidia = getPresidia(selectedChurch, selectedCuria);
+            const filtered = allPresidia.filter(p =>
+                (p.name || '').includes(filterText)
+            ).map(p => p.name).sort();
+
+            presidiumDropdown.innerHTML = '';
+            if (filtered.length > 0) {
+                filtered.forEach(name => {
+                    const div = document.createElement('div');
+                    div.textContent = name;
+                    div.onclick = () => {
+                        presidiumSearch.value = name;
+                        presidiumFilter.value = name;
+                        presidiumDropdown.style.display = 'none';
+                    };
+                    presidiumDropdown.appendChild(div);
+                });
+                presidiumDropdown.style.display = 'block';
+            } else {
+                presidiumDropdown.style.display = 'none';
+            }
+        }
+
         function setupControls(profile) {
             const ci = document.getElementById('churchInput');
             const cui = document.getElementById('curiaInput');
@@ -289,9 +548,11 @@
                 cui.style.display = 'block';
                 cui.value = profile.curiaName || profile.curia || '';
 
-                presidiumFilter.style.display = 'none';
-                pi.style.display = 'block';
-                pi.value = profile.presidiumName || profile.presidium || '';
+                presidiumSearch.value = profile.presidiumName || profile.presidium || '';
+                presidiumFilter.value = profile.presidiumName || profile.presidium || '';
+                presidiumSearch.disabled = true;
+
+                pi.style.display = 'none';
             }
         }
 
@@ -303,7 +564,8 @@
             churchFilter.onchange = () => {
                 const selected = churchFilter.value;
                 curiaFilter.innerHTML = '<option value="">전체</option>';
-                presidiumFilter.innerHTML = '<option value="">전체</option>';
+                presidiumFilter.value = '';
+                presidiumSearch.value = '';
                 if (selected) {
                     getCuriae(selected).forEach(c => curiaFilter.add(new Option(c, c)));
                     curiaFilter.disabled = false;
@@ -314,15 +576,8 @@
             };
 
             curiaFilter.onchange = () => {
-                const selectedChurch = churchFilter.value;
-                const selectedCuria = curiaFilter.value;
-                presidiumFilter.innerHTML = '<option value="">전체</option>';
-                if (selectedChurch && selectedCuria) {
-                    getPresidia(selectedChurch, selectedCuria).forEach(p => presidiumFilter.add(new Option(p.name, p.name)));
-                    presidiumFilter.disabled = false;
-                } else {
-                    presidiumFilter.disabled = true;
-                }
+                presidiumFilter.value = '';
+                presidiumSearch.value = '';
             };
         }
 
@@ -384,7 +639,7 @@
             statusContent.style.display = 'block';
             noDataMsg.style.display = 'none';
 
-            document.getElementById('reportDateRange').textContent = (start || end) ? `${start || '초기'} ~ ${end || '현재'} (입단일 기준)` : '전 기간';
+            document.getElementById('reportDateRange').textContent = (start || end) ? `( ${start || '초기'} ~ ${end || '현재'} 입단일 기준 )` : '( 전 기간 )';
 
             // 렌더링 쁘레
             if (showPrae) {
@@ -437,9 +692,29 @@
 
         function setupEventListeners() {
             btnSearch.onclick = loadReport;
+
+            presidiumSearch.onfocus = () => renderPresidiumDropdown(presidiumSearch.value);
+            presidiumSearch.oninput = () => renderPresidiumDropdown(presidiumSearch.value);
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select-wrapper')) {
+                    presidiumDropdown.style.display = 'none';
+                }
+            });
+
             [typeFilter, statusFilter, startDateFilter, endDateFilter, nameFilter].forEach(f => {
                 f.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); loadReport(); } });
             });
+
+            // Enter 키 이동 및 검색 바 추가
+            if (isAdmin) {
+                presidiumSearch.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        loadReport();
+                    }
+                });
+            }
         }
     </script>
 </body>

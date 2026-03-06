@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사(행사/교육/피정)관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -204,6 +204,92 @@
             background-color: #f1f1f1;
             cursor: pointer;
         }
+
+        /* Mobile specific overrides */
+        @media (max-width: 768px) {
+            .register-form-container {
+                padding: 20px 15px;
+            }
+
+            .form-title {
+                font-size: 1.2rem !important;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .form-title span {
+                font-size: 0.8rem !important;
+                color: #888 !important;
+                /* Change sub-title color to grey */
+            }
+
+            .btn-submit {
+                padding: 10px 20px !important;
+                font-size: 0.95rem !important;
+            }
+
+            #attendanceStats {
+                font-size: 0.8rem;
+            }
+
+            .member-item label {
+                font-size: 0.9rem;
+                display: flex;
+                align-items: center;
+                /* Align checkbox and text container vertically */
+                justify-content: flex-start;
+                /* Checkbox to the left */
+                gap: 12px;
+                width: 100%;
+                word-break: keep-all;
+                padding: 5px 0;
+            }
+
+            .member-item input {
+                margin: 0;
+                /* Let gap handle spacing */
+            }
+
+            .baptismal-name {
+                font-size: 0.75rem;
+                color: #888;
+                width: 100%;
+                text-align: center;
+                display: block;
+            }
+
+            /* 인원 정보 입력칸 축소 및 오른쪽 정렬 */
+            #totalCount,
+            #attendanceCount {
+                padding: 8px !important;
+                font-size: 0.9rem !important;
+                text-align: right !important;
+            }
+
+            #eventListContainer {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .event-table {
+                min-width: 800px;
+                /* Increase min-width to accommodate nowrap columns */
+            }
+
+            .event-table th,
+            .event-table td {
+                white-space: nowrap !important;
+                /* Prevent awkward line breaks in table */
+            }
+
+            /* Attendee list can still wrap or be long but nowrap is preferred for first few columns */
+            .event-table td:last-child {
+                white-space: normal !important;
+                min-width: 200px;
+                word-break: keep-all;
+            }
+        }
     </style>
 </head>
 
@@ -293,8 +379,8 @@
     <div class="main-content" style="padding: 120px 20px;">
         <div class="register-form-container">
             <h2 class="form-title">
-                행사(행사/교육/피정)관리
-                <span style="font-size: 0.9rem; color: #666; font-weight: normal;">행사(행사/교육/피정/기타) 내용 및 참석자 관리</span>
+                행사(행사/교육/피정) 관리
+                <span id="sub-title-text">내용 및 참석자 관리</span>
             </h2>
 
             <form id="eventForm">
@@ -428,10 +514,10 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let membersList = [];
@@ -740,7 +826,14 @@
             filteredMembers.forEach(m => {
                 const div = document.createElement('div');
                 div.className = 'member-item';
-                div.innerHTML = `<label><input type="checkbox" name="attendee" value="${m.name}" data-uid="${m.id}"> ${m.name} (${m.baptismalName || ''})</label>`;
+                div.innerHTML = `
+                    <label>
+                        <input type="checkbox" name="attendee" value="${m.name}" data-uid="${m.id}" style="margin: 0; flex-shrink: 0;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1;">
+                            <span style="font-weight: 700; font-size: 1rem; color: #333; line-height: 1.2;">${m.name}</span>
+                            <span class="baptismal-name" style="font-size: 0.8rem; color: #888; font-weight: normal; text-align: left;">(${m.baptismalName || '-'})</span>
+                        </div>
+                    </label>`;
                 div.querySelector('input').addEventListener('change', updateCount);
                 memberListBox.appendChild(div);
             });
@@ -752,7 +845,14 @@
         function updateCount() {
             const checked = Array.from(memberListBox.querySelectorAll('input[name="attendee"]:checked'));
             attendanceCount.value = checked.length;
-            attendeeNames.value = checked.map(i => i.value).join(', ');
+
+            // 2명씩 묶어서 줄바꿈 처리
+            let formattedNames = [];
+            const names = checked.map(i => i.value);
+            for (let i = 0; i < names.length; i += 2) {
+                formattedNames.push(names.slice(i, i + 2).join(', '));
+            }
+            attendeeNames.value = formattedNames.join(',\n');
         }
 
         function renderEventList() {

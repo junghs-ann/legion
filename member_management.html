@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입정보 관리 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -244,9 +244,10 @@
         </div>
     </div>
 
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
-        import { initAuthObserver } from "./auth.js";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         // DOM Elements
         const searchChurch = document.getElementById('search-church');

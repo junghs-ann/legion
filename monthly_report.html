@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례보고서 생성 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .selection-container {
@@ -146,6 +146,114 @@
             font-size: 0.95rem;
             line-height: 1.6;
             text-align: center;
+        }
+
+        /* 커스텀 모달 스타일 추가 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.15s ease-out;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        .custom-modal-message {
+            font-size: 1.05rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            /* 한국어 단어 단위 줄바꿈 */
+        }
+
+        .btn-modal-confirm {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 40px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(15px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* 반응형 스타일 */
+        @media screen and (max-width: 768px) {
+            .selection-container {
+                margin: 100px 15px 30px;
+                padding: 25px 20px;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .filter-item {
+                grid-column: span 1 !important;
+            }
+
+            .btn-action {
+                width: 100%;
+                justify-content: center;
+            }
+
+            #modeContainer div {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 12px !important;
+            }
+
+            .range-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .range-separator {
+                text-align: center;
+                margin: 2px 0;
+            }
         }
     </style>
 </head>
@@ -301,10 +409,18 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- 커스텀 모달 추가 -->
+    <div id="customModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div id="modalMessage" class="custom-modal-message"></div>
+            <button id="modalConfirmBtn" class="btn-modal-confirm">확인</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let userProfile = null;
@@ -317,6 +433,25 @@
         const startSess = document.getElementById('startSess');
         const endSess = document.getElementById('endSess');
         const btnGenerate = document.getElementById('btnGenerate');
+
+        // 커스텀 알림 함수
+        window.showCustomAlert = (message) => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const msgEl = document.getElementById('modalMessage');
+                const btn = document.getElementById('modalConfirmBtn');
+
+                msgEl.textContent = message;
+                modal.style.display = 'flex';
+
+                const close = () => {
+                    modal.style.display = 'none';
+                    btn.removeEventListener('click', close);
+                    resolve();
+                };
+                btn.addEventListener('click', close);
+            });
+        };
 
         const btnText = document.getElementById('btnText');
         const reportModeRadios = document.getElementsByName('reportMode');
@@ -432,8 +567,8 @@
             const ss = startSess.value, es = endSess.value;
             const mode = document.querySelector('input[name="reportMode"]:checked').value;
 
-            if (!c || !p || !s || !e) { alert('모든 항목을 채워주세요.'); return; }
-            if (s > e) { alert('날짜 범위를 확인해주세요.'); return; }
+            if (!c || !p || !s || !e) { window.showCustomAlert('모든 항목을 채워주세요.'); return; }
+            if (s > e) { window.showCustomAlert('날짜 범위를 확인해주세요.'); return; }
 
             // 보고서 상태 체크
             const reportHistory = JSON.parse(localStorage.getItem('monthly_report_status') || '[]');
@@ -444,7 +579,7 @@
             // '생성 및 수정' 모드일 때 승인 여부 체크
             if (mode === 'create') {
                 if (found && found.status === 'Approved') {
-                    alert('해당 회차의 보고서는 이미 단장 승인이 완료되었습니다.\n수정하시려면 먼저 [최종본 조회] 모드에서 보고서를 열어 [승인 취소]를 진행해주세요.');
+                    window.showCustomAlert('해당 회차의 보고서는 이미 단장 승인이 완료되었습니다.\n수정하시려면 먼저 [최종본 조회] 모드에서 보고서를 열어 [승인 취소]를 진행해주세요.');
                     return;
                 }
             }
@@ -452,7 +587,7 @@
             // '조회' 모드일 때 생성 여부 체크
             if (mode === 'view') {
                 if (!found) {
-                    alert('해당 회차의 보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
+                    window.showCustomAlert('해당 회차의 보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
                     return;
                 }
             }

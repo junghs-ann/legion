@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동항목 관리 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-container {
@@ -132,6 +132,64 @@
             margin-right: 10px;
             font-weight: normal;
         }
+
+        /* 등록 화면 헤더 스타일 */
+        .register-header {
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            word-break: keep-all;
+            /* 한글 자연스러운 줄바꿈 */
+        }
+
+        .header-title-area h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .header-title-area p {
+            margin: 5px 0 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .btn-close-top {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .register-container {
+                margin-top: 80px;
+                padding: 15px;
+            }
+
+            .register-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .btn-close-top {
+                width: 100%;
+                padding: 12px;
+            }
+
+            .church-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
     </style>
 </head>
 
@@ -209,14 +267,12 @@
     </header>
 
     <div class="register-container">
-        <div
-            style="border-bottom: 2px solid var(--secondary-color); padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
-            <div>
-                <h2 style="color: var(--primary-color); margin: 0;">활동항목 관리</h2>
-                <p style="margin: 5px 0 0; color: #666;">보고서의 '종목'과 '활동내용'의 계층 구조를 관리합니다.</p>
+        <div class="register-header">
+            <div class="header-title-area">
+                <h2>활동항목 관리</h2>
+                <p>보고서의 '종목'과 '활동내용'의 계층 구조를 관리합니다.</p>
             </div>
-            <button onclick="location.href='dashboard.html'" class="btn"
-                style="background: #6c757d; color: white; border: none; padding: 10px 25px; border-radius: 4px;">
+            <button onclick="location.href='dashboard.html'" class="btn btn-close-top">
                 <i class="fas fa-times"></i> 닫기
             </button>
         </div>
@@ -246,9 +302,10 @@
         <i class="fas fa-save" style="margin-right: 8px;"></i> [ <span id="currentChurchName">...</span> ] 설정 저장
     </button>
 
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js";
-        import { getChurches } from "./data.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { getChurches } from "./data.js?v=20260303_1210";
 
         let currentChurch = "";
         let activitySchema = {}; // { churchName: [ { id, title, items: [{name, unit}] } ] }

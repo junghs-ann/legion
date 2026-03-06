@@ -1,108 +1,166 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260303_1517_ui_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --card-bg: #FFFFFF;
+            --input-border: #D1D5DB;
+            --input-focus: var(--primary-color);
+            --header-border: #E5E7EB;
+            --text-secondary: #6B7280;
+            --bg-light: #F9FAFB;
+        }
+
+        /* 배경 워터마크 대비 최소화 (가독성 최우선) */
+        .dashboard-body::before {
+            background-color: rgba(245, 245, 245, 0.96) !important;
+        }
+
+        .main-content {
+            padding: 80px 15px !important;
+            background-color: var(--bg-light);
+        }
+
         .register-form-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            max-width: 950px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 0;
+            /* PC 버전 느낌을 위해 평면화 */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-width: 1100px;
             margin: 0 auto;
-            text-align: left;
+            border-top: 4px solid var(--secondary-color);
         }
 
         .form-title {
             font-family: 'Noto Serif KR', serif;
             color: var(--primary-color);
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--secondary-color);
+            margin-bottom: 40px;
             padding-bottom: 15px;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        /* 3번째 이미지 스타일: 가로형 섹션 헤더 */
+        .section-header {
+            grid-column: 1 / -1;
+            margin-top: 40px;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #EEE;
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: none !important;
+            border-left: none !important;
+        }
+
+        .section-header i {
+            color: var(--primary-color);
+            font-size: 1.2rem;
         }
 
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px 20px;
         }
 
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        @media (max-width: 480px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
+        .form-group.full-width {
+            grid-column: 1 / -1;
         }
 
         .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4B5563;
+            font-size: 0.92rem;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
+            padding: 10px 14px;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
-            font-size: 0.95rem;
-            background-color: white;
+            font-size: 16px;
+            background-color: #FFF;
+            color: #111;
+            transition: border-color 0.2s;
         }
 
-        .form-group input[readonly],
-        .form-group select[disabled] {
-            background-color: #f5f5f5;
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
         }
 
-        .section-header {
-            grid-column: 1 / -1;
-            margin-top: 20px;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            color: var(--primary-color);
-            font-weight: 600;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .form-group input[readonly] {
+            background-color: #F3F4F6;
+            color: #6B7280;
         }
 
         .form-btn-group {
-            margin-top: 30px;
-            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #EEE;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .btn-submit {
+            padding: 12px 25px;
+            /* 기존 35px에서 축소 */
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            /* 기존 1rem에서 축소 */
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+            display: inline-flex;
+            /* 아이콘과 텍스트 정렬 */
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-save {
             background-color: var(--primary-color);
             color: white;
-            border: none;
-            padding: 12px 40px;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+        }
+
+        .btn-delete {
+            background-color: #EF4444;
+            color: white;
+        }
+
+        .btn-close {
+            background-color: #6B7280;
+            color: white;
         }
 
         .btn-submit:hover {
@@ -110,64 +168,136 @@
             transform: translateY(-1px);
         }
 
-        .btn-action {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 0 15px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-action:hover {
-            opacity: 0.9;
-        }
-
-        .btn-inquiry {
-            background-color: #2196F3;
-        }
-
-        .btn-delete {
-            background-color: #f44336;
-        }
-
-        .btn-close {
-            background-color: #757575;
-        }
-
+        /* 테이블 디자인 고도화 */
         .table-container {
-            margin-top: 40px;
+            margin-top: 60px;
             overflow-x: auto;
+            border: 1px solid #EEE;
+            border-radius: 4px;
+            position: relative;
+            /* Sticky 기준점 */
         }
 
         .status-table {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        .status-table th,
-        .status-table td {
-            padding: 12px;
-            border: 1px solid #ddd;
-            text-align: center;
+            border-collapse: separate;
+            /* Sticky Border를 위해 separate 권장 */
+            border-spacing: 0;
+            min-width: 900px;
         }
 
         .status-table th {
-            background-color: #f8f9fa;
+            background-color: #F9FAFB;
+            color: #374151;
             font-weight: 600;
+            padding: 14px;
+            border-bottom: 2px solid #EEE;
+            font-size: 0.88rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* 컬럼 고정 (Sticky Columns) */
+        .status-table th:nth-child(1),
+        .status-table td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #F9FAFB;
+            border-right: 1px solid #EEE;
+        }
+
+        .status-table td:nth-child(1) {
+            background-color: #FFF;
+        }
+
+        .status-table th:nth-child(2),
+        .status-table td:nth-child(2) {
+            position: sticky;
+            left: 80px;
+            /* 첫 번째 컬럼 너비에 맞춰 조정 */
+            z-index: 20;
+            background-color: #F9FAFB;
+            border-right: 1px solid #EEE;
+        }
+
+        .status-table td:nth-child(2) {
+            background-color: #FFF;
+        }
+
+        /* 호버 시 고정 컬럼 배경색 유지 */
+        .status-table tr:hover td:nth-child(1),
+        .status-table tr:hover td:nth-child(2) {
+            background-color: #F3F4F6;
+        }
+
+        .status-table td {
+            padding: 12px;
+            border-bottom: 1px solid #F3F4F6;
+            text-align: center;
+            font-size: 0.9rem;
         }
 
         .status-table tr:hover {
-            background-color: #f1f1f1;
+            background-color: #F3F4F6;
             cursor: pointer;
+        }
+
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .register-form-container {
+                padding: 20px;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .btn-close-header {
+                width: 100%;
+            }
+
+            .btn-submit {
+                padding: 10px 15px;
+                /* 모바일에서 더 축소 */
+                font-size: 0.85rem;
+                flex: 1;
+                /* 가로 가득 채우기 방지 및 균등 배분용 */
+            }
+
+            .form-btn-group {
+                flex-wrap: nowrap;
+                /* 줄바꿈 방지 강제 */
+                gap: 8px;
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .badge-retired {
+            background: #FEE2E2;
+            color: #991B1B;
         }
     </style>
 </head>
@@ -255,11 +385,14 @@
         </ul>
     </header>
 
-    <div class="main-content" style="padding: 120px 20px;">
+    <div class="main-content" style="padding: 120px 20px 80vh;">
         <div class="register-form-container">
             <h2 class="form-title">
-                협조단원 관리
-                <span style="font-size: 0.9rem; color: #666; font-weight: normal;">활동단원별 협조단원 정보관리</span>
+                <div>
+                    <i class="fas fa-user-friends"></i> 협조단원 관리
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: normal; margin-top: 5px;">
+                        활동단원별 협조단원 정보 및 이력 관리</div>
+                </div>
             </h2>
 
             <form id="auxiliaryForm">
@@ -296,7 +429,7 @@
                         <label>행동단원 세례명</label>
                         <input type="text" id="activeMemberBaptismal" readonly>
                     </div>
-                    <div></div>
+                    <div><!-- Spacer for Grid --></div>
 
                     <!-- 협조단원 정보 -->
                     <div class="section-header"><i class="fas fa-user-friends"></i> 협조단원 상세 정보</div>
@@ -330,7 +463,7 @@
                         <label>연락처</label>
                         <input type="tel" name="phone" placeholder="010-0000-0000">
                     </div>
-                    <div class="form-group" style="grid-column: span 3;">
+                    <div class="form-group full-width">
                         <label>주소</label>
                         <input type="text" name="address">
                     </div>
@@ -342,19 +475,23 @@
                         <label>퇴단일</label>
                         <input type="text" name="withdrawalDate" placeholder="YYYY-MM-DD">
                     </div>
-                    <div></div>
-                    <div class="form-group" style="grid-column: span 3;">
+                    <div><!-- Spacer for Grid --></div>
+                    <div class="form-group full-width">
                         <label>특이 및 참고사항</label>
                         <textarea name="notes" rows="3" placeholder="기타 참고사항을 입력하세요"></textarea>
                     </div>
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="submit" class="btn-submit">저 장</button>
-                    <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭
-                        제</button>
-                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">닫
-                        기</button>
+                    <button type="submit" class="btn-submit btn-save">
+                        <i class="fas fa-save"></i> 저 장
+                    </button>
+                    <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">
+                        <i class="fas fa-trash-alt"></i> 삭 제
+                    </button>
+                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">
+                        <i class="fas fa-times"></i> 닫 기
+                    </button>
                 </div>
             </form>
 
@@ -382,10 +519,10 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js";
-        import { getChurches, getCuriae, getPresidia } from "./data.js";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         // State
         let currentUser = null;

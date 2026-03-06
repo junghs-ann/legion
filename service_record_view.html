@@ -15,14 +15,14 @@
         body {
             background-color: #f0f2f5;
             margin: 0;
-            padding: 30px 0;
+            padding: 30px 10px;
+            /* 좌우 여백 추가 */
             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
+            /* Flex 정렬 제거 (왼쪽 잘림 방지) */
+            min-width: 297mm;
+            /* 인쇄용 규격 최소값 유지 */
         }
 
         .print-page {
@@ -36,7 +36,8 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             page-break-after: always;
-            /* 인쇄 시 자동 페이지 넘김 */
+            margin: 0 auto 20px;
+            /* 중앙 정렬 및 하단 간격 */
         }
 
         .record-title {
@@ -352,6 +353,7 @@
             });
         }
     </script>
+    <script src="script.js?v=20260303_1255_fix"></script>
 </body>
 
 </html>
