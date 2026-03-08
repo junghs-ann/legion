@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아듀또리움 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260307_2253">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -159,10 +159,31 @@
             background-color: #1b5e20;
         }
 
+        .btn-save {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background-color: #1b5e20;
+        }
+
         .btn-delete {
             background-color: #dc3545;
-            padding: 10px 20px;
-            /* 축소 */
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+
+        .btn-close {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background-color: #5a6268;
         }
 
         /* 테이블 최적화 */
@@ -346,14 +367,16 @@
     </header>
 
     <div class="main-content">
-        <div class="register-form-container">
+        <div class="register-form-container" style="position: relative;">
+            <button type="button" onclick="location.href='dashboard.html'" title="닫기"
+                style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding: 0; line-height: 1; z-index: 10;"><i
+                    class="fas fa-times"></i></button>
             <!-- 헤더 영역 -->
             <div class="form-title-container">
                 <div class="form-title-group">
                     <h2 class="form-title">아듀또리움 관리</h2>
                     <span class="form-subtitle">아듀또리움 단원 정보 및 이력 관리</span>
                 </div>
-                <button type="button" class="btn-close-header" onclick="location.href='dashboard.html'">닫 기</button>
             </div>
 
             <form id="adjutoriumForm" onsubmit="return false;" autocomplete="off">
@@ -373,11 +396,18 @@
                                 <option value="">꾸리아 선택</option>
                             </select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="position: relative;">
                             <label>쁘레시디움(Pr.)</label>
-                            <select id="presidiumSelect" name="presidium" required disabled>
-                                <option value="">쁘레시디움 선택</option>
-                            </select>
+                            <div class="search-container" id="presidiumSearchContainer"
+                                style="position: relative; width: 100%;">
+                                <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                                    disabled class="nav-enter"
+                                    style="width: 100%; box-sizing: border-box; padding: 10px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
+                                <input type="hidden" id="presidiumSelect" name="presidium">
+                                <div id="presidiumDropdown" class="custom-dropdown"
+                                    style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -441,9 +471,17 @@
 
                     <div class="form-btn-group">
                         <input type="hidden" name="id" id="memberId">
-                        <button type="button" id="btnSave" class="btn-submit">저 장</button>
-                        <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭
-                            제</button>
+                        <button type="button" id="btnSave" class="btn-submit btn-save" style="min-width: 80px;">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button type="button" id="btnDelete" class="btn-submit btn-delete"
+                            style="display: none; min-width: 80px;">
+                            <i class="fas fa-trash-alt"></i> 삭제
+                        </button>
+                        <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'"
+                            style="min-width: 80px;">
+                            <i class="fas fa-times"></i> 닫기
+                        </button>
                     </div>
                 </div>
             </form>
@@ -472,10 +510,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js?v=20260307_2253"></script>
     <script type="module">
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260304_1500";
 
         // --- State ---
         let currentUser = null;
@@ -483,6 +522,7 @@
         let membersList = [];
         let editId = null;
         let isAdmin = false;
+        let currentPresidiaList = [];
 
         // --- DOM Elements ---
         const form = document.getElementById('adjutoriumForm');
@@ -509,12 +549,14 @@
         const historySection = document.getElementById('historySection');
 
         // --- Initialization ---
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
+            await loadPresidiaListItems();
+
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, logoutUser);
             }
-            loadData();
+            await loadData();
             setupPermissions();
             setupEventListeners();
             setupInputFormatting(); // 입력 포맷팅 초기화
@@ -522,10 +564,19 @@
             location.href = 'index.html';
         });
 
-        function loadData() {
-            adjutoriumList = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            updateDatalist();
+        async function loadPresidiaListItems() {
+            presidiaGeneralList = await fetchPresidiaList();
+        }
+        let presidiaGeneralList = [];
+
+        async function loadData() {
+            try {
+                const snapshot = await getDocs(collection(db, 'adjutorium_members_list'));
+                adjutoriumList = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                updateDatalist();
+            } catch (error) {
+                console.error("Error loading adjutorium data:", error);
+            }
         }
 
         function setupPermissions() {
@@ -535,7 +586,7 @@
             const isOfficer = officerRoles.some(r => role.includes(r.toLowerCase()));
 
             if (isAdmin) {
-                const churches = getChurches();
+                const churches = [...new Set(presidiaGeneralList.map(p => p.churchName || p.church))].sort();
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
                 churches.forEach(c => churchSelect.add(new Option(c, c)));
                 churchSelect.disabled = false;
@@ -553,7 +604,18 @@
 
                 setFixedOption(churchSelect, uc);
                 setFixedOption(curiaSelect, ucu);
-                setFixedOption(presidiumSelect, upr);
+
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) {
+                    pInput.value = upr;
+                    pInput.disabled = true;
+                    pInput.style.backgroundColor = '#f9f9f9';
+                }
+                const pSelect = document.getElementById('presidiumSelect');
+                if (pSelect) {
+                    pSelect.value = upr;
+                }
+
                 renderTable();
             } else {
                 showGlobalAlert('아듀또리움 관리 권한이 없습니다. 상급 단원 또는 관리자에게 문의해 주세요.').then(() => {
@@ -584,24 +646,106 @@
             churchSelect.addEventListener('change', () => {
                 const c = churchSelect.value;
                 curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) {
+                    pInput.value = '';
+                    pInput.disabled = true;
+                    pInput.style.backgroundColor = '#f9f9f9';
+                }
+                if (document.getElementById('presidiumSelect')) document.getElementById('presidiumSelect').value = '';
+
                 curiaSelect.disabled = !c;
-                if (c) getCuriae(c).forEach(cu => curiaSelect.add(new Option(cu, cu)));
+                if (c) {
+                    const curiae = [...new Set(presidiaGeneralList.filter(p => (p.churchName || p.church) === c).map(p => p.curiaName || p.curia))].sort();
+                    curiae.forEach(cu => curiaSelect.add(new Option(cu, cu)));
+                }
             });
 
             curiaSelect.addEventListener('change', () => {
                 const c = churchSelect.value;
                 const cu = curiaSelect.value;
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                presidiumSelect.disabled = !cu;
-                if (c && cu) getPresidia(c, cu).forEach(pr => presidiumSelect.add(new Option(pr.name, pr.name)));
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) {
+                    pInput.value = '';
+                    pInput.disabled = !cu;
+                    pInput.style.backgroundColor = cu ? 'white' : '#f9f9f9';
+                }
+                if (document.getElementById('presidiumSelect')) document.getElementById('presidiumSelect').value = '';
+
+                if (c && cu) loadPresidiaListDropdown(c, cu);
             });
 
-            presidiumSelect.addEventListener('change', () => {
-                renderTable();
-                resetFormDetails();
-                updateDatalist();
-            });
+            async function loadPresidiaListDropdown(church, curia) {
+                const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+                currentPresidiaList = [...new Set(presidia.filter(Boolean))];
+            }
+
+            // 쁘레시디움 커스텀 드롭다운 로직
+            const pInput = document.getElementById('presidiumInput');
+            const pDropdown = document.getElementById('presidiumDropdown');
+            const pSelect = document.getElementById('presidiumSelect');
+
+            function renderPresidiumDropdown(filter = '') {
+                if (!currentPresidiaList) return;
+                const list = currentPresidiaList.filter(p => filter === '' || p.includes(filter));
+
+                if (list.length === 0) {
+                    pDropdown.innerHTML = '<div class="no-result" style="padding: 10px; color: #888;">검색 결과가 없습니다.</div>';
+                    return;
+                }
+
+                pDropdown.innerHTML = list.map(name => `
+                    <div class="dropdown-item" data-name="${name}" style="padding: 10px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; transition: background 0.2s;">
+                        ${name}
+                    </div>
+                `).join('');
+
+                pDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const name = item.dataset.name;
+                        pInput.value = name;
+                        if (pSelect) pSelect.value = name;
+                        pDropdown.style.display = 'none';
+
+                        renderTable();
+                        resetFormDetails();
+                        updateDatalist();
+                    });
+                });
+            }
+
+            if (pInput) {
+                pInput.addEventListener('focus', () => {
+                    if (!pInput.disabled) {
+                        renderPresidiumDropdown('');
+                        pDropdown.style.display = 'block';
+                    }
+                });
+
+                pInput.addEventListener('input', () => {
+                    renderPresidiumDropdown(pInput.value.trim());
+                    pDropdown.style.display = 'block';
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (pInput && pInput.disabled) return;
+                    if (pInput && !pInput.contains(e.target) && pDropdown && !pDropdown.contains(e.target)) {
+                        if (pDropdown.style.display === 'block') {
+                            pDropdown.style.display = 'none';
+                            const currentVal = pInput.value.trim();
+                            if (currentVal && !currentPresidiaList.includes(currentVal)) {
+                                pInput.value = '';
+                                if (pSelect) pSelect.value = '';
+                            } else if (currentVal && currentPresidiaList.includes(currentVal)) {
+                                if (pSelect) pSelect.value = currentVal;
+                                renderTable();
+                                resetFormDetails();
+                                updateDatalist();
+                            }
+                        }
+                    }
+                });
+            }
 
             // Name Input & Datalist Logic
             nameInput.addEventListener('input', () => {
@@ -626,9 +770,14 @@
             if (btnDelete) btnDelete.addEventListener('click', handleDelete);
         }
 
+        async function loadPresidiaList(church, curia) {
+            const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            currentPresidiaList = [...new Set(presidia.filter(Boolean))];
+        }
+
         function updateDatalist() {
             const church = churchSelect.value;
-            const presidium = presidiumSelect.value;
+            const presidium = document.getElementById('presidiumSelect').value;
             if (!church || !presidium) return;
 
             const names = [...new Set(adjutoriumList
@@ -662,7 +811,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function handleSave() {
+        async function handleSave() {
             const church = churchSelect.value;
             const presidium = presidiumSelect.value;
             const name = nameInput.value.trim();
@@ -672,7 +821,6 @@
             if (!admissionDateInput.value) return showGlobalAlert('입단일 정보가 누락되었습니다.\n입단일은 필수 입력 사항입니다.');
 
             const data = {
-                id: editId || ('adj_' + Date.now()),
                 church,
                 curia: curiaSelect.value,
                 presidium,
@@ -686,36 +834,45 @@
                 admissionDate: admissionDateInput.value,
                 withdrawalDate: withdrawalDateInput.value,
                 notes: notesInput.value.trim(),
-                updatedAt: new Date().toISOString()
+                updatedAt: serverTimestamp()
             };
 
-            if (editId) {
-                const idx = adjutoriumList.findIndex(a => a.id === editId);
-                if (idx > -1) adjutoriumList[idx] = data;
-            } else {
-                data.createdAt = data.updatedAt;
-                adjutoriumList.push(data);
-            }
+            try {
+                if (editId) {
+                    await updateDoc(doc(db, 'adjutorium_members_list', editId), data);
+                } else {
+                    data.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'adjutorium_members_list'), data);
+                }
 
-            localStorage.setItem('adjutorium_members_list', JSON.stringify(adjutoriumList));
-            showGlobalAlert('아듀또리움 단원 정보가 성공적으로 저장되었습니다.').then(() => {
-                resetFormDetails();
-                renderTable();
-                updateDatalist();
-            });
+                showGlobalAlert('아듀또리움 단원 정보가 성공적으로 저장되었습니다.').then(async () => {
+                    resetFormDetails();
+                    await loadData();
+                    renderTable();
+                    updateDatalist();
+                });
+            } catch (error) {
+                console.error("Error saving adjutorium:", error);
+                showGlobalAlert('저장 중 오류가 발생했습니다.');
+            }
         }
 
-        function handleDelete() {
+        async function handleDelete() {
             if (!editId || !isAdmin) return;
-            showGlobalConfirm('선택한 단원의 정보를 정말로 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.').then(confirmed => {
+            showGlobalConfirm('선택한 단원의 정보를 정말로 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.').then(async confirmed => {
                 if (confirmed) {
-                    adjutoriumList = adjutoriumList.filter(a => a.id !== editId);
-                    localStorage.setItem('adjutorium_members_list', JSON.stringify(adjutoriumList));
-                    showGlobalAlert('정보가 정상적으로 삭제되었습니다.').then(() => {
-                        resetFormDetails();
-                        renderTable();
-                        updateDatalist();
-                    });
+                    try {
+                        await deleteDoc(doc(db, 'adjutorium_members_list', editId));
+                        showGlobalAlert('정보가 정상적으로 삭제되었습니다.').then(async () => {
+                            resetFormDetails();
+                            await loadData();
+                            renderTable();
+                            updateDatalist();
+                        });
+                    } catch (error) {
+                        console.error("Error deleting adjutorium:", error);
+                        showGlobalAlert('삭제 중 오류가 발생했습니다.');
+                    }
                 }
             });
         }
@@ -741,7 +898,7 @@
 
         function renderTable() {
             const church = churchSelect.value;
-            const presidium = presidiumSelect.value;
+            const presidium = document.getElementById('presidiumSelect').value;
 
             if (!presidium) {
                 tableBody.innerHTML = '<tr><td colspan="5" style="padding: 30px; color: #999;">조직을 선택하면 단원 목록이 표시됩니다.</td></tr>';

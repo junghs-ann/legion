@@ -92,24 +92,44 @@
             font-weight: bold;
         }
 
-        .btn-submit {
-            background-color: var(--primary-color);
+        .btn-submit,
+        .btn-close {
             color: white;
             border: none;
-            padding: 12px 40px;
+            padding: 10px 25px;
+            /* 패딩을 약간 줄임 */
             border-radius: 4px;
             font-size: 1rem;
             cursor: pointer;
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 80px;
+            /* 최소 너비 */
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
         }
 
         .btn-close {
             background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 12px 40px;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+        }
+
+        .action-buttons {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
         }
 
         .care-checkbox {
@@ -127,6 +147,76 @@
             background: #e9ecef;
             border-radius: 6px;
             font-weight: bold;
+        }
+
+        /* [쁘레시디움 커스텀 검색창 스타일] */
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        #presidiumInput {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        #presidiumInput:focus {
+            border-color: #d4af37;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+        }
+
+        #presidiumInput:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            color: #495057;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d4af37;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            z-index: 2200;
+            display: none;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #fdfaf0;
+            color: #b8860b;
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
         }
 
         /* Responsive adjustments for mobile */
@@ -157,7 +247,8 @@
             }
 
             .form-group input,
-            .form-group select {
+            .form-group select,
+            .search-container {
                 width: 100%;
                 max-width: 100% !important;
                 box-sizing: border-box;
@@ -198,6 +289,16 @@
             .care-table td:nth-child(5) {
                 width: 50px !important;
                 padding: 8px 1px !important;
+            }
+
+            .action-buttons {
+                gap: 10px;
+            }
+
+            .action-buttons button {
+                flex: 1;
+                /* 모바일에서 동일한 비율로 가득 차게 */
+                padding: 12px 0;
             }
         }
     </style>
@@ -281,8 +382,9 @@
             <div
                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 20px; padding-bottom: 10px;">
                 <h2 class="form-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">협조단원 돌봄 관리</h2>
-                <button type="button" class="btn-close" onclick="location.href='dashboard.html'"
-                    style="padding: 8px 16px; font-size: 0.9rem; margin: 0;">닫 기</button>
+                <button type="button" onclick="location.href='dashboard.html'"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; margin: 0; line-height: 1;"><i
+                        class="fas fa-times"></i></button>
             </div>
 
             <div class="form-grid-header">
@@ -300,9 +402,10 @@
                 </div>
                 <div class="form-group col-span-6">
                     <label>쁘레시디움(Pr.)</label>
-                    <select id="presidiumSelect" disabled style="max-width: calc(50% - 7.5px);">
-                        <option value="">쁘레시디움 선택</option>
-                    </select>
+                    <div class="search-container" style="max-width: calc(50% - 7.5px);" id="presidiumSearchContainer">
+                        <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off" disabled>
+                        <div id="presidiumDropdown" class="custom-dropdown"></div>
+                    </div>
                 </div>
                 <div class="form-group col-span-3">
                     <label>회차</label>
@@ -344,17 +447,19 @@
                 <div style="margin-left: 20px;">돌봄 완료: <span id="caredCount">0</span>명</div>
             </div>
 
-            <div style="margin-top: 30px; text-align: center; display: flex; justify-content: center; gap: 15px;">
-                <button type="button" id="btnSave" class="btn-submit">저 장</button>
-                <button type="button" id="btnDelete" class="btn-submit"
-                    style="background-color: #dc3545; display: none;">삭 제</button>
+            <div class="action-buttons">
+                <button type="button" id="btnSave" class="btn-submit">저장</button>
+                <button type="button" class="btn-close" onclick="location.href='dashboard.html'"><i
+                        class="fas fa-times"></i> 닫기</button>
+                <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭제</button>
             </div>
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let presidiaList = [];
@@ -365,7 +470,9 @@
 
         const churchSelect = document.getElementById('churchSelect');
         const curiaSelect = document.getElementById('curiaSelect');
-        const presidiumSelect = document.getElementById('presidiumSelect');
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+        let currentPresidia = [];
         const sessionInput = document.getElementById('sessionInput');
         const sessionList = document.getElementById('sessionList');
         const dateInput = document.getElementById('dateInput');
@@ -373,7 +480,7 @@
         const btnSave = document.getElementById('btnSave');
         const btnDelete = document.getElementById('btnDelete');
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
 
             // [New] Role-based Menu Control & Common Menus
@@ -383,20 +490,17 @@
                 });
             }
 
-            loadData();
-            setupOrgSelectors();
+            await loadData();
+            await setupOrgSelectors();
             setupEventListeners();
         }, () => { location.href = 'index.html'; });
 
-        function loadData() {
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+        async function loadData() {
+            presidiaList = await fetchPresidiaList();
+            // Other lists will be fetched on demand (attendance, members, auxiliary, careHistory)
         }
 
-        function setupOrgSelectors() {
+        async function setupOrgSelectors() {
             const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
 
             const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
@@ -413,9 +517,9 @@
                 curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
                 curiaSelect.disabled = true;
                 updatePresidiumList();
-                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium || '';
-                presidiumSelect.disabled = true;
-                updateSessionList();
+                presidiumInput.value = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumInput.disabled = true;
+                await updateSessionList();
             }
         }
 
@@ -435,28 +539,98 @@
         function updatePresidiumList() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
-            presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-            if (!curia) { presidiumSelect.disabled = true; return; }
+
+            currentPresidia = [];
+            presidiumInput.value = '';
+
+            if (!curia) {
+                presidiumInput.disabled = true;
+                return;
+            }
             const prs = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
-            prs.forEach(pr => {
-                const opt = document.createElement('option');
-                opt.value = opt.textContent = pr;
-                presidiumSelect.appendChild(opt);
-            });
-            presidiumSelect.disabled = false;
+            currentPresidia = prs;
+            presidiumInput.disabled = false;
         }
 
-        function updateSessionList() {
-            const pr = presidiumSelect.value;
+        async function updateSessionList() {
+            const pr = presidiumInput.value;
             sessionInput.innerHTML = '<option value="">회차 선택</option>';
-            if (!pr) return;
-            const prAttendance = attendanceList.filter(a => a.presidium === pr).sort((a, b) => parseInt(b.session) - parseInt(a.session));
-            prAttendance.forEach(a => {
-                const opt = document.createElement('option');
-                opt.value = a.session; // Store just the session number in value
-                opt.textContent = `${a.session}회 (${a.date})`;
-                opt.dataset.date = a.date; // Store date in data attribute
-                sessionInput.appendChild(opt);
+            if (!pr || !currentPresidia.includes(pr)) {
+                dateInput.value = '';
+                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                btnDelete.style.display = 'none';
+                updateCaredCount();
+                return;
+            }
+
+            try {
+                const q = query(collection(db, 'attendance_list'), where('presidium', '==', pr));
+                const querySnapshot = await getDocs(q);
+                attendanceList = [];
+                querySnapshot.forEach(doc => attendanceList.push({ id: doc.id, ...doc.data() }));
+
+                attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
+                attendanceList.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.session;
+                    opt.textContent = `${a.session}회 (${a.date})`;
+                    opt.dataset.date = a.date;
+                    sessionInput.appendChild(opt);
+                });
+            } catch (error) {
+                console.error("Error loading attendance for sessions:", error);
+            }
+        }
+
+        function setupPresidiumSearch() {
+            presidiumInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!presidiumInput.disabled) {
+                    renderDropdown(currentPresidia);
+                    presidiumDropdown.style.display = 'block';
+                }
+            });
+
+            presidiumInput.addEventListener('input', async (e) => {
+                window.setDirty(true);
+                const keyword = e.target.value.trim().toLowerCase();
+                const filtered = currentPresidia.filter(p => p.toLowerCase().includes(keyword));
+                renderDropdown(filtered);
+                presidiumDropdown.style.display = 'block';
+                await updateSessionList();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                    presidiumDropdown.style.display = 'none';
+
+                    const currentVal = presidiumInput.value.trim();
+                    if (currentVal && !currentPresidia.includes(currentVal)) {
+                        presidiumInput.value = '';
+                        (async () => await updateSessionList())();
+                    }
+                }
+            });
+        }
+
+        function renderDropdown(list) {
+            if (list.length === 0) {
+                presidiumDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            presidiumDropdown.innerHTML = list.map(p => `
+                <div class="dropdown-item" data-value="${p}">${p}</div>
+            `).join('');
+
+            presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    presidiumInput.value = item.dataset.value;
+                    presidiumDropdown.style.display = 'none';
+                    window.setDirty(true);
+                    await updateSessionList();
+                });
             });
         }
 
@@ -465,11 +639,11 @@
             document.querySelector('.register-form-container').addEventListener('input', () => window.setDirty(true));
             document.querySelector('.register-form-container').addEventListener('change', () => window.setDirty(true));
 
-            churchSelect.onchange = () => { updateCuriaList(); updateSessionList(); };
-            curiaSelect.onchange = () => { updatePresidiumList(); updateSessionList(); };
-            presidiumSelect.onchange = updateSessionList;
+            churchSelect.onchange = async () => { updateCuriaList(); await updateSessionList(); };
+            curiaSelect.onchange = async () => { updatePresidiumList(); await updateSessionList(); };
+            setupPresidiumSearch();
 
-            sessionInput.onchange = (e) => {
+            sessionInput.onchange = async (e) => {
                 const sessionNum = sessionInput.value;
                 if (!sessionNum) {
                     dateInput.value = '';
@@ -484,41 +658,57 @@
                 const extractedDate = selectedOpt.dataset.date;
                 dateInput.value = extractedDate;
 
-                const pr = presidiumSelect.value;
+                const pr = presidiumInput.value;
                 const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
                 if (record) {
-                    loadCareList(record);
-                    updateDeleteButtonState(record.session);
+                    await loadCareList(record);
+                    await updateDeleteButtonState(record.session);
                 }
             };
 
-            btnSave.onclick = saveCareData;
-            btnDelete.onclick = deleteCareData;
+            btnSave.onclick = async () => await saveCareData();
+            btnDelete.onclick = async () => await deleteCareData();
         }
 
-        function updateDeleteButtonState(sessionNum) {
-            const pr = presidiumSelect.value;
-            const existingCare = careHistory.find(c => c.presidium === pr && String(c.session) === String(sessionNum));
-            const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
-            if (existingCare && isAdmin) {
-                btnDelete.style.display = 'inline-block';
-            } else {
-                btnDelete.style.display = 'none';
+        async function updateDeleteButtonState(sessionNum) {
+            const pr = presidiumInput.value;
+            try {
+                const q = query(collection(db, 'auxiliary_care_list'),
+                    where('presidium', '==', pr),
+                    where('session', '==', String(sessionNum)));
+                const querySnapshot = await getDocs(q);
+                const existingCare = !querySnapshot.empty;
+
+                const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+                if (existingCare && isAdmin) {
+                    btnDelete.style.display = 'inline-block';
+                } else {
+                    btnDelete.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error checking existing care for delete button:", error);
             }
         }
 
-        function deleteCareData() {
-            const pr = presidiumSelect.value;
+        async function deleteCareData() {
+            const pr = presidiumInput.value;
             const session = sessionInput.value;
 
             if (!session) return;
 
             if (!confirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
 
-            const index = careHistory.findIndex(c => c.presidium === pr && String(c.session) === String(session));
-            if (index >= 0) {
-                careHistory.splice(index, 1);
-                localStorage.setItem('auxiliary_care_list', JSON.stringify(careHistory));
+            try {
+                const q = query(collection(db, 'auxiliary_care_list'),
+                    where('presidium', '==', pr),
+                    where('session', '==', String(session)));
+                const querySnapshot = await getDocs(q);
+                const deletePromises = [];
+                querySnapshot.forEach(docSnap => {
+                    deletePromises.push(deleteDoc(doc(db, 'auxiliary_care_list', docSnap.id)));
+                });
+                await Promise.all(deletePromises);
+
                 alert('삭제되었습니다.');
                 window.setDirty(false);
                 // Reset/Reload
@@ -527,110 +717,134 @@
                 tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
                 btnDelete.style.display = 'none';
                 updateCaredCount();
+            } catch (error) {
+                console.error("Error deleting care data:", error);
+                alert("삭제 중 오류가 발생했습니다.");
             }
         }
 
-        function loadCareList(attendanceRecord) {
-            const pr = presidiumSelect.value;
-            const todayStr = new Date().toISOString().split('T')[0];
+        async function loadCareList(attendanceRecord) {
+            const pr = presidiumInput.value;
 
-            // 1. Get present active members for this session
-            const presentActiveMemberIds = Object.entries(attendanceRecord.attendanceData)
-                .filter(([id, data]) => {
-                    const status = (typeof data === 'object') ? data.status : data;
-                    return status === 'P';
-                })
-                .map(([id]) => id);
-
-            // 2. Map to auxiliary members they manage (active ONLY)
-            let matchedAuxiliaries = auxiliaryList.filter(aux =>
-                String(aux.presidium) === String(pr) &&
-                presentActiveMemberIds.includes(String(aux.activeMemberId)) &&
-                // Active condition: No withdrawal date OR withdrawal date is in the future compared to session date
-                (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date)
-            );
-
-            // [추가] 단원은 본인이 담당하는 협조단원만 돌봄 등록 가능
-            const roleLower = (currentUser.role || '').toLowerCase();
-            const isAdmin = roleLower === 'admin' || roleLower === '관리자';
-            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
-
-            if (!isAdmin && !isOfficer) {
-                matchedAuxiliaries = matchedAuxiliaries.filter(aux =>
-                    String(aux.activeMemberId) === String(currentUser.id || currentUser.uid) ||
-                    (aux.activeMemberName === currentUser.name && (aux.activeMemberBaptismalName === (currentUser.baptismalName || '')))
-                );
-            }
-
-
-            if (matchedAuxiliaries.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">해당 회차에 출석한 행동단원이 관리하는 활동 중인 협조단원이 없습니다.<br><br>돌보는 협조단원이 협조단원 관리에 등록되어 있는지 확인하세요.</td></tr>';
-                return;
-            }
-
-            // 3. Group by active member
-            const grouped = [];
-            matchedAuxiliaries.forEach(aux => {
-                let group = grouped.find(g => String(g.id) === String(aux.activeMemberId));
-                if (!group) {
-                    group = { id: aux.activeMemberId, name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
-                    grouped.push(group);
+            try {
+                // Fetch members for matching activeMemberId if needed
+                if (membersList.length === 0) {
+                    const mSnap = await getDocs(collection(db, 'members_list'));
+                    membersList = [];
+                    mSnap.forEach(doc => membersList.push({ id: doc.id, ...doc.data() }));
                 }
-                group.list.push(aux);
-            });
 
-            // 5. Load existing care data if any
-            const existingCare = careHistory.find(c => c.presidium === pr && String(c.session) === String(attendanceRecord.session));
+                // Fetch auxiliary members for this presidium
+                const auxQ = query(collection(db, 'members_list'),
+                    where('presidium', '==', pr),
+                    where('role', '==', '협조단원'));
+                const auxSnap = await getDocs(auxQ);
+                auxiliaryList = [];
+                auxSnap.forEach(doc => auxiliaryList.push({ id: doc.id, ...doc.data() }));
 
-            // [개선] 항상 최신 행동단원 출석 및 협조단원 목록을 기준으로 표시합니다.
-            // 기존에 저장된 데이터가 있다면 해당 단원의 '체크 상태'만 가져옵니다.
-            const displayList = grouped;
+                // Fetch existing care history for this session
+                const careQ = query(collection(db, 'auxiliary_care_list'),
+                    where('presidium', '==', pr),
+                    where('session', '==', String(attendanceRecord.session)));
+                const careSnap = await getDocs(careQ);
+                let existingCare = null;
+                if (!careSnap.empty) {
+                    existingCare = { id: careSnap.docs[0].id, ...careSnap.docs[0].data() };
+                }
 
-            // 5. Render
-            tableBody.innerHTML = '';
-            let total = 0;
-            displayList.forEach(group => {
-                group.list.forEach((aux, idx) => {
-                    const tr = document.createElement('tr');
+                // 1. Get present active members for this session
+                const presentActiveMemberIds = Object.entries(attendanceRecord.attendanceData)
+                    .filter(([id, data]) => {
+                        const status = (typeof data === 'object') ? data.status : data;
+                        return status === 'P';
+                    })
+                    .map(([id]) => id);
 
-                    // Logic to determine if checked: 저장된 데이터에서 해당 협조단원의 ID를 기준으로 상태를 찾습니다.
-                    let isChecked = false;
-                    if (existingCare) {
-                        if (existingCare.careData && existingCare.careData[aux.id]) {
-                            isChecked = existingCare.careData[aux.id] === 'checked';
-                        } else if (existingCare.careDataSnapshot) {
-                            const snap = existingCare.careDataSnapshot.find(s => s.auxId === aux.id || s.id === aux.id);
-                            if (snap) isChecked = snap.checked === 'checked';
-                        }
+                // 2. Map to auxiliary members they manage (active ONLY)
+                let matchedAuxiliaries = auxiliaryList.filter(aux =>
+                    String(aux.presidium) === String(pr) &&
+                    presentActiveMemberIds.includes(String(aux.activeMemberId)) &&
+                    // Active condition: No withdrawal date OR withdrawal date is in the future compared to session date
+                    (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date)
+                );
+
+                // [추가] 단원은 본인이 담당하는 협조단원만 돌봄 등록 가능
+                const roleLower = (currentUser.role || '').toLowerCase();
+                const isAdmin = roleLower === 'admin' || roleLower === '관리자';
+                const isOfficer = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
+
+                if (!isAdmin && !isOfficer) {
+                    matchedAuxiliaries = matchedAuxiliaries.filter(aux =>
+                        String(aux.activeMemberId) === String(currentUser.id || currentUser.uid) ||
+                        (aux.activeMemberName === currentUser.name && (aux.activeMemberBaptismalName === (currentUser.baptismalName || '')))
+                    );
+                }
+
+                if (matchedAuxiliaries.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">해당 회차에 출석한 행동단원이 관리하는 활동 중인 협조단원이 없습니다.<br><br>돌보는 협조단원이 협조단원 관리에 등록되어 있는지 확인하세요.</td></tr>';
+                    return;
+                }
+
+                // 3. Group by active member
+                const grouped = [];
+                matchedAuxiliaries.forEach(aux => {
+                    let group = grouped.find(g => String(g.id) === String(aux.activeMemberId));
+                    if (!group) {
+                        group = { id: aux.activeMemberId, name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
+                        grouped.push(group);
                     }
-
-                    tr.innerHTML = `
-                        <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? group.name : ''}</td>
-                        <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? (group.baptismal || '-') : ''}</td>
-                        <td>${aux.name}</td>
-                        <td>${aux.baptismalName || '-'}</td>
-                        <td><input type="checkbox" class="care-checkbox" 
-                            data-aux-id="${aux.id || aux.auxId}" 
-                            data-aux-name="${aux.name}"
-                            data-aux-baptismal="${aux.baptismalName || ''}"
-                            data-aux-gender="${aux.gender || ''}"
-                            data-active-id="${group.id}"
-                            data-active-name="${group.name}"
-                            data-active-baptismal="${group.baptismal || ''}"
-                            ${isChecked ? 'checked' : ''}>
-                        </td>
-                    `;
-                    tableBody.appendChild(tr);
-                    total++;
+                    group.list.push(aux);
                 });
-            });
 
-            document.getElementById('totalAuxCount').textContent = total;
-            updateCaredCount();
+                // 5. Render
+                tableBody.innerHTML = '';
+                let total = 0;
+                grouped.forEach(group => {
+                    group.list.forEach((aux, idx) => {
+                        const tr = document.createElement('tr');
 
-            tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
-                cb.onchange = updateCaredCount;
-            });
+                        // Logic to determine if checked
+                        let isChecked = false;
+                        if (existingCare) {
+                            if (existingCare.careData && existingCare.careData[aux.id]) {
+                                isChecked = existingCare.careData[aux.id] === 'checked';
+                            } else if (existingCare.careDataSnapshot) {
+                                const snap = existingCare.careDataSnapshot.find(s => s.auxId === aux.id || s.id === aux.id);
+                                if (snap) isChecked = snap.checked === 'checked';
+                            }
+                        }
+
+                        tr.innerHTML = `
+                            <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? group.name : ''}</td>
+                            <td class="${idx === 0 ? '' : 'group-cell'}">${idx === 0 ? (group.baptismal || '-') : ''}</td>
+                            <td>${aux.name}</td>
+                            <td>${aux.baptismalName || '-'}</td>
+                            <td><input type="checkbox" class="care-checkbox" 
+                                data-aux-id="${aux.id || aux.auxId}" 
+                                data-aux-name="${aux.name}"
+                                data-aux-baptismal="${aux.baptismalName || ''}"
+                                data-aux-gender="${aux.gender || ''}"
+                                data-active-id="${group.id}"
+                                data-active-name="${group.name}"
+                                data-active-baptismal="${group.baptismal || ''}"
+                                ${isChecked ? 'checked' : ''}>
+                            </td>
+                        `;
+                        tableBody.appendChild(tr);
+                        total++;
+                    });
+                });
+
+                document.getElementById('totalAuxCount').textContent = total;
+                updateCaredCount();
+
+                tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
+                    cb.onchange = updateCaredCount;
+                });
+            } catch (error) {
+                console.error("Error loading care list:", error);
+                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
         function updateCaredCount() {
@@ -638,8 +852,8 @@
             document.getElementById('caredCount').textContent = count;
         }
 
-        function saveCareData() {
-            const pr = presidiumSelect.value;
+        async function saveCareData() {
+            const pr = presidiumInput.value;
             const session = sessionInput.value;
             const date = dateInput.value;
 
@@ -648,13 +862,12 @@
                 return;
             }
 
-            // NEW: Structure with Snapshot
-            const careData = {}; // Keeping for legacy support
-            const careDataSnapshot = []; // The new Snapshotted list
+            const careData = {};
+            const careDataSnapshot = [];
 
             tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
                 const status = cb.checked ? 'checked' : 'none';
-                careData[cb.dataset.auxId] = status; // Legacy
+                careData[cb.dataset.auxId] = status;
 
                 careDataSnapshot.push({
                     auxId: cb.dataset.auxId,
@@ -668,34 +881,43 @@
                 });
             });
 
-            const index = careHistory.findIndex(c => c.presidium === pr && String(c.session) === String(session));
-            const newEntry = {
-                id: index >= 0 ? careHistory[index].id : Date.now(),
-                presidium: pr,
-                session: session,
-                date: date,
-                careData: careData, // Legacy support
-                careDataSnapshot: careDataSnapshot, // Snapshot data
-                updatedAt: new Date().toISOString()
-            };
+            try {
+                // Find if existing record needs update
+                const q = query(collection(db, 'auxiliary_care_list'),
+                    where('presidium', '==', pr),
+                    where('session', '==', String(session)));
+                const querySnapshot = await getDocs(q);
+                let docId = `care_${pr}_${session}`; // Predictable ID
+                if (!querySnapshot.empty) {
+                    docId = querySnapshot.docs[0].id;
+                }
 
-            if (index >= 0) {
-                careHistory[index] = newEntry;
-            } else {
-                careHistory.push(newEntry);
+                const newEntry = {
+                    presidium: pr,
+                    session: String(session),
+                    date: date,
+                    church: churchSelect.value,
+                    curia: curiaSelect.value,
+                    careData: careData,
+                    careDataSnapshot: careDataSnapshot,
+                    updatedAt: serverTimestamp()
+                };
+
+                await setDoc(doc(db, 'auxiliary_care_list', docId), newEntry);
+                alert('저장되었습니다.');
+                window.setDirty(false);
+
+                // Clear session input to encourage next entry
+                sessionInput.value = '';
+                dateInput.value = '';
+                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                updateCaredCount();
+                btnDelete.style.display = 'none';
+                sessionInput.focus();
+            } catch (error) {
+                console.error("Error saving care data:", error);
+                alert("저장 중 오류가 발생했습니다.");
             }
-
-            localStorage.setItem('auxiliary_care_list', JSON.stringify(careHistory));
-            alert('저장되었습니다.');
-            window.setDirty(false);
-
-            // Clear session input to encourage next entry
-            sessionInput.value = '';
-            dateInput.value = '';
-            tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
-            updateCaredCount();
-            btnDelete.style.display = 'none';
-            sessionInput.focus(); // Focus back to session for next entry
         }
     </script>
 </body>

@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>공지사항 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260304_1430">
+    <link rel="stylesheet" href="styles.css?v=20260308_0022">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260304_1430">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260308_0022">
     <style>
         /* 사용자 피드백 반영: 배경 흰색 및 테두리 강제 설정 */
         body.dashboard-body {
@@ -33,6 +33,24 @@
             margin: 0 auto;
             position: relative;
             z-index: 100;
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 110;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         .board-header {
@@ -98,9 +116,11 @@
         .search-filter-section {
             background: #f8f9fa;
             padding: 25px;
-            border-radius: 10px;
+            border-radius: 12px;
             margin-bottom: 35px;
             border: 1px solid #e9ecef;
+            width: 100%;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -193,7 +213,7 @@
 
         .notice-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
             gap: 25px;
         }
 
@@ -303,6 +323,14 @@
             gap: 20px;
             color: #777;
             font-size: 0.95rem;
+            flex-wrap: wrap;
+        }
+
+        .detail-meta span {
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .detail-content {
@@ -310,7 +338,84 @@
             line-height: 1.8;
             color: #333;
             white-space: pre-wrap;
+            word-break: keep-all;
+            overflow-wrap: break-word;
             min-height: 200px;
+        }
+
+        /* Searchable Select Premium Styling */
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+            /* min-width 해제하여 부모 안에서 유연하게 조절 */
+        }
+
+        #presidiumInput {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #eee;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #fff;
+            box-sizing: border-box;
+            height: 42px;
+            /* 셀렉트 박스와 높이 통일 */
+        }
+
+        #presidiumInput:focus {
+            border-color: #d4a017;
+            box-shadow: 0 0 8px rgba(212, 160, 23, 0.2);
+        }
+
+        #presidiumInput:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            color: #adb5bd;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1.5px solid #d4a017;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 2200;
+            display: none;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f8f9fa;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #fffcf0;
+            color: #d4a017;
+            font-weight: 600;
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
         }
 
         /* 등록 모달 디자인 전면 개편 */
@@ -416,56 +521,67 @@
             gap: 15px;
             margin-bottom: 20px;
             background: #f8f9fa;
-            padding: 10px;
-            /* 패딩 소폭 감소 */
-            border-radius: 8px;
+            padding: 20px;
+            border-radius: 12px;
             flex-wrap: wrap;
             align-items: center;
             border: 1px solid #eee;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .org-filter-group {
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
+            min-width: 250px;
         }
 
         .org-filter-group label {
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.95rem;
             color: #444;
             white-space: nowrap;
-            width: 95px;
-            /* 너비 명시적 지정 */
+            width: 70px;
             display: inline-block;
-            text-align: justify;
-            /* 텍스트 양끝 정렬 효과 */
         }
 
         .org-filter-group select {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            min-width: 150px;
+            flex: 1;
+            padding: 10px 12px;
+            border: 1.5px solid #eee;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background-color: white;
+            min-width: 0;
+            transition: border-color 0.2s;
+        }
+
+        .org-filter-group select:focus {
+            border-color: var(--primary-color);
+            outline: none;
         }
 
         /* 모달 기본 기반 스타일 (누적 누락 해결) */
         .modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 10000;
+            /* 헤더보다 항상 위에 있도록 매우 높은 값 설정 */
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.5);
-            /* 어두운 배경 가림막 */
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
-            /* 배경 흐림 효과로 집중도 향상 */
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            align-items: flex-start;
+            /* 긴 내용 대응을 위해 상단 정렬 */
+            padding: 80px 20px 40px 20px;
+            /* 상단 시스템 헤더 공간 확보 */
+            box-sizing: border-box;
         }
 
         .modal-content {
@@ -478,6 +594,15 @@
         }
 
         @media (max-width: 768px) {
+            .board-container {
+                padding: 25px 15px;
+                border-radius: 0;
+            }
+
+            .org-filter-group {
+                min-width: 100%;
+            }
+
             .modal-content {
                 padding: 20px !important;
                 /* 모바일에서 내부 여백 축소 */
@@ -581,6 +706,8 @@
     <div class="main-content">
         <!-- 반드시 흰색 배경과 테두리를 가진 컨테이너 -->
         <div class="board-container">
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
             <div class="board-header">
                 <h1 class="board-title">
                     <i class="fas fa-bullhorn" style="color: #ff9800;"></i> 공지사항
@@ -609,9 +736,11 @@
                 </div>
                 <div class="org-filter-group">
                     <label>쁘레시디움</label>
-                    <select id="filterPresidium" disabled>
-                        <option value="">쁘레시디움 선택</option>
-                    </select>
+                    <div class="search-container">
+                        <input type="text" id="presidiumInput" placeholder="쁘레시디움 선택" disabled autocomplete="off">
+                        <input type="hidden" id="filterPresidium">
+                        <div id="presidiumDropdown" class="custom-dropdown"></div>
+                    </div>
                 </div>
             </div>
 
@@ -722,35 +851,42 @@
     <!-- Detail Modal: Readable Content View -->
     <div id="detailModal" class="modal">
         <div class="modal-content"
-            style="max-width: 800px; padding: 40px; border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);">
+            style="max-width: 800px; padding: 40px; border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2); position: relative;">
+            <!-- 모달 상단 우측 X 버튼 추가 -->
+            <span
+                style="position: absolute; top: 25px; right: 25px; font-size: 2.2rem; cursor: pointer; color: #ccc; line-height: 1; transition: all 0.2s;"
+                onclick="closeModal('detailModal')" onmouseover="this.style.color='#888'"
+                onmouseout="this.style.color='#ccc'">&times;</span>
+
             <div class="detail-view-container">
                 <div id="detailViewContent"></div>
-                <div
-                    style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 30px; border-top: 1px solid #f0f0f0; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div id="adminControls" style="display: none; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; justify-content: flex-end; margin-top: 40px; padding-top: 30px; border-top: 1px solid #f0f0f0; align-items: center; flex-wrap: wrap; gap: 10px;"
+                    class="detail-actions-row">
+                    <div id="adminControls" style="display: none; gap: 10px; flex: 1;">
                         <button id="btnEdit" class="btn-custom"
-                            style="background: #e7f5ff; color: #1971c2; border: 1px solid #a5d8ff;">
-                            <i class="fas fa-edit"></i> 수정하기
+                            style="background: #d4a017; color: white; border: none; flex: 1; justify-content: center;">
+                            <i class="fas fa-edit"></i> 수정
                         </button>
                         <button id="btnDelete" class="btn-custom"
-                            style="background: #fff5f5; color: #e03131; border: 1px solid #ffc9c9;">
-                            <i class="fas fa-trash-alt"></i> 공지 삭제
+                            style="background: #333; color: white; border: none; flex: 1; justify-content: center;">
+                            <i class="fas fa-trash-alt"></i> 삭제
                         </button>
                     </div>
                     <button class="btn-custom btn-close"
-                        style="padding: 12px 35px; border-radius: 12px; font-weight: 700;"
+                        style="background: #666; color: white; border: none; padding: 12px 35px; border-radius: 8px; font-weight: 700; flex: 1; justify-content: center;"
                         onclick="closeModal('detailModal')">
-                        <i class="fas fa-times"></i> 화면 닫기
+                        <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js?v=20260304_1430"></script>
+    <script src="script.js?v=20260308_0022"></script>
     <script type="module">
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260304_1430";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260304_1430";
+        import { fetchPresidiaList } from "./data.js?v=20260304_1430";
 
         let currentUser = null;
         let notices = [];
@@ -761,17 +897,23 @@
         // 조직 필터 관련 요소
         const filterChurch = document.getElementById('filterChurch');
         const filterCuria = document.getElementById('filterCuria');
+        const presidiumInput = document.getElementById('presidiumInput');
         const filterPresidium = document.getElementById('filterPresidium');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+
+        let currentPresidia = [];
 
         // 등록 모달 조직 관련 요소
         const postChurch = document.getElementById('postChurch');
         const postCuria = document.getElementById('postCuria');
         const postPresidium = document.getElementById('postPresidium');
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
-            loadData();
+            await loadPresidiaList();
+            await loadData();
             initOrgLogic(profile); // 조직 연동 초기화
+            setupPresidiumSearch(); // [New] 실시간 검색 로직 추가
             checkAdmin();
 
             // [New] Role-based Menu Control & Common Menus
@@ -782,8 +924,22 @@
             render();
         }, () => { location.href = 'index.html'; });
 
-        function loadData() {
-            notices = JSON.parse(localStorage.getItem('legion_notices_list') || '[]');
+        async function loadPresidiaList() {
+            presidiaList = await fetchPresidiaList();
+        }
+        let presidiaList = [];
+
+        async function loadData() {
+            try {
+                const q = query(collection(db, 'notice_list'), orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                notices = [];
+                querySnapshot.forEach(docSnap => {
+                    notices.push({ id: docSnap.id, ...docSnap.data() });
+                });
+            } catch (error) {
+                console.error("Error loading notices:", error);
+            }
         }
 
         // --- 조직 연동 및 권한 로직 시작 (게시판과 통일) ---
@@ -791,7 +947,7 @@
             const isAdmin = profile.role === 'admin';
 
             // 성당 목록 로드 (공통)
-            const churches = getChurches();
+            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
             [filterChurch, postChurch].forEach(select => {
                 churches.forEach(c => {
                     const opt = document.createElement('option');
@@ -811,11 +967,16 @@
                 filterChurch.value = orgFilter.church;
                 filterChurch.disabled = true;
 
-                loadSelectOptions(filterCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                loadSelectOptions(filterCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
                 filterCuria.disabled = true;
 
-                loadSelectOptions(filterPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
-                filterPresidium.disabled = false; // 쁘레시디움 선택을 비워(전체) 상위 공지 확인 가능케 함
+                loadSelectOptions(filterPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
+
+                // [New] 커스텀 선택창 초기화
+                currentPresidia = presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort();
+                presidiumInput.value = orgFilter.presidium || '';
+                filterPresidium.value = orgFilter.presidium || '';
+                presidiumInput.disabled = false;
 
                 // [추가] 이벤트 바인딩: 일반 사용자도 쁘레시디움 필터 변경 시 렌더링 반영
                 filterPresidium.addEventListener('change', () => {
@@ -826,9 +987,9 @@
                 // 등록 모달은 본인 소속으로 엄격 고정
                 postChurch.value = orgFilter.church;
                 postChurch.disabled = true;
-                loadSelectOptions(postCuria, getCuriae(orgFilter.church), orgFilter.curia);
+                loadSelectOptions(postCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
                 postCuria.disabled = true;
-                loadSelectOptions(postPresidium, getPresidia(orgFilter.church, orgFilter.curia).map(p => p.name), orgFilter.presidium);
+                loadSelectOptions(postPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
                 postPresidium.disabled = true;
 
             } else {
@@ -859,26 +1020,119 @@
         function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
             churchEl.addEventListener('change', () => {
                 const church = churchEl.value;
-                loadSelectOptions(curiaEl, church ? getCuriae(church) : []);
+                const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+                loadSelectOptions(curiaEl, curiae);
                 curiaEl.disabled = !church;
-                presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
-                presidiumEl.disabled = true;
+
+                // 검색형 드롭다운인 경우 처리
+                if (churchEl.id === 'filterChurch') {
+                    presidiumInput.value = '';
+                    filterPresidium.value = '';
+                    presidiumInput.disabled = true;
+                    currentPresidia = [];
+                } else {
+                    presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
+                    presidiumEl.disabled = true;
+                }
+
                 if (callback) callback(church, '', '');
             });
 
             curiaEl.addEventListener('change', () => {
                 const church = churchEl.value;
                 const curia = curiaEl.value;
-                const presidiaNames = curia ? getPresidia(church, curia).map(p => p.name) : [];
-                loadSelectOptions(presidiumEl, presidiaNames);
-                presidiumEl.disabled = !curia;
+                const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+
+                if (curiaEl.id === 'filterCuria') {
+                    currentPresidia = presidiaNames;
+                    presidiumInput.value = '';
+                    filterPresidium.value = '';
+                    presidiumInput.disabled = !curia;
+                } else {
+                    loadSelectOptions(presidiumEl, presidiaNames);
+                    presidiumEl.disabled = !curia;
+                }
+
                 if (callback) callback(church, curia, '');
             });
 
-            presidiumEl.addEventListener('change', () => {
-                if (callback) callback(churchEl.value, curiaEl.value, presidiumEl.value);
+            if (presidiumEl && presidiumEl.tagName === 'SELECT') {
+                presidiumEl.addEventListener('change', () => {
+                    if (callback) callback(churchEl.value, curiaEl.value, presidiumEl.value);
+                });
+            }
+        }
+
+        // --- [New] 커스텀 검색형 쁘레시디움 선택 로직 ---
+        function setupPresidiumSearch() {
+            presidiumInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!presidiumInput.disabled) {
+                    renderDropdown(currentPresidia);
+                    presidiumDropdown.style.display = 'block';
+                }
+            });
+
+            presidiumInput.addEventListener('input', (e) => {
+                const keyword = e.target.value.trim().toLowerCase();
+                const filtered = currentPresidia.filter(p => p.toLowerCase().includes(keyword));
+                renderDropdown(filtered);
+                presidiumDropdown.style.display = 'block';
+
+                filterPresidium.value = '';
+                orgFilter.presidium = '';
+                render();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (presidiumInput.disabled) return;
+
+                if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                    if (presidiumDropdown.style.display === 'block') {
+                        presidiumDropdown.style.display = 'none';
+                        const currentVal = presidiumInput.value.trim();
+                        let changed = false;
+
+                        if (currentVal && !currentPresidia.includes(currentVal)) {
+                            presidiumInput.value = '';
+                            if (filterPresidium.value !== '') changed = true;
+                            filterPresidium.value = '';
+                        } else if (currentVal && currentPresidia.includes(currentVal)) {
+                            if (filterPresidium.value !== currentVal) changed = true;
+                            filterPresidium.value = currentVal;
+                        }
+
+                        if (changed) {
+                            orgFilter.presidium = filterPresidium.value;
+                            render();
+                        }
+                    }
+                }
             });
         }
+
+        function renderDropdown(list) {
+            if (list.length === 0) {
+                presidiumDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                return;
+            }
+            presidiumDropdown.innerHTML = list.map(p => `
+                <div class="dropdown-item" data-value="${p}">${p}</div>
+            `).join('');
+
+            presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const val = item.dataset.value;
+                    presidiumInput.value = val;
+                    filterPresidium.value = val;
+                    orgFilter.presidium = val;
+                    presidiumDropdown.style.display = 'none';
+                    render();
+                });
+            });
+        }
+        // --- 쁘레시디움 로직 종료 ---
         // --- 조직 연동 및 권한 로직 종료 ---
 
         function checkAdmin() {
@@ -902,13 +1156,11 @@
                 const churchMatch = n.church === orgFilter.church;
 
                 // [Case 3] 꾸리아 및 쁘레시디움 엄격 매칭 (Strict Match)
-                // - 필터 값이 있으면 해당 값과 일치해야 함
-                // - 필터 값이 없으면(빈 문자열) 공지사항의 해당 필드도 비어있어야 함 (해당 조직 레벨의 공지임)
                 const curiaMatch = n.curia === (orgFilter.curia || "");
                 const presidiumMatch = n.presidiumName === (orgFilter.presidium || "");
 
                 return matchesFilter && matchesSearch && churchMatch && curiaMatch && presidiumMatch;
-            }).sort((a, b) => b.id - a.id);
+            });
 
             const pinned = filtered.filter(n => n.isPinned);
             const regular = filtered.filter(n => !n.isPinned);
@@ -986,12 +1238,17 @@
                 closeModal('detailModal');
                 openEdit(id);
             };
-            document.getElementById('btnDelete').onclick = () => {
+            document.getElementById('btnDelete').onclick = async () => {
                 if (!(isSuperAdmin || isAuthor)) return alert('권한이 없습니다.');
                 if (confirm('이 공지를 삭제하시겠습니까?')) {
-                    notices = notices.filter(x => x.id !== id);
-                    saveAndRefresh();
-                    closeModal('detailModal');
+                    try {
+                        await deleteDoc(doc(db, 'notice_list', id));
+                        await saveAndRefresh();
+                        closeModal('detailModal');
+                    } catch (error) {
+                        console.error("Error deleting notice:", error);
+                        alert("공지를 삭제하는 중 오류가 발생했습니다.");
+                    }
                 }
             };
             document.getElementById('detailModal').style.display = 'flex';
@@ -1009,9 +1266,11 @@
             // 수정 시 조직 정보 로드 (관리자용)
             if (currentUser.role === 'admin') {
                 postChurch.value = n.church || '';
-                loadSelectOptions(postCuria, getCuriae(n.church), n.curia);
+                const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === n.church).map(p => p.curiaName || p.curia))].sort();
+                loadSelectOptions(postCuria, curiae, n.curia);
                 postCuria.disabled = false;
-                loadSelectOptions(postPresidium, getPresidia(n.church, n.curia).map(p => p.name), n.presidiumName);
+                const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === n.church && (p.curiaName || p.curia) === n.curia).map(p => p.presidiumName || p.presidium).sort();
+                loadSelectOptions(postPresidium, presidiaNames, n.presidiumName);
                 postPresidium.disabled = false;
             }
 
@@ -1019,12 +1278,10 @@
             setTimeout(() => document.getElementById('noticeTitle').focus(), 100);
         }
 
-        const form = document.getElementById('noticeForm');
-        form.onsubmit = (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('noticeId').value;
             const data = {
-                id: id ? parseInt(id) : Date.now(),
                 title: document.getElementById('noticeTitle').value,
                 category: document.getElementById('noticeCategory').value,
                 content: document.getElementById('noticeContent').value,
@@ -1033,18 +1290,27 @@
                 church: postChurch.value,
                 curia: postCuria.value,
                 presidiumName: postPresidium.value,
-                date: new Date().toISOString().split('T')[0]
+                date: new Date().toISOString().split('T')[0],
+                updatedAt: serverTimestamp()
             };
-            if (id) {
-                const idx = notices.findIndex(x => x.id === parseInt(id));
-                notices[idx] = data;
-            } else { notices.push(data); }
-            saveAndRefresh();
-            closeModal('writeModal');
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'notice_list', id), data);
+                } else {
+                    data.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'notice_list'), data);
+                }
+                await saveAndRefresh();
+                closeModal('writeModal');
+            } catch (error) {
+                console.error("Error saving notice:", error);
+                alert("공지를 저장하는 중 오류가 발생했습니다.");
+            }
         };
 
-        function saveAndRefresh() {
-            localStorage.setItem('legion_notices_list', JSON.stringify(notices));
+        async function saveAndRefresh() {
+            await loadData();
             render();
         }
 

@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>입출내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260306_1520">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260306_1520">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* Report specific overrides */
         @media print {
@@ -23,6 +23,24 @@
             .btn-section {
                 display: none !important;
             }
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         /* Filter & Button Refinement */
@@ -42,7 +60,7 @@
 
         .btn-section {
             display: flex;
-            justify-content: flex-end;
+            justify-content: center;
             gap: 10px;
             margin-top: 20px;
             padding-top: 15px;
@@ -243,7 +261,10 @@
 
     <div class="main-content" style="padding: 85px 15px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 200px;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 200px; position: relative;">
+
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
 
             <!-- Filters -->
             <div class="filter-section">
@@ -364,9 +385,11 @@
     </div>
     </div>
 
-    <script src="script.js?v=20260306_1520"></script>
+    <script src="script.js?v=20260307_2325"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, doc, orderBy, limit } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -412,24 +435,26 @@
             }
 
             isAdmin = isAdminRole;
-            setupFilters(profile);
+            (async () => {
+                await loadPresidiaList();
+                setupFilters(profile);
 
-            // Load initial data if not admin
-            if (!isAdmin) {
-                // Ensure inputs are set before loading
-                document.getElementById('churchInput').value = profile.churchName || profile.church || '';
-                document.getElementById('curiaInput').value = profile.curiaName || profile.curia || '';
-                document.getElementById('presidiumInput').value = profile.presidiumName || profile.presidium || '';
-            }
+                // Load initial data if not admin
+                if (!isAdmin) {
+                    // Ensure inputs are set before loading
+                    document.getElementById('churchInput').value = profile.churchName || profile.church || '';
+                    document.getElementById('curiaInput').value = profile.curiaName || profile.curia || '';
+                    document.getElementById('presidiumInput').value = profile.presidiumName || profile.presidium || '';
+                }
+            })();
+
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, () => {
                     import("./auth.js").then(auth => auth.logoutUser());
                 });
             }
-
         }, () => {
-            alert("로그인이 필요합니다.");
             window.location.href = 'index.html';
         });
 
@@ -461,13 +486,13 @@
             }
         }
 
+        let presidiaList = [];
+        async function loadPresidiaList() {
+            presidiaList = await fetchPresidiaList();
+        }
+
         function getStoredPresidiaList() {
-            try {
-                return JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            } catch (e) {
-                console.error("Failed to load presidia list", e);
-                return [];
-            }
+            return presidiaList;
         }
 
         let currentPresidia = [];
@@ -578,126 +603,156 @@
             return { year, startDate, endDate, church, curia, presidium };
         }
 
-        function loadReport() {
+        async function loadReport() {
             const filters = getFilterValues();
             if (!filters.church || !filters.curia || !filters.presidium) {
                 alert("성당, 꾸리아, 쁘레시디움을 모두 선택해주세요.");
                 return;
             }
 
-            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
-            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
-            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
-            const summaryData = allSummaries[summaryKey] || { initialBalance: 0 };
+            try {
+                // 1. Load Initial Balance (from accounting_summaries) from Firestore
+                const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                const summaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', summaryId)));
 
-            const initialCarryover = summaryData.initialBalance || 0; // Balance from previous YEAR
+                let initialCarryover = 0;
+                if (!summaryDoc.empty) {
+                    initialCarryover = summaryDoc.docs[0].data().initialBalance || 0;
+                } else {
+                    // Fallback to calculate from previous year if not found
+                    const prevYear = (parseInt(filters.year) - 1).toString();
+                    const prevSummaryId = `${prevYear}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                    const prevSummaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', prevSummaryId)));
+                    const prevInitial = !prevSummaryDoc.empty ? (prevSummaryDoc.docs[0].data().initialBalance || 0) : 0;
 
-            // All transactions for this Org+Year
-            let orgTrans = allTrans.filter(t =>
-                t.year == filters.year &&
-                t.church === filters.church &&
-                t.curia === filters.curia &&
-                t.presidium === filters.presidium
-            );
+                    const prevTransQuery = query(
+                        collection(db, 'accounting_transactions'),
+                        where('year', '==', prevYear),
+                        where('church', '==', filters.church),
+                        where('curia', '==', filters.curia),
+                        where('presidium', '==', filters.presidium)
+                    );
+                    const prevTransSnap = await getDocs(prevTransQuery);
 
-            orgTrans.sort((a, b) => {
-                const dateA = new Date(a.year, a.month - 1, a.day);
-                const dateB = new Date(b.year, b.month - 1, b.day);
-                if (dateA - dateB !== 0) return dateA - dateB;
-                return (a.session || 0) - (b.session || 0);
-            });
-
-            // Date Range
-            let startDate = null;
-            let endDate = null;
-            if (filters.startDate) startDate = new Date(filters.startDate);
-            if (filters.endDate) endDate = new Date(filters.endDate);
-
-            if (startDate) startDate.setHours(0, 0, 0, 0);
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-
-            // Header: Underlined Date
-            let dateRangeText = `${filters.year}년`;
-            if (filters.startDate && filters.endDate) {
-                dateRangeText = `${filters.startDate} ~ ${filters.endDate}`;
-            } else if (filters.startDate) {
-                dateRangeText = `${filters.startDate} ~`;
-            }
-            reportDateRange.textContent = dateRangeText;
-
-            // --- Logic for Carryover & Totals ---
-            // 1. Calculate Balance before Start Date (Prev Carryover)
-            let prevBalance = initialCarryover;
-            let rangeIncomeTotal = 0;
-            let rangeExpenseTotal = 0;
-
-            // YTD (Cumulative) Totals
-            let ytdIncomeTotal = 0;
-            let ytdExpenseTotal = 0;
-
-            let expenseBreakdown = {}; // { 'ItemName': amount }
-            let incomeBreakdown = {};  // { 'ItemName': amount }
-            let displayTrans = []; // Transactions to show in main table
-            let currentBalance = 0;
-
-            // 2. Process Transactions
-            for (const t of orgTrans) {
-                const tDate = new Date(t.year, t.month - 1, t.day);
-                const amt = parseInt(t.amount) || 0;
-
-                // Date Range Check
-                let isBefore = false;
-                let isInRange = false;
-                let isYtd = false;
-
-                if (startDate && tDate < startDate) isBefore = true;
-                else if ((!startDate || tDate >= startDate) && (!endDate || tDate <= endDate)) isInRange = true;
-
-                if (!endDate || tDate <= endDate) isYtd = true;
-
-                // Carryover Calc
-                if (isBefore) {
-                    if (t.type === 'deposit') prevBalance += amt;
-                    else prevBalance -= amt;
+                    let prevBalance = prevInitial;
+                    prevTransSnap.docs.forEach(docSnap => {
+                        const t = docSnap.data();
+                        const amt = parseInt(t.amount) || 0;
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
+                    });
+                    initialCarryover = prevBalance;
                 }
 
-                // YTD Calc
-                if (isYtd) {
-                    if (t.type === 'deposit') ytdIncomeTotal += amt;
-                    else ytdExpenseTotal += amt;
-                }
+                // 2. Load all transactions for this Org+Year
+                const transQuery = query(
+                    collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('church', '==', filters.church),
+                    where('curia', '==', filters.curia),
+                    where('presidium', '==', filters.presidium)
+                );
+                const transSnap = await getDocs(transQuery);
+                let orgTrans = transSnap.docs.map(docSnap => docSnap.data());
 
-                // Range Display & Calc
-                if (isInRange) {
-                    displayTrans.push(t);
-                    if (t.type === 'deposit') {
-                        rangeIncomeTotal += amt;
-                        // Income Breakdown
-                        const itemKey = t.item || t.remarks || "기타 수입";
-                        if (!incomeBreakdown[itemKey]) incomeBreakdown[itemKey] = 0;
-                        incomeBreakdown[itemKey] += amt;
-                    } else {
-                        rangeExpenseTotal += amt;
-                        // Expense Breakdown
-                        const itemKey = t.item || t.remarks || "기타 지출";
-                        if (!expenseBreakdown[itemKey]) expenseBreakdown[itemKey] = 0;
-                        expenseBreakdown[itemKey] += amt;
+                orgTrans.sort((a, b) => {
+                    const dateA = new Date(parseInt(a.year), parseInt(a.month) - 1, parseInt(a.day));
+                    const dateB = new Date(parseInt(b.year), parseInt(b.month) - 1, parseInt(b.day));
+                    if (dateA - dateB !== 0) return dateA - dateB;
+                    return (parseInt(a.session) || 0) - (parseInt(b.session) || 0);
+                });
+
+                // Date Range
+                let startDate = null;
+                let endDate = null;
+                if (filters.startDate) startDate = new Date(filters.startDate);
+                if (filters.endDate) endDate = new Date(filters.endDate);
+
+                if (startDate) startDate.setHours(0, 0, 0, 0);
+                if (endDate) endDate.setHours(23, 59, 59, 999);
+
+                // Header: Underlined Date
+                let dateRangeText = `${filters.year}년`;
+                if (filters.startDate && filters.endDate) {
+                    dateRangeText = `${filters.startDate} ~ ${filters.endDate}`;
+                } else if (filters.startDate) {
+                    dateRangeText = `${filters.startDate} ~`;
+                }
+                reportDateRange.textContent = dateRangeText;
+
+                // --- Logic for Carryover & Totals ---
+                // 1. Calculate Balance before Start Date (Prev Carryover)
+                let prevBalance = initialCarryover;
+                let rangeIncomeTotal = 0;
+                let rangeExpenseTotal = 0;
+
+                // YTD (Cumulative) Totals
+                let ytdIncomeTotal = 0;
+                let ytdExpenseTotal = 0;
+
+                let expenseBreakdown = {}; // { 'ItemName': amount }
+                let incomeBreakdown = {};  // { 'ItemName': amount }
+                let displayTrans = []; // Transactions to show in main table
+                let currentBalance = 0;
+
+                // 2. Process Transactions
+                for (const t of orgTrans) {
+                    const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
+                    const amt = parseInt(t.amount) || 0;
+
+                    // Date Range Check
+                    let isBefore = false;
+                    let isInRange = false;
+                    let isYtd = false;
+
+                    if (startDate && tDate < startDate) isBefore = true;
+                    else if ((!startDate || tDate >= startDate) && (!endDate || tDate <= endDate)) isInRange = true;
+
+                    if (!endDate || tDate <= endDate) isYtd = true;
+
+                    // Carryover Calc
+                    if (isBefore) {
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
+                    }
+
+                    // YTD Calc
+                    if (isYtd) {
+                        if (t.type === 'deposit') ytdIncomeTotal += amt;
+                        else ytdExpenseTotal += amt;
+                    }
+
+                    // Range Display & Calc
+                    if (isInRange) {
+                        displayTrans.push(t);
+                        if (t.type === 'deposit') {
+                            rangeIncomeTotal += amt;
+                            // Income Breakdown
+                            const itemKey = t.item || t.remarks || "기타 수입";
+                            if (!incomeBreakdown[itemKey]) incomeBreakdown[itemKey] = 0;
+                            incomeBreakdown[itemKey] += amt;
+                        } else {
+                            rangeExpenseTotal += amt;
+                            // Expense Breakdown
+                            const itemKey = t.item || t.remarks || "기타 지출";
+                            if (!expenseBreakdown[itemKey]) expenseBreakdown[itemKey] = 0;
+                            expenseBreakdown[itemKey] += amt;
+                        }
                     }
                 }
-            }
 
-            // Cumulative Totals
-            const totalCumulativeIncome = ytdIncomeTotal + initialCarryover;
-            const totalCumulativeExpense = ytdExpenseTotal;
-            const finalBalance = totalCumulativeIncome - totalCumulativeExpense;
+                // Cumulative Totals
+                const totalCumulativeIncome = ytdIncomeTotal + initialCarryover;
+                const totalCumulativeExpense = ytdExpenseTotal;
+                const finalBalance = totalCumulativeIncome - totalCumulativeExpense;
 
 
-            // 3. Render Main Table
-            reportBody.innerHTML = '';
+                // 3. Render Main Table
+                reportBody.innerHTML = '';
 
-            // 3.1 Prev Carryover Row
-            const trInit = document.createElement('tr');
-            trInit.innerHTML = `
+                // 3.1 Prev Carryover Row
+                const trInit = document.createElement('tr');
+                trInit.innerHTML = `
                 <td></td>
                 <td></td>
                 <td></td>
@@ -706,23 +761,23 @@
                 <td class="amount"></td>
                 <td class="amount">${prevBalance.toLocaleString()}</td>
             `;
-            reportBody.appendChild(trInit);
+                reportBody.appendChild(trInit);
 
-            // 3.2 Transaction Rows
-            currentBalance = prevBalance;
-            displayTrans.forEach(t => {
-                const amt = parseInt(t.amount) || 0;
-                let inc = '', exp = '';
-                if (t.type === 'deposit') {
-                    currentBalance += amt;
-                    inc = amt.toLocaleString();
-                } else {
-                    currentBalance -= amt;
-                    exp = amt.toLocaleString();
-                }
+                // 3.2 Transaction Rows
+                currentBalance = prevBalance;
+                displayTrans.forEach(t => {
+                    const amt = parseInt(t.amount) || 0;
+                    let inc = '', exp = '';
+                    if (t.type === 'deposit') {
+                        currentBalance += amt;
+                        inc = amt.toLocaleString();
+                    } else {
+                        currentBalance -= amt;
+                        exp = amt.toLocaleString();
+                    }
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
                     <td>${t.session || ''}</td>
                     <td>${t.month}</td>
                     <td>${t.day}</td>
@@ -731,14 +786,14 @@
                     <td class="amount">${exp}</td>
                     <td class="amount">${currentBalance.toLocaleString()}</td>
                 `;
-                reportBody.appendChild(tr);
-            });
+                    reportBody.appendChild(tr);
+                });
 
-            // 3.3 Period Total Row
-            const trPeriodTotal = document.createElement('tr');
-            trPeriodTotal.classList.add('total-row');
-            trPeriodTotal.style.borderTop = "2px solid #333";
-            trPeriodTotal.innerHTML = `
+                // 3.3 Period Total Row
+                const trPeriodTotal = document.createElement('tr');
+                trPeriodTotal.classList.add('total-row');
+                trPeriodTotal.style.borderTop = "2px solid #333";
+                trPeriodTotal.innerHTML = `
                 <td></td>
                 <td></td>
                 <td></td>
@@ -747,15 +802,15 @@
                 <td class="amount">${rangeExpenseTotal.toLocaleString()}</td>
                 <td class="amount"></td>
             `;
-            reportBody.appendChild(trPeriodTotal);
+                reportBody.appendChild(trPeriodTotal);
 
-            // 3.4 Cumulative Total Row
-            const trCumulativeTotal = document.createElement('tr');
-            trCumulativeTotal.classList.add('total-row');
-            trCumulativeTotal.style.color = 'red';
-            trCumulativeTotal.style.borderTop = "1px solid red";
-            trCumulativeTotal.style.borderBottom = "2px double red";
-            trCumulativeTotal.innerHTML = `
+                // 3.4 Cumulative Total Row
+                const trCumulativeTotal = document.createElement('tr');
+                trCumulativeTotal.classList.add('total-row');
+                trCumulativeTotal.style.color = 'red';
+                trCumulativeTotal.style.borderTop = "1px solid red";
+                trCumulativeTotal.style.borderBottom = "2px double red";
+                trCumulativeTotal.innerHTML = `
                 <td></td>
                 <td></td>
                 <td></td>
@@ -764,26 +819,26 @@
                 <td class="amount">${totalCumulativeExpense.toLocaleString()}</td>
                 <td class="amount">${finalBalance.toLocaleString()}</td>
             `;
-            reportBody.appendChild(trCumulativeTotal);
+                reportBody.appendChild(trCumulativeTotal);
 
-            // 4. Update Summary Table (Bottom) with VERTICAL Breakdown
-            const summaryTable = document.querySelector('.summary-table');
-            if (summaryTable) {
-                // Generate Breakdown Strings with <br>
-                let incomeBreakdownText = Object.entries(incomeBreakdown)
-                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
-                    .join('<br>');
+                // 4. Update Summary Table (Bottom) with VERTICAL Breakdown
+                const summaryTable = document.querySelector('.summary-table');
+                if (summaryTable) {
+                    // Generate Breakdown Strings with <br>
+                    let incomeBreakdownText = Object.entries(incomeBreakdown)
+                        .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                        .join('<br>');
 
-                let expenseBreakdownText = Object.entries(expenseBreakdown)
-                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
-                    .join('<br>');
+                    let expenseBreakdownText = Object.entries(expenseBreakdown)
+                        .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                        .join('<br>');
 
-                // Add styling wrapper
-                // If there are items, adding a gap before the total
-                const incGap = incomeBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
-                const expGap = expenseBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
+                    // Add styling wrapper
+                    // If there are items, adding a gap before the total
+                    const incGap = incomeBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
+                    const expGap = expenseBreakdownText ? '<div style="margin: 4px 0; border-bottom: 1px solid #eee;"></div>' : '';
 
-                summaryTable.innerHTML = `
+                    summaryTable.innerHTML = `
                     <tr>
                         <th style="background-color: #f5f5f5;">전월 이월금</th>
                         <td class="amount" id="summaryPrevBalance" style="background-color: #f5f5f5;">${prevBalance.toLocaleString()}</td>
@@ -809,25 +864,26 @@
                         <td class="amount" id="summaryBalance" style="background-color: #e8f5e9; border-top: 2px solid #4CAF50; color: #2e7d32; font-weight: bold;">${currentBalance.toLocaleString()}</td>
                     </tr>
                 `;
-            }
+                }
 
-            if (displayTrans.length === 0 && prevBalance === 0) {
-                // reportContent.style.display = 'none';
-                // noDataMsg.style.display = 'block';
-                // Keep report visible even if empty to show carryover
-                reportContent.style.display = 'block';
-                noDataMsg.style.display = 'none';
-            } else {
-                reportContent.style.display = 'block';
-                noDataMsg.style.display = 'none';
+                if (displayTrans.length === 0 && prevBalance === 0) {
+                    // reportContent.style.display = 'none';
+                    // noDataMsg.style.display = 'block';
+                    // Keep report visible even if empty to show carryover
+                    reportContent.style.display = 'block';
+                    noDataMsg.style.display = 'none';
+                } else {
+                    reportContent.style.display = 'block';
+                    noDataMsg.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error generating report:", error);
+                alert("보고서를 생성하는 중 오류가 발생했습니다.");
             }
         }
 
         btnSearch.addEventListener('click', loadReport);
-        btnClose.addEventListener('click', () => {
-            window.location.href = 'dashboard.html';
-        });
-
+        btnClose.addEventListener('click', () => window.location.href = 'dashboard.html');
     </script>
 </body>
 

@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* Report specific styles */
         .attendance-table th {
@@ -152,15 +152,16 @@
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 border: 1px solid #ddd;
-                border-radius: 4px;
+                border-radius: 8px;
             }
 
-            /* 버튼 레이아웃 조정 */
+            /* 버튼 레이아웃 최적화 */
             .button-row {
+                display: flex !important;
                 flex-direction: row !important;
-                /* 가로로 배치 */
-                justify-content: center;
-                gap: 8px;
+                justify-content: center !important;
+                gap: 8px !important;
+                margin-top: 20px !important;
             }
 
             .button-row button {
@@ -225,6 +226,24 @@
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #eee;
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
     </style>
 </head>
@@ -304,7 +323,11 @@
 
     <div class="main-content" style="padding: 100px 15px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 25px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 25px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; position: relative;">
+
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
             <div class="filter-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
@@ -354,13 +377,19 @@
                 </div>
 
                 <!-- 버튼 영역을 필터 바로 아래로 이동 -->
-                <div class="button-row" style="margin-top: 20px; border-top: none; padding-top: 0;">
+                <div class="button-row">
                     <button id="btnSearch"
-                        style="background-color: var(--secondary-color); color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">조회</button>
+                        style="height: 42px; background-color: #d4a017; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-search"></i> 조회
+                    </button>
                     <button onclick="window.print()"
-                        style="background-color: #333; color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">인쇄</button>
+                        style="height: 42px; background-color: #333; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-print"></i> 인쇄
+                    </button>
                     <button onclick="location.href='dashboard.html'"
-                        style="background-color: #666; color: white; border: none; padding: 10px 40px; border-radius: 4px; cursor: pointer; font-weight: bold;">닫기</button>
+                        style="height: 42px; background-color: #666; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
                 </div>
             </div>
         </div>
@@ -406,9 +435,10 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         // 전역 변수 선언 (TDZ 방지를 위해 상단 이동)
         let currentUser = null;
@@ -429,10 +459,9 @@
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
 
-        function loadInitialData() {
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        async function loadInitialData() {
+            presidiaList = await fetchPresidiaList();
+            // membersList and auxiliaryList will be fetched in loadReport or as needed
         }
 
         function formatPhone(phone) {
@@ -445,7 +474,7 @@
             return phone;
         }
 
-        function setupControls(profile) {
+        async function setupControls(profile) {
             if (isAdmin) {
                 churchFilter.disabled = false;
                 loadChurches();
@@ -454,7 +483,7 @@
                 setFixedSelect(churchFilter, profile.churchName || profile.church || '');
                 setFixedSelect(curiaFilter, profile.curiaName || profile.curia || '');
                 setFixedSelect(presidiumFilter, profile.presidiumName || profile.presidium || '');
-                updateActiveMemberFilter();
+                await updateActiveMemberFilter();
             }
         }
 
@@ -473,7 +502,7 @@
                 churchFilter.appendChild(opt);
             });
 
-            churchFilter.onchange = () => {
+            churchFilter.onchange = async () => {
                 const selected = churchFilter.value;
                 curiaFilter.innerHTML = '<option value="">선택</option>';
                 presidiumSearch.value = '';
@@ -488,20 +517,20 @@
                         curiaFilter.appendChild(opt);
                     });
                 }
-                updateActiveMemberFilter();
+                await updateActiveMemberFilter();
             };
 
-            curiaFilter.onchange = () => {
+            curiaFilter.onchange = async () => {
                 const selectedChurch = churchFilter.value;
                 const selectedCuria = curiaFilter.value;
                 presidiumSearch.value = '';
                 presidiumFilter.value = '';
                 presidiumSearch.disabled = !selectedCuria;
-                updateActiveMemberFilter();
+                await updateActiveMemberFilter();
             };
         }
 
-        function updateActiveMemberFilter() {
+        async function updateActiveMemberFilter() {
             let presidiumValue;
             if (isAdmin) {
                 presidiumValue = presidiumFilter.value;
@@ -512,21 +541,28 @@
             activeMemberFilter.innerHTML = '<option value="all">전체</option>';
             if (!presidiumValue) return;
 
-            const listInPresidium = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidiumValue);
-            const activeMemberIds = [...new Set(listInPresidium.map(a => a.activeMemberId))];
+            try {
+                // Fetch members for this presidium to populate filter
+                const q = query(collection(db, 'members_list'), where('presidium', '==', presidiumValue));
+                const qSnap = await getDocs(q);
+                membersList = [];
+                qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
 
-            activeMemberIds.forEach(id => {
-                const member = membersList.find(m => m.id === id);
-                if (member) {
+                const activeMembers = membersList.filter(m => m.role !== '협조단원');
+                activeMembers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                activeMembers.forEach(m => {
                     const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = member.name;
+                    opt.value = m.id;
+                    opt.textContent = m.name;
                     activeMemberFilter.appendChild(opt);
-                }
-            });
+                });
+            } catch (error) {
+                console.error("Error updating active member filter:", error);
+            }
         }
 
-        function loadReport() {
+        async function loadReport() {
             let church, curia, presidium;
             if (isAdmin) {
                 church = churchFilter.value;
@@ -542,78 +578,88 @@
                 presidium = currentUser.presidiumName || currentUser.presidium || '';
             }
 
-            const targetId = activeMemberFilter.value;
-            const targetStatus = statusFilter.value;
-            const todayStr = new Date().toISOString().split('T')[0];
+            try {
+                // Fetch all members of the presidium from Firestore
+                const q = query(collection(db, 'members_list'), where('presidium', '==', presidium));
+                const qSnap = await getDocs(q);
+                membersList = [];
+                qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
 
-            let filtered = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidium);
+                // Auxiliary members are members with role '협조단원'
+                auxiliaryList = membersList.filter(m => m.role === '협조단원');
 
-            if (targetId !== 'all') {
-                filtered = filtered.filter(a => String(a.activeMemberId) === String(targetId));
-            }
+                const targetId = activeMemberFilter.value;
+                const targetStatus = statusFilter.value;
+                const todayStr = new Date().toISOString().split('T')[0];
 
-            if (targetStatus === 'active') {
-                filtered = filtered.filter(a => {
-                    const member = membersList.find(m => m.id === a.activeMemberId);
-                    const isMemberRetired = member && (member.status === '퇴단' || member.status === '전출');
-                    const isAuxRetired = a.withdrawalDate && a.withdrawalDate <= todayStr;
-                    return !isMemberRetired && !isAuxRetired;
-                });
-            } else if (targetStatus === 'retired') {
-                filtered = filtered.filter(a => {
-                    const member = membersList.find(m => m.id === a.activeMemberId);
-                    const isMemberRetired = member && (member.status === '퇴단' || member.status === '전출');
-                    const isAuxRetired = a.withdrawalDate && a.withdrawalDate <= todayStr;
-                    return isMemberRetired || isAuxRetired;
-                });
-            }
+                let filtered = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidium);
 
-            if (filtered.length === 0) {
-                reportContent.style.display = 'none';
-                noDataMsg.style.display = 'block';
-                return;
-            }
-
-            noDataMsg.style.display = 'none';
-            reportContent.style.display = 'block';
-            document.getElementById('reportOrgInfo').textContent = `${church} > ${curia} > ${presidium}`;
-
-            filtered.sort((a, b) => {
-                const isA_Retired = a.withdrawalDate && a.withdrawalDate <= todayStr;
-                const isB_Retired = b.withdrawalDate && b.withdrawalDate <= todayStr;
-                if (isA_Retired !== isB_Retired) return isA_Retired ? 1 : -1;
-                const dateA = a.admissionDate || '9999-99-99';
-                const dateB = b.admissionDate || '9999-99-99';
-                if (dateA !== dateB) return dateA.localeCompare(dateB);
-                return (a.name || '').localeCompare(b.name || '');
-            });
-
-            const groupedByActiveMember = [];
-            filtered.forEach(a => {
-                const mid = a.activeMemberId;
-                let group = groupedByActiveMember.find(g => g.id === mid);
-                if (!group) {
-                    group = { id: mid, name: a.activeMemberName, baptismal: a.activeMemberBaptismalName, list: [] };
-                    groupedByActiveMember.push(group);
+                if (targetId !== 'all') {
+                    filtered = filtered.filter(a => String(a.activeMemberId) === String(targetId));
                 }
-                group.list.push(a);
-            });
 
-            reportBody.innerHTML = '';
-            groupedByActiveMember.forEach(group => {
-                const activeAuxCount = group.list.filter(aux => !(aux.withdrawalDate && aux.withdrawalDate <= todayStr)).length;
-                const displayName = `${group.name || '-'}${activeAuxCount > 0 ? ` (${activeAuxCount}명)` : ' (0명)'}`;
+                if (targetStatus === 'active') {
+                    filtered = filtered.filter(a => {
+                        const member = membersList.find(m => m.id === a.activeMemberId);
+                        const isMemberRetired = member && (member.status === '퇴단' || member.status === '전출');
+                        const isAuxRetired = a.withdrawalDate && a.withdrawalDate <= todayStr;
+                        return !isMemberRetired && !isAuxRetired;
+                    });
+                } else if (targetStatus === 'retired') {
+                    filtered = filtered.filter(a => {
+                        const member = membersList.find(m => m.id === a.activeMemberId);
+                        const isMemberRetired = member && (member.status === '퇴단' || member.status === '전출');
+                        const isAuxRetired = a.withdrawalDate && a.withdrawalDate <= todayStr;
+                        return isMemberRetired || isAuxRetired;
+                    });
+                }
 
-                group.list.forEach((aux, idx) => {
-                    const tr = document.createElement('tr');
-                    const isRetired = aux.withdrawalDate && aux.withdrawalDate <= todayStr;
-                    const isLast = idx === group.list.length - 1;
+                if (filtered.length === 0) {
+                    reportContent.style.display = 'none';
+                    noDataMsg.style.display = 'block';
+                    return;
+                }
 
-                    if (isRetired) {
-                        tr.classList.add('retired-row');
+                noDataMsg.style.display = 'none';
+                reportContent.style.display = 'block';
+                document.getElementById('reportOrgInfo').textContent = `${church} > ${curia} > ${presidium}`;
+
+                filtered.sort((a, b) => {
+                    const isA_Retired = a.withdrawalDate && a.withdrawalDate <= todayStr;
+                    const isB_Retired = b.withdrawalDate && b.withdrawalDate <= todayStr;
+                    if (isA_Retired !== isB_Retired) return isA_Retired ? 1 : -1;
+                    const dateA = a.admissionDate || '9999-99-99';
+                    const dateB = b.admissionDate || '9999-99-99';
+                    if (dateA !== dateB) return dateA.localeCompare(dateB);
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+
+                const groupedByActiveMember = [];
+                filtered.forEach(a => {
+                    const mid = a.activeMemberId;
+                    let group = groupedByActiveMember.find(g => g.id === mid);
+                    if (!group) {
+                        group = { id: mid, name: a.activeMemberName, baptismal: a.activeMemberBaptismalName, list: [] };
+                        groupedByActiveMember.push(group);
                     }
+                    group.list.push(a);
+                });
 
-                    tr.innerHTML = `
+                reportBody.innerHTML = '';
+                groupedByActiveMember.forEach(group => {
+                    const activeAuxCount = group.list.filter(aux => !(aux.withdrawalDate && aux.withdrawalDate <= todayStr)).length;
+                    const displayName = `${group.name || '-'}${activeAuxCount > 0 ? ` (${activeAuxCount}명)` : ' (0명)'}`;
+
+                    group.list.forEach((aux, idx) => {
+                        const tr = document.createElement('tr');
+                        const isRetired = aux.withdrawalDate && aux.withdrawalDate <= todayStr;
+                        const isLast = idx === group.list.length - 1;
+
+                        if (isRetired) {
+                            tr.classList.add('retired-row');
+                        }
+
+                        tr.innerHTML = `
                         <td class="${idx === 0 ? '' : 'group-cell'} ${isLast ? 'group-last-cell' : ''}">${idx === 0 ? displayName : ''}</td>
                         <td class="${idx === 0 ? '' : 'group-cell'} ${isLast ? 'group-last-cell' : ''} baptismal-cell">${idx === 0 ? (group.baptismal || '-') : ''}</td>
                         <td class="baptismal-cell">${aux.name || '-'}</td>
@@ -628,9 +674,13 @@
                         <td class="date-cell">${aux.withdrawalDate || ''}</td>
                         <td style="text-align: left;">${aux.notes || ''}</td>
                     `;
-                    reportBody.appendChild(tr);
+                        reportBody.appendChild(tr);
+                    });
                 });
-            });
+            } catch (error) {
+                console.error("Error loading report:", error);
+                alert("보고서를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
         function renderDropdown(filterText = '') {
@@ -649,11 +699,11 @@
                 filtered.forEach(name => {
                     const div = document.createElement('div');
                     div.textContent = name;
-                    div.onclick = () => {
+                    div.onclick = async () => {
                         presidiumSearch.value = name;
                         presidiumFilter.value = name;
                         presidiumDropdown.style.display = 'none';
-                        updateActiveMemberFilter();
+                        await updateActiveMemberFilter();
                     };
                     presidiumDropdown.appendChild(div);
                 });
@@ -664,7 +714,7 @@
         }
 
         function setupEventListeners() {
-            btnSearch.onclick = loadReport;
+            btnSearch.onclick = async () => await loadReport();
 
             presidiumSearch.onfocus = () => renderDropdown(presidiumSearch.value);
             presidiumSearch.oninput = () => renderDropdown(presidiumSearch.value);
@@ -677,13 +727,13 @@
 
             const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumSearch, activeMemberFilter, statusFilter] : [activeMemberFilter, statusFilter]);
             fields.forEach((f, idx) => {
-                f.addEventListener('keydown', (e) => {
+                f.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (idx < fields.length - 1) {
                             fields[idx + 1].focus();
                         } else {
-                            loadReport();
+                            await loadReport();
                         }
                     }
                 });
@@ -691,7 +741,7 @@
         }
 
         // 마지막에 초기화 호출
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
 
             if (window.initCommonMenus) {
@@ -701,9 +751,13 @@
             }
 
             isAdmin = (profile.role === 'admin' || profile.role === '관리자');
-            loadInitialData();
-            setupControls(profile);
+            await loadInitialData();
+            await setupControls(profile);
             setupEventListeners();
+
+            if (!isAdmin) {
+                await loadReport();
+            }
         }, () => {
             location.href = 'index.html';
         });

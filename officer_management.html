@@ -255,7 +255,10 @@
     </header>
 
     <div class="main-content" style="padding: 120px 20px;">
-        <div class="register-form-container">
+        <div class="register-form-container" style="position: relative;">
+            <button type="button" onclick="location.href='dashboard.html'" title="닫기"
+                style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding: 0; line-height: 1; z-index: 10;"><i
+                    class="fas fa-times"></i></button>
             <h2 class="form-title">
                 간부 관리
                 <span style="font-size: 0.9rem; color: #666; font-weight: normal;">간부 선임 및 정보 관리</span>
@@ -280,11 +283,18 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label>쁘레시디움(Pr.)</label>
-                        <select name="presidium" id="presidiumSelect" required disabled>
-                            <option value="">쁘레시디움 선택</option>
-                        </select>
+                        <div class="search-container" id="presidiumSearchContainer"
+                            style="position: relative; width: 100%;">
+                            <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                                disabled class="nav-enter"
+                                style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
+                            <input type="hidden" id="presidiumSelect" name="presidium">
+                            <div id="presidiumDropdown" class="custom-dropdown"
+                                style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -372,11 +382,15 @@
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="submit" class="btn-submit">저 장</button>
-                    <button type="button" id="btnDelete" class="btn-submit"
-                        style="background-color: #f44336; display: none;">삭 제</button>
-                    <button type="button" class="btn-submit btn-close"
-                        onclick="location.href='dashboard.html'">닫기</button>
+                    <button type="submit" class="btn btn-save"
+                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-save"></i> 저장</button>
+                    <button type="button" id="btnDelete" class="btn btn-delete"
+                        style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-trash-alt"></i> 삭제</button>
+                    <button type="button" class="btn btn-close" onclick="location.href='dashboard.html'"
+                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #6c757d; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-times"></i> 닫기</button>
                 </div>
             </form>
 
@@ -390,7 +404,9 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, serverTimestamp } from "./firebase-config.js?v=20260307_2342";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         // Global State
         let currentUser = null;
@@ -411,9 +427,9 @@
         const phoneOutput = document.getElementById('phone');
 
         // === Init & Auth ===
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
-            loadBaseData();
+            await loadBaseData();
             setupPermissions();
             setupEventListeners();
 
@@ -425,9 +441,22 @@
             location.href = 'index.html';
         });
 
-        function loadBaseData() {
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        async function loadBaseData() {
+            try {
+                const [memSnap, prSnap] = await Promise.all([
+                    getDocs(collection(db, 'members_list')),
+                    fetchPresidiaList()
+                ]);
+
+                membersList = [];
+                memSnap.forEach(doc => membersList.push({ id: doc.id, ...doc.data() }));
+
+                presidiaList = prSnap;
+            } catch (error) {
+                console.error("Error loading sync base data:", error);
+                membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+                presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+            }
         }
 
         function setupPermissions() {
@@ -461,7 +490,8 @@
                 });
                 churchSelect.disabled = false;
                 curiaSelect.disabled = false;
-                presidiumSelect.disabled = false;
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) pInput.disabled = false;
             } else {
                 // Officer: Lock to their own org from login profile
                 const userChurch = currentUser.church || currentUser.churchName;
@@ -487,17 +517,22 @@
                 curiaSelect.disabled = true;
 
                 // Fixed Presidium
-                presidiumSelect.innerHTML = '';
-                const optPr = document.createElement('option');
-                optPr.value = userPresidium;
-                optPr.textContent = userPresidium;
-                presidiumSelect.appendChild(optPr);
-                presidiumSelect.value = userPresidium;
-                presidiumSelect.disabled = true;
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) {
+                    pInput.value = userPresidium || '';
+                    pInput.disabled = true;
+                    pInput.style.backgroundColor = '#f9f9f9';
+                }
+                const pSelect = document.getElementById('presidiumSelect');
+                if (pSelect) {
+                    pSelect.value = userPresidium || '';
+                }
 
                 // Initial Member List Load
-                loadMembers();
-                loadExistingOfficer();
+                (async () => {
+                    await loadMembers();
+                    await loadExistingOfficer();
+                })();
             }
         }
 
@@ -535,8 +570,12 @@
                 churchSelect.addEventListener('change', () => {
                     const church = churchSelect.value;
                     curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
-                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                    presidiumSelect.disabled = true;
+                    if (document.getElementById('presidiumInput')) {
+                        document.getElementById('presidiumInput').value = '';
+                        document.getElementById('presidiumInput').disabled = true;
+                        document.getElementById('presidiumInput').style.backgroundColor = '#f9f9f9';
+                    }
+                    if (document.getElementById('presidiumSelect')) document.getElementById('presidiumSelect').value = '';
                     memberSelect.innerHTML = '<option value="">단원 선택</option>';
                     memberSelect.disabled = true;
                     resetMemberUI();
@@ -559,34 +598,100 @@
                     }
                 });
 
+                let currentPresidia = [];
+                const presidiumInput = document.getElementById('presidiumInput');
+                const presidiumDropdown = document.getElementById('presidiumDropdown');
+                const originalPresidiumSelect = document.getElementById('presidiumSelect');
+
+                function renderDropdown(filter = '') {
+                    if (!currentPresidia) return;
+                    const list = currentPresidia.filter(p => filter === '' || p.includes(filter));
+
+                    if (list.length === 0) {
+                        presidiumDropdown.innerHTML = '<div class="no-result" style="padding: 10px; color: #888;">검색 결과가 없습니다.</div>';
+                        return;
+                    }
+
+                    presidiumDropdown.innerHTML = list.map(name => `
+                        <div class="dropdown-item" data-name="${name}" style="padding: 10px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; transition: background 0.2s;">
+                            ${name}
+                        </div>
+                    `).join('');
+
+                    presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const name = item.dataset.name;
+                            presidiumInput.value = name;
+                            if (originalPresidiumSelect) originalPresidiumSelect.value = name;
+                            presidiumDropdown.style.display = 'none';
+                            (async () => {
+                                await loadMembers();
+                                await loadExistingOfficer();
+                            })();
+                        });
+                    });
+                }
+
                 curiaSelect.addEventListener('change', () => {
                     const church = churchSelect.value;
                     const curia = curiaSelect.value;
-                    presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                    presidiumInput.value = '';
+                    if (originalPresidiumSelect) originalPresidiumSelect.value = '';
+                    currentPresidia = [];
+
                     memberSelect.innerHTML = '<option value="">단원 선택</option>';
                     memberSelect.disabled = true;
                     resetMemberUI();
 
-                    if (curia) {
-                        const prs = presidiaList
-                            .filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia)
-                            .map(p => p.presidiumName || p.name || p.presidium)
-                            .sort();
+                    if (!church || !curia) {
+                        presidiumInput.disabled = true;
+                        presidiumInput.style.backgroundColor = '#f9f9f9';
+                        return;
+                    }
 
-                        prs.forEach(pr => {
-                            const opt = document.createElement('option');
-                            opt.value = pr;
-                            opt.textContent = pr;
-                            presidiumSelect.appendChild(opt);
-                        });
-                        presidiumSelect.disabled = false;
-                    } else {
-                        presidiumSelect.disabled = true;
+                    const prs = presidiaList
+                        .filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia)
+                        .map(p => p.presidiumName || p.name || p.presidium)
+                        .sort();
+
+                    currentPresidia = [...new Set(prs.filter(Boolean))];
+
+                    presidiumInput.disabled = false;
+                    presidiumInput.style.backgroundColor = 'white';
+                });
+
+                presidiumInput.addEventListener('focus', () => {
+                    if (!presidiumInput.disabled) {
+                        renderDropdown('');
+                        presidiumDropdown.style.display = 'block';
+                    }
+                });
+
+                presidiumInput.addEventListener('input', () => {
+                    renderDropdown(presidiumInput.value.trim());
+                    presidiumDropdown.style.display = 'block';
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (presidiumInput && presidiumInput.disabled) return;
+                    if (presidiumInput && !presidiumInput.contains(e.target) && presidiumDropdown && !presidiumDropdown.contains(e.target)) {
+                        if (presidiumDropdown.style.display === 'block') {
+                            presidiumDropdown.style.display = 'none';
+                            const currentVal = presidiumInput.value.trim();
+                            if (currentVal && !currentPresidia.includes(currentVal)) {
+                                presidiumInput.value = '';
+                                if (originalPresidiumSelect) originalPresidiumSelect.value = '';
+                            } else if (currentVal && currentPresidia.includes(currentVal)) {
+                                if (originalPresidiumSelect) originalPresidiumSelect.value = currentVal;
+                                loadMembers();
+                                loadExistingOfficer();
+                            }
+                        }
                     }
                 });
             }
 
-            presidiumSelect.addEventListener('change', loadMembers);
+            // Custom search handles data update internally
 
             // Member Selection Logic
             memberSelect.addEventListener('change', () => {
@@ -604,7 +709,7 @@
                     phoneOutput.value = member.phone || '';
 
                     // [New] Automatically look for existing officer record for THIS member
-                    loadExistingOfficer();
+                    (async () => await loadExistingOfficer())();
                 }
             });
 
@@ -642,9 +747,9 @@
             setupDateFormatting('appointmentExpiryDate');
 
             // [New] Existing Officer Auto-lookup
-            form.querySelector('select[name="role"]').addEventListener('change', loadExistingOfficer);
+            form.querySelector('select[name="role"]').addEventListener('change', async () => await loadExistingOfficer());
             [churchSelect, curiaSelect, presidiumSelect].forEach(sel => {
-                sel.addEventListener('change', loadExistingOfficer);
+                sel.addEventListener('change', async () => await loadExistingOfficer());
             });
 
 
@@ -669,7 +774,7 @@
             }
         }
 
-        function loadExistingOfficer() {
+        async function loadExistingOfficer() {
             const church = String(churchSelect.value || '').trim();
             const curia = String(curiaSelect.value || '').trim();
             const presidium = String(presidiumSelect.value || '').trim();
@@ -678,7 +783,20 @@
 
             if (!church || !curia || !presidium) return;
 
-            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            let officersList = [];
+            try {
+                const q = query(
+                    collection(db, 'officers_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium)
+                );
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(doc => officersList.push({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Error fetching officers_list:", error);
+                officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            }
 
             // 1. Position-based records (for the whole organization)
             const orgRecords = officersList.filter(o => {
@@ -816,9 +934,16 @@
         }
 
         // Helper: When clicking a table row, populate the form
-        window.setFormFromTable = function (id) {
-            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const record = officersList.find(o => o.id === id);
+        window.setFormFromTable = async function (id) {
+            let record = null;
+            try {
+                const docSnap = await getDoc(doc(db, 'officers_list', id));
+                if (docSnap.exists()) record = { id: docSnap.id, ...docSnap.data() };
+            } catch (error) {
+                console.error("Error fetching officer detail:", error);
+                const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+                record = officersList.find(o => o.id === id);
+            }
             if (!record) return;
 
             // Trigger member selection
@@ -894,7 +1019,7 @@
             display.value = result.length > 0 ? result.join(' ') : "당일";
         }
 
-        function loadMembers() {
+        async function loadMembers() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
             const presidium = presidiumSelect.value;
@@ -905,6 +1030,21 @@
             if (!church || !curia || !presidium) {
                 memberSelect.disabled = true;
                 return;
+            }
+
+            try {
+                const q = query(
+                    collection(db, 'members_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
+                );
+                const querySnapshot = await getDocs(q);
+                membersList = [];
+                querySnapshot.forEach(doc => membersList.push({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Error loadMembers from Firestore:", error);
+                membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
             }
 
             // Filter: Same Org + Active (Not retired/transferred)
@@ -975,35 +1115,37 @@
 
                 // [Crucial] Real-time Duplicate Check
                 if (name === 'appointmentDate' && e.target.value.length === 10) {
-                    const conflict = checkDuplicateActivity();
-                    if (conflict) {
-                        // [Fix] Activate flag to suppress the "Enter Appointment Date first" alert on next field
-                        if (typeof isProcessingConflict !== 'undefined') isProcessingConflict = true;
+                    (async () => {
+                        const conflict = await checkDuplicateActivity();
+                        if (conflict) {
+                            // [Fix] Activate flag to suppress the "Enter Appointment Date first" alert on next field
+                            if (typeof isProcessingConflict !== 'undefined') isProcessingConflict = true;
 
-                        alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
-                        e.target.value = '';
-                        const expInput = document.getElementsByName('appointmentExpiryDate')[0];
-                        if (expInput) expInput.value = '';
+                            alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
+                            e.target.value = '';
+                            const expInput = document.getElementsByName('appointmentExpiryDate')[0];
+                            if (expInput) expInput.value = '';
 
-                        // Aggressive Focus Reset
-                        setTimeout(() => {
-                            input.focus();
+                            // Aggressive Focus Reset
                             setTimeout(() => {
-                                if (document.activeElement !== input) input.focus();
-                                // Deactivate flag after some time to allow normal validation again
-                                if (typeof isProcessingConflict !== 'undefined') {
-                                    setTimeout(() => { isProcessingConflict = false; }, 100);
-                                }
-                            }, 100);
-                        }, 50);
-                    }
+                                input.focus();
+                                setTimeout(() => {
+                                    if (document.activeElement !== input) input.focus();
+                                    // Deactivate flag after some time to allow normal validation again
+                                    if (typeof isProcessingConflict !== 'undefined') {
+                                        setTimeout(() => { isProcessingConflict = false; }, 100);
+                                    }
+                                }, 100);
+                            }, 50);
+                        }
+                    })();
                 }
                 updateTenure();
             });
         }
 
         // === Helper: Duplicate Check Logic ===
-        function checkDuplicateActivity() {
+        async function checkDuplicateActivity() {
             const today = new Date().toISOString().split('T')[0];
             const editId = form.getAttribute('data-edit-id');
             const church = (churchSelect.value || '').trim();
@@ -1018,7 +1160,21 @@
             const isSavingAsExpired = appointmentExpiryDate && appointmentExpiryDate < today;
             if (isSavingAsExpired) return null; // No conflict if saving as historic record
 
-            let officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            let officersList = [];
+            try {
+                const q = query(
+                    collection(db, 'officers_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium),
+                    where('memberId', '==', memberId)
+                );
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(doc => officersList.push({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Error checkDuplicateActivity from Firestore:", error);
+                officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            }
 
             const conflict = officersList.find(o => {
                 // Skip if same record
@@ -1049,7 +1205,7 @@
         }
 
         // === Logic: Save ===
-        function handleSave(e) {
+        async function handleSave(e) {
             e.preventDefault();
 
             // [Important] Gather all data from form elements
@@ -1077,7 +1233,7 @@
             const editId = form.getAttribute('data-edit-id');
 
             // 1. Conflict Check (Re-use shared logic)
-            const conflict = checkDuplicateActivity();
+            const conflict = await checkDuplicateActivity();
             if (conflict) {
                 alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
                 return;
@@ -1112,21 +1268,20 @@
             }
 
             try {
-                localStorage.setItem('officers_list', JSON.stringify(officersList));
-
-                // [Sync] 유저 프로필 직책 동시 업데이트 (가입 정보 연동)
-                const users = JSON.parse(localStorage.getItem('users') || '{}');
-                const targetUid = Object.keys(users).find(uid => {
-                    const u = users[uid];
-                    // 이름과 소속이 일치하는 유저 식별
-                    return u.name === data.name && u.church === data.church && u.presidiumName === data.presidium;
+                const docId = editId || ('off_' + Date.now());
+                await setDoc(doc(db, 'officers_list', docId), {
+                    ...data,
+                    updatedAt: serverTimestamp()
                 });
 
-                if (targetUid) {
-                    users[targetUid].role = data.role;
-                    localStorage.setItem('users', JSON.stringify(users));
+                // [Sync] 유저 프로필 직책 동시 업데이트 (가입 정보 연동)
+                // Note: Users migration should be handled elsewhere, but keeping logic for relative sync
+                const q = query(collection(db, 'users'), where('name', '==', data.name), where('church', '==', data.church), where('presidiumName', '==', data.presidium));
+                const userSnap = await getDocs(q);
+                userSnap.forEach(async (uDoc) => {
+                    await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
                     console.log(`User Profile Role Synced: ${data.name} -> ${data.role}`);
-                }
+                });
 
                 alert('간부 정보가 성공적으로 저장되었습니다.');
                 setTimeout(loadExistingOfficer, 100);
@@ -1136,7 +1291,7 @@
             }
         }
 
-        function handleDelete() {
+        async function handleDelete() {
             const editId = form.getAttribute('data-edit-id');
             const role = form.querySelector('select[name="role"]').value;
             const name = memberNameOutput.value;
@@ -1147,14 +1302,8 @@
             }
 
             if (confirm(`현재 조회된 [${role} - ${name}] 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-                let officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-
-                // Use String conversion for absolute ID matching
-                const idx = officersList.findIndex(o => String(o.id) === String(editId));
-
-                if (idx > -1) {
-                    officersList.splice(idx, 1);
-                    localStorage.setItem('officers_list', JSON.stringify(officersList));
+                try {
+                    await deleteDoc(doc(db, 'officers_list', editId));
                     alert('성공적으로 삭제되었습니다.');
 
                     // Clean up UI and reset edit state
@@ -1164,8 +1313,9 @@
 
                     // Refresh View
                     setTimeout(loadExistingOfficer, 100);
-                } else {
-                    alert('삭제할 정보를 찾을 수 없습니다. (ID 미일치)');
+                } catch (error) {
+                    console.error('Delete failed:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
                 }
             }
         }

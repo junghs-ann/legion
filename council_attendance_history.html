@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>평의회 출석 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* Report specific styles */
         .summary-info {
@@ -309,6 +309,24 @@
         .button-row button:active {
             transform: translateY(0);
         }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
@@ -387,7 +405,11 @@
 
     <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px; position: relative;">
+
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
             <div class="filter-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
@@ -552,10 +574,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js?v=20260307_2325"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
-        import { getChurches, getCuriae } from "./data.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -576,25 +599,24 @@
 
         yearFilter.value = new Date().getFullYear();
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile);
             }
             isAdmin = (profile.role || '').includes('관리자') || (profile.role || '').includes('admin');
 
-            loadPresidiaList();
-            setupFilters(profile);
+            await loadPresidiaList();
+            await setupFilters(profile);
             setupEventListeners();
         });
 
-        function loadPresidiaList() {
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        async function loadPresidiaList() {
+            presidiaList = await fetchPresidiaList();
         }
 
-        function setupFilters(profile) {
-            const presidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            const churches = [...new Set(presidia.map(p => p.churchName))].sort();
+        async function setupFilters(profile) {
+            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
 
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => {
@@ -606,7 +628,7 @@
             if (!isAdmin) {
                 churchFilter.value = profile.churchName || profile.church || '';
                 churchFilter.disabled = true;
-                updateCuriaFilter(profile.churchName || profile.church);
+                await updateCuriaFilter(profile.churchName || profile.church);
                 curiaFilter.value = profile.curiaName || profile.curia || '';
                 curiaFilter.disabled = true;
 
@@ -616,18 +638,17 @@
                 presidiumSearch.disabled = true;
 
                 // 소속 설정 후 즉시 회차 목록 업데이트
-                updateSessionDatalist();
+                await updateSessionDatalist();
             }
 
-            churchFilter.onchange = () => updateCuriaFilter(churchFilter.value);
-            curiaFilter.onchange = () => {
-                // updatePresidiumFilter(curiaFilter.value); // This line is removed
-                updateSessionDatalist();
+            churchFilter.onchange = async () => await updateCuriaFilter(churchFilter.value);
+            curiaFilter.onchange = async () => {
+                await updateSessionDatalist();
             };
         }
 
-        function updateCuriaFilter(churchName) {
-            const curiae = [...new Set(presidiaList.filter(p => p.churchName === churchName).map(p => p.curiaName))].sort();
+        async function updateCuriaFilter(churchName) {
+            const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === churchName).map(p => p.curiaName || p.curia))].sort();
 
             curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
             curiae.forEach(c => {
@@ -636,8 +657,7 @@
                 curiaFilter.appendChild(opt);
             });
             curiaFilter.disabled = !churchName;
-            // updatePresidiumFilter(curiaFilter.value); // This line is removed
-            updateSessionDatalist();
+            await updateSessionDatalist();
         }
 
         // This function is no longer needed as presidium selection is handled by custom search
@@ -683,7 +703,7 @@
             }
         }
 
-        function updateSessionDatalist() {
+        async function updateSessionDatalist() {
             const church = churchFilter.value;
             const curia = curiaFilter.value;
 
@@ -692,29 +712,39 @@
 
             if (!church || !curia) return;
 
-            const allData = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
-            // date와 session이 모두 있는 유효한 데이터만 필터링
-            const filtered = allData.filter(r => r.church === church && r.curia === curia && r.date && r.session);
+            try {
+                const q = query(collection(db, 'council_attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    orderBy('date', 'desc'),
+                    orderBy('session', 'desc'));
 
-            // Sort by session descending and remove duplicates
-            const sessions = [...new Map(filtered.map(item => [item.session, item])).values()]
-                .sort((a, b) => parseInt(b.session) - parseInt(a.session));
+                const querySnapshot = await getDocs(q);
+                const allData = [];
+                querySnapshot.forEach(docSnap => allData.push(docSnap.data()));
 
-            sessions.forEach(s => {
-                const optStr = `${s.session}차 (${s.date})`;
+                // Sort by session descending and remove duplicates
+                const sessions = [...new Map(allData.filter(r => r.date && r.session).map(item => [item.session, item])).values()]
+                    .sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
-                const opt1 = document.createElement('option');
-                opt1.value = s.session;
-                opt1.textContent = optStr;
-                opt1.dataset.date = s.date;
-                startSessionFilter.appendChild(opt1);
+                sessions.forEach(s => {
+                    const optStr = `${s.session}차 (${s.date})`;
 
-                const opt2 = document.createElement('option');
-                opt2.value = s.session;
-                opt2.textContent = optStr;
-                opt2.dataset.date = s.date;
-                endSessionFilter.appendChild(opt2);
-            });
+                    const opt1 = document.createElement('option');
+                    opt1.value = s.session;
+                    opt1.textContent = optStr;
+                    opt1.dataset.date = s.date;
+                    startSessionFilter.appendChild(opt1);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = s.session;
+                    opt2.textContent = optStr;
+                    opt2.dataset.date = s.date;
+                    endSessionFilter.appendChild(opt2);
+                });
+            } catch (error) {
+                console.error("Error updating session datalist:", error);
+            }
         }
 
         // This function is no longer needed as date filters are removed
@@ -730,7 +760,7 @@
         // endSessionFilter.addEventListener('change', () => handleSessionSelect(endSessionFilter, endDateFilter));
 
         function setupEventListeners() {
-            btnSearch.onclick = loadReport;
+            btnSearch.onclick = async () => await loadReport();
 
             presidiumSearch.onfocus = () => renderPresidiumDropdown(presidiumSearch.value);
             presidiumSearch.oninput = () => renderPresidiumDropdown(presidiumSearch.value);
@@ -745,74 +775,84 @@
             const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumSearch, yearFilter, startSessionFilter, endSessionFilter]
                 : [yearFilter, startSessionFilter, endSessionFilter]);
             fields.forEach((f, idx) => {
-                f.addEventListener('keydown', (e) => {
+                f.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (idx < fields.length - 1) {
                             fields[idx + 1].focus();
                         } else {
-                            loadReport();
+                            await loadReport();
                         }
                     }
                 });
             });
         }
 
-        function loadReport() {
+        async function loadReport() {
             const church = churchFilter.value;
             const curia = curiaFilter.value;
             const year = parseInt(yearFilter.value);
             const startSess = startSessionFilter.value ? parseInt(startSessionFilter.value) : null;
             const endSess = endSessionFilter.value ? parseInt(endSessionFilter.value) : null;
-            // const startD = startDateFilter.value; // Removed
-            // const endD = endDateFilter.value;     // Removed
 
             if (!church || !curia) {
                 alert("성당과 꾸리아를 선택해주세요.");
                 return;
             }
 
-            const allData = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
-            let filtered = allData.filter(r =>
-                r.church === church &&
-                r.curia === curia &&
-                new Date(r.date).getFullYear() === year
-            );
+            try {
+                const q = query(collection(db, 'council_attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    orderBy('date', 'desc'),
+                    orderBy('session', 'desc'));
 
-            if (startSess) filtered = filtered.filter(r => parseInt(r.session) >= startSess);
-            if (endSess) filtered = filtered.filter(r => parseInt(r.session) <= endSess);
-            // if (startD) filtered = filtered.filter(r => r.date >= startD); // Removed
-            // if (endD) filtered = filtered.filter(r => r.date <= endD);     // Removed
+                const querySnapshot = await getDocs(q);
+                const allData = [];
+                querySnapshot.forEach(docSnap => allData.push(docSnap.data()));
 
-            const presidium = presidiumFilter.value;
+                let filtered = allData.filter(r =>
+                    new Date(r.date).getFullYear() === year
+                );
 
-            filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+                if (startSess) filtered = filtered.filter(r => parseInt(r.session) >= startSess);
+                if (endSess) filtered = filtered.filter(r => parseInt(r.session) <= endSess);
+                // if (startD) filtered = filtered.filter(r => r.date >= startD); // Removed
+                // if (endD) filtered = filtered.filter(r => r.date <= endD);     // Removed
 
-            if (filtered.length === 0) {
-                reportContent.style.display = 'none';
-                noDataMsg.style.display = 'block';
-                return;
+                const presidium = presidiumFilter.value;
+
+                filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+
+                if (filtered.length === 0) {
+                    reportContent.style.display = 'none';
+                    noDataMsg.style.display = 'block';
+                    return;
+                }
+
+                // If presidium is selected, we only filter the internal attendanceData
+                let finalData = filtered;
+                if (presidium) {
+                    finalData = filtered.map(r => ({
+                        ...r,
+                        attendanceData: (r.attendanceData || []).filter(a => a.presidiumName === presidium)
+                    })).filter(r => r.attendanceData.length > 0);
+                }
+
+                if (finalData.length === 0) {
+                    reportContent.style.display = 'none';
+                    noDataMsg.style.display = 'block';
+                    return;
+                }
+
+                noDataMsg.style.display = 'none';
+                reportContent.style.display = 'block';
+
+                renderReport(finalData);
+            } catch (error) {
+                console.error("Error loading report:", error);
+                alert("보고서를 불러오는 중 오류가 발생했습니다.");
             }
-
-            // If presidium is selected, we only filter the internal attendanceData
-            let finalData = filtered;
-            if (presidium) {
-                finalData = filtered.map(r => ({
-                    ...r,
-                    attendanceData: (r.attendanceData || []).filter(a => a.presidiumName === presidium)
-                })).filter(r => r.attendanceData.length > 0);
-            }
-
-            if (finalData.length === 0) {
-                reportContent.style.display = 'none';
-                noDataMsg.style.display = 'block';
-                return;
-            }
-
-            noDataMsg.style.display = 'none';
-            reportContent.style.display = 'block';
-
-            renderReport(finalData);
         }
 
         function renderReport(data) {

@@ -433,8 +433,9 @@
 
         <script src="script.js?v=20260303_1255_fix"></script>
         <script type="module">
+            import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2325";
             import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-            import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+            import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
             let currentUser = null;
             let userProfile = null;
@@ -470,7 +471,7 @@
             const btnText = document.getElementById('btnText');
             const reportModeRadios = document.getElementsByName('reportMode');
 
-            initAuthObserver((user, profile) => {
+            initAuthObserver(async (user, profile) => {
                 if (!user) { location.href = "index.html"; return; }
                 currentUser = user; userProfile = profile;
 
@@ -481,7 +482,8 @@
                     });
                 }
 
-                initFilters(); checkPermissions(); setupEnterToNext();
+                await fetchPresidiaList();
+                await initFilters(); checkPermissions(); setupEnterToNext();
 
                 const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
                 const isOfficer = officerRoles.some(r => (userProfile.role || '').toLowerCase().includes(r.toLowerCase()));
@@ -500,7 +502,7 @@
                 });
             });
 
-            function initFilters() {
+            async function initFilters() {
                 const churches = getChurches();
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
                 churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
@@ -536,25 +538,38 @@
 
             presidiumSelect.addEventListener('change', updateSessionLists);
 
-            function updateSessionLists() {
+            async function updateSessionLists() {
                 const pr = presidiumSelect.value;
                 startSess.innerHTML = '<option value="">시작 회차 선택</option>';
                 endSess.innerHTML = '<option value="">종료 회차 선택</option>';
 
                 if (!pr) return;
 
-                const attList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-                // date와 session이 있는 유효한 출석부 기록만 필터링
-                const filteredAtts = attList.filter(a => (a.presidiumName || a.presidium) === pr && a.session && a.date)
-                    .sort((a, b) => parseInt(b.session || 0) - parseInt(a.session || 0));
+                try {
+                    const q = query(
+                        collection(db, 'attendance_list'),
+                        where('presidiumName', '==', pr),
+                        orderBy('date', 'desc')
+                    );
+                    const querySnapshot = await getDocs(q);
+                    const filteredAtts = [];
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.session && data.date) {
+                            filteredAtts.push(data);
+                        }
+                    });
 
-                filteredAtts.forEach(a => {
-                    const optText = `${a.session}회 (${a.date})`;
-                    const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
-                    const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
-                    startSess.add(opt1);
-                    endSess.add(opt2);
-                });
+                    filteredAtts.forEach(a => {
+                        const optText = `${a.session}회 (${a.date})`;
+                        const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
+                        const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
+                        startSess.add(opt1);
+                        endSess.add(opt2);
+                    });
+                } catch (error) {
+                    console.error("Error updateSessionLists:", error);
+                }
             }
 
             startSess.addEventListener('change', () => {
@@ -581,31 +596,42 @@
                 if (parseInt(ss) > parseInt(es)) { window.showCustomAlert('회차 범위를 확인해주세요.'); return; }
 
                 if (mode === 'view') {
-                    const reportHistory = JSON.parse(localStorage.getItem('business_report_status') || '[]');
-                    const found = reportHistory.find(r =>
-                        r.church === c && r.presidium === p && r.startSess === ss && r.endSess === es
-                    );
-
-                    if (!found) {
-                        window.showCustomAlert('해당 기간의 사업보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
-                        return;
-                    }
+                    // [Firestore Migration] business_report_status 컬렉션에서 상태 조회
+                    getDocs(query(
+                        collection(db, 'business_report_status'),
+                        where('church', '==', c),
+                        where('presidium', '==', p),
+                        where('startSess', '==', ss),
+                        where('endSess', '==', es)
+                    )).then(snap => {
+                        if (snap.empty) {
+                            window.showCustomAlert('해당 기간의 사업보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
+                            return;
+                        }
+                        openReport(c, curiaSelect.value, p, s, e, ss, es, mode);
+                    }).catch(err => {
+                        console.error("Status check error:", err);
+                        window.showCustomAlert('상태 확인 중 오류가 발생했습니다.');
+                    });
+                } else {
+                    openReport(c, curiaSelect.value, p, s, e, ss, es, mode);
                 }
+            });
 
+            function openReport(c, curia, p, s, e, ss, es, mode) {
                 const width = 1200; const height = 900;
                 const left = (window.screen.width / 2) - (width / 2);
                 const top = (window.screen.height / 2) - (height / 2);
 
                 const brSess = document.getElementById('brSession').value;
 
-                let url = `business_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curiaSelect.value)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+                let url = `business_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curia)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
                 if (ss) url += `&ss=${ss}`;
                 if (es) url += `&es=${es}`;
                 if (brSess) url += `&brSess=${brSess}`;
 
                 window.open(url, 'BusinessReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
-            });
-
+            }
         </script>
 </body>
 

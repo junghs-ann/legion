@@ -989,9 +989,10 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js?v=20260304_1525"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
+        import { initAuthObserver } from "./auth.js?v=20260304_1525";
 
         const urlParams = new URLSearchParams(window.location.search);
         const church = urlParams.get('church');
@@ -1002,7 +1003,7 @@
 
         let userProfile = null;
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             userProfile = profile;
             if (church && pr && start && end) {
                 generateReport();
@@ -1016,21 +1017,62 @@
             const ss = urlParams.get('ss');
             const es = urlParams.get('es');
             const curia = urlParams.get('curia');
-            const brSess = urlParams.get('brSess'); // 새로 추가된 보고서 회차
+            const brSess = urlParams.get('brSess');
 
-            // --- 데이터 로딩 ---
-            const presList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            const allAtt = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const allMem = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const allOff = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const allRec = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
-            const allEv = JSON.parse(localStorage.getItem('events_list') || '[]');
-            const councilAtt = JSON.parse(localStorage.getItem('council_attendance_list') || '[]');
-            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
-            const allAdj = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
+            const t = (val) => String(val || '').trim();
+            const targetPr = t(pr);
 
-            const t = (v) => String(v || '').trim();
+            // --- Firestore 데이터 로딩 (병렬) ---
+            let presList = [], allAtt = [], allMem = [], allOff = [], allRec = [], allTrans = [], allEv = [], councilAtt = [], allSummaries = {}, allAdj = [], allPret = [], allAux = [];
+
+            try {
+                const [
+                    presSnap,
+                    attSnap,
+                    memSnap,
+                    offSnap,
+                    recSnap,
+                    transSnap,
+                    eventSnap,
+                    councilSnap,
+                    adjSnap,
+                    pretSnap,
+                    auxSnap,
+                    summarySnap
+                ] = await Promise.all([
+                    getDocs(query(collection(db, 'presidia_list'), where('name', '==', targetPr))),
+                    getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'council_attendance_list'), where('church', '==', church))),
+                    getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
+                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidium', '==', targetPr))),
+                    getDocs(query(collection(db, 'accounting_summaries')))
+                ]);
+
+                presList = presSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAtt = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allMem = memSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allOff = offSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allRec = recSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allTrans = transSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allEv = eventSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                councilAtt = councilSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAdj = adjSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allPret = pretSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAux = auxSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                summarySnap.docs.forEach(d => {
+                    allSummaries[d.id] = d.data();
+                });
+            } catch (err) {
+                console.error("Firestore loading error:", err);
+            }
+
             const getField = (obj, keys) => { for (let k of keys) { if (obj && obj[k] !== undefined) return obj[k]; } return ''; };
             const norm = (d) => {
                 if (!d) return '';
@@ -1145,11 +1187,8 @@
                     (o.appointmentDate <= end) && (!o.appointmentExpiryDate || o.appointmentExpiryDate > end)
                 );
 
-                // [New] 단원 분류별 전용 데이터 리스트 사전 정의 (ReferenceError 방지)
-                const allPret = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
-                const allAux = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-                const allAdj = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]');
-
+                // [New] 단원 분류별 전용 데이터 리스트 (이미 Firestore에서 로드됨)
+                // allPret, allAux, allAdj 변수 사용
                 // 간부 및 단원 출석 집계 로직 (출결내역 보고서 attendance_history.html 로직 이식)
                 const officerStats = {
                     '단장': { attended: 0 },
@@ -1165,8 +1204,7 @@
                     clean(a.presidium) === clean(pr) &&
                     extractNum(a.session) >= startSessNum &&
                     extractNum(a.session) <= endSessNum
-                );
-
+                ).sort((a, b) => extractNum(a.session) - extractNum(b.session));
                 rangeAtts.forEach(record => {
                     const ad = record.attendanceData || {};
                     const rolesAttendedInSession = new Set();
@@ -1283,9 +1321,9 @@
                     extractNum(r.session) <= endSessNum
                 );
 
-                // 저장된 기록 불러오기
-                const reportHistory = JSON.parse(localStorage.getItem('business_report_status') || '[]');
-                const saved = reportHistory.find(r => r.church === church && r.presidium === pr && r.startSess === ss && r.endSess === es);
+                // 저장된 기록 불러오기 (이미 Firestore에서 로드됨)
+                const reportHistory = allReportStatus;
+                const saved = reportHistory.find(r => r.church === church && r.presidium === pr && String(r.startSess) === String(ss) && String(r.endSess) === String(es));
 
                 // 전차 보고서 찾기
                 let prevReport = null;
@@ -1797,12 +1835,12 @@
                 const reportKey = { church, presidium: pr, startSess: urlParams.get('ss'), endSess: urlParams.get('es') };
 
                 const getStatusData = () => {
-                    const history = JSON.parse(localStorage.getItem('business_report_status') || '[]');
+                    const history = allReportStatus;
                     return history.find(h =>
                         h.church === reportKey.church &&
                         h.presidium === reportKey.presidium &&
-                        h.startSess === reportKey.startSess &&
-                        h.endSess === reportKey.endSess
+                        String(h.startSess) === String(reportKey.startSess) &&
+                        String(h.endSess) === String(reportKey.endSess)
                     );
                 };
 
@@ -1946,14 +1984,6 @@
                 };
 
                 const saveStatus = async (status, signer = null) => {
-                    let history = JSON.parse(localStorage.getItem('business_report_status') || '[]');
-                    const idx = history.findIndex(h =>
-                        h.church === reportKey.church &&
-                        h.presidium === reportKey.presidium &&
-                        h.startSess === reportKey.startSess &&
-                        h.endSess === reportKey.endSess
-                    );
-
                     // [Data Save Fix] 화면에서 수동으로 수정된 단원수 데이터 수집
                     const prevMemberCounts = {};
                     const catIds = ['m', 'p', 'a', 'aj'];
@@ -1972,16 +2002,14 @@
                         ...reportKey,
                         reportSess: urlParams.get('brSess'),
                         status: status,
-                        signer: signer || (idx >= 0 ? history[idx].signer : null),
+                        signer: signer || (getStatusData() ? getStatusData().signer : null),
                         mgmtStatus: document.getElementById('managementStatus').textContent,
                         prevMemberCounts: prevMemberCounts, // 수동 수정 데이터 포함
                         updatedAt: new Date().toISOString()
                     };
 
-                    if (idx >= 0) history[idx] = newData;
-                    else history.push(newData);
-
-                    localStorage.setItem('business_report_status', JSON.stringify(history));
+                    const docId = `${reportKey.church}_${reportKey.presidium}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                    await setDoc(doc(db, 'business_report_status', docId), newData);
                     renderStatus();
 
                     if (status === 'approved') await window.showCustomAlert('사업보고서가 최종 승인되었습니다.');
@@ -2009,19 +2037,10 @@
                         : '확정을 취소하고 다시 수정하시겠습니까?';
 
                     if (await window.showCustomConfirm(msg)) {
-                        let history = JSON.parse(localStorage.getItem('business_report_status') || '[]');
-                        const idx = history.findIndex(h =>
-                            h.church === reportKey.church &&
-                            h.presidium === reportKey.presidium &&
-                            h.startSess === reportKey.startSess &&
-                            h.endSess === reportKey.endSess
-                        );
-                        if (idx >= 0) {
-                            history.splice(idx, 1);
-                            localStorage.setItem('business_report_status', JSON.stringify(history));
-                            await window.showCustomAlert('취소되었습니다.');
-                            location.reload();
-                        }
+                        const docId = `${reportKey.church}_${reportKey.presidium}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                        await deleteDoc(doc(db, 'business_report_status', docId));
+                        await window.showCustomAlert('취소되었습니다.');
+                        location.reload();
                     }
                 };
 

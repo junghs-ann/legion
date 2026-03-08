@@ -1,196 +1,116 @@
-// --- Mock Auth System (LocalStorage Based) ---
-// Firebase Auth has been replaced with this mock system for testing purposes.
-// No external API keys are required.
+import { auth, db } from './firebase-config.js';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    updatePassword as firebaseUpdatePassword
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+    doc,
+    setDoc,
+    getDoc,
+    updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// --- Register User (Mock) ---
+// --- Register User (Firebase) ---
 export async function registerUser(email, password, userData) {
-    console.log("Mock Register:", email, userData);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Save to localStorage to simulate DB
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-    // Check for duplicate username/email among ACTIVE members
-    const existingActive = Object.values(users).find(u => u.email === email && u.status === 'active');
-    if (existingActive) {
-        console.error("Signup Failed: Duplicate ID", email);
-        throw new Error("이미 사용 중인 아이디입니다.");
-    }
-
-    // Create random UID
-    const uid = 'user_' + Math.random().toString(36).substr(2, 9);
-
-    // Role Logic: 15년 차 시위에서 승인 없이 즉시 활성화 (단원 명부 대조 후 가입하므로)
-    const status = 'active';
-
-    const newUser = {
-        ...userData,
-        uid: uid,
-        email: email,
-        password: password, // In real app, never store raw password!
-        status: status,
-        createdAt: new Date().toISOString()
-    };
-
+    console.log("Firebase Register:", email);
     try {
-        // [IMPORTANT] Use UID as the KEY for history management
-        users[uid] = newUser;
-        localStorage.setItem('users', JSON.stringify(users));
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        // Auto-login after register
+        const newUser = {
+            ...userData,
+            uid: user.uid,
+            email: email,
+            status: 'active',
+            createdAt: new Date().toISOString()
+        };
+
+        // Save profile to Firestore
+        await setDoc(doc(db, "users", user.uid), newUser);
+
+        // Session Sync (Local storage still used for fast access)
         localStorage.setItem('currentUser', JSON.stringify(newUser));
-        console.log("User registered and logged in:", newUser);
-        return { user: { uid: uid, email: email } };
-    } catch (e) {
-        console.error("Database Error (Mock):", e);
-        throw new Error("데이터 저장 중 오류가 발생했습니다.");
+        return userCredential;
+    } catch (error) {
+        console.error("Firebase Register Error:", error);
+        if (error.code === 'auth/email-already-in-use') throw new Error("이미 사용 중인 아이디입니다.");
+        throw error;
     }
 }
 
-// --- Login User (Mock) ---
+// --- Login User (Firebase) ---
 export async function loginUser(email, password) {
-    console.log("Mock Login:", email);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log("Firebase Login:", email);
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-    // Find candidate users (by email/username)
-    // History management: Get the most recent active or latest record
-    const candidates = Object.values(users)
-        .filter(u => u.email === email && u.password === password)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    if (candidates.length === 0) {
-        throw new Error("아이디 또는 비밀번호가 잘못되었습니다.");
-    }
-
-    // Prefer 'active' status if multiple records exist
-    const user = candidates.find(u => u.status === 'active') || candidates[0];
-
-    if (user.status === 'retire') {
-        throw new Error("퇴단 처리된 계정입니다. 관리자에게 문의하세요.");
-    }
-
-    // Role Sync: 간부 명단과 대조하여 직책 자동 업데이트 (Robust Match)
-    if (user.role !== 'admin') {
-        const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-        const today = new Date().toISOString().split('T')[0];
-
-        // 필터링 및 정렬: 활동 중인 기록 우선 및 최신 임명일 순
-        const matchedOfficers = officers
-            .filter(o =>
-                o.name === user.name &&
-                (o.churchName === user.church || o.church === user.church) &&
-                (o.presidiumName === user.presidiumName || o.presidium === user.presidiumName)
-            )
-            .sort((a, b) => {
-                const isActiveA = !a.appointmentExpiryDate || a.appointmentExpiryDate >= today;
-                const isActiveB = !b.appointmentExpiryDate || b.appointmentExpiryDate >= today;
-                if (isActiveA && !isActiveB) return -1;
-                if (!isActiveA && isActiveB) return 1;
-                return String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || ''));
-            });
-
-        const officialRecord = matchedOfficers[0];
-
-        if (officialRecord) {
-            console.log("간부 직책 동기화 실행:", officialRecord.role);
-            user.role = officialRecord.role;
-            user.id = officialRecord.memberId; // [Identity Sync] 간부명단 ID 동기화
-        } else {
-            // [Identity Sync] 일반 단원 명단 대조
-            const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const matchedMember = members.find(m =>
-                m.name === user.name &&
-                (m.churchName === user.church || m.church === user.church) &&
-                (m.presidiumName === user.presidiumName || m.presidium === user.presidiumName)
-            );
-            if (matchedMember) {
-                user.id = matchedMember.id; // [Identity Sync] 단원명단 ID 동기화
-            }
+        // Get profile from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) {
+            throw new Error("사용자 정보를 찾을 수 없습니다.");
         }
 
-        // [IMPORTANT] Use UID as the KEY for history management
-        users[user.uid] = user;
-        localStorage.setItem('users', JSON.stringify(users));
-    }
+        const profile = userDoc.data();
+        if (profile.status === 'retire') {
+            await signOut(auth);
+            throw new Error("퇴단 처리된 계정입니다. 관리자에게 문의하세요.");
+        }
 
-    // Set fake session
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    return { uid: user.uid, email: user.email };
+        // Role Sync - Roles are now managed directly in Firestore.
+
+        localStorage.setItem('currentUser', JSON.stringify(profile));
+        return user;
+    } catch (error) {
+        console.error("Firebase Login Error:", error);
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            throw new Error("아이디 또는 비밀번호가 잘못되었습니다.");
+        }
+        throw error;
+    }
 }
 
-// --- Logout User (Mock) ---
+// --- Logout User (Firebase) ---
 export async function logoutUser() {
+    await signOut(auth);
     localStorage.removeItem('currentUser');
     window.location.href = "index.html";
 }
 
-// --- Update Password (New) ---
+// --- Update Password (Firebase) ---
 export async function updatePassword(uid, newPassword) {
-    console.log("Mock Password Update:", uid);
-    await new Promise(resolve => setTimeout(resolve, 300)); // Delay
-
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (!users[uid]) {
-        throw new Error("사용자를 찾을 수 없습니다.");
+    const user = auth.currentUser;
+    if (user && user.uid === uid) {
+        await firebaseUpdatePassword(user, newPassword);
+        return true;
     }
-
-    // Update password
-    users[uid].password = newPassword;
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // If current user is the one being updated, sync session
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser && currentUser.uid === uid) {
-        currentUser.password = newPassword;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    }
-
-    return true;
+    throw new Error("비밀번호 변경 권한이 없거나 다시 로그인해야 합니다.");
 }
 
-// --- Get User Profile (Mock) ---
+// --- Get User Profile (Firebase) ---
 export async function getUserProfile(uid) {
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    return users[uid] || null;
+    const userDoc = await getDoc(doc(db, "users", uid));
+    return userDoc.exists() ? userDoc.data() : null;
 }
 
-// --- Auth State Observer (Mock) ---
+// --- Auth State Observer (Firebase) ---
 export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
-    // Check local storage for session
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-
-    if (currentUser) {
-        onUserAuthenticated({ uid: currentUser.uid, email: currentUser.email }, currentUser);
-    } else {
-        if (onUserNotAuthenticated) onUserNotAuthenticated();
-    }
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // Get most recent profile from Firestore
+            const profile = await getUserProfile(user.uid);
+            if (profile) {
+                localStorage.setItem('currentUser', JSON.stringify(profile));
+                onUserAuthenticated(user, profile);
+            } else {
+                if (onUserNotAuthenticated) onUserNotAuthenticated();
+            }
+        } else {
+            localStorage.removeItem('currentUser');
+            if (onUserNotAuthenticated) onUserNotAuthenticated();
+        }
+    });
 }
-
-// --- Default Admin Seeder (For Mobile/Dev Convenience) ---
-(function seedDefaultAdmin() {
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-    // Check if admin exists in any form
-    const adminExists = Object.values(users).some(u => u.email === 'admin');
-
-    if (!adminExists) {
-        const uid = 'user_kjxhgb6d5'; // Match backup_data.json UID
-        const adminUser = {
-            uid: uid,
-            email: 'jhsann@legion.app',
-            password: '1234',
-            name: '관리자',
-            role: 'admin',
-            status: 'active',
-            churchName: '본부',
-            presidiumName: '관리자(본부)',
-            createdAt: '2026-02-10T07:09:24.504Z'
-        };
-        users[uid] = adminUser;
-        localStorage.setItem('users', JSON.stringify(users));
-        console.log("Default admin account seeded: jhsann@legion.app / 1234");
-    }
-})();

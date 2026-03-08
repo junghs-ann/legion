@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>일정 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260304_1500">
+    <link rel="stylesheet" href="styles.css?v=20260308_0048">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260304_1500">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260308_0048">
     <style>
         .schedule-container {
             background: white;
@@ -25,6 +25,8 @@
             margin-bottom: 25px;
             border-bottom: 2px solid var(--secondary-color);
             padding-bottom: 15px;
+            padding-right: 40px;
+            /* 우측 상단 X 버튼과의 겹침 방지 */
         }
 
         .schedule-title {
@@ -35,6 +37,40 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            white-space: nowrap;
+            /* 제목 줄바꿈 방지 */
+            flex-shrink: 0;
+        }
+
+        /* Top-right 'X' close button style */
+        .btn-top-close {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            font-size: 2rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .schedule-title {
+                font-size: 1.3rem;
+                /* 모바일에서 제목 크기 축소 */
+            }
+
+            .btn-top-close {
+                top: 15px;
+                right: 15px;
+                font-size: 1.8rem;
+            }
         }
 
         /* Layout Grid */
@@ -114,9 +150,12 @@
         }
 
         .current-month {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: 800;
             color: #2d3748;
+            white-space: nowrap;
+            text-align: center;
+            flex: 1;
         }
 
         .nav-btn {
@@ -421,12 +460,57 @@
         }
 
         .btn-delete {
-            background: #fff5f5;
-            color: #c53030;
-            border: 1px solid #feb2b2;
-            padding: 10px 15px;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            /* 크기 축소 */
             border-radius: 6px;
             cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            /* 글자 크기 축소 */
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+        }
+
+        .btn-save {
+            background: #d4a017;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            /* 크기 축소 */
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            /* 글자 크기 축소 */
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
+        }
+
+        .btn-close {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            /* 크기 축소 */
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            /* 글자 크기 축소 */
+            white-space: nowrap;
+            /* 줄바꿈 방지 */
         }
 
         /* Category Tag Styles */
@@ -462,6 +546,14 @@
 
         .btn-icon:hover {
             color: #e53e3e;
+        }
+
+        /* New Action Button Row Style */
+        .btn-action-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            padding: 0 5px;
         }
     </style>
 </head>
@@ -542,21 +634,16 @@
     </header>
 
     <div class="main-content" style="padding: 120px 20px;">
-        <div class="schedule-container">
-            <div class="schedule-header">
+        <div class="schedule-container" style="position: relative;">
+            <!-- 우측 상단 X 닫기 버튼 추가 -->
+            <span class="btn-top-close" onclick="location.href='dashboard.html'" title="닫기">&times;</span>
+
+            <div class="schedule-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h2 class="schedule-title"><i class="far fa-calendar-alt"></i> 일정 관리</h2>
-                <div style="display: flex; gap: 10px;">
-                    <button id="btnOpenAdd" class="btn-primary">
-                        <i class="fas fa-plus"></i> 일정 등록
-                    </button>
-                    <button type="button" class="btn-secondary" onclick="location.href='dashboard.html'">
-                        닫 기
-                    </button>
-                </div>
             </div>
 
             <!-- 조직 필터 영역 -->
-            <div class="org-filter-section">
+            <div class="org-filter-section" style="margin-bottom: 15px;">
                 <div class="filter-group">
                     <label>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;당</label>
                     <select id="filterChurch">
@@ -575,6 +662,13 @@
                         <option value="">쁘레시디움 선택</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- 신규 등록 버튼 영역 (필터와 달력 사이) -->
+            <div class="btn-action-row">
+                <button id="btnOpenAdd" class="btn-primary" style="white-space: nowrap; padding: 10px 25px;">
+                    <i class="fas fa-plus"></i> 등 록
+                </button>
             </div>
 
             <div class="schedule-layout">
@@ -619,14 +713,14 @@
                     <label>제목</label>
                     <input type="text" id="schedTitle" required placeholder="일정 제목을 입력하세요">
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
+                <div class="form-row" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);">
+                    <div class="form-group" style="min-width: 0;">
                         <label>날짜</label>
-                        <input type="date" id="schedDate" required>
+                        <input type="date" id="schedDate" required style="width: 100%; box-sizing: border-box;">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="min-width: 0;">
                         <label>시간 (선택)</label>
-                        <input type="time" id="schedTime">
+                        <input type="time" id="schedTime" style="width: 100%; box-sizing: border-box;">
                     </div>
                 </div>
                 <div class="form-group">
@@ -651,11 +745,18 @@
                 <input type="hidden" id="schedCuria">
                 <input type="hidden" id="schedPresidium">
 
-                <div class="btn-group">
+                <div class="btn-group" style="justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <button type="submit" class="btn-save" style="flex: 1; justify-content: center;">
+                        <i class="fas fa-save"></i> 저 장
+                    </button>
                     <button type="button" id="btnDelete" class="btn-delete"
-                        style="display:none; margin-right: auto;">삭제</button>
-                    <button type="button" class="btn-secondary" id="btnCloseModal">닫기</button>
-                    <button type="submit" class="btn-primary">저장</button>
+                        style="display:none; flex: 1; justify-content: center;">
+                        <i class="fas fa-trash-alt"></i> 삭 제
+                    </button>
+                    <button type="button" class="btn-close" id="btnCloseModal"
+                        style="flex: 1; justify-content: center;">
+                        <i class="fas fa-times"></i> 닫 기
+                    </button>
                 </div>
             </form>
         </div>
@@ -684,10 +785,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260304_1500"></script>
+    <script src="script.js?v=20260308_0048"></script>
     <script type="module">
-        import { initAuthObserver } from "./auth.js?v=20260304_1500";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260304_1500";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260304_1500";
+        import { fetchPresidiaList } from "./data.js?v=20260304_1500";
 
         let currentUser = null;
         let schedules = [];
@@ -705,10 +807,12 @@
         const scheduleForm = document.getElementById('scheduleForm');
 
         // Logic Initialization
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
+            await loadPresidiaList(); // Fetch presidia first for filters
             setupOrgFilters();
-            loadSchedules();
+            await loadCategories(); // Initialize categories from Firestore
+            startSchedulesSync();   // Start real-time sync for schedules
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
@@ -732,8 +836,13 @@
             }
 
             renderCalendar();
-            // renderEventList() 호출 삭제
         }, () => { location.href = 'index.html'; });
+
+        async function loadPresidiaList() {
+            presidiaList = await fetchPresidiaList();
+        }
+        let presidiaList = [];
+        let unsubscribeSchedules = null;
 
         // --- Organization Filter Logic ---
         function setupOrgFilters() {
@@ -741,7 +850,7 @@
             const filterCuria = document.getElementById('filterCuria');
             const filterPresidium = document.getElementById('filterPresidium');
 
-            const churchList = getChurches();
+            const churchList = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
             churchList.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
@@ -825,7 +934,8 @@
             const filterCuria = document.getElementById('filterCuria');
             filterCuria.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) return;
-            getCuriae(church).forEach(c => {
+            const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+            curiae.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
                 if (c === preselect) opt.selected = true;
@@ -837,10 +947,11 @@
             const filterPresidium = document.getElementById('filterPresidium');
             filterPresidium.innerHTML = '<option value="">쁘레시디움 선택</option>';
             if (!church || !curia) return;
-            getPresidia(church, curia).forEach(p => {
+            const presidia = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            presidia.forEach(pName => {
                 const opt = document.createElement('option');
-                opt.value = p.name; opt.textContent = p.name;
-                if (p.name === preselect) opt.selected = true;
+                opt.value = pName; opt.textContent = pName;
+                if (pName === preselect) opt.selected = true;
                 filterPresidium.appendChild(opt);
             });
         }
@@ -852,64 +963,76 @@
         }
 
         // --- Data Logic ---
-        function loadSchedules() {
-            const raw = localStorage.getItem('schedules_list') || '[]';
-            const all = JSON.parse(raw);
+        let allSchedules = [];
+        function startSchedulesSync() {
+            if (unsubscribeSchedules) unsubscribeSchedules();
+            const q = query(collection(db, 'schedule_list'), orderBy('date', 'asc'));
+            unsubscribeSchedules = onSnapshot(q, (snapshot) => {
+                allSchedules = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                applySchedulesFilter();
+            }, (error) => {
+                console.error("Error syncing schedules:", error);
+            });
+        }
 
+        function applySchedulesFilter() {
             // Filter by Org
-            schedules = all.filter(s => {
+            schedules = allSchedules.filter(s => {
                 const sChurch = s.churchName || s.church || '';
                 const sCuria = s.curiaName || s.curia || '';
                 const sPresidium = s.presidiumName || s.presidium || '';
 
-                // 성당이 선택되지 않았으면 아무것도 보여주지 않음 (관리자 초기 화면 등)
                 if (!orgFilter.church) return false;
-
-                // [계층형 누적 필터링 로직]
-                // 1. 기본적으로 선택된 성당의 일정이어야 함
                 if (sChurch !== orgFilter.church) return false;
 
-                // 2. 성당 레벨 일정 (꾸리아/쁘레시디움 정보가 없는 경우)
                 const isChurchLevel = !sCuria && !sPresidium;
-
-                // 3. 꾸리아 레벨 일정 (해당 꾸리아 정보가 있고 쁘레시디움 정보가 없는 경우)
                 const isCuriaLevel = orgFilter.curia && (sCuria === orgFilter.curia) && !sPresidium;
-
-                // 4. 쁘레시디움 레벨 일정 (해당 꾸리아와 쁘레시디움 정보가 모두 일치하는 경우)
                 const isPresidiumLevel = orgFilter.curia && orgFilter.presidium && (sCuria === orgFilter.curia) && (sPresidium === orgFilter.presidium);
 
-                // 선택된 필터 수준에 따라 누적하여 반환
                 if (orgFilter.presidium) {
-                    // 성당 + 꾸리아 + 쁘레시디움 일정 모두 노출
                     return isChurchLevel || isCuriaLevel || isPresidiumLevel;
                 } else if (orgFilter.curia) {
-                    // 성당 + 꾸리아 일정 노출
                     return isChurchLevel || isCuriaLevel;
                 } else {
-                    // 성당 일정만 노출
                     return isChurchLevel;
                 }
             });
+            renderCalendar();
+            if (selectedDate) renderEventList();
         }
 
-        function saveSchedule(item) {
-            const all = JSON.parse(localStorage.getItem('schedules_list') || '[]');
-            if (item.id) {
-                const idx = all.findIndex(s => s.id === item.id);
-                if (idx !== -1) all[idx] = item;
-            } else {
-                item.id = 'sched_' + Date.now();
-                all.push(item);
+        async function loadSchedules() {
+            // Logic moved to startSchedulesSync for real-time updates
+        }
+
+        async function saveSchedule(item) {
+            try {
+                const id = item.id;
+                const data = { ...item };
+                delete data.id;
+                data.updatedAt = serverTimestamp();
+
+                if (id) {
+                    await updateDoc(doc(db, 'schedule_list', id), data);
+                } else {
+                    data.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'schedule_list'), data);
+                }
+                refreshData();
+            } catch (error) {
+                console.error("Error saving schedule:", error);
+                alert("일정을 저장하는 중 오류가 발생했습니다.");
             }
-            localStorage.setItem('schedules_list', JSON.stringify(all));
-            refreshData();
         }
 
-        function deleteSchedule(id) {
-            let all = JSON.parse(localStorage.getItem('schedules_list') || '[]');
-            all = all.filter(s => s.id !== id);
-            localStorage.setItem('schedules_list', JSON.stringify(all));
-            refreshData();
+        async function deleteSchedule(id) {
+            try {
+                await deleteDoc(doc(db, 'schedule_list', id));
+                refreshData();
+            } catch (error) {
+                console.error("Error deleting schedule:", error);
+                alert("일정을 삭제하는 중 오류가 발생했습니다.");
+            }
         }
 
         // --- Calendar Rendering ---
@@ -1060,7 +1183,7 @@
         });
 
         function openEditModal(e) {
-            document.getElementById('modalTitle').textContent = '일정 수정';
+            document.getElementById('modalTitle').textContent = '일정 상세';
             document.getElementById('scheduleId').value = e.id;
             document.getElementById('schedTitle').value = e.title;
             document.getElementById('schedDate').value = e.date;
@@ -1079,12 +1202,9 @@
             }
         });
 
-        scheduleForm.addEventListener('submit', (e) => {
+        scheduleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Validate Org Selection BEFORE saving
-            // If User is NOT admin, org is already set.
-            // If User IS admin, they must have selected AT LEAST a church.
             const church = document.getElementById('filterChurch').value;
             const curia = document.getElementById('filterCuria').value;
             const presidium = document.getElementById('filterPresidium').value;
@@ -1109,26 +1229,32 @@
                 author: currentUser.name || '알 수 없음'
             };
 
-            saveSchedule(item);
+            await saveSchedule(item);
             scheduleModal.style.display = 'none';
             alert('저장되었습니다.');
         });
 
         // --- Category Dynamic Logic ---
-        function loadCategories() {
-            const defaultCats = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
-            const stored = JSON.parse(localStorage.getItem('schedule_categories') || '[]');
-
-            if (stored.length === 0) {
-                localStorage.setItem('schedule_categories', JSON.stringify(defaultCats));
-                return defaultCats;
+        let categories = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
+        async function loadCategories() {
+            try {
+                const docSnap = await getDocs(collection(db, 'schedule_categories'));
+                if (!docSnap.empty) {
+                    categories = docSnap.docs.map(d => d.data().name);
+                } else {
+                    // Initialize default categories if none exist
+                    for (const cat of categories) {
+                        await addDoc(collection(db, 'schedule_categories'), { name: cat });
+                    }
+                }
+                renderCategoryOptions();
+            } catch (error) {
+                console.error("Error loading categories:", error);
             }
-            return stored;
         }
 
         function renderCategoryOptions() {
             const select = document.getElementById('schedCategory');
-            const categories = loadCategories();
             select.innerHTML = '';
             categories.forEach(cat => {
                 const opt = document.createElement('option');
@@ -1166,43 +1292,52 @@
 
         function renderCategoryList() {
             if (!categoryList) return;
-            const categories = loadCategories();
             categoryList.innerHTML = '';
             categories.forEach((cat, index) => {
                 const item = document.createElement('div');
                 item.className = 'category-list-item';
                 item.innerHTML = `
                     <span>${cat}</span>
-                    <button class="btn-icon" onclick="removeCategory(${index})"><i class="fas fa-trash-alt"></i></button>
+                    <button class="btn-icon" onclick="removeCategory('${cat}')"><i class="fas fa-trash-alt"></i></button>
                 `;
                 categoryList.appendChild(item);
             });
         }
 
-        window.removeCategory = (index) => {
-            let categories = loadCategories();
-            if (confirm(`'${categories[index]}' 분류를 삭제하시겠습니까?`)) {
-                categories.splice(index, 1);
-                localStorage.setItem('schedule_categories', JSON.stringify(categories));
-                renderCategoryList();
+        window.removeCategory = async (catName) => {
+            if (confirm(`'${catName}' 분류를 삭제하시겠습니까?`)) {
+                try {
+                    const q = query(collection(db, 'schedule_categories'), where('name', '==', catName));
+                    const snapshot = await getDocs(q);
+                    for (const d of snapshot.docs) {
+                        await deleteDoc(doc(db, 'schedule_categories', d.id));
+                    }
+                    await loadCategories();
+                    renderCategoryList();
+                } catch (error) {
+                    console.error("Error removing category:", error);
+                }
             }
         };
 
-        document.getElementById('btnAddCategory').addEventListener('click', () => {
+        document.getElementById('btnAddCategory').addEventListener('click', async () => {
             const input = document.getElementById('newCategoryName');
             const val = input.value.trim();
             if (!val) return;
 
-            let categories = loadCategories();
             if (categories.includes(val)) {
                 alert('이미 존재하는 분류입니다.');
                 return;
             }
 
-            categories.push(val);
-            localStorage.setItem('schedule_categories', JSON.stringify(categories));
-            input.value = '';
-            renderCategoryList();
+            try {
+                await addDoc(collection(db, 'schedule_categories'), { name: val });
+                input.value = '';
+                await loadCategories();
+                renderCategoryList();
+            } catch (error) {
+                console.error("Error adding category:", error);
+            }
         });
 
         // Initialize dynamic parts

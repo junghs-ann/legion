@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260306_1620">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 (테두리 및 스타일 지원) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -34,6 +34,26 @@
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            /* 상단 X 버튼 배치를 위해 추가 */
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         .stats-header {
@@ -163,7 +183,7 @@
         }
 
         .btn-search:hover {
-            background: #0088cc;
+            background: #b88a15;
             transform: translateY(-2px);
         }
 
@@ -465,18 +485,35 @@
         }
 
         .btn-excel {
-            background-color: #2e7d32;
+            background-color: #333;
+            /* 블랙 색상으로 통일 */
             color: white;
         }
 
         .btn-excel:hover {
-            background-color: #1b5e20;
+            background-color: #000;
             transform: translateY(-2px);
         }
 
         .btn-close {
             background-color: #666;
             color: white;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .btn-group.bottom-actions {
+                flex-direction: row !important;
+                justify-content: center !important;
+                gap: 8px !important;
+            }
+
+            .btn-group.bottom-actions .btn-action {
+                flex: 1;
+                width: auto !important;
+                padding: 10px 5px !important;
+                font-size: 0.8rem !important;
+            }
         }
 
         @media (max-width: 768px) {
@@ -619,6 +656,9 @@
     </header>
 
     <div class="stats-container">
+        <!-- 상단 우측 X 버튼 추가 -->
+        <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
         <div class="stats-header">
             <div>
                 <h2 style="color: var(--primary-color); margin: 0;">활동 내역</h2>
@@ -699,10 +739,11 @@
     </div>
     </div>
 
-    <script src="script.js?v=20260306_1620"></script>
+    <script src="script.js?v=20260307_2325"></script>
     <script type="module">
+        import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let members = [];
@@ -720,10 +761,9 @@
         const memberSelect = document.getElementById('memberSelect');
         const dateListPopup = document.getElementById('dateListPopup');
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
             if (!currentUser) {
-                alert('로그인이 필요합니다.');
                 location.href = 'index.html';
                 return;
             }
@@ -734,20 +774,47 @@
                     import("./auth.js").then(auth => auth.logoutUser());
                 });
             }
-            // 초기 데이터 로드
-            activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
-            activityRecords = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            members = JSON.parse(localStorage.getItem('members_list') || '[]');
 
-            initSelectors();
+            // [수정] Firestore에서 초기 데이터 로드 (스키마)
+            try {
+                const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
+                schemaSnap.forEach(doc => {
+                    activitySchemaMap[doc.id] = doc.data().categories;
+                });
+            } catch (error) {
+                console.error("Error loading schemas:", error);
+                activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            }
+
+            await initSelectors();
+            initCommonData();
             setupEventListeners();
         });
+
+        let allPresidia = [];
+        async function initCommonData() {
+            allPresidia = await fetchPresidiaList();
+        }
+
+        // --- Helper: Data Source (Organization) ---
+        function getChurches() {
+            return [...new Set(allPresidia.map(p => p.churchName))].sort();
+        }
+        function getCuriae(church) {
+            return [...new Set(allPresidia.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+        }
+        function getPresidia(church, curia) {
+            return allPresidia.filter(p => p.churchName === church && p.curiaName === curia).map(p => ({
+                id: p.id,
+                name: p.presidiumName
+            }));
+        }
 
         /**
          * @function initSelectors
          * @description 사용자 권한에 따라 필터 초기화
          */
-        function initSelectors() {
+        async function initSelectors() {
             const role = currentUser.role?.toLowerCase();
             const isAdmin = ['admin', '관리자'].includes(role);
             const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
@@ -769,24 +836,24 @@
                 presidiumInput.disabled = false; // Changed from presidiumSelect
                 memberSelect.disabled = false;
 
-                churchSelect.onchange = () => {
+                churchSelect.onchange = async () => {
                     const c = churchSelect.value;
                     const curiae = getCuriae(c);
                     curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>' + curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
                     curiaSelect.disabled = false;
                     presidiumInput.value = '';
                     currentPresidia = []; // [Update] church 변경 시 쁘레 목록 초기화
-                    updateMembers();
+                    await updateMembers();
                 };
 
-                curiaSelect.onchange = () => {
+                curiaSelect.onchange = async () => {
                     const c = churchSelect.value;
                     const cu = curiaSelect.value;
                     const prs = getPresidia(c, cu).map(p => p.name); // Get names only
                     currentPresidia = prs.sort();
                     presidiumInput.value = '';
                     presidiumInput.disabled = false;
-                    updateMembers();
+                    await updateMembers();
                 };
 
                 setupPresidiumSearch();
@@ -808,7 +875,7 @@
                 presidiumInput.disabled = true; // Changed from presidiumSelect
 
                 // 명시적으로 단원 목록을 다시 불러와서 목록을 완성함
-                updateMembers(); // Changed from updateMemberList(userChurch, userPr);
+                await updateMembers(); // Changed from updateMemberList(userChurch, userPr);
 
                 if (isOfficer) {
                     // 간부: 단원 선택 가능
@@ -860,10 +927,10 @@
                         div.className = 'dropdown-item';
                         div.textContent = p;
                         div.style.color = '#333';
-                        div.onclick = () => {
+                        div.onclick = async () => {
                             presidiumInput.value = p;
                             presidiumDropdown.style.display = 'none';
-                            updateMembers();
+                            await updateMembers();
                         };
                         presidiumDropdown.appendChild(div);
                     });
@@ -889,7 +956,7 @@
             });
         }
 
-        function updateMembers() { // Renamed from updateMemberList
+        async function updateMembers() { // Renamed from updateMemberList
             const churchName = churchSelect.value;
             const prName = presidiumInput.value; // Changed from presidiumSelect.value
             memberSelect.innerHTML = '<option value="">전체 단원</option>';
@@ -898,32 +965,39 @@
             const startD = startDate.value;
             const endD = endDate.value;
 
-            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const prMembers = allMembers.filter(m => {
-                const isOrgMatch = (m.churchName === churchName || m.church === churchName) &&
-                    (m.presidiumName === prName || m.presidium === prName);
-                if (!isOrgMatch) return false;
+            try {
+                // [수정] Firestore에서 단원 및 간부 목록 가져오기
+                const mQuery = query(collection(db, 'members_list'), where('presidiumName', '==', prName));
+                const oQuery = query(collection(db, 'officers_list'), where('presidiumName', '==', prName));
 
-                // [강화된 필터링 로직]
-                // 1. 퇴단/전출 단원 제외: leaveDate가 있고, 조회 시작일(startD)보다 이전이면 제외
-                if ((m.status === '퇴단' || m.status === '전출') && m.leaveDate && startD && m.leaveDate < startD) {
-                    return false;
-                }
+                const [mSnap, oSnap] = await Promise.all([getDocs(mQuery), getDocs(oQuery)]);
 
-                // 2. 예정 단원 제외: probationaryDate가 있고, 조회 종료일(endD)보다 이후이면 제외
-                if (m.probationaryDate && endD && m.probationaryDate > endD) {
-                    return false;
-                }
+                let prMembers = [];
+                mSnap.forEach(doc => prMembers.push({ id: doc.id, ...doc.data() }));
+                oSnap.forEach(doc => prMembers.push({ id: doc.id, ...doc.data() }));
 
-                return true;
-            }).sort((a, b) => a.name.localeCompare(b.name));
+                // Filter logic
+                const filteredMembers = prMembers.filter(m => {
+                    // 1. 퇴단/전출 단원 제외: leaveDate가 있고, 조회 시작일(startD)보다 이전이면 제외
+                    if ((m.status === '퇴단' || m.status === '전출') && m.leaveDate && startD && m.leaveDate < startD) {
+                        return false;
+                    }
+                    // 2. 예정 단원 제외: probationaryDate가 있고, 조회 종료일(endD)보다 이후이면 제외
+                    if (m.probationaryDate && endD && m.probationaryDate > endD) {
+                        return false;
+                    }
+                    return true;
+                }).sort((a, b) => a.name.localeCompare(b.name));
 
-            prMembers.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.name;
-                opt.textContent = m.name;
-                memberSelect.appendChild(opt);
-            });
+                filteredMembers.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.name;
+                    opt.textContent = m.name;
+                    memberSelect.appendChild(opt);
+                });
+            } catch (error) {
+                console.error("Error updateMembers:", error);
+            }
 
             // [추가] 단원 권한인 경우 본인 이름으로 항상 고정
             if (currentUser) {
@@ -954,13 +1028,13 @@
             }
 
             // 날짜 변경 시 단원 목록 자동 갱신
-            startDate.onchange = () => updateMembers(); // Changed from updateMemberList
-            endDate.onchange = () => updateMembers(); // Changed from updateMemberList
+            startDate.onchange = async () => await updateMembers(); // Changed from updateMemberList
+            endDate.onchange = async () => await updateMembers(); // Changed from updateMemberList
 
             // 날짜 목록 팝업 토글
-            document.getElementById('btnShowDateList').onclick = (e) => {
+            document.getElementById('btnShowDateList').onclick = async (e) => {
                 e.stopPropagation();
-                showDateList();
+                await showDateList();
             };
 
             // 외부 클릭 시 팝업 닫기
@@ -979,9 +1053,9 @@
                 };
             });
 
-            document.getElementById('btnSearch').addEventListener('click', () => {
+            document.getElementById('btnSearch').addEventListener('click', async () => {
                 console.log('[Search] Button clicked!');
-                renderStats();
+                await renderStats();
             });
 
             // 엑셀 다운로드 이벤트
@@ -992,40 +1066,50 @@
          * @function showDateList
          * @description 주회합(attendance_list) 기록에서 날짜와 회차 목록을 가져와 팝업으로 표시
          */
-        function showDateList() {
+        async function showDateList() {
             const prName = presidiumInput.value; // Changed from presidiumSelect.value
             if (!prName) {
                 alert('쁘레시디움을 먼저 선택해주세요.');
                 return;
             }
 
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            // [Fix] presidium 프로퍼티 명칭 보강 (공백 제거 및 대소문자 무관하게 체크)
-            const targetPrName = prName.trim();
-            const myHistory = allAttendance.filter(a => {
-                const pr = (a.presidium || a.presidiumName || '').trim();
-                return pr === targetPrName && a.date && a.session;
-            }).sort((a, b) => b.date.localeCompare(a.date));
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('presidiumName', '==', prName),
+                    orderBy('date', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const myHistory = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.session) {
+                        myHistory.push({ id: doc.id, ...data });
+                    }
+                });
 
-            if (myHistory.length === 0) {
-                dateListPopup.innerHTML = `
-                    <div class="date-list-item" style="color: #666; cursor: default;">
-                        "${targetPrName}"의 주회 기록이 없습니다.<br>
-                        <small>기록이 있어야 목록에 나타납니다.</small>
-                    </div>`;
-            } else {
-                dateListPopup.innerHTML = myHistory.map(h => `
-                    <div class="date-list-item" onclick="selectDateRange('${h.date}')">
-                        <span class="date-info">${h.date}</span>
-                        <span class="session-info">(${h.session}차)</span>
-                    </div>
-                `).join('');
+                if (myHistory.length === 0) {
+                    dateListPopup.innerHTML = `
+                        <div class="date-list-item" style="color: #666; cursor: default;">
+                            "${prName}"의 주회 기록이 없습니다.<br>
+                            <small>기록이 있어야 목록에 나타납니다.</small>
+                        </div>`;
+                } else {
+                    dateListPopup.innerHTML = myHistory.map(h => `
+                        <div class="date-list-item" onclick="selectDateRange('${h.date}')">
+                            <span class="date-info">${h.date}</span>
+                            <span class="session-info">(${h.session}차)</span>
+                        </div>
+                    `).join('');
+                }
+                dateListPopup.style.display = 'block';
+            } catch (error) {
+                console.error("Error showDateList:", error);
             }
-            dateListPopup.style.display = 'block';
         }
 
         // 전역 스코프에 선택 함수 노출
-        window.selectDateRange = (date) => {
+        window.selectDateRange = async (date) => {
             // 시작일이 없으면 시작일에, 있으면 종료일에 입력 (편의성)
             if (!startDate.value) startDate.value = date;
             else if (!endDate.value) endDate.value = date;
@@ -1035,10 +1119,10 @@
             }
             dateListPopup.style.display = 'none';
             // 날짜 선택 후 단원 목록 갱신
-            updateMembers(); // Changed from updateMemberList(churchSelect.value, presidiumSelect.value);
+            await updateMembers(); // Changed from updateMemberList(churchSelect.value, presidiumSelect.value);
         };
 
-        function renderStats() {
+        async function renderStats() {
             const church = churchSelect.value;
             const curia = curiaSelect.value; // Added curia
             const pr = presidiumInput.value; // Changed from presidiumSelect.value
@@ -1063,27 +1147,33 @@
                 return;
             }
 
-            // [추가] 성명 정렬 순서 고도화 (활동 등록 화면과 동일하게)
-            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
+            // [수정] Firestore에서 단원 및 간부 목록 가져오기 (정렬용)
+            let allMembers = [], allOfficers = [];
+            try {
+                const mSnap = await getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', pr)));
+                const oSnap = await getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', pr)));
+                mSnap.forEach(doc => allMembers.push(doc.data()));
+                oSnap.forEach(doc => allOfficers.push(doc.data()));
+            } catch (error) {
+                console.error("Error fetching members for sort:", error);
+            }
+
             const rolePriorityMap = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
 
             // 해당 쁘레시디움의 모든 인원에 대해 정렬 가중치 생성
             const memberSortMap = {};
 
             // 1. 간부 가중치 (10~49)
-            allOfficers.filter(o => (o.churchName === church || o.church === church) && (o.presidiumName === pr || o.presidium === pr))
-                .forEach(o => {
-                    const priority = rolePriorityMap[o.role] || 50;
-                    // 간부인데 이미 등록된 경우 더 높은 직책 우선
-                    if (!memberSortMap[o.name] || memberSortMap[o.name] > priority) {
-                        memberSortMap[o.name] = priority;
-                    }
-                });
+            allOfficers.forEach(o => {
+                const priority = rolePriorityMap[o.role] || 50;
+                // 간부인데 이미 등록된 경우 더 높은 직책 우선
+                if (!memberSortMap[o.name] || memberSortMap[o.name] > priority) {
+                    memberSortMap[o.name] = priority;
+                }
+            });
 
             // 2. 일반 단원 가중치 (수련일 기준, 100부터 시작)
-            const sortedMembers = allMembers.filter(m => (m.churchName === church || m.church === church) && (m.presidiumName === pr || m.presidium === pr))
-                .sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+            const sortedMembers = allMembers.sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
 
             sortedMembers.forEach((m, idx) => {
                 if (!memberSortMap[m.name]) {
@@ -1098,13 +1188,32 @@
                 schemaCopy.unshift(otherGroup);
             }
 
-            // 1. 데이터 필터링 및 정렬
-            const filteredRecords = activityRecords.filter(r => {
-                const isOrgMatch = r.churchName === church && r.presidiumName === pr;
-                const isDateMatch = (!startD || r.date >= startD) && (!endD || r.date <= endD);
-                const isMemberMatch = !selectedMember || r.memberName === selectedMember;
-                return isOrgMatch && isDateMatch && isMemberMatch;
-            }).sort((a, b) => {
+            // 1. Firestore 데이터 쿼리
+            let records = [];
+            try {
+                let q = query(
+                    collection(db, 'activity_records'),
+                    where('churchName', '==', church),
+                    where('presidiumName', '==', pr)
+                );
+
+                // Firestore limit: cannot have range filters on different fields easily with equalities.
+                // We'll filter date and member in memory for simplicity if query is complex,
+                // but date range is usually fine.
+                const querySnap = await getDocs(q);
+                querySnap.forEach(doc => {
+                    const data = doc.data();
+                    const isDateMatch = (!startD || data.date >= startD) && (!endD || data.date <= endD);
+                    const isMemberMatch = !selectedMember || data.memberName === selectedMember;
+                    if (isDateMatch && isMemberMatch) {
+                        records.push(data);
+                    }
+                });
+            } catch (error) {
+                console.error("Error fetching activity records:", error);
+            }
+
+            const filteredRecords = records.sort((a, b) => {
                 // (가) 날짜/회차 우선 (오름차순)
                 if (a.date !== b.date) return a.date.localeCompare(b.date);
                 if (a.session !== b.session) return parseInt(a.session) - parseInt(b.session);

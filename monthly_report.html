@@ -419,8 +419,9 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let userProfile = null;
@@ -456,7 +457,7 @@
         const btnText = document.getElementById('btnText');
         const reportModeRadios = document.getElementsByName('reportMode');
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             if (!user) { location.href = "index.html"; return; }
             currentUser = user; userProfile = profile;
 
@@ -465,7 +466,8 @@
                 window.initCommonMenus(profile, logoutUser);
             }
 
-            initFilters(); checkPermissions(); setupEnterToNext();
+            await fetchPresidiaList();
+            await initFilters(); checkPermissions(); setupEnterToNext();
 
             // 권한에 따른 모드 제어
             const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
@@ -478,6 +480,11 @@
             // 초기 버튼 텍스트 설정 (현재 체크된 라디오 기준)
             const currentMode = document.querySelector('input[name="reportMode"]:checked').value;
             btnText.textContent = currentMode === 'create' ? '월례보고서 생성' : '월례보고서 조회(열람)';
+
+            // [추가] 단장 등 간부 로그인 시 조직이 고정되므로, 즉시 회차 목록을 로드함
+            if (userProfile.presidiumName || userProfile.presidium) {
+                await updateSessionLists();
+            }
         }, () => { location.href = "index.html"; });
 
         // 라디오 버튼 변경 시 텍스트 업데이트
@@ -487,7 +494,7 @@
             });
         });
 
-        function initFilters() {
+        async function initFilters() {
             const churches = getChurches();
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
@@ -500,7 +507,7 @@
                 presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
 
                 // [Fix] 단장 등 간부 로그인 시 조직이 고정되므로, 즉시 회차 목록을 로드함
-                updateSessionLists();
+                // updateSessionLists() is now called in initAuthObserver after it finishes
             } else {
                 churchSelect.addEventListener('change', () => { updateCuriaList(churchSelect.value); updatePresidiumList('', ''); });
                 curiaSelect.addEventListener('change', () => { updatePresidiumList(churchSelect.value, curiaSelect.value); });
@@ -524,27 +531,40 @@
             btnGenerate.disabled = false;
         }
 
-        presidiumSelect.addEventListener('change', updateSessionLists);
+        presidiumSelect.addEventListener('change', async () => await updateSessionLists());
 
-        function updateSessionLists() {
+        async function updateSessionLists() {
             const pr = presidiumSelect.value;
             startSess.innerHTML = '<option value="">시작 회차 선택</option>';
             endSess.innerHTML = '<option value="">종료 회차 선택</option>';
 
             if (!pr) return;
 
-            const attList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            // date와 session이 있는 유효한 출석부 기록만 필터링
-            const filteredAtts = attList.filter(a => (a.presidiumName || a.presidium) === pr && a.session && a.date)
-                .sort((a, b) => parseInt(b.session || 0) - parseInt(a.session || 0));
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('presidiumName', '==', pr),
+                    orderBy('date', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const filteredAtts = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.session && data.date) {
+                        filteredAtts.push(data);
+                    }
+                });
 
-            filteredAtts.forEach(a => {
-                const optText = `${a.session}회 (${a.date})`;
-                const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
-                const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
-                startSess.add(opt1);
-                endSess.add(opt2);
-            });
+                filteredAtts.forEach(a => {
+                    const optText = `${a.session}회 (${a.date})`;
+                    const opt1 = new Option(optText, a.session); opt1.dataset.date = a.date;
+                    const opt2 = new Option(optText, a.session); opt2.dataset.date = a.date;
+                    startSess.add(opt1);
+                    endSess.add(opt2);
+                });
+            } catch (error) {
+                console.error("Error updateSessionLists:", error);
+            }
         }
 
         startSess.addEventListener('change', () => {
@@ -562,7 +582,7 @@
             ins.forEach((input, i) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const next = ins[i + 1]; if (next) next.focus(); else if (!btnGenerate.disabled) btnGenerate.focus(); } }); });
         }
 
-        btnGenerate.addEventListener('click', () => {
+        btnGenerate.addEventListener('click', async () => {
             const c = churchSelect.value, p = presidiumSelect.value, s = startDate.value, e = endDate.value;
             const ss = startSess.value, es = endSess.value;
             const mode = document.querySelector('input[name="reportMode"]:checked').value;
@@ -571,10 +591,16 @@
             if (s > e) { window.showCustomAlert('날짜 범위를 확인해주세요.'); return; }
 
             // 보고서 상태 체크
-            const reportHistory = JSON.parse(localStorage.getItem('monthly_report_status') || '[]');
-            const found = reportHistory.find(r =>
-                r.church === c && r.presidium === p && r.startSess === ss && r.endSess === es
-            );
+            let found = null;
+            try {
+                const reportId = `${c}_${p}_${ss}_${es}`;
+                const reportSnap = await getDoc(doc(db, 'monthly_report_status', reportId));
+                if (reportSnap.exists()) {
+                    found = reportSnap.data();
+                }
+            } catch (error) {
+                console.error("Error checking report status:", error);
+            }
 
             // '생성 및 수정' 모드일 때 승인 여부 체크
             if (mode === 'create') {

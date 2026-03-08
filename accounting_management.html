@@ -317,7 +317,10 @@
     <!-- Removed data.js import -->
     <script src="script.js?v=20260306_2340"></script>
     <script type="module">
-        // import { getChurches, getCuriae } from './data.js'; // REMOVED
+        import { db } from "./firebase-config.js";
+        import {
+            collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, writeBatch, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         // DOM Elements
@@ -342,6 +345,7 @@
 
         // Helper to get Presidia from LocalStorage
         function getStoredPresidiaList() {
+            // Reference list remains in localStorage for performance
             return JSON.parse(localStorage.getItem('presidia_list') || '[]');
         }
 
@@ -381,7 +385,6 @@
                     btnAddRow.style.display = 'inline-block';
                 }
             }, () => {
-                alert("로그인이 필요합니다.");
                 window.location.href = 'index.html';
             });
         }
@@ -526,30 +529,27 @@
         }
 
         // --- Data Management ---
-        function getStoredItems() {
-            return JSON.parse(localStorage.getItem('accounting_items') || '[]');
-        }
+        async function loadItems(church, curia) {
+            try {
+                const itemsQuery = query(
+                    collection(db, 'accounting_items'),
+                    where('church', '==', church),
+                    where('curia', '==', curia)
+                );
+                const itemsSnap = await getDocs(itemsQuery);
+                currentItems = itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        function saveStoredItems(items) {
-            localStorage.setItem('accounting_items', JSON.stringify(items));
-        }
+                // Sort: Deposit first, then Withdrawal
+                currentItems.sort((a, b) => {
+                    if (a.type !== b.type) return a.type === 'deposit' ? -1 : 1;
+                    return a.name.localeCompare(b.name);
+                });
 
-        function loadItems(church, curia) {
-            const allItems = getStoredItems();
-            // Filter by Church and Curia instead of Presidium
-            currentItems = allItems.filter(item => item.church === church && item.curia === curia);
-
-            // If legacy items exist with just presidiumId (from older version), we might ignore them 
-            // or we might need a migration strategy. For now, we assume new data structure.
-            // But since we are repurposing, we should rely on the new fields.
-
-            // Sort: Deposit first, then Withdrawal
-            currentItems.sort((a, b) => {
-                if (a.type !== b.type) return a.type === 'deposit' ? -1 : 1;
-                return a.name.localeCompare(b.name);
-            });
-
-            renderGrid();
+                renderGrid();
+            } catch (error) {
+                console.error("Error loading accounting items:", error);
+                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
         function renderGrid() {
@@ -616,46 +616,70 @@
             gridBody.appendChild(tr);
         }
 
-        function saveData() {
+        async function saveData() {
             if (!loadedChurch || !loadedCuria) {
                 alert('먼저 소속을 조회해주세요.');
                 return;
             }
 
-            const rows = gridBody.querySelectorAll('tr');
-            const newItemsList = [];
+            try {
+                const rows = gridBody.querySelectorAll('tr');
+                const batch = writeBatch(db);
 
-            // Retrieve all other items not belonging to this Church/Curia
-            const allItems = getStoredItems();
-            const otherItems = allItems.filter(item => !(item.church === loadedChurch && item.curia === loadedCuria));
+                // Fetch existing items for this church/curia to handle deletions
+                const itemsQuery = query(
+                    collection(db, 'accounting_items'),
+                    where('church', '==', loadedChurch),
+                    where('curia', '==', loadedCuria)
+                );
+                const existingSnap = await getDocs(itemsQuery);
 
-            rows.forEach(row => {
-                const id = row.dataset.id || Date.now().toString() + Math.random().toString().substr(2, 5);
-                const type = row.querySelector('.type-select').value;
-                const name = row.querySelector('.name-input').value.trim();
-                const isActive = row.querySelector('.status-select').value === 'true';
+                // Track which IDs are still present
+                const activeIds = [];
 
-                // Skip empty rows
-                if (!name) return;
+                rows.forEach(row => {
+                    const id = row.dataset.id;
+                    const type = row.querySelector('.type-select').value;
+                    const name = row.querySelector('.name-input').value.trim();
+                    const isActive = row.querySelector('.status-select').value === 'true';
 
-                newItemsList.push({
-                    id: id,
-                    church: loadedChurch,
-                    curia: loadedCuria,
-                    // presidiumId: REMOVED as it is now scoped to Curia
-                    type: type,
-                    name: name,
-                    isActive: isActive,
-                    createdAt: new Date().toISOString()
+                    if (!name) return;
+
+                    if (id) {
+                        // Update existing
+                        const docRef = doc(db, 'accounting_items', id);
+                        batch.update(docRef, {
+                            type, name, isActive,
+                            updatedAt: serverTimestamp()
+                        });
+                        activeIds.push(id);
+                    } else {
+                        // Add new
+                        const newDocRef = doc(collection(db, 'accounting_items'));
+                        batch.set(newDocRef, {
+                            church: loadedChurch,
+                            curia: loadedCuria,
+                            type, name, isActive,
+                            createdAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
                 });
-            });
 
-            // Save merged list
-            const finalItems = [...otherItems, ...newItemsList];
-            saveStoredItems(finalItems);
+                // Delete items that were removed from the table
+                existingSnap.docs.forEach(docSnap => {
+                    if (!activeIds.includes(docSnap.id)) {
+                        batch.delete(docSnap.ref);
+                    }
+                });
 
-            alert('저장되었습니다.');
-            loadItems(loadedChurch, loadedCuria);
+                await batch.commit();
+                alert('저장되었습니다.');
+                loadItems(loadedChurch, loadedCuria);
+            } catch (error) {
+                console.error("Error saving accounting items:", error);
+                alert("저장 중 오류가 발생했습니다.");
+            }
         }
 
         // Start

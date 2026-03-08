@@ -1,5 +1,5 @@
-// === Version: 20260304_1945_global_modal ===
-console.log("Legion Script Loaded: 20260304_1945_global_modal");
+// === Version: 20260308_0430_auth_fix ===
+console.log("Legion Script Loaded: 20260308_0430_auth_fix");
 
 // === Global Custom Modal CSS Injection ===
 (function injectGlobalModalCSS() {
@@ -215,33 +215,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Mobile Submenu Accordion
-        if (window.innerWidth <= 1024) {
-            navItems.forEach(item => {
-                const link = item.querySelector('.nav-link');
-                const subMenu = item.querySelector('.sub-menu');
+        // Click-based Accordion Logic (Shared for Desktop & Mobile)
+        navItems.forEach(item => {
+            const link = item.querySelector('.nav-link');
+            const subMenu = item.querySelector('.sub-menu');
 
-                if (subMenu) {
-                    link.addEventListener('click', (e) => {
-                        // If it's just a toggle link (has '#' or no real href), prevent default
-                        const href = link.getAttribute('href');
-                        if (!href || href === '#') {
-                            e.preventDefault();
+            if (subMenu) {
+                item.classList.add('has-submenu'); // 화살표 표시를 위한 클래스 추가
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '#' || subMenu) {
+                        e.preventDefault(); // Submenu nodes are toggles
+                    }
+
+                    const isOpen = item.classList.contains('active-menu');
+
+                    // 1. Close ALL other menus (Auto-close logic)
+                    navItems.forEach(otherItem => {
+                        if (otherItem !== item) {
+                            otherItem.classList.remove('active-menu');
                         }
-
-                        // Close other open menus
-                        navItems.forEach(otherItem => {
-                            if (otherItem !== item) {
-                                const otherSub = otherItem.querySelector('.sub-menu');
-                                if (otherSub) otherSub.classList.remove('open');
-                            }
-                        });
-
-                        subMenu.classList.toggle('open');
                     });
+
+                    // 2. Toggle current menu
+                    if (isOpen) {
+                        item.classList.remove('active-menu');
+                    } else {
+                        item.classList.add('active-menu');
+                    }
+                });
+            }
+        });
+
+        // Close menu if clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+                navItems.forEach(item => item.classList.remove('active-menu'));
+                if (window.innerWidth <= 1024) {
+                    navMenu.classList.remove('active');
+                    document.body.classList.remove('no-scroll');
                 }
-            });
-        }
+            }
+        });
     }
 });
 
@@ -256,81 +271,19 @@ window.handleLogout = async () => {
     if (window.isDirty) {
         if (!(await window.showGlobalConfirm('저장하지 않은 데이터가 있습니다. 로그아웃 하시겠습니까?'))) return;
     }
-    localStorage.removeItem('currentUser');
-    window.location.href = "index.html";
+
+    // Firebase 로그아웃 기능이 등록되어 있다면 호출, 아니면 로컬 정리만 수행
+    if (typeof window.firebaseLogout === 'function') {
+        await window.firebaseLogout();
+    } else {
+        localStorage.removeItem('currentUser');
+        window.location.href = "index.html";
+    }
 };
 
-// === Emergency Force Refresh Function (Global) ===
-window.forceDataRefresh = async function () {
-    console.log("Force Refresh Triggered...");
-    try {
-        const overlay = document.getElementById('dataSyncOverlay');
-        if (overlay) overlay.style.display = 'flex';
+// [Removed] Emergency Force Refresh Function - System is now fully Firestore-based.
 
-        const ts = Date.now();
-        const rand = Math.random().toString(36).substring(7);
-        const response = await fetch(`./backup_data.json?v=${ts}&rand=${rand}`, {
-            cache: 'no-store',
-            headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-        });
-
-        if (!response.ok) throw new Error('Backup fetch failed');
-        const backupData = await response.json();
-
-        if (backupData && typeof backupData === 'object') {
-            for (const key in backupData) {
-                if (key === 'currentUser' && localStorage.getItem('currentUser')) continue;
-                const value = backupData[key];
-                localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-            }
-            console.log("Force Sync success!");
-            sessionStorage.setItem('data_initialized', 'true');
-            await window.showGlobalAlert("✅ 데이터가 성공적으로 갱신되었습니다!");
-
-            if (typeof window.loadData === 'function') {
-                window.loadData();
-                if (typeof window.setupOrgSelectors === 'function') await window.setupOrgSelectors();
-            } else {
-                window.location.reload();
-            }
-            return true;
-        }
-    } catch (error) {
-        console.error("Force Sync Critical Error:", error);
-        await window.showGlobalAlert("데이터를 가져오는데 실패했습니다. 네트워크 상태를 확인해 주세요.");
-    } finally {
-        const overlay = document.getElementById('dataSyncOverlay');
-        if (overlay) overlay.style.display = 'none';
-    }
-    return true;
-};
-
-// === Auto Data Initialization (For New Devices/Mobile) ===
-window.dataReady = (async function () {
-    const isAlreadyInitialized = sessionStorage.getItem('data_initialized');
-
-    // 데이터 유효성 정밀 체크 함수
-    const checkMissing = () => {
-        try {
-            const p = localStorage.getItem('presidia_list');
-            const m = localStorage.getItem('members_list');
-            // 존재하지 않거나, '[]' 이거나, 파싱했을 때 길이가 0인 경우 체크
-            if (!p || p === '[]' || p === 'null') return true;
-            if (!m || m === '[]' || m === 'null') return true;
-
-            const pArr = JSON.parse(p);
-            if (!Array.isArray(pArr) || pArr.length === 0) return true;
-
-            return false;
-        } catch (e) { return true; }
-    };
-
-    if (!isAlreadyInitialized || checkMissing()) {
-        console.log("Mobile Sync: Initializing or data invalid.");
-        await window.forceDataRefresh();
-    }
-    return true;
-})();
+// [Removed] Auto Data Initialization - System is now fully Firestore-based.
 
 // Removed old definition
 // (Cleared legacy block)
@@ -338,6 +291,11 @@ window.dataReady = (async function () {
 // === End of Global Initialization ===
 
 window.initCommonMenus = (profile, logoutUser) => {
+    // Firebase 로그아웃 함수를 전역 핸들러에서 쓸 수 있게 등록
+    if (typeof logoutUser === 'function') {
+        window.firebaseLogout = logoutUser;
+    }
+
     // 약간의 지연을 주어 DOM 상태가 안정된 후 실행
     setTimeout(() => {
         const navMenu = document.querySelector('.nav-menu');

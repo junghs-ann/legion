@@ -107,9 +107,9 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js?v=20260308_0430"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260308_0430";
 
         // Auth Guard & Role Check
         initAuthObserver((user, profile) => {
@@ -126,7 +126,6 @@
             }
         }, () => {
             // User Not Authenticated
-            alert("로그인이 필요합니다.");
             window.location.href = "index.html";
         });
     </script>

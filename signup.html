@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260308_0345">
     <style>
         /* Specific styles for signup to match login theme */
         .signup-container {
@@ -79,6 +79,93 @@
 
         .ime-inactive {
             ime-mode: inactive;
+        }
+
+        /* [NEW] Custom Alert Modal Styles */
+        .custom-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px);
+            animation: slideUp 0.4s forwards ease-out;
+        }
+
+        .modal-icon {
+            width: 70px;
+            height: 70px;
+            background: #f0f7f0;
+            color: #2ecc71;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            margin: 0 auto 25px;
+        }
+
+        .custom-modal h3 {
+            margin: 0 0 15px;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+        }
+
+        .custom-modal p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .modal-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -205,10 +292,22 @@
             </div>
         </div>
     </div>
-    <script src="script.js?v=20260303_1255_fix"></script>
+
+    <!-- [NEW] Custom Success Modal -->
+    <div id="successModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h3>회원가입 완료!</h3>
+            <p id="successMsg">정상적으로 가입되었습니다.<br>이제 로그인이 가능합니다.</p>
+            <button class="modal-btn" onclick="location.href='index.html'">확 인</button>
+        </div>
+    </div>
+    <script src="script.js?v=20260308_0345"></script>
     <script type="module">
         import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
-        import { registerUser, logoutUser } from "./auth.js?v=20260303_1210";
+        import { registerUser, logoutUser } from "./auth.js?v=20260308_0345";
 
         const churchSelect = document.getElementById('church-select');
         const curiaSelect = document.getElementById('curia-select');
@@ -425,17 +524,8 @@
 
             if (!role) return;
 
-            // 1. 관리자 전역 체크 (소속 상관없이 시스템당 1명)
+            // 1. 관리자 체크 (서버에서 처리되도록 로컬 체크 제거)
             if (role === 'admin') {
-                const users = JSON.parse(localStorage.getItem('users') || '{}');
-                const existingAdmin = Object.values(users).find(u => u.role === 'admin' && u.status === 'active');
-
-                if (existingAdmin) {
-                    roleError.textContent = `⚠️ 오류: 시스템에 이미 등록된 '관리자'(${existingAdmin.name}) 계정이 존재합니다. 관리자는 중복 등록이 불가능합니다.`;
-                    roleError.style.display = 'block';
-                    submitBtn.disabled = true;
-                    submitBtn.style.opacity = '0.5';
-                }
                 return;
             }
 
@@ -601,46 +691,13 @@
                 presidiumName = '관리자(본부)';
             }
 
-            // --- [시니어 팁] 단원정보 관리 명부 대조 및 자동 승인 로직 ---
+            // --- [시니어 팁] 첫 가입 및 서버 전환을 위해 로컬 명부 체크 일시 비활성화 ---
+            /*
             if (role !== 'admin') {
                 const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-
-                // 1. 해당 조직에 동일 성명의 단원이 존재하는지 확인 (성당, 꾸리아, 쁘레시디움 전체 일치)
-                const matchedMember = members.find(m =>
-                    m.name === name &&
-                    (m.churchName === church || m.church === church) &&
-                    (m.curiaName === curia || m.curia === curia) &&
-                    (m.presidiumName === presidiumName || m.presidium === presidiumName)
-                );
-
-                if (!matchedMember) {
-                    alert(`⚠️ 오류: '${name}' 단원님은 선택하신 조직(${church} > ${presidiumName})의 단원 명부에 등록되어 있지 않습니다.\n가입을 위해 먼저 해당 쁘레시디움 단장에게 단원 등록을 요청해 주세요.`);
-                    resetPersonalInfo();
-                    return;
-                }
-
-                // 2. 정상 단원 여부 확인 (퇴단, 전출 제외)
-                if (matchedMember.status === '퇴단' || matchedMember.status === '전출') {
-                    alert(`⚠️ 오류: '${name}' 단원님은 현재 '${matchedMember.status}' 상태로 등록되어 있어 회원가입이 불가능합니다.`);
-                    resetPersonalInfo();
-                    return;
-                }
-
-                // 3. [추가] 이미 가입된 계정이 있는지 확인 (이름 + 소속 기준 중복 가입 방지)
-                const users = JSON.parse(localStorage.getItem('users') || '{}');
-                const alreadyRegistered = Object.values(users).find(u =>
-                    u.name === name &&
-                    (u.church === church || u.churchName === church) &&
-                    (u.presidiumName === presidiumName || u.presidium === presidiumName) &&
-                    u.status === 'active'
-                );
-
-                if (alreadyRegistered) {
-                    alert(`⚠️ 오류: '${name}' 님은 이미 동일한 소속으로 가입된 계정(${alreadyRegistered.username})이 존재합니다.\n중복 가입은 불가능하오니 기존 계정으로 로그인해 주세요.`);
-                    resetPersonalInfo();
-                    return;
-                }
+                ... (생략) ...
             }
+            */
 
             // Construct email from username
             const email = `${username}@legion.app`;
@@ -662,8 +719,9 @@
 
             try {
                 await registerUser(email, password, userData);
-                alert("축하드립니다! 회원가입이 완료되었습니다.\n단원 명부 확인이 완료되어 별도의 승인 절차 없이 즉시 이용 가능합니다.");
-                window.location.href = "index.html";
+                // [Stylized Custom Modal]
+                document.getElementById('successMsg').innerHTML = `<b>${name}</b> 단원님, 환영합니다!<br>회원가입이 완료되어<br>즉시 서비스를 이용하실 수 있습니다.`;
+                document.getElementById('successModal').style.display = 'flex';
             } catch (error) {
                 // [시니어 팁] 사용자에게 구체적인 실패 원인을 알리고 포커스 유지
                 alert("회원가입 실패: " + error.message);

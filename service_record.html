@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>복무 기록부 생성 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260306_1520">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .selection-container {
@@ -16,6 +16,26 @@
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             text-align: center;
+            position: relative;
+            /* 상단 X 버튼 배치를 위해 추가 */
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         .filter-grid {
@@ -80,16 +100,6 @@
             min-width: 100px;
         }
 
-        .btn-generate {
-            background-color: #1a73e8;
-            color: white;
-        }
-
-        .btn-generate:hover {
-            background-color: #1557b0;
-            transform: translateY(-2px);
-        }
-
         .btn-close {
             background-color: #666;
             color: white;
@@ -99,6 +109,16 @@
             background-color: #444;
         }
 
+        .btn-generate {
+            background-color: #d4a017;
+            /* 골드 색상으로 변경 */
+            color: white;
+        }
+
+        .btn-generate:hover {
+            background-color: #b88a15;
+        }
+
         .guide-text {
             color: #666;
             margin-top: 20px;
@@ -106,6 +126,21 @@
             word-break: keep-all;
             line-height: 1.6;
             padding: 0 10px;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .btn-group {
+                flex-direction: row !important;
+                /* 모바일에서도 한 줄 배치 */
+                gap: 10px !important;
+            }
+
+            .btn-action {
+                flex: 1;
+                font-size: 0.9rem !important;
+                padding: 10px 5px !important;
+            }
         }
 
         /* Gold Border for Search Inputs */
@@ -295,6 +330,9 @@
     </header>
 
     <div class="selection-container">
+        <!-- 상단 우측 X 버튼 추가 -->
+        <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
         <h2 style="color: var(--primary-color); margin-bottom: 10px;">복무 기록부 생성</h2>
         <p class="guide-text">복무 기록부를 인쇄할 단원을 선택한 후,<br>'생성' 버튼을 눌러주세요.</p>
 
@@ -329,14 +367,19 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-action btn-generate" id="btnCreate">복무 기록부 생성</button>
-            <button class="btn-action btn-close" onclick="location.href='dashboard.html'">닫기</button>
+            <button class="btn-action btn-generate" id="btnCreate">
+                <i class="fas fa-file-medical"></i>&nbsp;복무 기록부 생성
+            </button>
+            <button class="btn-action btn-close" onclick="location.href='dashboard.html'">
+                <i class="fas fa-times"></i>&nbsp;닫기
+            </button>
         </div>
     </div>
 
-    <script src="script.js?v=20260306_1520"></script>
+    <script src="script.js?v=20260307_2325"></script>
     <script type="module">
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -381,8 +424,8 @@
             };
         }, () => { location.href = 'index.html'; });
 
-        function setupFilterData(profile) {
-            const presidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        async function setupFilterData(profile) {
+            const presidia = await fetchPresidiaList();
 
             // Initial load
             const churches = [...new Set(presidia.map(p => p.churchName))].sort();

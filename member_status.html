@@ -41,7 +41,7 @@
         .form-title {
             font-family: 'Noto Serif KR', serif;
             color: var(--primary-color);
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             padding-bottom: 15px;
             font-size: 1.8rem;
             display: flex;
@@ -154,12 +154,12 @@
         }
 
         .btn-delete {
-            background-color: #EF4444;
+            background-color: #dc3545;
             color: white;
         }
 
         .btn-close {
-            background-color: #6B7280;
+            background-color: #6c757d;
             color: white;
         }
 
@@ -386,7 +386,10 @@
     </header>
 
     <div class="main-content" style="padding: 120px 20px 80vh;">
-        <div class="register-form-container">
+        <div class="register-form-container" style="position: relative; border-top: none;">
+            <button type="button" onclick="location.href='dashboard.html'" title="닫기"
+                style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding: 0; line-height: 1; z-index: 10;"><i
+                    class="fas fa-times"></i></button>
             <h2 class="form-title">
                 <div>
                     <i class="fas fa-user-friends"></i> 협조단원 관리
@@ -412,11 +415,18 @@
                             <option value="">꾸리아 선택</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label>쁘레시디움(Pr.)</label>
-                        <select id="presidiumSelect" name="presidium" required disabled>
-                            <option value="">쁘레시디움 선택</option>
-                        </select>
+                        <div class="search-container" id="presidiumSearchContainer"
+                            style="position: relative; width: 100%;">
+                            <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                                disabled class="nav-enter"
+                                style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
+                            <input type="hidden" id="presidiumSelect" name="presidium">
+                            <div id="presidiumDropdown" class="custom-dropdown"
+                                style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -483,14 +493,16 @@
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="submit" class="btn-submit btn-save">
-                        <i class="fas fa-save"></i> 저 장
+                    <button type="submit" class="btn-submit btn-save" style="min-width: 80px;">
+                        <i class="fas fa-save"></i> 저장
                     </button>
-                    <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">
-                        <i class="fas fa-trash-alt"></i> 삭 제
+                    <button type="button" id="btnDelete" class="btn-submit btn-delete"
+                        style="display: none; min-width: 80px;">
+                        <i class="fas fa-trash-alt"></i> 삭제
                     </button>
-                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">
-                        <i class="fas fa-times"></i> 닫 기
+                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'"
+                        style="min-width: 80px;">
+                        <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
             </form>
@@ -600,7 +612,17 @@
 
                 setFixedOption(churchSelect, userChurch);
                 setFixedOption(curiaSelect, userCuria);
-                setFixedOption(presidiumSelect, userPresidium);
+
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput) {
+                    pInput.value = userPresidium || '';
+                    pInput.disabled = true;
+                    pInput.style.backgroundColor = '#f9f9f9';
+                }
+                const pSelect = document.getElementById('presidiumSelect');
+                if (pSelect) {
+                    pSelect.value = userPresidium || '';
+                }
 
                 const myMember = membersList.find(m => m.name === userName && m.presidiumName === userPresidium && m.status !== '퇴단' && m.status !== '전출');
                 if (myMember) {
@@ -652,10 +674,14 @@
             churchSelect.addEventListener('change', () => {
                 const church = churchSelect.value;
                 curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                if (document.getElementById('presidiumInput')) {
+                    document.getElementById('presidiumInput').value = '';
+                    document.getElementById('presidiumInput').disabled = true;
+                    document.getElementById('presidiumInput').style.backgroundColor = '#f9f9f9';
+                }
+                if (document.getElementById('presidiumSelect')) document.getElementById('presidiumSelect').value = '';
                 activeMemberSelect.innerHTML = '<option value="">활동단원 선택</option>';
                 curiaSelect.disabled = !church;
-                presidiumSelect.disabled = true;
                 activeMemberSelect.disabled = true;
 
                 if (church) {
@@ -668,34 +694,104 @@
                 }
             });
 
+            let currentPresidia = [];
+            const presidiumInput = document.getElementById('presidiumInput');
+            const presidiumDropdown = document.getElementById('presidiumDropdown');
+            const originalPresidiumSelect = document.getElementById('presidiumSelect');
+
+            function renderDropdown(filter = '') {
+                if (!currentPresidia) return;
+                const list = currentPresidia.filter(p => filter === '' || p.includes(filter));
+
+                if (list.length === 0) {
+                    presidiumDropdown.innerHTML = '<div class="no-result" style="padding: 10px; color: #888;">검색 결과가 없습니다.</div>';
+                    return;
+                }
+
+                presidiumDropdown.innerHTML = list.map(name => `
+                    <div class="dropdown-item" data-name="${name}" style="padding: 10px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; transition: background 0.2s;">
+                        ${name}
+                    </div>
+                `).join('');
+
+                presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const name = item.dataset.name;
+                        presidiumInput.value = name;
+                        if (originalPresidiumSelect) originalPresidiumSelect.value = name;
+                        presidiumDropdown.style.display = 'none';
+
+                        const church = churchSelect.value;
+                        const curia = curiaSelect.value;
+                        activeMemberSelect.innerHTML = '<option value="">행동단원 선택</option>';
+                        activeMemberSelect.disabled = !name;
+
+                        if (church && curia && name) {
+                            loadActiveMembers(church, curia, name);
+                            renderTable();
+                        }
+                    });
+                });
+            }
+
             curiaSelect.addEventListener('change', () => {
                 const church = churchSelect.value;
                 const curia = curiaSelect.value;
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
+                presidiumInput.value = '';
+                if (originalPresidiumSelect) originalPresidiumSelect.value = '';
+                currentPresidia = [];
+
                 activeMemberSelect.innerHTML = '<option value="">활동단원 선택</option>';
-                presidiumSelect.disabled = !curia;
                 activeMemberSelect.disabled = true;
 
-                if (church && curia) {
-                    getPresidia(church, curia).forEach(pr => {
-                        const opt = document.createElement('option');
-                        opt.value = pr.name;
-                        opt.textContent = pr.name;
-                        presidiumSelect.appendChild(opt);
-                    });
+                if (!church || !curia) {
+                    presidiumInput.disabled = true;
+                    presidiumInput.style.backgroundColor = '#f9f9f9';
+                    return;
+                }
+
+                const prs = getPresidia(church, curia).map(p => p.name).sort();
+                currentPresidia = [...new Set(prs.filter(Boolean))];
+
+                presidiumInput.disabled = false;
+                presidiumInput.style.backgroundColor = 'white';
+            });
+
+            presidiumInput.addEventListener('focus', () => {
+                if (!presidiumInput.disabled) {
+                    renderDropdown('');
+                    presidiumDropdown.style.display = 'block';
                 }
             });
 
-            presidiumSelect.addEventListener('change', () => {
-                const church = churchSelect.value;
-                const curia = curiaSelect.value;
-                const presidium = presidiumSelect.value;
-                activeMemberSelect.innerHTML = '<option value="">행동단원 선택</option>';
-                activeMemberSelect.disabled = !presidium;
+            presidiumInput.addEventListener('input', () => {
+                renderDropdown(presidiumInput.value.trim());
+                presidiumDropdown.style.display = 'block';
+            });
 
-                if (church && curia && presidium) {
-                    loadActiveMembers(church, curia, presidium);
-                    renderTable();
+            document.addEventListener('click', (e) => {
+                if (presidiumInput && presidiumInput.disabled) return;
+                if (presidiumInput && !presidiumInput.contains(e.target) && presidiumDropdown && !presidiumDropdown.contains(e.target)) {
+                    if (presidiumDropdown.style.display === 'block') {
+                        presidiumDropdown.style.display = 'none';
+                        const currentVal = presidiumInput.value.trim();
+                        if (currentVal && !currentPresidia.includes(currentVal)) {
+                            presidiumInput.value = '';
+                            if (originalPresidiumSelect) originalPresidiumSelect.value = '';
+                        } else if (currentVal && currentPresidia.includes(currentVal)) {
+                            if (originalPresidiumSelect) originalPresidiumSelect.value = currentVal;
+
+                            const church = churchSelect.value;
+                            const curia = curiaSelect.value;
+                            activeMemberSelect.innerHTML = '<option value="">행동단원 선택</option>';
+                            activeMemberSelect.disabled = !currentVal;
+
+                            if (church && curia && currentVal) {
+                                loadActiveMembers(church, curia, currentVal);
+                                renderTable();
+                            }
+                        }
+                    }
                 }
             });
 
@@ -992,8 +1088,14 @@
             churchSelect.value = preserved.church;
             curiaSelect.value = preserved.curia;
             if (curiaSelect.disabled === false) curiaSelect.dispatchEvent(new Event('change'));
-            presidiumSelect.value = preserved.presidium;
-            if (presidiumSelect.disabled === false) presidiumSelect.dispatchEvent(new Event('change'));
+
+            if (document.getElementById('presidiumSelect')) {
+                document.getElementById('presidiumSelect').value = preserved.presidium;
+                if (document.getElementById('presidiumInput')) {
+                    document.getElementById('presidiumInput').value = preserved.presidium;
+                    // Trigger custom search event if needed or simply let dispatch take over if attached 
+                }
+            }
             activeMemberSelect.value = preserved.activeMemberId;
             activeMemberBaptismal.value = preserved.activeMemberBaptismal;
         }
@@ -1076,8 +1178,12 @@
             curiaSelect.value = data.curia;
             if (curiaSelect.disabled === false) curiaSelect.dispatchEvent(new Event('change'));
 
-            presidiumSelect.value = data.presidium;
-            if (presidiumSelect.disabled === false) presidiumSelect.dispatchEvent(new Event('change'));
+            if (document.getElementById('presidiumSelect')) {
+                document.getElementById('presidiumSelect').value = data.presidium;
+                if (document.getElementById('presidiumInput')) {
+                    document.getElementById('presidiumInput').value = data.presidium;
+                }
+            }
 
             activeMemberSelect.value = data.activeMemberId;
             activeMemberBaptismal.value = data.activeMemberBaptismalName || '';

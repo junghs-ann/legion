@@ -208,35 +208,73 @@
 
     <div id="pageContainer"></div>
 
-    <script>
+    <script type="module">
+        import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+
         const PAGE_LIMITS = { move: 5, career: 10, education: 19 };
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function init() {
             const params = new URLSearchParams(window.location.search);
             const memberId = params.get('id');
             if (!memberId) { alert('잘못된 접근입니다.'); window.close(); return; }
 
-            const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const member = members.find(m => m.id === memberId || m.uid === memberId || m.name === memberId);
+            // Fetch Member Data from Firestore
+            let member = null;
+            try {
+                const memberSnap = await getDoc(doc(db, 'members_list', memberId));
+                if (memberSnap.exists()) {
+                    member = { id: memberSnap.id, ...memberSnap.data() };
+                } else {
+                    // Try searching by name if ID fails (for backward compatibility if needed)
+                    const qName = query(collection(db, 'members_list'), where('name', '==', memberId));
+                    const qSnap = await getDocs(qName);
+                    if (!qSnap.empty) {
+                        member = { id: qSnap.docs[0].id, ...qSnap.docs[0].data() };
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching member:", error);
+            }
+
             if (!member) { alert('회원 정보를 찾을 수 없습니다.'); window.close(); return; }
 
-            // Fetch Related Data
-            const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const allCareer = officers.filter(o => o.memberId === memberId || o.name === member.name).sort((a, b) => (a.appointmentDate || "").localeCompare(b.appointmentDate || ""));
+            // Fetch Career Data from Firestore
+            const allCareer = [];
+            try {
+                const qCareer = query(collection(db, 'officers_list'), where('memberId', '==', member.id));
+                const qSnapCareer = await getDocs(qCareer);
+                qSnapCareer.forEach(d => allCareer.push(d.data()));
+                allCareer.sort((a, b) => (a.appointmentDate || "").localeCompare(b.appointmentDate || ""));
+            } catch (error) {
+                console.error("Error fetching career:", error);
+            }
 
-            const events = JSON.parse(localStorage.getItem('events_list') || '[]');
-            const allEvents = events.filter(e => {
-                const attendees = (e.attendeeNames || "").split(',').map(n => n.trim());
-                return attendees.includes(member.name);
-            }).sort((a, b) => (a.eventDate || "").localeCompare(b.eventDate || ""));
+            // Fetch Education/Event Data from Firestore
+            const allEvents = [];
+            try {
+                // attendeeNames is stored as comma-separated string, so we fetch all and filter in JS
+                const qEvents = query(collection(db, 'events_list'), orderBy('eventDate', 'asc'));
+                const qSnapEvents = await getDocs(qEvents);
+                qSnapEvents.forEach(d => {
+                    const data = d.data();
+                    const attendees = (data.attendeeNames || "").split(',').map(n => n.trim());
+                    if (attendees.includes(member.name)) {
+                        allEvents.push(data);
+                    }
+                });
+            } catch (error) {
+                console.error("Error fetching events:", error);
+            }
 
             // Calculate Pages
-            const moveData = [{ pr: member.presidiumName, curia: member.curiaName, church: member.churchName, period: `${member.probationaryDate} ~` }];
+            const moveData = [{ pr: member.presidiumName || member.presidium, curia: member.curiaName || member.curia, church: member.churchName || member.church, period: `${member.probationaryDate || ''} ~` }];
             const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;
             const totalEduPages = Math.ceil(allEvents.length / PAGE_LIMITS.education) || 1;
             const totalPages = Math.max(totalCareerPages, totalEduPages, 1);
 
             const container = document.getElementById('pageContainer');
+            container.innerHTML = '';
 
             for (let i = 0; i < totalPages; i++) {
                 const pageEl = document.createElement('div');
@@ -296,7 +334,7 @@
             }
 
             setTimeout(applyTextFitting, 200);
-        });
+        }
 
         function renderMoveRows(data) {
             let html = '';
@@ -352,6 +390,15 @@
                 }
             });
         }
+
+        // Run on load
+        initAuthObserver((user) => {
+            if (user) {
+                init();
+            } else {
+                window.close();
+            }
+        }, () => { window.close(); });
     </script>
     <script src="script.js?v=20260303_1255_fix"></script>
 </body>

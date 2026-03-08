@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 돌봄내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Print Styles */
@@ -52,6 +52,26 @@
             max-width: 1300px;
             margin: 0 auto;
             overflow-x: auto;
+            position: relative;
+            /* 상단 X 버튼 배치를 위해 추가 */
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         .filter-container {
@@ -144,18 +164,47 @@
         }
 
         .btn-search {
-            background: var(--primary-color);
+            background: #d4a017;
             color: white;
+        }
+
+        .btn-search:hover {
+            background: #b88a15;
         }
 
         .btn-print {
-            background: #28a745;
+            background: #333;
             color: white;
         }
 
+        .btn-print:hover {
+            background: #000;
+        }
+
         .btn-close {
-            background: #6c757d;
+            background: #666;
             color: white;
+        }
+
+        .btn-close:hover {
+            background: #444;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .bottom-actions {
+                flex-direction: row !important;
+                justify-content: center !important;
+                gap: 8px !important;
+            }
+
+            .btn-action {
+                flex: 1 !important;
+                max-width: none !important;
+                height: 42px !important;
+                font-size: 0.85rem !important;
+                padding: 0 5px !important;
+            }
         }
 
         .report-title {
@@ -631,6 +680,9 @@
 
     <div class="main-content" style="padding: 100px 20px;">
         <div class="report-container">
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
             <div class="report-header" style="margin-bottom: 25px; text-align: center;">
                 <h3 class="report-title">협조단원 돌봄 내역</h3>
             </div>
@@ -723,9 +775,10 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -746,15 +799,12 @@
         let careHistory = [];
         let currentPrList = []; // 실시간 검색용 리스트
 
-        function loadData() {
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-            careHistory = JSON.parse(localStorage.getItem('auxiliary_care_list') || '[]');
+        async function loadData() {
+            presidiaList = await fetchPresidiaList();
+            // membersList and careHistory will be fetched in renderReport
         }
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
             isAdmin = (profile.role === 'admin' || profile.role === '관리자');
 
@@ -765,10 +815,14 @@
                 });
             }
 
-            loadData();
+            await loadData();
             setupYearSelector();
-            setupOrgSelectors();
+            await setupOrgSelectors();
             setupEventListeners();
+
+            if (!isAdmin) {
+                await renderReport();
+            }
         }, () => { location.href = 'index.html'; });
 
         function setupYearSelector() {
@@ -790,7 +844,7 @@
             endDateInput.value = lastDay;
         }
 
-        function setupOrgSelectors() {
+        async function setupOrgSelectors() {
             // Fix: Check both churchName and church property
             const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(c => c).sort();
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
@@ -893,7 +947,7 @@
 
             // startSessionInput, endSessionInput removed
 
-            document.getElementById('btnSearch').onclick = renderReport;
+            document.getElementById('btnSearch').onclick = async () => await renderReport();
             document.getElementById('btnPrint').onclick = () => window.print();
         }
 
@@ -901,7 +955,7 @@
             // Function removed as we use manual date range now
         }
 
-        function renderReport() {
+        async function renderReport() {
             const pr = presidiumInput.value;
             const startD = startDateInput.value;
             const endD = endDateInput.value;
@@ -914,34 +968,47 @@
             const minD = startD < endD ? startD : endD;
             const maxD = startD < endD ? endD : startD;
 
-            // 1. Get relevant care records based on DATE range
-            const relevantRecords = careHistory
-                .filter(c => c.presidium === pr && c.date >= minD && c.date <= maxD)
-                .sort((a, b) => {
+            try {
+                // 1. Get relevant care records based on DATE range from Firestore
+                const q = query(collection(db, 'auxiliary_care_list'),
+                    where('presidium', '==', pr));
+                const querySnapshot = await getDocs(q);
+                careHistory = [];
+                querySnapshot.forEach(docSnap => careHistory.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const relevantRecords = careHistory.filter(c => c.date >= minD && c.date <= maxD);
+                relevantRecords.sort((a, b) => {
                     if (a.date !== b.date) return a.date.localeCompare(b.date);
                     return parseInt(a.session) - parseInt(b.session);
                 });
 
-            if (relevantRecords.length === 0) {
-                showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
-                return;
-            }
+                if (relevantRecords.length === 0) {
+                    showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
+                    return;
+                }
 
-            // 2. Build Columns (Monthly grouping)
-            const tableHead = document.getElementById('tableHead');
-            const months = {}; // { "2026-01": [rec1, rec2], ... }
-            relevantRecords.forEach(r => {
-                const mKey = r.date.substring(0, 7);
-                if (!months[mKey]) months[mKey] = [];
-                months[mKey].push(r);
-            });
+                // Fetch members if needed for legacy support auxiliaryList
+                const mSnap = await getDocs(query(collection(db, 'members_list'),
+                    where('presidium', '==', pr),
+                    where('role', '==', '협조단원')));
+                auxiliaryList = [];
+                mSnap.forEach(docSnap => auxiliaryList.push({ id: docSnap.id, ...docSnap.data() }));
 
-            let row1Html = `
+                // 2. Build Columns (Monthly grouping)
+                const tableHead = document.getElementById('tableHead');
+                const months = {}; // { "2026-01": [rec1, rec2], ... }
+                relevantRecords.forEach(r => {
+                    const mKey = r.date.substring(0, 7);
+                    if (!months[mKey]) months[mKey] = [];
+                    months[mKey].push(r);
+                });
+
+                let row1Html = `
                 <tr>
                     <th colspan="2" style="background-color: #f1f3f5;">행동단원</th>
                     <th colspan="3" style="background-color: #f1f3f5;">협조단원</th>
             `;
-            let row2Html = `
+                let row2Html = `
                 <tr>
                     <th>이름</th>
                     <th>세례명</th>
@@ -950,123 +1017,127 @@
                     <th>성별</th>
             `;
 
-            Object.entries(months).forEach(([mKey, recs]) => {
-                const [y, m] = mKey.split('-');
-                let monthTotal = 0;
-                recs.forEach(r => {
-                    // Calculate total from snapshot if available, else legacy
+                Object.entries(months).forEach(([mKey, recs]) => {
+                    const [y, m] = mKey.split('-');
+                    let monthTotal = 0;
+                    recs.forEach(r => {
+                        // Calculate total from snapshot if available, else legacy
+                        if (r.careDataSnapshot) {
+                            monthTotal += r.careDataSnapshot.filter(s => s.checked === 'checked').length;
+                        } else {
+                            monthTotal += Object.values(r.careData || {}).filter(v => v === 'checked').length;
+                        }
+                    });
+
+                    row1Html += `<th colspan="${recs.length}" class="month-header">${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)</th>`;
+                    recs.forEach(r => {
+                        const dateObj = new Date(r.date);
+                        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                        const day = dayNames[dateObj.getDay()];
+                        row2Html += `<th class="session-header">${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})</th>`;
+                    });
+                });
+
+                tableHead.innerHTML = row1Html + '</tr>' + row2Html + '</tr>';
+
+                // 3. Build Rows (Snapshot based)
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+
+                // NEW: Instead of using current auxiliaryList, 
+                // we gather all unique auxiliaries from the selected records' snapshots.
+                const uniqueAuxMap = new Map();
+                relevantRecords.forEach(r => {
                     if (r.careDataSnapshot) {
-                        monthTotal += r.careDataSnapshot.filter(s => s.checked === 'checked').length;
+                        r.careDataSnapshot.forEach(item => {
+                            if (!uniqueAuxMap.has(item.auxId)) {
+                                uniqueAuxMap.set(item.auxId, {
+                                    id: item.auxId,
+                                    name: item.name,
+                                    baptismalName: item.baptismalName,
+                                    gender: item.gender,
+                                    activeMemberId: item.activeMemberId,
+                                    activeMemberName: item.activeMemberName,
+                                    activeMemberBaptismalName: item.activeMemberBaptismalName
+                                });
+                            }
+                        });
                     } else {
-                        monthTotal += Object.values(r.careData || {}).filter(v => v === 'checked').length;
+                        // Legacy support: Use current list but filter by legacy careData keys
+                        Object.keys(r.careData).forEach(auxId => {
+                            if (!uniqueAuxMap.has(auxId)) {
+                                const realAux = auxiliaryList.find(a => String(a.id) === String(auxId));
+                                if (realAux) {
+                                    uniqueAuxMap.set(auxId, {
+                                        id: auxId,
+                                        name: realAux.name,
+                                        baptismalName: realAux.baptismalName,
+                                        gender: realAux.gender,
+                                        activeMemberId: realAux.activeMemberId,
+                                        activeMemberName: realAux.activeMemberName,
+                                        activeMemberBaptismalName: realAux.activeMemberBaptismalName
+                                    });
+                                }
+                            }
+                        });
                     }
                 });
 
-                row1Html += `<th colspan="${recs.length}" class="month-header">${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)</th>`;
-                recs.forEach(r => {
-                    const dateObj = new Date(r.date);
-                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-                    const day = dayNames[dateObj.getDay()];
-                    row2Html += `<th class="session-header">${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})</th>`;
+                const mergedAuxiliaries = Array.from(uniqueAuxMap.values());
+
+                // Group by active member for rowspan effect (as stored in snapshot)
+                const grouped = {};
+                mergedAuxiliaries.forEach(aux => {
+                    const key = aux.activeMemberId || 'unknown';
+                    if (!grouped[key]) grouped[key] = { name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
+                    grouped[key].list.push(aux);
                 });
-            });
 
-            tableHead.innerHTML = row1Html + '</tr>' + row2Html + '</tr>';
+                Object.values(grouped).forEach(g => {
+                    // Sort by aux name within group for stability
+                    g.list.sort((a, b) => a.name.localeCompare(b.name));
 
-            // 3. Build Rows (Snapshot based)
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
+                    g.list.forEach((aux, idx) => {
+                        const tr = document.createElement('tr');
+                        // Removed group-row class as we are repeating data now
 
-            // NEW: Instead of using current auxiliaryList, 
-            // we gather all unique auxiliaries from the selected records' snapshots.
-            const uniqueAuxMap = new Map();
-            relevantRecords.forEach(r => {
-                if (r.careDataSnapshot) {
-                    r.careDataSnapshot.forEach(item => {
-                        if (!uniqueAuxMap.has(item.auxId)) {
-                            uniqueAuxMap.set(item.auxId, {
-                                id: item.auxId,
-                                name: item.name,
-                                baptismalName: item.baptismalName,
-                                gender: item.gender,
-                                activeMemberId: item.activeMemberId,
-                                activeMemberName: item.activeMemberName,
-                                activeMemberBaptismalName: item.activeMemberBaptismalName
-                            });
-                        }
-                    });
-                } else {
-                    // Legacy support: Use current list but filter by legacy careData keys
-                    Object.keys(r.careData).forEach(auxId => {
-                        if (!uniqueAuxMap.has(auxId)) {
-                            const realAux = auxiliaryList.find(a => String(a.id) === String(auxId));
-                            if (realAux) {
-                                uniqueAuxMap.set(auxId, {
-                                    id: auxId,
-                                    name: realAux.name,
-                                    baptismalName: realAux.baptismalName,
-                                    gender: realAux.gender,
-                                    activeMemberId: realAux.activeMemberId,
-                                    activeMemberName: realAux.activeMemberName,
-                                    activeMemberBaptismalName: realAux.activeMemberBaptismalName
-                                });
+                        let rowHtml = '';
+                        // Repeated active member data for sticky column alignment
+                        rowHtml += `<td>${g.name}</td>`;
+                        rowHtml += `<td>${g.baptismal || '-'}</td>`;
+
+                        rowHtml += `<td>${aux.name}</td>`;
+                        rowHtml += `<td>${aux.baptismalName || '-'}</td>`;
+                        rowHtml += `<td>${aux.gender || '-'}</td>`;
+
+                        // Care cells across relevant sessions
+                        relevantRecords.forEach(r => {
+                            let status = 'none';
+                            if (r.careDataSnapshot) {
+                                const snapItem = r.careDataSnapshot.find(s => String(s.auxId) === String(aux.id));
+                                status = snapItem ? snapItem.checked : 'none';
+                            } else {
+                                // Legacy support
+                                status = r.careData[aux.id] || 'none';
                             }
-                        }
+
+                            if (status === 'checked') {
+                                rowHtml += '<td style="color: var(--secondary-color); font-weight: bold;">돌봄</td>';
+                            } else {
+                                rowHtml += '<td style="color: #ccc;">-</td>';
+                            }
+                        });
+
+                        tr.innerHTML = rowHtml;
+                        tableBody.appendChild(tr);
                     });
-                }
-            });
-
-            const mergedAuxiliaries = Array.from(uniqueAuxMap.values());
-
-            // Group by active member for rowspan effect (as stored in snapshot)
-            const grouped = {};
-            mergedAuxiliaries.forEach(aux => {
-                const key = aux.activeMemberId || 'unknown';
-                if (!grouped[key]) grouped[key] = { name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
-                grouped[key].list.push(aux);
-            });
-
-            Object.values(grouped).forEach(g => {
-                // Sort by aux name within group for stability
-                g.list.sort((a, b) => a.name.localeCompare(b.name));
-
-                g.list.forEach((aux, idx) => {
-                    const tr = document.createElement('tr');
-                    // Removed group-row class as we are repeating data now
-
-                    let rowHtml = '';
-                    // Repeated active member data for sticky column alignment
-                    rowHtml += `<td>${g.name}</td>`;
-                    rowHtml += `<td>${g.baptismal || '-'}</td>`;
-
-                    rowHtml += `<td>${aux.name}</td>`;
-                    rowHtml += `<td>${aux.baptismalName || '-'}</td>`;
-                    rowHtml += `<td>${aux.gender || '-'}</td>`;
-
-                    // Care cells across relevant sessions
-                    relevantRecords.forEach(r => {
-                        let status = 'none';
-                        if (r.careDataSnapshot) {
-                            const snapItem = r.careDataSnapshot.find(s => String(s.auxId) === String(aux.id));
-                            status = snapItem ? snapItem.checked : 'none';
-                        } else {
-                            // Legacy support
-                            status = r.careData[aux.id] || 'none';
-                        }
-
-                        if (status === 'checked') {
-                            rowHtml += '<td style="color: var(--secondary-color); font-weight: bold;">돌봄</td>';
-                        } else {
-                            rowHtml += '<td style="color: #ccc;">-</td>';
-                        }
-                    });
-
-                    tr.innerHTML = rowHtml;
-                    tableBody.appendChild(tr);
                 });
-            });
 
-            // No title subtitles per request
+                // No title subtitles per request
+            } catch (error) {
+                console.error("Error rendering report:", error);
+                showCustomAlert("보고서를 생성하는 중 오류가 발생했습니다.");
+            }
         }
     </script>
 </body>

@@ -246,7 +246,8 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc } from "./firebase-config.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260304_1500";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         // DOM Elements
@@ -265,8 +266,9 @@
         let currentUserProfile = null;
 
         // Initialize
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUserProfile = profile;
+            await loadPresidiaList();
 
             // Permission Check
             if (profile.role !== 'admin' && profile.role !== 'president') {
@@ -286,7 +288,8 @@
             const menuToggle = document.querySelector('.menu-toggle');
             if (menuToggle) {
                 menuToggle.addEventListener('click', () => {
-                    navMenu.classList.toggle('active');
+                    const navMenu = document.querySelector('.nav-menu');
+                    if (navMenu) navMenu.classList.toggle('active');
                 });
             }
 
@@ -294,25 +297,19 @@
             setupFilters(profile);
 
         }, () => {
-            alert("로그인이 필요합니다.");
             window.location.href = 'index.html';
         });
 
+        async function loadPresidiaList() {
+            presidiaGeneralList = await fetchPresidiaList();
+        }
+        let presidiaGeneralList = [];
+
         function setupFilters(profile) {
             // Populate Churches (Common)
-            // 1. Get churches from organization registry
-            let churchList = getChurches();
+            const churches = [...new Set(presidiaGeneralList.map(p => p.churchName || p.church))].sort();
 
-            // 2. Get churches from registered users (in case they are not in registry yet)
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const userChurches = Object.values(allUsers)
-                .map(u => u.church)
-                .filter(c => c); // Remove empty/null
-
-            // 3. Merge and Unique
-            churchList = [...new Set([...churchList, ...userChurches])].sort();
-
-            churchList.forEach(c => {
+            churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c;
                 opt.textContent = c;
@@ -361,18 +358,7 @@
         }
 
         function loadCuriae(church, preselectVal = null) {
-            // 1. Get from Registry
-            let curiaList = getCuriae(church);
-
-            // 2. Get from Users
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const userCuriae = Object.values(allUsers)
-                .filter(u => u.church === church)
-                .map(u => u.curia)
-                .filter(c => c);
-
-            // 3. Merge and Unique
-            curiaList = [...new Set([...curiaList, ...userCuriae])].sort();
+            const curiaList = [...new Set(presidiaGeneralList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
 
             curiaList.forEach(c => {
                 const opt = document.createElement('option');
@@ -385,38 +371,14 @@
         }
 
         function loadPresidia(church, curia, preselectVal = null) {
-            // 1. Get from Registry
-            const registryPresidia = getPresidia(church, curia); // Returns [{id, name}]
-
-            // 2. Get from Users
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const userPresidia = Object.values(allUsers)
-                .filter(u => u.church === church && u.curia === curia)
-                .map(u => ({ id: u.presidiumId, name: u.presidiumName }))
-                .filter(p => p.id && p.name);
-
-            // 3. Merge (Unique by ID)
-            const presidiumMap = new Map();
-
-            // Priority to Registry (official names)
-            registryPresidia.forEach(p => presidiumMap.set(p.id, p.name));
-
-            // Add from Users if not exists
-            userPresidia.forEach(p => {
-                if (!presidiumMap.has(p.id)) {
-                    presidiumMap.set(p.id, p.name);
-                }
-            });
-
-            // Convert to Array and Sort
-            const mergedPresidia = Array.from(presidiumMap, ([id, name]) => ({ id, name }))
-                .sort((a, b) => a.name.localeCompare(b.name));
+            const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            const mergedPresidia = [...new Set(presidia.filter(Boolean))];
 
             mergedPresidia.forEach(p => {
                 const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                if (preselectVal === p.id) opt.selected = true;
+                opt.value = p; // In members, we often store name or some identifier, keeping consistent with old logic which was name mostly
+                opt.textContent = p;
+                if (preselectVal === p) opt.selected = true;
                 searchPresidium.appendChild(opt);
             });
             if (!preselectVal) searchPresidium.disabled = false;
@@ -425,33 +387,36 @@
         // Search Logic
         btnSearch.addEventListener('click', searchMembers);
 
-        function searchMembers() {
+        async function searchMembers() {
             const sChurch = searchChurch.value;
             const sCuria = searchCuria.value;
             const sPresidiumId = searchPresidium.value;
             const sName = searchName.value.trim().toLowerCase();
 
-            // Load all users
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            let results = Object.values(allUsers);
+            try {
+                let q = collection(db, 'users');
+                const constraints = [];
+                if (sChurch) constraints.push(where('church', '==', sChurch));
+                if (sCuria) constraints.push(where('curia', '==', sCuria));
+                if (sPresidiumId) constraints.push(where('presidiumName', '==', sPresidiumId)); // Note: old code used presidiumId but registry uses Name often in users
 
-            // Filtering
-            results = results.filter(u => {
-                // Admin can skip church selection, but if selected, it must match
-                if (sChurch && u.church !== sChurch) return false;
-                if (sCuria && u.curia !== sCuria) return false;
-                if (sPresidiumId && u.presidiumId !== sPresidiumId) return false;
+                const queryRef = constraints.length > 0 ? query(q, ...constraints) : q;
+                const snapshot = await getDocs(queryRef);
+                let results = snapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() }));
 
-                // Name match (partial)
-                if (sName && !u.name.toLowerCase().includes(sName)) return false;
+                // Client-side filtering for name (partial match)
+                if (sName) {
+                    results = results.filter(u => u.name && u.name.toLowerCase().includes(sName));
+                }
 
-                return true;
-            });
-
-            renderTable(results);
+                await renderTable(results);
+            } catch (error) {
+                console.error("Error searching members:", error);
+                alert("조회 중 오류가 발생했습니다.");
+            }
         }
 
-        function renderTable(users) {
+        async function renderTable(users) {
             tableBody.innerHTML = '';
             resultCount.textContent = `(${users.length}명)`;
 
@@ -460,12 +425,10 @@
                 return;
             }
 
-            users.forEach(u => {
+            for (const u of users) {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #ddd';
 
-
-                // Mapping status to text and colors
                 const statusMap = {
                     'active': { text: '승인', bg: '#e8f5e9', color: '#2e7d32' },
                     'pending': { text: '대기', bg: '#fff3e0', color: '#ef6c00' },
@@ -475,8 +438,7 @@
                 };
                 const statusInfo = statusMap[u.status] || { text: u.status, bg: '#eee', color: '#333' };
 
-                // [개선] 최신 직급 정보를 가져오는 통합 함수 적용
-                const rankInfo = getLatestRank(u);
+                const rankInfo = await getLatestRank(u);
 
                 tr.innerHTML = `
                     <td style="padding: 10px;">${u.name}</td>
@@ -496,7 +458,7 @@
                     </td>
                 `;
                 tableBody.appendChild(tr);
-            });
+            }
 
             // Attach Edit Event Listeners
             document.querySelectorAll('.btn-edit').forEach(btn => {
@@ -515,163 +477,168 @@
             });
         }
 
-        // [개선] 최신 직급 정보를 결정하는 핵심 로직
-        function getLatestRank(u) {
-            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const today = new Date().toISOString().split('T')[0];
+        async function getLatestRank(u) {
+            try {
+                const today = new Date().toISOString().split('T')[0];
 
-            const roleMap = {
-                'admin': '관리자',
-                'president': '단장',
-                'vice_president': '부단장',
-                'secretary': '서기',
-                'treasurer': '회계',
-                'member': '단원'
-            };
-
-            const reverseRoleMap = {
-                '단장': 'president',
-                '부단장': 'vice_president',
-                '서기': 'secretary',
-                '회계': 'treasurer',
-                '단원': 'member',
-                '관리자': 'admin'
-            };
-
-            // 1순위: 간부 명단에서 활동 중인 직책 확인 (성명 + 성당 + Pr. 대조)
-            const officialOfficer = officersList.find(o =>
-                o.name === u.name &&
-                (o.churchName === u.church || o.church === u.church) &&
-                (o.presidiumName === u.presidiumName || o.presidium === u.presidiumName) &&
-                (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
-            );
-
-            if (officialOfficer) {
-                return {
-                    text: officialOfficer.role,
-                    code: reverseRoleMap[officialOfficer.role] || 'member'
+                const roleMap = {
+                    'admin': '관리자',
+                    'president': '단장',
+                    'vice_president': '부단장',
+                    'secretary': '서기',
+                    'treasurer': '회계',
+                    'member': '단원'
                 };
-            }
 
-            // 2순위: 단원 명단에서 활동 중인지 확인
-            const activeMember = membersList.find(m =>
-                m.name === u.name &&
-                m.churchName === u.church &&
-                m.presidiumName === u.presidiumName &&
-                (m.status !== '퇴단' && m.status !== '전출')
-            );
+                const reverseRoleMap = {
+                    '단장': 'president',
+                    '부단장': 'vice_president',
+                    '서기': 'secretary',
+                    '회계': 'treasurer',
+                    '단원': 'member',
+                    '관리자': 'admin'
+                };
 
-            if (activeMember) {
+                // 1순위: 간부 명단에서 활동 중인 직책 확인
+                const offQuery = query(collection(db, 'officers_list'),
+                    where('name', '==', u.name),
+                    where('churchName', '==', u.church),
+                    where('presidiumName', '==', u.presidiumName)
+                );
+                const offSnapshot = await getDocs(offQuery);
+                const officialOfficer = offSnapshot.docs.map(d => d.data()).find(o =>
+                    (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
+                );
+
+                if (officialOfficer) {
+                    return {
+                        text: officialOfficer.role,
+                        code: reverseRoleMap[officialOfficer.role] || 'member'
+                    };
+                }
+
+                // 2순위: 단원 명단에서 활동 중인지 확인
+                const memQuery = query(collection(db, 'members_list'),
+                    where('name', '==', u.name),
+                    where('churchName', '==', u.church),
+                    where('presidiumName', '==', u.presidiumName)
+                );
+                const memSnapshot = await getDocs(memQuery);
+                const activeMember = memSnapshot.docs.map(d => d.data()).find(m =>
+                    (m.status !== '퇴단' && m.status !== '전출')
+                );
+
+                if (activeMember) {
+                    return { text: '단원', code: 'member' };
+                }
+
+                return {
+                    text: roleMap[u.role] || u.role || '단원',
+                    code: u.role || 'member'
+                };
+            } catch (error) {
+                console.error("Error getting latest rank:", error);
                 return { text: '단원', code: 'member' };
             }
-
-            // 3순위: 위 데이터가 없으면 가입 시 입력된 직급 정보 반환
-            return {
-                text: roleMap[u.role] || u.role || '단원',
-                code: u.role || 'member'
-            };
         }
 
-        // [추가] 사용자 삭제 로직
-        function deleteUser(uid) {
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const user = allUsers[uid];
-
-            if (!user) {
-                alert("삭제할 사용자 정보를 찾을 수 없습니다.");
-                return;
-            }
-
-            if (confirm(`정말로 '${user.name}' 사용자의 가입 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-                delete allUsers[uid];
-                localStorage.setItem('users', JSON.stringify(allUsers));
-                alert("삭제되었습니다.");
-                searchMembers(); // 리스트 갱신
-            }
-        }
-
-        // Edit Modal Logic
-        function openEditModal(uid) {
-            editForm.reset(); // Clear form state
-
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const user = allUsers[uid];
-            if (!user) {
-                // Compatibility: Find by email if UID not found (for old data)
-                const userByEmail = Object.values(allUsers).find(u => u.email === uid);
-                if (userByEmail) return openEditModal(userByEmail.uid);
-                alert("사용자 정보를 찾을 수 없습니다.");
-                return;
-            }
-
-            document.getElementById('edit-email').value = user.email; // We keep email as ID for login
-            document.getElementById('edit-uid').value = user.uid; // Hidden field to track current record
-            document.getElementById('edit-church').value = user.church || '';
-            document.getElementById('edit-presidium').value = user.presidiumName || '';
-            document.getElementById('edit-name').value = user.name;
-            document.getElementById('edit-baptismal').value = user.baptismalName;
-            document.getElementById('edit-gender').value = user.gender || '';
-            document.getElementById('edit-status').value = user.status;
-
-            // [개선] 모달을 열 때도 최신 직급 정보를 실시간으로 조회하여 반영
-            const currentRank = getLatestRank(user);
-            document.getElementById('edit-role').value = currentRank.code;
-
-            // Populate ID/PW
-            document.getElementById('edit-username').value = user.username || '';
-            document.getElementById('edit-password').value = user.password || '';
-
-            // 탈퇴일 표시 제어
-            const leaveDateGroup = document.getElementById('leave-date-group');
-            const leaveDateInput = document.getElementById('edit-leave-date');
-            if (user.status === 'retire' || user.leaveDate) {
-                leaveDateGroup.style.display = 'block';
-                leaveDateInput.value = user.leaveDate || '기록 없음';
-            } else {
-                leaveDateGroup.style.display = 'none';
-            }
-
-            // [New] 비밀번호 초기화 버튼 리스너 (한 번만 등록하기 위해 기존 것 제거는 복잡하니 매번 초기화는 아니고 전역에서 처리하거나 여기서)
-            const resetBtn = document.getElementById('btn-reset-password');
-            // Clean old listener
-            const newResetBtn = resetBtn.cloneNode(true);
-            resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
-            newResetBtn.addEventListener('click', () => {
-                if (confirm(`'${user.name}'님의 비밀번호를 '1234'로 초기화하시겠습니까?`)) {
-                    document.getElementById('edit-password').value = '1234';
-                    alert("비밀번호가 '1234'로 설정되었습니다.\n'저장' 버튼을 눌러야 최종 반영됩니다.");
+        async function deleteUser(uid) {
+            try {
+                const docRef = doc(db, 'users', uid);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                    alert("삭제할 사용자 정보를 찾을 수 없습니다.");
+                    return;
                 }
-            });
+                const user = docSnap.data();
 
-            editModal.style.display = 'flex';
+                if (confirm(`정말로 '${user.name}' 사용자의 가입 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                    await deleteDoc(docRef);
+                    alert("삭제되었습니다.");
+                    await searchMembers(); // 리스트 갱신
+                }
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
+        }
+
+        async function openEditModal(uid) {
+            editForm.reset();
+
+            try {
+                const docRef = doc(db, 'users', uid);
+                const docSnap = await getDoc(docRef);
+
+                if (!docSnap.exists()) {
+                    alert("사용자 정보를 찾을 수 없습니다.");
+                    return;
+                }
+                const user = { uid: docSnap.id, ...docSnap.data() };
+
+                document.getElementById('edit-email').value = user.email;
+                document.getElementById('edit-uid').value = user.uid;
+                document.getElementById('edit-church').value = user.church || '';
+                document.getElementById('edit-presidium').value = user.presidiumName || '';
+                document.getElementById('edit-name').value = user.name;
+                document.getElementById('edit-baptismal').value = user.baptismalName;
+                document.getElementById('edit-gender').value = user.gender || '';
+                document.getElementById('edit-status').value = user.status;
+
+                const currentRank = await getLatestRank(user);
+                document.getElementById('edit-role').value = currentRank.code;
+
+                document.getElementById('edit-username').value = user.username || '';
+                document.getElementById('edit-password').value = user.password || '';
+
+                const leaveDateGroup = document.getElementById('leave-date-group');
+                const leaveDateInput = document.getElementById('edit-leave-date');
+                if (user.status === 'retire' || user.leaveDate) {
+                    leaveDateGroup.style.display = 'block';
+                    leaveDateInput.value = user.leaveDate || '기록 없음';
+                } else {
+                    leaveDateGroup.style.display = 'none';
+                }
+
+                const resetBtn = document.getElementById('btn-reset-password');
+                const newResetBtn = resetBtn.cloneNode(true);
+                resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+                newResetBtn.addEventListener('click', () => {
+                    if (confirm(`'${user.name}'님의 비밀번호를 '1234'로 초기화하시겠습니까?`)) {
+                        document.getElementById('edit-password').value = '1234';
+                        alert("비밀번호가 '1234'로 설정되었습니다.\n'저장' 버튼을 눌러야 최종 반영됩니다.");
+                    }
+                });
+
+                editModal.style.display = 'flex';
+            } catch (error) {
+                console.error("Error opening edit modal:", error);
+                alert("정보를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
         btnCancelEdit.addEventListener('click', () => {
             editModal.style.display = 'none';
         });
 
-        editForm.addEventListener('submit', function (e) {
+        editForm.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const email = document.getElementById('edit-email').value;
             const uid = document.getElementById('edit-uid').value;
             const newName = document.getElementById('edit-name').value;
             const newBaptismal = document.getElementById('edit-baptismal').value;
             const newGender = document.getElementById('edit-gender').value;
             const newStatus = document.getElementById('edit-status').value;
             const newRole = document.getElementById('edit-role').value;
-
-            // Get ID/PW
             const newUsername = document.getElementById('edit-username').value;
             const newPassword = document.getElementById('edit-password').value;
 
-            const allUsers = JSON.parse(localStorage.getItem('users') || '{}');
-            const currentUserData = allUsers[uid];
+            try {
+                const docRef = doc(db, 'users', uid);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) return;
+                const currentUserData = docSnap.data();
 
-            if (currentUserData) {
-                // [Logic Check] History Management
-                // If old status was 'retire' and new status is 'entry' or 'transfer', create NEW record
                 if (currentUserData.status === 'retire' && (newStatus === 'entry' || newStatus === 'transfer')) {
                     if (!confirm("퇴단한 단원을 재입단 또는 전입 처리하여 신규 기록을 생성하시겠습니까? (기존 퇴단 기록은 보존됩니다)")) {
                         return;
@@ -687,34 +654,34 @@
                         status: newStatus,
                         role: newRole,
                         username: newUsername,
-                        email: `${newUsername}@legion.app`, // [Bug Fix] Email sync for login
+                        email: `${newUsername}@legion.app`,
                         password: newPassword,
-                        createdAt: new Date().toISOString()
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
                     };
 
-                    allUsers[newUid] = newRecord;
+                    await setDoc(doc(db, 'users', newUid), newRecord);
                 } else {
-                    // Just update existing record
-                    allUsers[uid].name = newName;
-                    allUsers[uid].baptismalName = newBaptismal;
-                    allUsers[uid].gender = newGender;
-                    allUsers[uid].status = newStatus;
-                    allUsers[uid].role = newRole;
-                    allUsers[uid].username = newUsername;
-                    allUsers[uid].email = `${newUsername}@legion.app`; // [Bug Fix] Email sync for login
-                    allUsers[uid].password = newPassword;
-
-                    // If modifying self, update session
-                    if (currentUserProfile.uid === uid) {
-                        currentUserProfile = allUsers[uid];
-                        localStorage.setItem('currentUser', JSON.stringify(currentUserProfile));
-                    }
+                    const updateData = {
+                        name: newName,
+                        baptismalName: newBaptismal,
+                        gender: newGender,
+                        status: newStatus,
+                        role: newRole,
+                        username: newUsername,
+                        email: `${newUsername}@legion.app`,
+                        password: newPassword,
+                        updatedAt: serverTimestamp()
+                    };
+                    await updateDoc(docRef, updateData);
                 }
 
-                localStorage.setItem('users', JSON.stringify(allUsers));
                 alert("저장되었습니다.");
                 editModal.style.display = 'none';
-                searchMembers(); // Refresh table
+                await searchMembers();
+            } catch (error) {
+                console.error("Error saving user:", error);
+                alert("저장 중 오류가 발생했습니다.");
             }
         });
 

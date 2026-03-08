@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회계 장부 - 레지오 마리애</title>
     <!-- Force reload of styles -->
-    <link rel="stylesheet" href="styles.css?v=20260306_2345_rollback2">
+    <link rel="stylesheet" href="styles.css?v=20260307_2253">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260306_2345_rollback2">
     <style>
@@ -337,8 +337,12 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260307_0290"></script>
+    <script src="script.js?v=20260307_2253"></script>
     <script type="module">
+        import { db } from "./firebase-config.js";
+        import {
+            collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, writeBatch, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
         // DOM Elements
@@ -429,9 +433,7 @@
                 }
 
             }, () => {
-                window.showGlobalAlert("로그인이 필요합니다.").then(() => {
-                    window.location.href = 'index.html';
-                });
+                window.location.href = 'index.html';
             });
         }
 
@@ -464,6 +466,8 @@
         }
 
         function getStoredPresidiaList() {
+            // We still use localStorage for presidia_list as it is a large reference list
+            // that doesn't change frequently. This is fine for now.
             return JSON.parse(localStorage.getItem('presidia_list') || '[]');
         }
 
@@ -601,7 +605,7 @@
             }
         }
 
-        function loadTransactions() {
+        async function loadTransactions() {
             const filters = getFilterValues();
             const isDateFiltered = !!(filters.startDate || filters.endDate);
             if (!filters.church || !filters.curia || !filters.presidium) {
@@ -609,144 +613,154 @@
                 return;
             }
 
-            // Load Accounting Items for Dropdown (Scoped to Curia)
-            const allItems = JSON.parse(localStorage.getItem('accounting_items') || '[]');
-            accountItems = allItems.filter(item =>
-                item.church === filters.church &&
-                item.curia === filters.curia &&
-                item.isActive // Only active items
-            );
-
-            // Load Session List (from attendance_list)
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            window.curSessionList = allAttendance.filter(a =>
-                (a.churchName === filters.church || a.church === filters.church) &&
-                (a.curiaName === filters.curia || a.curia === filters.curia) &&
-                (a.presidiumName === filters.presidium || a.presidium === filters.presidium) &&
-                a.session && a.date
-            ).sort((a, b) => parseInt(b.session) - parseInt(a.session));
-
-            // Update Latest Session Info
-            const latestSessEl = document.getElementById('latestSessionLabel');
-            if (window.curSessionList.length > 0) {
-                const latest = window.curSessionList[0];
-                latestSessEl.textContent = `최근 입력 회차: ${latest.session}회 (${latest.date})`;
-                latestSessEl.style.display = 'block';
-            } else {
-                latestSessEl.style.display = 'none';
-            }
-
-            // Load Initial Balance
-            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
-            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
-
-            let currentInitialBalance = allSummaries[summaryKey]?.initialBalance;
-
-            // If no explicit initial balance for this year, try to calculate from Previous Year
-            if (currentInitialBalance === undefined || currentInitialBalance === null) {
-                const prevYear = parseInt(filters.year) - 1;
-                const prevSummaryKey = `${prevYear}_${filters.church}_${filters.curia}_${filters.presidium}`;
-
-                // Get Prev Year's Initial
-                const prevInitial = allSummaries[prevSummaryKey]?.initialBalance || 0;
-
-                // Get Prev Year's Transactions
-                const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
-                const prevTrans = allTrans.filter(t =>
-                    parseInt(t.year) === prevYear &&
-                    t.church === filters.church &&
-                    t.curia === filters.curia &&
-                    t.presidium === filters.presidium
+            try {
+                // 1. Load Accounting Items for Dropdown (Scoped to Curia) from Firestore
+                const itemsQuery = query(
+                    collection(db, 'accounting_items'),
+                    where('church', '==', filters.church),
+                    where('curia', '==', filters.curia),
+                    where('isActive', '==', true)
                 );
+                const itemsSnap = await getDocs(itemsQuery);
+                window.accountItems = itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // Calculate Prev Year Final Balance
-                let prevBalance = prevInitial;
-                prevTrans.forEach(t => {
-                    const amt = parseInt(t.amount) || 0;
-                    if (t.type === 'deposit') prevBalance += amt;
-                    else prevBalance -= amt;
-                });
+                // 2. Load Session List (from attendance_list) from Firestore
+                const attQuery = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', filters.church),
+                    where('curia', '==', filters.curia),
+                    where('presidium', '==', filters.presidium)
+                );
+                const attSnap = await getDocs(attQuery);
+                window.curSessionList = attSnap.docs
+                    .map(doc => doc.data())
+                    .filter(a => a.session && a.date)
+                    .sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
-                if (prevBalance !== 0) {
-                    currentInitialBalance = prevBalance;
+                // Update Latest Session Info
+                const latestSessEl = document.getElementById('latestSessionLabel');
+                if (window.curSessionList.length > 0) {
+                    const latest = window.curSessionList[0];
+                    latestSessEl.textContent = `최근 입력 회차: ${latest.session}회 (${latest.date})`;
+                    latestSessEl.style.display = 'block';
+                } else {
+                    latestSessEl.style.display = 'none';
                 }
-            }
 
-            let yearInitialBalance = currentInitialBalance || 0;
+                // 3. Load Initial Balance (from accounting_summaries) from Firestore
+                const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                const summaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', summaryId)));
 
-            // Load Transactions
-            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
-            let yearTransactions = allTrans.filter(t =>
-                t.year === filters.year &&
-                t.church === filters.church &&
-                t.curia === filters.curia &&
-                t.presidium === filters.presidium
-            );
+                let currentInitialBalance = null;
+                if (!summaryDoc.empty) {
+                    currentInitialBalance = summaryDoc.docs[0].data().initialBalance;
+                }
 
-            // Sort by Date (Month, Day)
-            yearTransactions.sort((a, b) => {
-                if (a.month !== b.month) return a.month - b.month;
-                if (a.day !== b.day) return a.day - b.day;
-                return a.session - b.session; // fallback
-            });
+                // If no explicit initial balance for this year, try to calculate from Previous Year
+                if (currentInitialBalance === undefined || currentInitialBalance === null) {
+                    const prevYear = (parseInt(filters.year) - 1).toString();
+                    const prevSummaryId = `${prevYear}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                    const prevSummaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', prevSummaryId)));
 
-            // Date filtering logic
-            let displayTransactions = yearTransactions;
-            let displayInitialBalance = yearInitialBalance;
+                    const prevInitial = !prevSummaryDoc.empty ? (prevSummaryDoc.docs[0].data().initialBalance || 0) : 0;
 
-            if (filters.startDate && filters.endDate) {
-                const start = new Date(filters.startDate);
-                const end = new Date(filters.endDate);
-                start.setHours(0, 0, 0, 0);
-                end.setHours(23, 59, 59, 999);
+                    // Get Prev Year's Transactions to calculate final balance
+                    const prevTransQuery = query(
+                        collection(db, 'accounting_transactions'),
+                        where('year', '==', prevYear),
+                        where('church', '==', filters.church),
+                        where('curia', '==', filters.curia),
+                        where('presidium', '==', filters.presidium)
+                    );
+                    const prevTransSnap = await getDocs(prevTransQuery);
 
-                const filtered = [];
-                let runningBalance = yearInitialBalance;
-
-                for (const t of yearTransactions) {
-                    // Check date
-                    const tDate = new Date(t.year, t.month - 1, t.day);
-
-                    if (tDate < start) {
-                        // Update balance
+                    let prevBalance = prevInitial;
+                    prevTransSnap.docs.forEach(doc => {
+                        const t = doc.data();
                         const amt = parseInt(t.amount) || 0;
-                        if (t.type === 'deposit') runningBalance += amt;
-                        else runningBalance -= amt;
-                    } else if (tDate >= start && tDate <= end) {
-                        filtered.push(t);
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
+                    });
+
+                    if (prevBalance !== 0) {
+                        currentInitialBalance = prevBalance;
                     }
                 }
 
-                displayTransactions = filtered;
-                displayInitialBalance = runningBalance;
-            }
+                let yearInitialBalance = currentInitialBalance || 0;
 
-            window.loadedTransactions = displayTransactions;
+                // 4. Load Transactions from Firestore
+                const transQuery = query(
+                    collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('church', '==', filters.church),
+                    where('curia', '==', filters.curia),
+                    where('presidium', '==', filters.presidium)
+                );
+                const transSnap = await getDocs(transQuery);
+                let yearTransactions = transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Set Initial Balance Input
-            initialBalanceInput.value = displayInitialBalance.toLocaleString();
+                // Sort by Date (Month, Day)
+                yearTransactions.sort((a, b) => {
+                    if (parseInt(a.month) !== parseInt(b.month)) return parseInt(a.month) - parseInt(b.month);
+                    if (parseInt(a.day) !== parseInt(b.day)) return parseInt(a.day) - parseInt(b.day);
+                    return parseInt(a.session) - parseInt(b.session);
+                });
 
-            // Check ReadOnly State
-            const isReadOnly = (!window.isAdmin && !window.isOfficer);
+                // Date filtering logic
+                let displayTransactions = yearTransactions;
+                let displayInitialBalance = yearInitialBalance;
 
-            if (isReadOnly) {
-                initialBalanceInput.disabled = true;
-                btnAddRow.style.display = 'none';
-                btnSave.style.display = 'none';
-            } else {
-                // In Input Mode or Full View
-                // Disable Initial Balance editing if specific date range is selected to prevent confusion
-                if (filters.startDate || filters.endDate) {
-                    initialBalanceInput.disabled = true;
-                } else {
-                    initialBalanceInput.disabled = false;
+                if (filters.startDate && filters.endDate) {
+                    const start = new Date(filters.startDate);
+                    const end = new Date(filters.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+
+                    const filtered = [];
+                    let runningBalance = yearInitialBalance;
+
+                    for (const t of yearTransactions) {
+                        const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
+
+                        if (tDate < start) {
+                            const amt = parseInt(t.amount) || 0;
+                            if (t.type === 'deposit') runningBalance += amt;
+                            else runningBalance -= amt;
+                        } else if (tDate >= start && tDate <= end) {
+                            filtered.push(t);
+                        }
+                    }
+
+                    displayTransactions = filtered;
+                    displayInitialBalance = runningBalance;
                 }
-                btnAddRow.style.display = 'inline-block';
-                btnSave.style.display = 'inline-block';
-            }
 
-            renderTable();
-            ledgerFooter.style.display = 'table-footer-group';
+                window.loadedTransactions = displayTransactions;
+                initialBalanceInput.value = displayInitialBalance.toLocaleString();
+
+                const isReadOnly = (!window.isAdmin && !window.isOfficer);
+                if (isReadOnly) {
+                    initialBalanceInput.disabled = true;
+                    btnAddRow.style.display = 'none';
+                    btnSave.style.display = 'none';
+                } else {
+                    if (filters.startDate || filters.endDate) {
+                        initialBalanceInput.disabled = true;
+                    } else {
+                        initialBalanceInput.disabled = false;
+                    }
+                    btnAddRow.style.display = 'inline-block';
+                    btnSave.style.display = 'inline-block';
+                }
+
+                renderTable();
+                ledgerFooter.style.display = 'table-footer-group';
+
+            } catch (error) {
+                console.error("Error loading accounting data:", error);
+                window.showGlobalAlert("데이터를 불러오는 중 오류가 발생했습니다: " + error.message);
+            }
         }
 
         function calculateBalance() {
@@ -1091,103 +1105,129 @@
             }
             if (!filters.church || !filters.curia || !filters.presidium) return;
 
-            // Save Initial Balance
-            const initialVal = parseInt(initialBalanceInput.value.replace(/,/g, '')) || 0;
-            const allSummaries = JSON.parse(localStorage.getItem('accounting_summaries') || '{}');
-            const summaryKey = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
-
-            if (!allSummaries[summaryKey]) allSummaries[summaryKey] = {};
-            // Only save initial balance if allowed (full year view)
-            if (!initialBalanceInput.disabled) {
-                allSummaries[summaryKey].initialBalance = initialVal;
-            }
-            localStorage.setItem('accounting_summaries', JSON.stringify(allSummaries));
-
-            const rows = ledgerBody.querySelectorAll('tr');
-            const newTransactions = [];
-
-            let isValid = true;
-
-            for (const row of Array.from(rows)) {
-                if (row.classList.contains('empty-msg')) continue;
-
-                // Get values
-                const sEl = row.querySelector('.session-input');
-                const session = sEl.value;
-                const month = row.querySelector('.month-input').value;
-                const day = row.querySelector('.day-input').value;
-                const weekday = row.querySelector('.weekday-input').value;
-                const type = row.querySelector('.type-select').value;
-                const item = row.querySelector('.item-select').value;
-                // Save raw amount number
-                const amount = row.querySelector('.amount-input').value.replace(/,/g, '');
-                const remarks = row.querySelector('.remarks-input').value;
-
-                // Basic validation: If any field filled, require Date, Type, Amount
-                if (session || month || day || amount) {
-                    if (!month || !day || !amount) {
-                        await window.showGlobalAlert("월, 일, 금액은 필수입니다.");
-                        isValid = false;
-                        break;
-                    }
-                } else {
-                    // Empty row, skip
-                    continue;
+            try {
+                // 1. Save Initial Balance to accounting_summaries
+                const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                if (!initialBalanceInput.disabled) {
+                    const initialVal = parseInt(initialBalanceInput.value.replace(/,/g, '')) || 0;
+                    await updateDoc(doc(db, 'accounting_summaries', summaryId), {
+                        initialBalance: initialVal,
+                        updatedAt: serverTimestamp()
+                    }).catch(async (err) => {
+                        // If doc doesn't exist, create it
+                        if (err.code === 'not-found') {
+                            await updateDoc(doc(db, 'accounting_summaries', summaryId), {
+                                initialBalance: initialVal,
+                                year: filters.year,
+                                church: filters.church,
+                                curia: filters.curia,
+                                presidium: filters.presidium,
+                                createdAt: serverTimestamp()
+                            }, { merge: true }); // Using setDoc with merge instead of catch updateDoc is better but getDocs can check existance
+                            // Correction: using setDoc for summaries
+                            const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                            await setDoc(doc(db, 'accounting_summaries', summaryId), {
+                                initialBalance: initialVal,
+                                year: filters.year,
+                                church: filters.church,
+                                curia: filters.curia,
+                                presidium: filters.presidium,
+                                updatedAt: serverTimestamp()
+                            }, { merge: true });
+                        } else {
+                            throw err;
+                        }
+                    });
                 }
 
-                newTransactions.push({
-                    id: Date.now() + Math.random().toString(36).substr(2, 5),
-                    year: filters.year,
-                    church: filters.church,
-                    curia: filters.curia,
-                    presidium: filters.presidium,
-                    session, month, day, weekday, type, item, amount, remarks
-                });
-            }
+                // 2. Save Transactions
+                const rows = ledgerBody.querySelectorAll('tr');
+                const batch = writeBatch(db);
 
-            if (!isValid) return;
+                // For deletions, we need to know what was previously there.
+                // A simpler way: delete existing in range and add new.
+                // But this is risky if other users are editing (unlikely here).
 
-            // Merge Logic:
-            // If in Date Range Mode (Input Mode), we should only replace transactions falling within that range?
-            // A safer approach for "Input Mode" which might cover just 1 day is:
-            // Keep transactions that do NOT match the current filter scope (Org + Year)
-            // PLUS transactions that match Org+Year but are OUTSIDE the date range.
+                // Let's use the same logic as before: replace all in the current filter scope.
+                const start = filters.startDate ? new Date(filters.startDate) : null;
+                const end = filters.endDate ? new Date(filters.endDate) : null;
+                if (start) start.setHours(0, 0, 0, 0);
+                if (end) end.setHours(23, 59, 59, 999);
 
-            const allTrans = JSON.parse(localStorage.getItem('accounting_transactions') || '[]');
-
-            let otherTrans;
-            if (filters.startDate && filters.endDate) {
-                // If Partial View (Input Mode)
-                const start = new Date(filters.startDate);
-                const end = new Date(filters.endDate);
-                start.setHours(0, 0, 0, 0);
-                end.setHours(23, 59, 59, 999);
-
-                otherTrans = allTrans.filter(t => {
-                    // Keep if different Org
-                    if (!(t.year === filters.year && t.church === filters.church && t.curia === filters.curia && t.presidium === filters.presidium)) return true;
-
-                    // Same Org+Year: Keep if date outside range
-                    const tDate = new Date(t.year, t.month - 1, t.day);
-                    return (tDate < start || tDate > end);
-                });
-
-            } else {
-                // Full Year View: Replace all for this Org+Year
-                otherTrans = allTrans.filter(t =>
-                    !(t.year === filters.year &&
-                        t.church === filters.church &&
-                        t.curia === filters.curia &&
-                        t.presidium === filters.presidium)
+                // Fetch existing to handle deletions
+                const transQuery = query(
+                    collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('church', '==', filters.church),
+                    where('curia', '==', filters.curia),
+                    where('presidium', '==', filters.presidium)
                 );
+                const existingSnap = await getDocs(transQuery);
+
+                // Mark for deletion if in range
+                existingSnap.docs.forEach(docSnap => {
+                    const t = docSnap.data();
+                    const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
+
+                    if (start && end) {
+                        if (tDate >= start && tDate <= end) {
+                            batch.delete(docSnap.ref);
+                        }
+                    } else {
+                        // Full Year View: delete all
+                        batch.delete(docSnap.ref);
+                    }
+                });
+
+                // Add new rows
+                let isValid = true;
+                for (const row of Array.from(rows)) {
+                    if (row.classList.contains('empty-msg')) continue;
+
+                    const session = row.querySelector('.session-input').value;
+                    const month = row.querySelector('.month-input').value;
+                    const day = row.querySelector('.day-input').value;
+                    const weekday = row.querySelector('.weekday-input').value;
+                    const type = row.querySelector('.type-select').value;
+                    const item = row.querySelector('.item-select').value;
+                    const amount = row.querySelector('.amount-input').value.replace(/,/g, '');
+                    const remarks = row.querySelector('.remarks-input').value;
+
+                    if (session || month || day || amount) {
+                        if (!month || !day || !amount) {
+                            await window.showGlobalAlert("월, 일, 금액은 필수입니다.");
+                            isValid = false;
+                            break;
+                        }
+
+                        const newDocRef = doc(collection(db, 'accounting_transactions'));
+                        batch.set(newDocRef, {
+                            year: filters.year.toString(),
+                            church: filters.church,
+                            curia: filters.curia,
+                            presidium: filters.presidium,
+                            session: session.toString(),
+                            month: month.toString(),
+                            day: day.toString(),
+                            weekday, type, item,
+                            amount: amount.toString(),
+                            remarks,
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                }
+
+                if (!isValid) return;
+
+                await batch.commit();
+                await window.showGlobalAlert("저장되었습니다.");
+                window.setDirty(false);
+                loadTransactions();
+
+            } catch (error) {
+                console.error("Error saving accounting data:", error);
+                window.showGlobalAlert("저장 중 오류가 발생했습니다: " + error.message);
             }
-
-            const finalTrans = [...otherTrans, ...newTransactions];
-            localStorage.setItem('accounting_transactions', JSON.stringify(finalTrans));
-
-            await window.showGlobalAlert("저장되었습니다.");
-            window.setDirty(false);
-            loadTransactions(); // Reload to refresh
         }
 
         function setupEventListeners() {

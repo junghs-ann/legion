@@ -256,12 +256,17 @@
     </header>
 
     <div class="main-content">
-        <div class="register-form-container">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 30px; padding-bottom: 15px;">
-                <h2 class="form-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">단원정보 관리</h2>
-                <button type="button" class="btn-submit btn-cancel" onclick="location.href='dashboard.html'"
-                    style="padding: 8px 16px; font-size: 0.9rem; margin: 0;">닫 기</button>
+        <div class="register-form-container" style="position: relative;">
+            <button type="button" onclick="location.href='dashboard.html'" title="닫기"
+                style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding: 0; line-height: 1; z-index: 10;"><i
+                    class="fas fa-times"></i></button>
+            <div class="form-title page-header-container"
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid var(--secondary-color); padding-bottom: 15px; position: relative;">
+                <div style="flex: 1; text-align: left; padding-right: 30px;">
+                    <h2 class="form-title"
+                        style="color: var(--primary-color); margin: 0; font-family: 'Noto Serif KR', serif; display: inline-block; border-bottom: none; padding-bottom: 0;">
+                        단원정보 관리</h2>
+                </div>
             </div>
             <form id="memberRegisterForm">
 
@@ -283,12 +288,18 @@
                                 <option value="">꾸리아 선택</option>
                             </select>
                         </div>
-                        <div class="form-group form-full-width">
+                        <div class="form-group form-full-width" style="position: relative;">
                             <label>쁘레시디움 (Pr.)</label>
-                            <select id="presidiumSelect" name="presidiumName" required disabled
-                                style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
-                                <option value="">쁘레시디움 선택</option>
-                            </select>
+                            <div class="search-container" id="presidiumSearchContainer"
+                                style="position: relative; width: 100%;">
+                                <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                                    disabled class="nav-enter"
+                                    style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
+                                <input type="hidden" id="presidiumSelect" name="presidiumName">
+                                <div id="presidiumDropdown" class="custom-dropdown"
+                                    style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Action Buttons for Unit Info -->
@@ -381,9 +392,15 @@
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="submit" class="btn-submit">저 장</button>
-                    <button type="button" id="btnDeleteMember" class="btn-submit"
-                        style="background-color: #dc3545; display: none;">삭 제</button>
+                    <button type="submit" class="btn btn-save"
+                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-save"></i> 저장</button>
+                    <button type="button" id="btnDeleteMember" class="btn btn-delete"
+                        style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-trash-alt"></i> 삭제</button>
+                    <button type="button" class="btn btn-close" onclick="location.href='dashboard.html'"
+                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #6c757d; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-times"></i> 닫기</button>
                 </div>
             </form>
         </div>
@@ -408,10 +425,15 @@
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { db } from "./firebase-config.js";
+        import {
+            collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+            query, where, orderBy, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Define Organization Data Logic
         const initOrgSelectors = () => {
-            // Populate Lists from DB
+            // Populate Lists from DB (Still using localStorage for static-ish org data)
             const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
 
             // DOM Elements
@@ -421,9 +443,6 @@
 
             // 1. Populate Church Select
             const churches = [...new Set(storedPresidia.map(p => p.churchName).filter(Boolean))].sort();
-
-            // Allow manual entry option just in case? Or strict? 
-            // User asked for "Show as list from entered data". Strict is better.
 
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -435,12 +454,9 @@
             // 2. Cascading Logic: Church -> Curia
             churchSelect.addEventListener('change', () => {
                 const selectedChurch = churchSelect.value;
-
-                // Reset Curia & Presidium
                 curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
                 curiaSelect.disabled = !selectedChurch;
                 curiaSelect.style.backgroundColor = selectedChurch ? 'white' : '#f9f9f9';
-
                 presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
                 presidiumSelect.disabled = true;
                 presidiumSelect.style.backgroundColor = '#f9f9f9';
@@ -448,7 +464,6 @@
                 if (selectedChurch) {
                     const filtered = storedPresidia.filter(p => p.churchName === selectedChurch);
                     const curiae = [...new Set(filtered.map(p => p.curiaName).filter(Boolean))].sort();
-
                     curiae.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = c;
@@ -459,107 +474,151 @@
             });
 
             // 3. Cascading Logic: Curia -> Presidium
+            let currentPresidia = [];
+            const presidiumInput = document.getElementById('presidiumInput');
+            const presidiumDropdown = document.getElementById('presidiumDropdown');
+
+            function renderDropdown(filter = '') {
+                if (!currentPresidia) return;
+                const list = currentPresidia.filter(p => filter === '' || p.includes(filter));
+                if (list.length === 0) {
+                    presidiumDropdown.innerHTML = '<div class="no-result" style="padding: 10px; color: #888;">검색 결과가 없습니다.</div>';
+                    return;
+                }
+                presidiumDropdown.innerHTML = list.map(name => `
+                    <div class="dropdown-item" data-name="${name}" style="padding: 10px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; transition: background 0.2s;">
+                        ${name}
+                    </div>
+                `).join('');
+                presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const name = item.dataset.name;
+                        presidiumInput.value = name;
+                        presidiumSelect.value = name;
+                        presidiumDropdown.style.display = 'none';
+                    });
+                });
+            }
+
             curiaSelect.addEventListener('change', () => {
                 const selectedChurch = churchSelect.value;
                 const selectedCuria = curiaSelect.value;
+                presidiumInput.value = '';
+                presidiumSelect.value = '';
+                currentPresidia = [];
+                if (!selectedChurch || !selectedCuria) {
+                    presidiumInput.disabled = true;
+                    presidiumInput.style.backgroundColor = '#f9f9f9';
+                    return;
+                }
+                const filtered = storedPresidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
+                currentPresidia = [...new Set(filtered.map(p => p.presidiumName).filter(Boolean))].sort();
+                presidiumInput.disabled = false;
+                presidiumInput.style.backgroundColor = 'white';
+            });
 
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                presidiumSelect.disabled = !selectedCuria;
-                presidiumSelect.style.backgroundColor = selectedCuria ? 'white' : '#f9f9f9';
+            presidiumInput.addEventListener('focus', () => {
+                if (!presidiumInput.disabled) {
+                    renderDropdown('');
+                    presidiumDropdown.style.display = 'block';
+                }
+            });
 
-                if (selectedChurch && selectedCuria) {
-                    const filtered = storedPresidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
-                    const presidia = [...new Set(filtered.map(p => p.presidiumName).filter(Boolean))].sort();
+            presidiumInput.addEventListener('input', () => {
+                renderDropdown(presidiumInput.value.trim());
+                presidiumDropdown.style.display = 'block';
+            });
 
-                    presidia.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = p;
-                        opt.textContent = p;
-                        presidiumSelect.appendChild(opt);
-                    });
+            document.addEventListener('click', (e) => {
+                if (presidiumInput && presidiumInput.disabled) return;
+                if (presidiumInput && !presidiumInput.contains(e.target) && presidiumDropdown && !presidiumDropdown.contains(e.target)) {
+                    if (presidiumDropdown.style.display === 'block') {
+                        presidiumDropdown.style.display = 'none';
+                        const currentVal = presidiumInput.value.trim();
+                        if (currentVal && !currentPresidia.includes(currentVal)) {
+                            presidiumInput.value = '';
+                            presidiumSelect.value = '';
+                        } else if (currentVal && currentPresidia.includes(currentVal)) {
+                            presidiumSelect.value = currentVal;
+                        }
+                    }
                 }
             });
         };
 
         // Auth Guard & RBAC
-        initAuthObserver((user, profile) => {
+        let currentUserProfile = null;
+        initAuthObserver(async (user, profile) => {
             if (!user) {
                 window.location.href = "index.html";
                 return;
             }
-
-            // Logged in user profile should have: church, curia, presidium, role, name
-            // If profile is missing (e.g. old data), might need fallback or error.
-
+            currentUserProfile = profile;
             initOrgSelectors();
 
             const churchSelect = document.getElementById('churchSelect');
             const curiaSelect = document.getElementById('curiaSelect');
             const presidiumSelect = document.getElementById('presidiumSelect');
 
-            // Normalize role for comparison
             const role = (profile.role || user.role || '').toLowerCase();
             const isAdmin = role === 'admin' || role === '관리자';
             const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].includes(role);
-            const isMember = !isAdmin && !isOfficer; // Assumes anyone else is a regular member
+            const isMember = !isAdmin && !isOfficer;
 
-            // Apply Org Limits
             if (!isAdmin) {
-                // Officer or Member: Lock to their org
                 if (profile.church) {
                     churchSelect.value = profile.church;
-                    churchSelect.dispatchEvent(new Event('change')); // Trigger cascade
+                    churchSelect.dispatchEvent(new Event('change'));
                     churchSelect.disabled = true;
                     churchSelect.style.backgroundColor = '#f9f9f9';
                 }
 
-                // Allow time for cascade? No, sync is fine if elements exist.
-                // Wait, trigger change is sync. But the listener clears Curia options first then repopulates.
-                // We need to set value AFTER repopulation.
-
-                // Better approach: Manually set options if we know them, or wait. 
-                // Since `initOrgSelectors` sets up listeners, we can just manually trigger.
-                // BUT, `change` event clears downstream.
-
-                // Let's refine the loading sequence.
                 setTimeout(() => {
                     if (profile.church) {
                         churchSelect.value = profile.church;
                         churchSelect.dispatchEvent(new Event('change'));
                     }
-
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         if (profile.curia) {
                             curiaSelect.value = profile.curia;
                             curiaSelect.dispatchEvent(new Event('change'));
                             curiaSelect.disabled = true;
                             curiaSelect.style.backgroundColor = '#f9f9f9';
                         }
-
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             if (profile.presidium) {
+                                const pInput = document.getElementById('presidiumInput');
+                                if (pInput) {
+                                    pInput.value = profile.presidium;
+                                    pInput.disabled = true;
+                                    pInput.style.backgroundColor = '#f9f9f9';
+                                }
                                 presidiumSelect.value = profile.presidium;
-                                presidiumSelect.disabled = true;
-                                presidiumSelect.style.backgroundColor = '#f9f9f9';
                             }
 
-                            // If Member, load their data (Self-Edit Mode)
                             if (isMember) {
                                 document.getElementById('btnNewRegister').style.display = 'none';
                                 document.getElementById('btnInquiryMember').style.display = 'none';
 
-                                // Auto-load self
-                                const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-                                const myMember = members.find(m => m.name === (profile.name || user.name) && m.presidiumName === profile.presidium);
-
-                                if (myMember) {
-                                    loadMemberDataForEdit(myMember);
-                                    document.querySelector('.form-title').textContent = '단원정보 관리';
-                                } else {
-                                    alert("등록된 단원 정보를 찾을 수 없습니다. 관리자에게 문의하세요.");
-                                    const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
-                                    submitBtn.disabled = true;
-                                    submitBtn.style.backgroundColor = '#ccc';
+                                // Auto-load self from Firestore
+                                try {
+                                    const q = query(collection(db, "members_list"),
+                                        where("name", "==", profile.name || user.name),
+                                        where("presidiumName", "==", profile.presidium)
+                                    );
+                                    const querySnapshot = await getDocs(q);
+                                    if (!querySnapshot.empty) {
+                                        const myData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+                                        loadMemberDataForEdit(myData);
+                                        document.querySelector('.form-title').textContent = '내 정보 관리';
+                                    } else {
+                                        alert("등록된 단원 정보를 찾을 수 없습니다. 관리자에게 문의하세요.");
+                                        const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
+                                        submitBtn.disabled = true;
+                                        submitBtn.style.backgroundColor = '#ccc';
+                                    }
+                                } catch (err) {
+                                    console.error("Self load error:", err);
                                 }
                             }
                         }, 50);
@@ -567,61 +626,28 @@
                 }, 50);
             }
 
-            // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, logoutUser);
             }
         });
 
-
-
-        // ... Top Operation Buttons Logic ...
+        // Top Operation Buttons Logic
         document.getElementById('btnNewRegister').addEventListener('click', () => {
-            // Check if Org is selected
             const presidiumName = document.getElementById('presidiumSelect').value;
             if (!presidiumName) {
                 alert('먼저 쁘레시디움을 선택해주세요.');
                 return;
             }
-
-            // Clear form fields
             const form = document.getElementById('memberRegisterForm');
             form.removeAttribute('data-edit-id');
-
-            const resetField = (name) => {
-                const el = form.elements[name];
-                if (el) el.value = '';
-            }
-
-            resetField('name');
-            resetField('baptismalName');
-            resetField('feastDate');
-            resetField('birthDate');
-            resetField('phone');
-            resetField('address');
-            resetField('probationaryDate');
-            resetField('promiseDate');
-            resetField('confirmationDate');
-            resetField('appointmentDate');
-            resetField('appointmentExpiryDate');
-            resetField('leaveDate');
-            resetField('notes');
-
-            form.elements['classification'].selectedIndex = 0;
-            form.elements['status'].selectedIndex = 0;
-            form.elements['gender'].selectedIndex = 0;
-            form.elements['role'].selectedIndex = 0;
-
+            form.reset();
             document.querySelector('.form-title').textContent = '단원정보 관리';
             const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
             submitBtn.textContent = '저 장';
-
-            // Hide Delete Button on New Register
             document.getElementById('btnDeleteMember').style.display = 'none';
             document.getElementById('classificationSelect').focus();
         });
 
-        // Status Change Validation (Position Transfer & Retire Date Control)
         const statusSelect = document.querySelector('select[name="status"]');
         const leaveDateInput = document.querySelector('input[name="leaveDate"]');
         const leaveDateNotice = document.getElementById('leaveDateNotice');
@@ -646,118 +672,49 @@
             }
         }
 
-        statusSelect.addEventListener('change', function () {
-            updateLeaveDateState();
-
-            if (this.value === '직책이동') {
-                const form = document.getElementById('memberRegisterForm');
-                const editId = form.getAttribute('data-edit-id');
-
-                // 1. Check if Existing Member is Loaded
-                if (!editId) {
-                    alert('직책이동은 기존 단원 정보를 조회한 후에만 선택할 수 있습니다.');
-                    this.value = '입단'; // Reset to default
-                    updateLeaveDateState();
-                    return;
-                }
-
-                // 2. Check for Mandatory Date Fields in Existing Data
-                const currentAppDate = form.elements['appointmentDate'].value;
-                const currentExpDate = form.elements['appointmentExpiryDate'].value;
-
-                if (!currentAppDate || !currentExpDate) {
-                    alert('기존 자료에 임명일과 임명 만료일이 모두 입력되어 있어야 직책이동을 선택할 수 있습니다.\n\n먼저 해당 정보를 입력하고 저장한 후 다시 시도해주세요.');
-                    this.value = '입단'; // Reset to default
-                    updateLeaveDateState();
-                    return;
-                }
-            }
-        });
-
-        // Initialize state
+        statusSelect.addEventListener('change', updateLeaveDateState);
         updateLeaveDateState();
 
-        // Add Alert when interacting with disabled Leave Date
-        leaveDateInput.parentElement.addEventListener('click', function (e) {
-            const status = statusSelect.value;
-            if (status !== '퇴단' && status !== '전출') {
-                alert("퇴단/전출일을 입력하려면 상태를 '퇴단' 또는 '전출'로 먼저 변경해야 합니다.");
-                statusSelect.focus();
-            }
-        });
-
-        // Real-time Date Validation: Probationary Date vs Leave Date vs Promise Date
         const probationaryDateInput = document.querySelector('input[name="probationaryDate"]');
         const promiseDateInput = document.querySelector('input[name="promiseDate"]');
 
         const validateLeaveDate = () => {
             const probDate = probationaryDateInput.value;
             const leaveDate = leaveDateInput.value;
-
-            if (probDate && leaveDate) {
-                if (new Date(leaveDate) <= new Date(probDate)) {
-                    alert('퇴단/전출일은 입단/전입일보다 나중의 날짜여야 합니다.');
-                    leaveDateInput.value = ''; // Reset invalid value
-                }
+            if (probDate && leaveDate && new Date(leaveDate) <= new Date(probDate)) {
+                alert('퇴단/전출일은 입단/전입일보다 나중의 날짜여야 합니다.');
+                leaveDateInput.value = '';
             }
         };
 
         const validatePromiseDate = () => {
             const probDate = probationaryDateInput.value;
             const promDate = promiseDateInput.value;
-
-            if (promDate) { // Check only if promiseDate has a value
+            if (promDate) {
                 if (!probDate) {
-                    alert('입단/전입일이 입력되지 않은 상태에서 선서일을 입력할 수 없습니다. \n먼저 입단/전입일을 입력해 주세요.');
+                    alert('입단/전입일이 입력되지 않은 상태에서 선서일을 입력할 수 없습니다.');
                     promiseDateInput.value = '';
                     return;
                 }
                 if (new Date(promDate) <= new Date(probDate)) {
                     alert('선서일은 입단/전입일보다 나중의 날짜여야 합니다.');
-                    promiseDateInput.value = ''; // Reset invalid value
+                    promiseDateInput.value = '';
                 }
             }
         };
 
-
-        let isProbDateAlertShown = false; // Flag to prevent redundant alerts per session
-
+        let isProbDateAlertShown = false;
         probationaryDateInput.addEventListener('change', function () {
             const form = document.getElementById('memberRegisterForm');
             const initialDate = form.getAttribute('data-initial-prob-date') || '';
-
-            // Show guide message only if:
-            // 1. We are in edit mode (initialDate exists)
-            // 2. Value actually changed from what was initially loaded
-            // 3. The original status was NOT 'retire' or 'leave' (meaning it's a correction of an active member)
-            // 4. We haven't alerted the user for this change yet in this edit session
             const originalStatus = form.getAttribute('data-original-status') || '';
             const isAlreadyLeft = originalStatus === '퇴단' || originalStatus === '전출';
 
             if (initialDate && this.value !== initialDate && !isAlreadyLeft && !isProbDateAlertShown) {
                 alert("입단/전입일 변경시 퇴단/전출 단원이 새로 입단한 경우이면 퇴단, 전출 처리 후 수정해 주세요");
                 isProbDateAlertShown = true;
-
-                // Revert to initial value and focus after alert
                 this.value = initialDate;
-                setTimeout(() => this.focus(), 0); // Use setTimeout to ensure focus happens after alert closure
-                return; // Stop further execution for this event
-            }
-
-            // Update min attribute for leave date and promise date
-            if (this.value) {
-                const probDateObj = new Date(this.value);
-
-                // For leave/promise: strictly after (+1 day)
-                const afterDate = new Date(probDateObj);
-                afterDate.setDate(afterDate.getDate() + 1);
-                const minAfter = afterDate.toISOString().split('T')[0];
-
-                leaveDateInput.min = minAfter;
-                promiseDateInput.min = minAfter;
-            } else {
-                leaveDateInput.removeAttribute('min');
-                promiseDateInput.removeAttribute('min');
+                return;
             }
             validateLeaveDate();
             validatePromiseDate();
@@ -766,30 +723,26 @@
         leaveDateInput.addEventListener('change', validateLeaveDate);
         promiseDateInput.addEventListener('change', validatePromiseDate);
 
-        // Delete Member Logic
-        document.getElementById('btnDeleteMember').addEventListener('click', () => {
+        // Delete Member Logic (Firestore)
+        document.getElementById('btnDeleteMember').addEventListener('click', async () => {
             const form = document.getElementById('memberRegisterForm');
             const editId = form.getAttribute('data-edit-id');
             const name = form.elements['name'].value;
-
             if (!editId) return;
 
-            if (confirm(`정말로 '${name}' 단원의 정보를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) {
-                let members = JSON.parse(localStorage.getItem('members_list') || '[]');
-                const originalLength = members.length;
-                members = members.filter(m => m.id !== editId);
-
-                if (members.length < originalLength) {
-                    localStorage.setItem('members_list', JSON.stringify(members));
+            if (confirm(`정말로 '${name}' 단원의 정보를 삭제하시겠습니까?`)) {
+                try {
+                    await deleteDoc(doc(db, "members_list", editId));
                     alert('삭제되었습니다.');
-                    location.reload(); // Refresh to clear form and list
-                } else {
-                    alert('삭제할 대상을 찾을 수 없습니다.');
+                    location.reload();
+                } catch (err) {
+                    alert('삭제 실패: ' + err.message);
                 }
             }
         });
 
-        document.getElementById('btnInquiryMember').addEventListener('click', () => {
+        // Inquiry Member Logic (Firestore)
+        document.getElementById('btnInquiryMember').addEventListener('click', async () => {
             const churchName = document.getElementById('churchSelect').value;
             const curiaName = document.getElementById('curiaSelect').value;
             const presidiumName = document.getElementById('presidiumSelect').value;
@@ -799,41 +752,41 @@
                 return;
             }
 
-            const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const filtered = members.filter(m =>
-                m.churchName === churchName &&
-                m.presidiumName === presidiumName &&
-                (!curiaName || m.curiaName === curiaName)
-            );
+            try {
+                const q = query(
+                    collection(db, "members_list"),
+                    where("churchName", "==", churchName),
+                    where("presidiumName", "==", presidiumName)
+                );
+                const querySnapshot = await getDocs(q);
+                const memberList = document.getElementById('memberList');
+                const modal = document.getElementById('memberSearchModal');
 
-            const memberList = document.getElementById('memberList');
-            const modal = document.getElementById('memberSearchModal');
-
-            memberList.innerHTML = '';
-            if (filtered.length === 0) {
-                memberList.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
-            } else {
-                filtered.forEach(m => {
-                    const li = document.createElement('li');
-                    li.style.padding = '10px';
-                    li.style.borderBottom = '1px solid #eee';
-                    li.style.cursor = 'pointer';
-                    li.style.display = 'flex';
-                    li.style.justifyContent = 'space-between';
-                    li.innerHTML = `<span><strong>${m.name}</strong> (${m.baptismalName})</span> <span style="font-size:0.9em; color:#888;">${m.status}</span>`;
-
-                    li.addEventListener('click', () => {
-                        loadMemberDataForEdit(m);
-                        modal.style.display = 'none';
+                memberList.innerHTML = '';
+                if (querySnapshot.empty) {
+                    memberList.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
+                } else {
+                    querySnapshot.forEach(docSnap => {
+                        const m = { id: docSnap.id, ...docSnap.data() };
+                        const li = document.createElement('li');
+                        li.style.padding = '10px';
+                        li.style.borderBottom = '1px solid #eee';
+                        li.style.cursor = 'pointer';
+                        li.style.display = 'flex';
+                        li.style.justifyContent = 'space-between';
+                        li.innerHTML = `<span><strong>${m.name}</strong> (${m.baptismalName})</span> <span style="font-size:0.9em; color:#888;">${m.status}</span>`;
+                        li.onclick = () => {
+                            loadMemberDataForEdit(m);
+                            modal.style.display = 'none';
+                        };
+                        memberList.appendChild(li);
                     });
-
-                    li.addEventListener('mouseover', () => li.style.backgroundColor = '#f5f5f5');
-                    li.addEventListener('mouseout', () => li.style.backgroundColor = 'white');
-
-                    memberList.appendChild(li);
-                });
+                }
+                modal.style.display = 'flex';
+            } catch (err) {
+                console.error("Inquiry error:", err);
+                alert('조회 중 오류가 발생했습니다.');
             }
-            modal.style.display = 'flex';
         });
 
         document.getElementById('btnCloseModal').addEventListener('click', () => {
@@ -841,102 +794,94 @@
         });
 
         function loadMemberDataForEdit(member) {
-            console.log("Loading member:", member);
             const form = document.getElementById('memberRegisterForm');
-
-            if (form.elements['name']) form.elements['name'].value = member.name;
-            if (form.elements['baptismalName']) form.elements['baptismalName'].value = member.baptismalName || '';
-            if (form.elements['gender']) form.elements['gender'].value = member.gender || '';
-            if (form.elements['feastDate']) form.elements['feastDate'].value = member.feastDate || '';
-            if (form.elements['birthDate']) form.elements['birthDate'].value = member.birthDate || '';
-            if (form.elements['phone']) form.elements['phone'].value = member.phone || '';
-            if (form.elements['address']) form.elements['address'].value = member.address || '';
-
-            if (form.elements['classification']) form.elements['classification'].value = member.classification;
-            if (form.elements['status']) form.elements['status'].value = member.status;
-
-            if (form.elements['probationaryDate']) form.elements['probationaryDate'].value = member.probationaryDate || '';
-            if (form.elements['promiseDate']) form.elements['promiseDate'].value = member.promiseDate || '';
-            if (form.elements['confirmationDate']) form.elements['confirmationDate'].value = member.confirmationDate || '';
-            if (form.elements['leaveDate']) form.elements['leaveDate'].value = member.leaveDate || '';
-
-            if (form.elements['notes']) form.elements['notes'].value = member.notes || '';
+            Object.keys(member).forEach(key => {
+                if (form.elements[key]) form.elements[key].value = member[key] || '';
+            });
 
             document.querySelector('.form-title').textContent = '단원정보 관리';
             const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
             submitBtn.textContent = '저 장';
 
             form.setAttribute('data-edit-id', member.id);
-            form.setAttribute('data-original-status', member.status); // Store original status for history management
-            form.setAttribute('data-initial-prob-date', member.probationaryDate || ''); // For change detection
-
-            isProbDateAlertShown = false; // Reset alert flag for new edit session
-
-            // Re-initialize leave date field state based on loaded data
+            form.setAttribute('data-original-status', member.status);
+            form.setAttribute('data-initial-prob-date', member.probationaryDate || '');
+            isProbDateAlertShown = false;
             updateLeaveDateState();
 
-            // Show Delete Button only for Admin
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            const role = ((user && user.role) || '').toLowerCase();
+            const role = (currentUserProfile.role || '').toLowerCase();
             const isAdmin = role === 'admin' || role === '관리자';
-
-            if (isAdmin) {
-                document.getElementById('btnDeleteMember').style.display = 'inline-block';
-            } else {
-                document.getElementById('btnDeleteMember').style.display = 'none';
-            }
+            document.getElementById('btnDeleteMember').style.display = isAdmin ? 'inline-block' : 'none';
         }
 
-        // Enter Key Navigation (Skip Disabled Fields)
-        document.getElementById('memberRegisterForm').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                const target = e.target;
-                if (target.tagName === 'TEXTAREA' || target.type === 'submit' || target.type === 'button') {
-                    return;
+        // Form Submission (Firestore)
+        document.getElementById('memberRegisterForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const memberData = Object.fromEntries(formData.entries());
+            const editId = this.getAttribute('data-edit-id');
+
+            if (!memberData.churchName || !memberData.presidiumName || !memberData.name || !memberData.probationaryDate) {
+                alert('성당, 쁘레시디움, 성명, 입단/전입일은 필수 입력입니다.');
+                return;
+            }
+
+            try {
+                memberData.updatedAt = serverTimestamp();
+                if (editId) {
+                    await updateDoc(doc(db, "members_list", editId), memberData);
+                    await syncUserAccountStatus(memberData);
+                    alert('수정 완료되었습니다.');
+                } else {
+                    memberData.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "members_list"), memberData);
+                    await syncUserAccountStatus(memberData);
+                    alert('신규 등록 완료되었습니다.');
                 }
-
-                e.preventDefault();
-                const form = this;
-
-                // Validation for probationaryDate on Enter
-                if (target.name === 'probationaryDate' && (!target.value || target.value.trim() === '')) {
-                    alert('입단/전입일을 먼저 입력해 주세요.');
-                    target.focus();
-                    return;
-                }
-
-
-                const focusable = Array.from(form.querySelectorAll('input, select, textarea, button'));
-                const currentIndex = focusable.indexOf(target);
-
-                // Find the next enabled focusable element
-                for (let i = currentIndex + 1; i < focusable.length; i++) {
-                    const nextElement = focusable[i];
-                    if (!nextElement.disabled && nextElement.type !== 'hidden' && nextElement.offsetParent !== null) {
-                        nextElement.focus();
-                        break;
-                    }
-                }
+                location.reload();
+            } catch (err) {
+                console.error("Save error:", err);
+                alert('저장 중 오류가 발생했습니다: ' + err.message);
             }
         });
 
-        // Feast Date Formatting (MM.DD)
-        // Global Date Formatting (YYYY-MM-DD) for all date inputs
-        const dateInputs = document.querySelectorAll('input[name="birthDate"], input[name="probationaryDate"], input[name="promiseDate"], input[name="confirmationDate"], input[name="leaveDate"]');
+        async function syncUserAccountStatus(memberData) {
+            try {
+                const q = query(collection(db, "users"),
+                    where("name", "==", memberData.name),
+                    where("church", "==", memberData.churchName),
+                    where("presidium", "==", memberData.presidiumName)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
+                    let updateData = {};
+                    if (memberData.status === '퇴단' || memberData.status === '전출') {
+                        updateData.status = 'retire';
+                        updateData.leaveDate = memberData.leaveDate || new Date().toISOString().split('T')[0];
+                    } else if (userData.status === 'retire') {
+                        updateData.status = 'active';
+                        updateData.leaveDate = null;
+                    }
+                    if (Object.keys(updateData).length > 0) {
+                        await updateDoc(doc(db, "users", userDoc.id), updateData);
+                    }
+                }
+            } catch (err) {
+                console.error("User sync error:", err);
+            }
+        }
 
+        // --- UI Utils (Formatting) ---
+        const dateInputs = document.querySelectorAll('input[placeholder="YYYY-MM-DD"]');
         dateInputs.forEach(input => {
             input.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-digits
+                let value = e.target.value.replace(/[^0-9]/g, '');
                 let formatted = '';
-
-                if (value.length <= 4) {
-                    formatted = value;
-                } else if (value.length <= 6) {
-                    formatted = value.substring(0, 4) + '-' + value.substring(4);
-                } else {
-                    formatted = value.substring(0, 4) + '-' + value.substring(4, 6) + '-' + value.substring(6, 8);
-                }
-
+                if (value.length <= 4) formatted = value;
+                else if (value.length <= 6) formatted = value.substring(0, 4) + '-' + value.substring(4);
+                else formatted = value.substring(0, 4) + '-' + value.substring(4, 6) + '-' + value.substring(6, 8);
                 e.target.value = formatted;
             });
         });
@@ -944,249 +889,24 @@
         const feastInput = document.querySelector('input[name="feastDate"]');
         if (feastInput) {
             feastInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-digits
-                if (value.length > 2) {
-                    value = value.substring(0, 2) + '.' + value.substring(2, 4);
-                }
+                let value = e.target.value.replace(/[^0-9]/g, '');
+                if (value.length > 2) value = value.substring(0, 2) + '.' + value.substring(2, 4);
                 e.target.value = value;
             });
         }
 
-        // Phone Number Formatting (010-XXXX-XXXX)
         const phoneInput = document.querySelector('input[name="phone"]');
         if (phoneInput) {
             phoneInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-digits
+                let value = e.target.value.replace(/[^0-9]/g, '');
                 let formatted = '';
-
-                if (value.length < 4) {
-                    formatted = value;
-                } else if (value.length < 7) {
-                    formatted = value.substring(0, 3) + '-' + value.substring(3);
-                } else if (value.length < 11) {
-                    formatted = value.substring(0, 3) + '-' + value.substring(3, 6) + '-' + value.substring(6);
-                } else {
-                    formatted = value.substring(0, 3) + '-' + value.substring(3, 7) + '-' + value.substring(7, 11);
-                }
-
+                if (value.length < 4) formatted = value;
+                else if (value.length < 7) formatted = value.substring(0, 3) + '-' + value.substring(3);
+                else if (value.length < 11) formatted = value.substring(0, 3) + '-' + value.substring(3, 6) + '-' + value.substring(6);
+                else formatted = value.substring(0, 3) + '-' + value.substring(3, 7) + '-' + value.substring(7, 11);
                 e.target.value = formatted;
             });
         }
-
-        // Form Submission
-        document.getElementById('memberRegisterForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-            const memberData = Object.fromEntries(formData.entries());
-            const editId = this.getAttribute('data-edit-id');
-
-            // Validate essential fields
-            if (!memberData.churchName || !memberData.presidiumName || !memberData.name || !memberData.probationaryDate) {
-                alert('성당, 쁘레시디움, 성명, 입단/전입일은 필수 입력입니다.');
-                return;
-            }
-
-            // Date Validation (Probationary Date vs Promise Date)
-            const probDate = memberData.probationaryDate;
-            const promDate = memberData.promiseDate;
-            const leaveDate = memberData.leaveDate;
-            const status = memberData.status;
-
-            // 1. Promise Date Validation
-            if (promDate) {
-                if (!probDate) {
-                    alert('입단/전입일이 입력되지 않은 상태에서 선서일을 입력할 수 없습니다. \n먼저 입단/전입일을 입력해 주세요.');
-                    return;
-                }
-                if (new Date(promDate) <= new Date(probDate)) {
-                    alert('선서일은 입단/전입일보다 나중의 날짜여야 합니다. \n날짜를 확인해 주세요.');
-                    return;
-                }
-            }
-
-
-            // 3. Leave Date Validation
-            if (leaveDate) {
-                // Must be '퇴단' or '전출' status
-                if (status !== '퇴단' && status !== '전출') {
-                    alert("상태가 '퇴단' 또는 '전출'인 경우에만 퇴단/전출일을 입력할 수 있습니다.");
-                    return;
-                }
-                if (!probDate) {
-                    alert('입단/전입일이 없는 상태에서 퇴단/전출일을 입력할 수 없습니다.');
-                    return;
-                }
-                if (new Date(leaveDate) <= new Date(probDate)) {
-                    alert('퇴단/전출일은 입단/전입일보다 나중의 날짜여야 합니다. \n날짜를 확인해 주세요.');
-                    return;
-                }
-            } else if (status === '퇴단' || status === '전출') {
-                // If status is retire/leave, date is required
-                alert("'퇴단' 또는 '전출' 상태 선택 시 해당 날짜를 입력해야 합니다.");
-                return;
-            }
-
-            // Duplicate Check & Officer Transfer Logic
-            // Duplicate Check & Officer Transfer Logic
-            if (!editId) {
-                // New Registration Duplicate Check
-                const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-                const isDuplicate = members.some(m =>
-                    m.name === memberData.name &&
-                    m.churchName === memberData.churchName &&
-                    m.curiaName === memberData.curiaName &&
-                    m.presidiumName === memberData.presidiumName &&
-                    m.role === memberData.role &&
-                    m.status === memberData.status
-                );
-
-                if (isDuplicate) {
-                    alert('이미 동일한 정보의 단원이 등록되어 있습니다.');
-                    return;
-                }
-
-                memberData.id = Date.now().toString();
-                members.push(memberData);
-                localStorage.setItem('members_list', JSON.stringify(members));
-
-                // [추가] 가입 정보(로그인 계정)와 연동
-                syncUserAccountStatus(memberData);
-
-                alert('단원 등록이 완료되었습니다.');
-                location.reload();
-            } else {
-                // Update Existing or Create New for Officer Transfer or History Management
-                const members = JSON.parse(localStorage.getItem('members_list') || '[]');
-                const originalRole = this.getAttribute('data-original-role');
-                const originalStatus = this.getAttribute('data-original-status');
-
-                // 1. History Management Logic: Re-entry from Retire
-                if (originalStatus === '퇴단' && (memberData.status === '입단' || memberData.status === '전입')) {
-                    if (confirm(`'퇴단' 상태인 단원을 '${memberData.status}' 처리하여 신규 기록을 생성하시겠습니까?\n\n[확인]: 기존 퇴단 기록은 보존하고, 새로운 활동 기록을 생성합니다.\n[취소]: 작업을 중단합니다.`)) {
-                        memberData.id = Date.now().toString(); // New ID for new history
-                        members.push(memberData);
-                        localStorage.setItem('members_list', JSON.stringify(members));
-                        alert('새로운 입단 기록이 생성되었습니다. (기존 퇴단 기록 보존)');
-                        location.reload();
-                        return;
-                    } else {
-                        return;
-                    }
-                }
-
-
-                // Normal Update
-                const index = members.findIndex(m => m.id === editId);
-                if (index !== -1) {
-                    memberData.id = editId; // Keep original ID
-                    members[index] = memberData;
-                    localStorage.setItem('members_list', JSON.stringify(members));
-
-                    // 쁘레또리움 퇴단 정보 자동 동기화 (퇴단/전출 시)
-                    if (memberData.status === '퇴단' || memberData.status === '전출') {
-                        const praetoriumList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
-                        let praeChanged = false;
-
-                        // 해당 단원의 활성화된(퇴단일이 없는) 쁘레또리움 이력을 찾아 동일한 날짜 기입
-                        praetoriumList.forEach(record => {
-                            if (record.memberId === editId && (!record.leaveDate || record.leaveDate === '')) {
-                                record.leaveDate = memberData.leaveDate;
-                                record.status = 'retire';
-                                praeChanged = true;
-                            }
-                        });
-
-                        if (praeChanged) {
-                            localStorage.setItem('praetorium_list', JSON.stringify(praetoriumList));
-                            console.log('Praetorium withdrawal date synchronized.');
-                        }
-                    }
-
-                    // [추가] 가입 정보(로그인 계정)와 연동 (수정 시에도 적용)
-                    syncUserAccountStatus(memberData);
-
-                    alert('단원 정보가 저장되었습니다.');
-                    location.reload();
-                } else {
-                    alert('수정할 단원 정보를 찾을 수 없습니다.');
-                }
-            }
-        });
-
-        // [공통 함수] 단원 상태와 가입 계정 상태 동기화
-        function syncUserAccountStatus(memberData) {
-            const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-            // 이름과 소속이 일치하는 가입 계정 찾기
-            const matchedUser = Object.values(users).find(u =>
-                u.name === memberData.name &&
-                (u.church === memberData.churchName || u.churchName === memberData.churchName) &&
-                (u.presidiumName === memberData.presidiumName || u.presidium === memberData.presidiumName)
-            );
-
-            if (matchedUser) {
-                if (memberData.status === '퇴단' || memberData.status === '전출') {
-                    console.log("계정 연동: 탈퇴 처리함. ID:", matchedUser.uid);
-                    matchedUser.status = 'retire';
-                    matchedUser.leaveDate = memberData.leaveDate || new Date().toISOString().split('T')[0];
-                } else {
-                    // 퇴단 상태에서 다시 복귀한 경우 (입단/전입 등)
-                    if (matchedUser.status === 'retire') {
-                        console.log("계정 연동: 활동 상태로 복구함. ID:", matchedUser.uid);
-                        matchedUser.status = 'active';
-                        delete matchedUser.leaveDate;
-                    }
-                }
-                users[matchedUser.uid] = matchedUser;
-                localStorage.setItem('users', JSON.stringify(users));
-            }
-        }
-
-        // [Step 17/18] 기존 단원 데이터 성별 및 명칭 일괄 업데이트 (일회성 실행)
-        (function () {
-            const MIGR_KEY = 'migrated_member_gender_v18'; // v18로 업그레이드
-            if (localStorage.getItem(MIGR_KEY)) return;
-
-            // 1. 단원 목록 (members_list)
-            let members = JSON.parse(localStorage.getItem('members_list') || '[]');
-            let changedMembers = false;
-            members = members.map(m => {
-                // 성별 업데이트 (Step 17)
-                if (!m.gender || (m.gender !== '남' && m.gender !== '여')) {
-                    m.gender = '여';
-                    changedMembers = true;
-                }
-                // 명칭 업데이트 (Step 18)
-                if (m.classification === '활동단원') {
-                    m.classification = '행동단원';
-                    changedMembers = true;
-                }
-                return m;
-            });
-
-            if (changedMembers) {
-                localStorage.setItem('members_list', JSON.stringify(members));
-                console.log('Step 18: Terminology updated to "행동단원" in members_list');
-            }
-
-            // 2. 사용자 목록 (users) - 만약 가입 데이터에 활동단원이 있다면 변경
-            let users = JSON.parse(localStorage.getItem('users') || '{}');
-            let changedUsers = false;
-            Object.keys(users).forEach(uid => {
-                if (users[uid].classification === '활동단원') {
-                    users[uid].classification = '행동단원';
-                    changedUsers = true;
-                }
-            });
-            if (changedUsers) {
-                localStorage.setItem('users', JSON.stringify(users));
-                console.log('Step 18: Terminology updated to "행동단원" in users');
-            }
-
-            localStorage.setItem(MIGR_KEY, 'true');
-        })();
-
     </script>
 </body>
 

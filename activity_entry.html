@@ -666,6 +666,10 @@
 
     <script src="script.js?v=20260306_1750"></script>
     <script type="module">
+        import { db } from "./firebase-config.js";
+        import {
+            doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260306_1720";
         import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260306_1720";
 
@@ -686,9 +690,8 @@
         const sessionInput = document.getElementById('sessionNumber');
 
         // 인증 상태 감시자 초기화
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             if (!user) {
-                alert('로그인이 필요합니다.');
                 location.href = 'index.html';
                 return;
             }
@@ -701,10 +704,18 @@
                 });
             }
 
-            // 모든 성당의 스키마 데이터 로드
-            activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            // [수정] Firestore에서 모든 성당의 스키마 데이터 로드
+            try {
+                const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
+                schemaSnap.forEach(doc => {
+                    activitySchemaMap[doc.id] = doc.data().categories;
+                });
+            } catch (error) {
+                console.error("Error loading schemas:", error);
+                activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
+            }
 
-            initSelectors();
+            await initSelectors();
             setupEventListeners();
         });
 
@@ -713,7 +724,7 @@
          * @function initSelectors
          * @description 사용자 권한에 따라 성당, 꾸리아, 쁘레시디움, 단원 선택 필드를 초기화하고 접근을 제어합니다.
          */
-        function initSelectors() {
+        async function initSelectors() {
             const role = currentUser.role?.toLowerCase();
             const isAdmin = role === 'admin' || role === '관리자';
             // 간부 역할 목록 (단장, 부단장, 서기, 회계)
@@ -747,7 +758,7 @@
                 presidiumInput.disabled = true;
 
 
-                updateMeetingDates(); // [수정] 출석 날짜 목록 로드 (내부에서 초기화 처리 포함)
+                await updateMeetingDates(); // [수정] 출석 날짜 목록 로드 (내부에서 초기화 처리 포함)
 
                 if (role === 'member' || role === '단원') {
                     // 일반 단원은 본인 이름 고정
@@ -803,41 +814,54 @@
          * @function updateMeetingDates
          * @description 선택된 쁘레시디움의 출석 기록(attendance_list)을 가져와 날짜 드롭다운을 구성합니다.
          */
-        function updateMeetingDates() {
+        async function updateMeetingDates() {
             const presidium = presidiumSelect.value;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+
             reportDateSelect.innerHTML = '<option value="">날짜 선택</option>';
             sessionInput.value = '';
             memberSelect.value = ''; // Clear hidden memberSelect
             memberInput.value = ''; // Clear memberInput
 
-            if (!presidium) return;
+            if (!presidium || !church || !curia) return;
 
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const myAttendance = allAttendance.filter(a =>
-                (a.presidium === presidium || a.presidiumName === presidium)
-            ).sort((a, b) => b.date.localeCompare(a.date)); // 최신순
+            try {
+                // Firestore에서 출석 기록 가져오기
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium),
+                    orderBy('date', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const myAttendance = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            if (myAttendance.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = "";
-                opt.textContent = "등록된 출석 기록 없음";
-                reportDateSelect.appendChild(opt);
-                return;
-            }
+                if (myAttendance.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.textContent = "등록된 출석 기록 없음";
+                    reportDateSelect.appendChild(opt);
+                    return;
+                }
 
-            myAttendance.forEach(a => {
-                const opt = document.createElement('option');
-                opt.value = a.date;
-                opt.dataset.session = a.session;
-                opt.dataset.attendanceId = a.id; // [추가] 고유 ID 저장
-                opt.textContent = `${a.date} (${a.session}회)`;
-                reportDateSelect.appendChild(opt);
-            });
+                myAttendance.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.date;
+                    opt.dataset.session = a.session;
+                    opt.dataset.attendanceId = a.id; // [추가] 고유 ID 저장
+                    opt.textContent = `${a.date} (${a.session}회)`;
+                    reportDateSelect.appendChild(opt);
+                });
 
-            // [추가] 최신 주회합 날짜 자동 선택 및 단원 목록 로드
-            if (myAttendance.length > 0) {
-                reportDateSelect.value = myAttendance[0].date;
-                updateMemberList();
+                // [추가] 최신 주회합 날짜 자동 선택 및 단원 목록 로드
+                if (myAttendance.length > 0) {
+                    reportDateSelect.value = myAttendance[0].date;
+                    await updateMemberList();
+                }
+            } catch (error) {
+                console.error("Error updatesessionSelects:", error);
             }
         }
 
@@ -845,7 +869,7 @@
          * [Point 3] 단원 목록 업데이트
          *              선택된 주회합 날짜에 '출석(P)'한 단원만 출석부 원본 데이터를 기반으로 목록에 표시합니다.
          */
-        function updateMemberList() {
+        async function updateMemberList() {
             const church = (churchSelect.value || '').trim();
             const curia = (curiaSelect.value || '').trim();
             const presidium = (presidiumSelect.value || '').trim();
@@ -864,68 +888,72 @@
             memberInput.value = '';
             if (!presidium || !reportDate) return;
 
-            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+            try {
+                // Firestore에서 데이터 가져오기
+                const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church), where('presidiumName', '==', presidium));
+                const memSnap = await getDocs(memQuery);
+                const allMembers = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // 1. 해당 주회합의 출석 데이터 찾기 (ID 매칭)
-            const attId = selectedOpt ? selectedOpt.dataset.attendanceId : null;
-            const attendanceRecord = allAttendance.find(a => a.id === attId);
+                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church), where('curia', '==', curia), where('presidium', '==', presidium));
+                const ofSnap = await getDocs(ofQuery);
+                const allOfficers = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            if (!attendanceRecord || !attendanceRecord.attendanceData) {
-                console.warn("[MemberList Update] No attendance record found.");
-                return;
-            }
+                // 1. 해당 주회합의 출석 데이터 찾기 (ID 매칭)
+                const attId = selectedOpt ? selectedOpt.dataset.attendanceId : null;
+                if (!attId) return;
 
-            // 2. [출석부 화면과 100% 동일한 목록 구성 로직]
-            const rolePriorityMap = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
-
-            // (1) 간부 필터링 (출석부 화면 로직 이식)
-            const officers = allOfficers.filter(o =>
-                (o.church === church || o.churchName === church) &&
-                (o.curia === curia || o.curiaName === curia) &&
-                (o.presidium === presidium || o.presidiumName === presidium) &&
-                o.appointmentDate <= reportDate &&
-                (!o.appointmentExpiryDate || o.appointmentExpiryDate > reportDate)
-            ).sort((a, b) => (rolePriorityMap[a.role] || 99) - (rolePriorityMap[b.role] || 99));
-
-            const officerIds = new Set(officers.map(o => o.memberId));
-
-            // (2) 일반 단원 필터링 (출석부 화면 로직 이식)
-            const members = allMembers.filter(m =>
-                (m.churchName === church || m.church === church) &&
-                (m.presidiumName === presidium || m.presidium === presidium) &&
-                (!m.leaveDate || m.leaveDate > reportDate) &&
-                !officerIds.has(m.id)
-            ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
-
-            // (3) 합치기 (순서 엄수: 간부 -> 단원)
-            const combinedSource = [];
-            officers.forEach(o => combinedSource.push({ id: o.memberId, name: o.name, role: o.role, baptismalName: o.baptismalName }));
-            members.forEach(m => combinedSource.push({ id: m.id, name: m.name, role: '단원', baptismalName: m.baptismalName }));
-
-            // 3. 목록 렌더링 (출석한 'P' 상태인 사람만 순서대로 추가)
-            // We don't render to memberSelect directly, but store the filtered list for showMemberDropdown
-            const availableMembersForDropdown = [];
-            let presentCount = 0;
-            combinedSource.forEach(m => {
-                const data = attendanceRecord.attendanceData[m.id] || attendanceRecord.attendanceData[m.name];
-                if (!data) return;
-
-                const status = (typeof data === 'object') ? data.status : data;
-                if (status === 'P' || status === 'L') {
-                    availableMembersForDropdown.push(m);
-                    presentCount++;
+                const attDoc = await getDoc(doc(db, 'attendance_list', attId));
+                if (!attDoc.exists()) {
+                    console.warn("[MemberList Update] No attendance record found.");
+                    return;
                 }
-            });
-            // Store this list globally or pass it to showMemberDropdown
-            memberSelect.dataset.availableMembers = JSON.stringify(availableMembersForDropdown);
+                const attendanceRecord = attDoc.data();
 
+                // 2. [출석부 화면과 100% 동일한 목록 구성 로직]
+                const rolePriorityMap = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
 
-            console.log(`[MemberList Update] Mirroring attendance record: ${presentCount} members loaded.`);
+                // (1) 간부 필터링 (출석부 화면 로직 이식)
+                const officers = allOfficers.filter(o =>
+                    o.appointmentDate <= reportDate &&
+                    (!o.appointmentExpiryDate || o.appointmentExpiryDate > reportDate)
+                ).sort((a, b) => (rolePriorityMap[a.role] || 99) - (rolePriorityMap[b.role] || 99));
 
-            // 날짜 변경 등에 의해 단원 목록이 갱신되면 기존 데이터 로드 시도
-            loadExistingReport();
+                const officerIds = new Set(officers.map(o => o.memberId));
+
+                // (2) 일반 단원 필터링 (출석부 화면 로직 이식)
+                const members = allMembers.filter(m =>
+                    (!m.leaveDate || m.leaveDate > reportDate) &&
+                    !officerIds.has(m.id)
+                ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+
+                // (3) 합치기 (순서 엄수: 간부 -> 단원)
+                const combinedSource = [];
+                officers.forEach(o => combinedSource.push({ id: o.memberId, name: o.name, role: o.role, baptismalName: o.baptismalName }));
+                members.forEach(m => combinedSource.push({ id: m.id, name: m.name, role: '단원', baptismalName: m.baptismalName }));
+
+                // 3. 목록 렌더링 (출석한 'P' 상태인 사람만 순서대로 추가)
+                const availableMembersForDropdown = [];
+                let presentCount = 0;
+                combinedSource.forEach(m => {
+                    const data = attendanceRecord.attendanceData[m.id] || attendanceRecord.attendanceData[m.name];
+                    if (!data) return;
+
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') {
+                        availableMembersForDropdown.push(m);
+                        presentCount++;
+                    }
+                });
+                // Store this list globally or pass it to showMemberDropdown
+                memberSelect.dataset.availableMembers = JSON.stringify(availableMembersForDropdown);
+
+                console.log(`[MemberList Update] Mirroring attendance record: ${presentCount} members loaded.`);
+
+                // 날짜 변경 등에 의해 단원 목록이 갱신되면 기존 데이터 로드 시도
+                await loadExistingReport();
+            } catch (error) {
+                console.error("Error updateMemberList:", error);
+            }
         }
 
         /**
@@ -975,7 +1003,7 @@
             // presidiumSelect.addEventListener('change', updateMeetingDates);
 
             // 주회합 날짜 변경 시 단원 목록 업데이트
-            reportDateSelect.addEventListener('change', updateMemberList);
+            reportDateSelect.addEventListener('change', async () => await updateMemberList());
 
             // [추가] 단원 선택 변경 시 기존 데이터 로드
             // This is now triggered by the custom dropdown selection
@@ -1070,12 +1098,12 @@
             } else {
                 presidiumDropdown.innerHTML = filtered.map(name => `<div class="dropdown-item" data-name="${name}">${name}</div>`).join('');
                 presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                    item.addEventListener('click', () => {
+                    item.addEventListener('click', async () => {
                         const name = item.dataset.name;
                         presidiumInput.value = name;
                         presidiumSelect.value = name;
                         presidiumDropdown.style.display = 'none';
-                        updateMeetingDates();
+                        await updateMeetingDates();
                     });
                 });
             }
@@ -1093,7 +1121,7 @@
             } else {
                 memberDropdown.innerHTML = filtered.map(m => `<div class="dropdown-item" data-name="${m.name}" data-uid="${m.id}">${`[${m.role}] ${m.name} (${m.baptismalName || ''})`}</div>`).join('');
                 memberDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                    item.addEventListener('click', () => {
+                    item.addEventListener('click', async () => {
                         memberDropdown.style.display = 'none'; // Close other
                         const name = item.dataset.name;
                         const uid = item.dataset.uid;
@@ -1101,7 +1129,7 @@
                         memberSelect.value = name; // Store just the name for logic
                         memberSelect.dataset.uid = uid; // Store UID for attendance check
                         // Trigger load
-                        loadExistingReport();
+                        await loadExistingReport();
                     });
                 });
             }
@@ -1113,10 +1141,13 @@
          * @description 선택된 주회합/단원의 기존 활동 보고 기록이 있는지 확인하고, 있으면 내역을 폼에 채웁니다.
          *              기록이 없으면 모든 입력 필드를 0으로 초기화합니다.
          */
-        function loadExistingReport() {
+        async function loadExistingReport() {
             const memberName = memberSelect.value;
+            const uid = memberSelect.dataset.uid;
             const date = reportDateSelect.value;
             const session = sessionInput.value;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
             const presidium = presidiumSelect.value;
             const inputs = document.querySelectorAll('.activity-input');
 
@@ -1139,95 +1170,94 @@
                 return;
             }
 
-            // --- 출석 여부 화면단 사전 검증 추가 ---
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const attRecord = allAttendance.find(a =>
-                (a.presidium === presidium || a.presidiumName === presidium) &&
-                a.date === date &&
-                String(a.session) === String(session)
-            );
+            try {
+                // --- 출석 여부 화면단 사전 검증 추가 ---
+                const selectedOpt = reportDateSelect.options[reportDateSelect.selectedIndex];
+                const attId = selectedOpt ? selectedOpt.dataset.attendanceId : null;
 
-            let isAttended = false;
-            if (attRecord && attRecord.attendanceData) {
-                // memberSelect가 input으로 바뀌었으므로 dataset.uid 등은 직접 넘겨받은 값을 사용해야 함
-                // dropdown - click 이벤트에서 uid를 어딘가 저장해둬야 함. 일단 memberSelect.dataset.uid에 저장하도록 수정함
-                const uid = memberSelect.dataset.uid;
-
-                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
-                if (data) {
-                    const status = (typeof data === 'object') ? data.status : data;
-                    if (status === 'P' || status === 'L') isAttended = true;
-                } else {
-                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                    const memberObj = allMembers.find(m => m.name === memberName && (m.presidium === presidium || m.presidiumName === presidium)) ||
-                        allOfficers.find(o => o.name === memberName && (o.presidium === presidium || o.presidiumName === presidium));
-                    if (memberObj) {
-                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
-                        if (dataById) {
-                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
-                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                let isAttended = false;
+                if (attId) {
+                    const attDoc = await getDoc(doc(db, 'attendance_list', attId));
+                    if (attDoc.exists()) {
+                        const attRecord = attDoc.data();
+                        const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
+                        if (data) {
+                            const status = (typeof data === 'object') ? data.status : data;
+                            if (status === 'P' || status === 'L') isAttended = true;
                         }
                     }
                 }
-            }
 
-            if (!isAttended) {
-                // 결석 시 폼 숨김 처리
-                absState.style.display = 'block';
-                grid.style.display = 'none';
-                btnSaveReport.disabled = true;
-                btnSaveReport.style.opacity = '0.5';
+                if (!isAttended) {
+                    // 결석 시 폼 숨김 처리
+                    absState.style.display = 'block';
+                    grid.style.display = 'none';
+                    btnSaveReport.disabled = true;
+                    btnSaveReport.style.opacity = '0.5';
+                    btnDeleteReport.style.display = 'none';
+                    calculateTotals();
+                    return;
+                } else {
+                    absState.style.display = 'none';
+                    grid.style.display = 'grid';
+                    btnSaveReport.disabled = false;
+                    btnSaveReport.style.opacity = '1';
+                }
+
+                // 2. 저장된 기록 검색
+                const docId = `${church}_${presidium}_${session}_${uid || memberName}`;
+                const reportDoc = await getDoc(doc(db, 'activity_records', docId));
+
+                // 3. 데이터가 있으면 폼에 채우기
+                if (reportDoc.exists()) {
+                    const record = reportDoc.data();
+                    console.log(`[LoadReport] Found existing record for ${memberName} (${session}차)`);
+
+                    // counts 채우기
+                    if (record.counts) {
+                        Object.keys(record.counts).forEach(name => {
+                            const input = document.querySelector(`.activity-input[data-name="${name}"]`);
+                            if (input) input.value = record.counts[name];
+                        });
+                    }
+
+                    btnDeleteReport.style.display = isAdmin ? 'flex' : 'none';
+                    btnDeleteReport.dataset.docId = docId; // Store for deletion
+                } else {
+                    console.log(`[LoadReport] No existing record for ${memberName} (${session}차)`);
+                    btnDeleteReport.style.display = 'none';
+                }
+
+                // 4. 합계 계산 및 정렬 적용 (데이터 로드 후 즉시 반영)
                 calculateTotals();
-                return; // 이후 로직 수행 안함
-            } else {
-                absState.style.display = 'none';
-                grid.style.display = 'grid';
-                btnSaveReport.disabled = false;
-                btnSaveReport.style.opacity = '1';
+                if (currentSortMode === 'activity') reorderCards();
+            } catch (error) {
+                console.error("Error loadExistingReport:", error);
             }
-
-            // 2. 저장된 기록 검색
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            const record = records.find(r =>
-                r.memberName === memberName &&
-                r.date === date &&
-                r.session === session
-            );
-
-            // 3. 데이터가 있으면 폼에 채우기
-            if (record && record.counts) {
-                console.log(`[LoadReport] Found existing record for ${memberName} (${session}차)`);
-                btnDeleteReport.style.display = isAdmin ? 'flex' : 'none'; // Only Admin can see Delete button
-            } else {
-                console.log(`[LoadReport] No existing record for ${memberName} (${session}차)`);
-                btnDeleteReport.style.display = 'none'; // Hide delete button
-            }
-
-            // 4. 합계 계산 및 정렬 적용 (데이터 로드 후 즉시 반영)
-            calculateTotals();
-            if (currentSortMode === 'activity') reorderCards();
         }
 
         /**
          * @function deleteReport
          * @description 현재 선택된 주회합/단원의 활동 보고 기록을 삭제합니다.
          */
-        function deleteReport() {
+        async function deleteReport() {
             const memberName = memberSelect.value;
             const date = reportDateSelect.value;
             const session = sessionInput.value;
+            const docId = btnDeleteReport.dataset.docId;
+
+            if (!docId) return;
 
             if (!confirm(`${memberName} 단원의 ${date} (${session}회) 활동보고를 삭제하시겠습니까?`)) return;
 
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            const filtered = records.filter(r =>
-                !(r.memberName === memberName && r.date === date && r.session === session)
-            );
-
-            localStorage.setItem('activity_records', JSON.stringify(filtered));
-            alert('삭제되었습니다.');
-            loadExistingReport(); // UI 갱신
+            try {
+                await deleteDoc(doc(db, 'activity_records', docId));
+                alert('삭제되었습니다.');
+                await loadExistingReport(); // UI 갱신
+            } catch (error) {
+                console.error("Error deleteReport:", error);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
         }
 
         /**
@@ -1365,116 +1395,106 @@
 
         /**
          * @function saveReport
-         * @description 현재 입력된 활동 보고 데이터를 로컬 스토리지에 저장합니다.
+         * @description 현재 입력된 활동 보고 데이터를 Firestore에 저장합니다.
          *              필수 필드 유효성 검사, 활동 건수 확인, 기존 기록 덮어쓰기 로직을 포함합니다.
          */
-        function saveReport() {
+        async function saveReport() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
             const presidium = presidiumSelect.value;
             const date = reportDateSelect.value;
             const session = sessionInput.value;
             const memberName = memberSelect.value;
+            const uid = memberSelect.dataset.uid;
 
             // 필수 필드 유효성 검사
             if (!church || !presidium || !date || !session || !memberName) {
                 return alert('모든 소속 정보와 단원, 회차를 정확히 입력해 주세요.');
             }
 
-            // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const attRecord = allAttendance.find(a =>
-                (a.presidium === presidium || a.presidiumName === presidium) &&
-                a.date === date &&
-                String(a.session) === String(session)
-            );
+            try {
+                // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
+                const selectedOpt = reportDateSelect.options[reportDateSelect.selectedIndex];
+                const attId = selectedOpt ? selectedOpt.dataset.attendanceId : null;
 
-            let isAttended = false;
-            if (attRecord && attRecord.attendanceData) {
-                // select option에 저장된 uid 활용 
-                const selectedOpt = memberSelect.options[memberSelect.selectedIndex];
-                const uid = selectedOpt ? selectedOpt.dataset.uid : null;
-
-                // uid로 먼저 찾고, 없으면 이름으로 찾기
-                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
-                if (data) {
-                    const status = (typeof data === 'object') ? data.status : data;
-                    if (status === 'P' || status === 'L') isAttended = true;
-                } else {
-                    // 혹시 매칭 실패 시 전체 회원 목록에서 id를 찾아 확인
-                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                    const memberObj = allMembers.find(m => m.name === memberName && (m.presidium === presidium || m.presidiumName === presidium)) ||
-                        allOfficers.find(o => o.name === memberName && (o.presidium === presidium || o.presidiumName === presidium));
-                    if (memberObj) {
-                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
-                        if (dataById) {
-                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
-                            if (statusById === 'P' || statusById === 'L') isAttended = true;
+                let isAttended = false;
+                if (attId) {
+                    const attDoc = await getDoc(doc(db, 'attendance_list', attId));
+                    if (attDoc.exists()) {
+                        const attRecord = attDoc.data();
+                        const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[memberName];
+                        if (data) {
+                            const status = (typeof data === 'object') ? data.status : data;
+                            if (status === 'P' || status === 'L') isAttended = true;
                         }
                     }
                 }
-            }
 
-            if (!isAttended) {
-                return alert('해당 주회합에 출석(또는 지각) 처리된 단원만 활동 보고를 등록할 수 있습니다.\\n먼저 출석 상태를 확인해 주세요.');
-            }
-
-            const inputs = document.querySelectorAll('.activity-input');
-            const counts = {};
-            let hasAnyActivity = false;
-
-            // 입력된 활동 데이터 수집
-            inputs.forEach(input => {
-                const val = parseInt(input.value) || 0;
-                if (val > 0) {
-                    counts[input.dataset.name] = val;
-                    hasAnyActivity = true;
+                if (!isAttended) {
+                    return alert('해당 주회합에 출석(또는 지각) 처리된 단원만 활동 보고를 등록할 수 있습니다.\n먼저 출석 상태를 확인해 주세요.');
                 }
-            });
 
-            // 활동 건수가 없는 경우 사용자에게 확인 요청
-            if (!hasAnyActivity) {
-                if (!confirm('입력된 활동 건수가 없습니다. 그래도 저장하시겠습니까?')) return;
-            }
+                const inputs = document.querySelectorAll('.activity-input');
+                const counts = {};
+                let hasAnyActivity = false;
 
-            // 새로운 활동 보고 레코드 객체 생성
-            const record = {
-                id: Date.now(), // 고유 ID
-                churchName: church,
-                curiaName: curia,
-                presidiumName: presidium,
-                memberName: memberName,
-                session: session,
-                date: date,
-                counts: counts,
-                timestamp: new Date().toISOString() // 저장 시점
-            };
+                // 입력된 활동 데이터 수집
+                inputs.forEach(input => {
+                    const val = parseInt(input.value) || 0;
+                    if (val > 0) {
+                        counts[input.dataset.name] = val;
+                        hasAnyActivity = true;
+                    }
+                });
 
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+                // 활동 건수가 없는 경우 사용자에게 확인 요청
+                if (!hasAnyActivity) {
+                    if (!confirm('입력된 활동 건수가 없습니다. 그래도 저장하시겠습니까?')) return;
+                }
 
-            // 동일 단원/회차/날짜 중복 체크 및 덮어쓰기 로직
-            const existingIdx = records.findIndex(r => r.memberName === memberName && r.session === session && r.date === date);
-            if (existingIdx > -1) {
-                if (!confirm(`${memberName} 단원의 ${session}차 활동 보고가 이미 존재합니다. 덮어쓰시겠습니까?`)) return;
-                records.splice(existingIdx, 1); // 기존 레코드 제거
-            }
+                // 새로운 활동 보고 레코드 객체 생성
+                const record = {
+                    churchName: church,
+                    curiaName: curia,
+                    presidiumName: presidium,
+                    memberName: memberName,
+                    memberId: uid || '',
+                    session: session,
+                    date: date,
+                    counts: counts,
+                    updatedAt: serverTimestamp()
+                };
 
-            records.push(record); // 새 레코드 추가
-            localStorage.setItem('activity_records', JSON.stringify(records)); // 로컬 스토리지 업데이트
+                const docId = `${church}_${presidium}_${session}_${uid || memberName}`;
 
-            alert('저장되었습니다.');
+                // 중복 체크 및 저장
+                const reportRef = doc(db, 'activity_records', docId);
+                const existingReport = await getDoc(reportRef);
 
-            // 저장 후 다음 작업 선택
-            if (confirm('계속해서 다른 단원을 등록하시겠습니까?')) {
-                // 단원 선택만 해제 (소속 및 날짜 유지는 편의성을 위함)
-                memberSelect.value = "";
-                // 단원 역할이 아닌 경우에만 단원 선택 필드 활성화
-                if (currentUser.role?.toLowerCase() !== 'member') memberSelect.disabled = false;
-                inputs.forEach(input => input.value = ""); // 활동 입력 필드 초기화
-                calculateTotals(); // 총계 초기화
-            } else {
-                location.href = 'dashboard.html'; // 대시보드로 이동
+                if (existingReport.exists()) {
+                    if (!confirm(`${memberName} 단원의 ${session}차 활동 보고가 이미 존재합니다. 덮어쓰시겠습니까?`)) return;
+                }
+
+                await setDoc(reportRef, record);
+
+                alert('저장되었습니다.');
+
+                // 저장 후 다음 작업 선택
+                if (confirm('계속해서 다른 단원을 등록하시겠습니까?')) {
+                    // 단원 선택만 해제 (소속 및 날짜 유지는 편의성을 위함)
+                    memberSelect.value = "";
+                    memberInput.value = "";
+                    // 단원 역할이 아닌 경우에만 단원 선택 필드 활성화
+                    if (currentUser.role?.toLowerCase() !== 'member') memberSelect.disabled = false;
+                    inputs.forEach(input => input.value = ""); // 활동 입력 필드 초기화
+                    calculateTotals(); // 총계 초기화
+                    await loadExistingReport(); // UI 상태 초기화
+                } else {
+                    location.href = 'dashboard.html'; // 대시보드로 이동
+                }
+            } catch (error) {
+                console.error("Error saveReport:", error);
+                alert("저장 중 오류가 발생했습니다.");
             }
         }
     </script>

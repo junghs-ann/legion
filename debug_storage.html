@@ -1,23 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 
 <head>
-    <title>LocalStorage Debugger</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 백업 및 디버그 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <style>
+        .debug-container {
+            max-width: 900px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .debug-header {
+            border-bottom: 2px solid var(--secondary-color);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .debug-header h1 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #eee;
+            max-height: 500px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .btn-group {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-backup {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-backup:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        .info-box {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #856404;
+        }
+    </style>
 </head>
 
-<body>
-    <h1>LocalStorage Debugger</h1>
-    <pre id="output"></pre>
+<body class="dashboard-body">
+    <div class="debug-container">
+        <div class="debug-header">
+            <h1>로컬 데이터 백업 및 관리</h1>
+            <button onclick="location.href='dashboard.html'" class="btn-backup" style="background: #666;">
+                dashboard로 이동
+            </button>
+        </div>
+
+        <div class="info-box">
+            <strong>⚠️ 중요 알림:</strong><br>
+            시스템의 모든 데이터가 클라우드(Firestore)로 이전되었습니다. <br>
+            아래 '전체 데이터 백업' 버튼을 눌러 브라우저에 남아있는 기존 데이터를 `.json` 파일로 안전하게 보관하세요. <br>
+            백업이 완료되면 레거시 코드 제거 작업을 진행할 수 있습니다.
+        </div>
+
+        <div class="btn-group">
+            <button id="btnDownload" class="btn-backup">
+                <i class="fas fa-download"></i> 전체 데이터 백업 (JSON 다운로드)
+            </button>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #555;">현재 로컬 저장소(localStorage) 내용</h3>
+        <pre id="output">데이터 로딩 중...</pre>
+    </div>
+
     <script>
-        const data = {
-            presidia_list: JSON.parse(localStorage.getItem('presidia_list') || '[]'),
-            currentUser: JSON.parse(localStorage.getItem('currentUser') || '{}'),
-            users: JSON.parse(localStorage.getItem('users') || '{}')
+        function getAllLocalStorageData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                try {
+                    data[key] = JSON.parse(localStorage.getItem(key));
+                } catch (e) {
+                    data[key] = localStorage.getItem(key);
+                }
+            }
+            return data;
+        }
+
+        const fullData = getAllLocalStorageData();
+        document.getElementById('output').textContent = JSON.stringify(fullData, null, 2);
+
+        document.getElementById('btnDownload').onclick = () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `legion_backup_${timestamp}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+
+            alert('데이터 백업 파일이 생성되었습니다. 다운로드 폴더를 확인해 주세요.');
         };
-        document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-        console.log("Full LocalStorage Data:", data);
     </script>
-<script src="script.js?v=20260303_1255_fix"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>
 
 </html>

@@ -716,6 +716,10 @@
 
     <script src="script.js?v=20260306_1655"></script>
     <script type="module">
+        import { db } from "./firebase-config.js";
+        import {
+            collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, writeBatch, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1100_final";
 
         let currentUser = null;
@@ -758,16 +762,17 @@
             setupEventListeners();
         });
 
-        window.loadData = function () {
+        window.loadData = async function () {
             try {
-                membersList = JSON.parse(localStorage.getItem('members_list') || '[]') || [];
-                officersList = JSON.parse(localStorage.getItem('officers_list') || '[]') || [];
+                // Fetch Members and Officers from Firestore for the specific organization
+                // But since we need them for rendering, we'll fetch them in loadAttendanceList()
                 presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]') || [];
-                attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]') || [];
-                console.log("Local loadData complete.");
+
+                // For attendance_list, we'll fetch from Firestore based on selection
+                console.log("Local loadData complete (reference lists only).");
             } catch (e) {
                 console.error("Data parse error", e);
-                membersList = []; officersList = []; presidiaList = []; attendanceList = [];
+                presidiaList = [];
             }
         };
 
@@ -1008,41 +1013,55 @@
             presidiumDropdown.style.display = 'block';
         }
 
-        function updateSessionList(filter = '') {
+        async function updateSessionList(filter = '') {
             const presidium = presidiumSelect.value;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
             if (!presidium) {
                 sessionDropdown.innerHTML = '<div class="no-result">쁘레시디움을 선택해 주세요.</div>';
                 return;
             }
 
-            const prRecords = attendanceList.filter(a => a.presidium === presidium);
-            const sortedRecords = prRecords.sort((a, b) => parseInt(b.session) - parseInt(a.session));
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium)
+                );
+                const querySnapshot = await getDocs(q);
+                attendanceList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Filter by typing
-            const filtered = filter
-                ? sortedRecords.filter(a => a.session.toString().includes(filter))
-                : sortedRecords;
+                const sortedRecords = attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
-            if (filtered.length === 0) {
-                sessionDropdown.innerHTML = '<div class="no-result">일치하는 회차가 없습니다.</div>';
-                return;
-            }
+                // Filter by typing
+                const filtered = filter
+                    ? sortedRecords.filter(a => a.session.toString().includes(filter))
+                    : sortedRecords;
 
-            sessionDropdown.innerHTML = filtered.map(a => `
-                <div class="dropdown-item" data-session="${a.session}">
-                    ${a.session}회 (${a.date})
-                </div>
-            `).join('');
+                if (filtered.length === 0) {
+                    sessionDropdown.innerHTML = '<div class="no-result">일치하는 회차가 없습니다.</div>';
+                    return;
+                }
 
-            // Add click events to items
-            sessionDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const selected = item.dataset.session;
-                    sessionInput.value = selected;
-                    sessionDropdown.style.display = 'none';
-                    loadAttendanceBySession(true, true);
+                sessionDropdown.innerHTML = filtered.map(a => `
+                    <div class="dropdown-item" data-session="${a.session}">
+                        ${a.session}회 (${a.date})
+                    </div>
+                `).join('');
+
+                // Add click events to items
+                sessionDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const selected = item.dataset.session;
+                        sessionInput.value = selected;
+                        sessionDropdown.style.display = 'none';
+                        loadAttendanceBySession(true, true);
+                    });
                 });
-            });
+            } catch (error) {
+                console.error("Error loading session list:", error);
+            }
         }
 
         let isProcessingSession = false;
@@ -1103,68 +1122,84 @@
             }
         }
 
-        function deleteAttendance() {
+        async function deleteAttendance() {
             const date = dateInput.value;
             const presidium = presidiumSelect.value;
-            if (!date || !presidium) {
+            if (!date || !presidium || !currentEditingId) {
                 alert('삭제할 기록을 먼저 선택(조직 및 날짜)해 주세요.');
                 return;
             }
 
-            const existingIndex = attendanceList.findIndex(a => a.date === date && a.presidium === presidium);
-            if (existingIndex === -1) return;
-
             if (!confirm(`${date}일자 ${presidium}의 출석 기록을 정말 삭제하시겠습니까?`)) return;
 
-            attendanceList.splice(existingIndex, 1);
-            localStorage.setItem('attendance_list', JSON.stringify(attendanceList));
-
-            alert('출석 기록이 삭제되었습니다.');
-            window.setDirty(false);
-            updateSessionList(); // [추가] 회차 목록(datalist)을 최신화하여 삭제된 내역 반영
-            loadAttendanceByDate();
+            try {
+                await deleteDoc(doc(db, 'attendance_list', currentEditingId));
+                alert('출석 기록이 삭제되었습니다.');
+                window.setDirty(false);
+                currentEditingId = null;
+                sessionInput.value = '';
+                dateInput.value = '';
+                dayInput.value = '';
+                updateSessionList();
+                loadAttendanceList();
+            } catch (error) {
+                console.error("Error deleting attendance:", error);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
         }
 
-        function loadAttendanceList() {
+        async function loadAttendanceList() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
             const presidium = presidiumSelect.value;
-            const meetingDate = dateInput.value; // Use the selected meeting date
+            const meetingDate = dateInput.value;
 
             if (!church || !curia || !presidium) {
                 tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">조직을 선택하면 단원 목록이 표시됩니다.</td></tr>';
                 return;
             }
 
-            // 1. Get Officers (Active term during the meeting date)
-            const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+            try {
+                // 1. Fetch Officers and Members from Firestore
+                const ofQuery = query(
+                    collection(db, 'officers_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium)
+                );
+                const ofSnap = await getDocs(ofQuery);
+                officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // If meetingDate is not set, we might use today or just show everyone, 
-            // but the requirement says "based on meeting date".
-            const filterDate = meetingDate || new Date().toISOString().split('T')[0];
+                const memQuery = query(
+                    collection(db, 'members_list'),
+                    where('churchName', '==', church),
+                    where('presidiumName', '==', presidium)
+                );
+                const memSnap = await getDocs(memQuery);
+                membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            const officers = officersList.filter(o =>
-                o.church === church && o.curia === curia && o.presidium === presidium &&
-                o.appointmentDate <= filterDate &&
-                (!o.appointmentExpiryDate || o.appointmentExpiryDate > filterDate)
-            ).sort((a, b) => (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99));
+                const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+                const filterDate = meetingDate || new Date().toISOString().split('T')[0];
 
-            const officerIds = new Set(officers.map(o => o.memberId));
+                const officers = officersList.filter(o =>
+                    o.appointmentDate <= filterDate &&
+                    (!o.appointmentExpiryDate || o.appointmentExpiryDate > filterDate)
+                ).sort((a, b) => (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99));
 
-            // 2. Get Members (Active during the meeting date)
-            // Logic: Not an officer AND (!leaveDate OR leaveDate > meetingDate)
-            const members = membersList.filter(m =>
-                m.churchName === church && m.presidiumName === presidium &&
-                (!m.leaveDate || m.leaveDate > filterDate) &&
-                !officerIds.has(m.id)
-            ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+                const officerIds = new Set(officers.map(o => o.memberId));
 
-            // 3. Render
-            renderTable(officers, members);
+                const members = membersList.filter(m =>
+                    (!m.leaveDate || m.leaveDate > filterDate) &&
+                    !officerIds.has(m.id)
+                ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
 
-            // After rendering the list, try to load saved attendance data if date exists
-            if (meetingDate) {
-                loadAttendanceByDate();
+                renderTable(officers, members);
+
+                if (meetingDate) {
+                    loadAttendanceByDate();
+                }
+            } catch (error) {
+                console.error("Error loading members/officers:", error);
             }
         }
 
@@ -1290,7 +1325,7 @@
             updateSummary();
         }
 
-        function saveAttendance() {
+        async function saveAttendance() {
             const presidium = presidiumSelect.value;
             const session = sessionInput.value;
             const date = dateInput.value;
@@ -1300,129 +1335,113 @@
                 return;
             }
 
-            // Session & Date Integrity Validation (4 Rules)
-            const numericSession = parseInt(session);
-            const prRecords = attendanceList.filter(a => a.presidium === presidium);
+            try {
+                const numericSession = parseInt(session);
+                // Refetch attendance_list for validation
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', churchSelect.value),
+                    where('curia', '==', curiaSelect.value),
+                    where('presidium', '==', presidium)
+                );
+                const querySnapshot = await getDocs(q);
+                const prRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // [중요] 기존 자료를 수정 중인 경우, 그 기록은 중복 체크에서 제외합니다.
-            const existingSession = prRecords.find(a => parseInt(a.session) === numericSession);
+                const existingSession = prRecords.find(a => parseInt(a.session) === numericSession);
 
-            // 1. Session Uniqueness: Same session number can't have different dates (unless editing same ID)
-            if (existingSession && existingSession.id !== currentEditingId && existingSession.date !== date) {
-                alert(`이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
-                return;
-            }
-
-            // 2. Continuity Check (for NEW records only)
-            if (!currentEditingId && !existingSession && prRecords.length > 0) {
-                const maxSession = Math.max(...prRecords.map(r => parseInt(r.session)));
-                if (numericSession !== maxSession + 1) {
-                    alert(`입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n입력하려는 회차를 확인하시기 바랍니다.`);
+                if (existingSession && existingSession.id !== currentEditingId && existingSession.date !== date) {
+                    alert(`이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
                     return;
                 }
-            }
 
-            // 3. Chronological Order based on Session (excluding self)
-            const otherRecords = currentEditingId ? prRecords.filter(r => r.id !== currentEditingId) : prRecords;
+                if (!currentEditingId && !existingSession && prRecords.length > 0) {
+                    const maxSession = Math.max(...prRecords.map(r => parseInt(r.session)));
+                    if (numericSession !== maxSession + 1) {
+                        alert(`입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n입력하려는 회차를 확인하시기 바랍니다.`);
+                        return;
+                    }
+                }
 
-            const pastSessions = otherRecords.filter(r => parseInt(r.session) < numericSession);
-            if (pastSessions.length > 0) {
-                const lastPrev = pastSessions.reduce((p, c) => parseInt(c.session) > parseInt(p.session) ? c : p);
-                if (date <= lastPrev.date) {
-                    alert(`입력하신 날짜(${date})가 이전 회차(${lastPrev.session}회)의 날짜(${lastPrev.date})보다 빠르거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
+                const otherRecords = currentEditingId ? prRecords.filter(r => r.id !== currentEditingId) : prRecords;
+
+                const pastSessions = otherRecords.filter(r => parseInt(r.session) < numericSession);
+                if (pastSessions.length > 0) {
+                    const lastPrev = pastSessions.reduce((p, c) => parseInt(c.session) > parseInt(p.session) ? c : p);
+                    if (date <= lastPrev.date) {
+                        alert(`입력하신 날짜(${date})가 이전 회차(${lastPrev.session}회)의 날짜(${lastPrev.date})보다 빠르거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
+                        return;
+                    }
+                }
+
+                const futureSessions = otherRecords.filter(r => parseInt(r.session) > numericSession);
+                if (futureSessions.length > 0) {
+                    const firstNext = futureSessions.reduce((p, c) => parseInt(c.session) < parseInt(p.session) ? c : p);
+                    if (date >= firstNext.date) {
+                        alert(`입력하신 날짜(${date})가 이후 회차(${firstNext.session}회)의 날짜(${firstNext.date})보다 늦거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
+                        return;
+                    }
+                }
+
+                const attendanceData = (currentEditingId && existingSession) ? { ...existingSession.attendanceData } : {};
+                let missingAttendance = [];
+
+                tableBody.querySelectorAll('tr[data-id]').forEach(tr => {
+                    const id = tr.dataset.id;
+                    const p = tr.querySelector('.present');
+                    const a = tr.querySelector('.absent');
+
+                    const role = p.dataset.role || '단원';
+                    const name = p.dataset.name || '';
+                    const baptismalName = p.dataset.baptismal || '';
+
+                    if (p && p.checked) {
+                        attendanceData[id] = { status: 'P', role, name, baptismalName };
+                    } else if (a && a.checked) {
+                        attendanceData[id] = { status: 'A', role, name, baptismalName };
+                    } else {
+                        missingAttendance.push(name || tr.cells[1].textContent);
+                    }
+                });
+
+                if (Object.keys(attendanceData).length === 0) {
+                    alert('최소 1명 이상의 출결 상태를 선택해 주세요.');
                     return;
                 }
-            }
 
-            const futureSessions = otherRecords.filter(r => parseInt(r.session) > numericSession);
-            if (futureSessions.length > 0) {
-                const firstNext = futureSessions.reduce((p, c) => parseInt(c.session) < parseInt(p.session) ? c : p);
-                if (date >= firstNext.date) {
-                    alert(`입력하신 날짜(${date})가 이후 회차(${firstNext.session}회)의 날짜(${firstNext.date})보다 늦거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
-                    return;
-                }
-            }
+                const newData = {
+                    church: churchSelect.value,
+                    curia: curiaSelect.value,
+                    presidium,
+                    session: session.toString(),
+                    date,
+                    day: dayInput.value,
+                    attendanceData,
+                    summary: {
+                        total: document.getElementById('totalCount').textContent,
+                        officerAttendance: `${document.getElementById('officerAttendanceCount').textContent} / ${document.getElementById('totalOfficerCount').textContent}`,
+                        memberAttendance: `${document.getElementById('memberAttendanceCount').textContent} / ${document.getElementById('totalMemberCount').textContent}`
+                    },
+                    updatedAt: serverTimestamp()
+                };
 
-            // Partial Update Logic: Start with existing data if we are editing
-            const attendanceData = currentEditingId && existingSession ? { ...existingSession.attendanceData } : {};
-            let missingAttendance = [];
-
-            tableBody.querySelectorAll('tr[data-id]').forEach(tr => {
-                const id = tr.dataset.id;
-                const p = tr.querySelector('.present');
-                const a = tr.querySelector('.absent');
-
-                const role = p.dataset.role || '단원';
-                const name = p.dataset.name || '';
-                const baptismalName = p.dataset.baptismal || '';
-
-                if (p && p.checked) {
-                    attendanceData[id] = {
-                        status: 'P',
-                        role: role,
-                        name: name,
-                        baptismalName: baptismalName
-                    };
-                } else if (a && a.checked) {
-                    attendanceData[id] = {
-                        status: 'A',
-                        role: role,
-                        name: name,
-                        baptismalName: baptismalName
-                    };
+                if (currentEditingId) {
+                    await updateDoc(doc(db, 'attendance_list', currentEditingId), newData);
                 } else {
-                    // Only check for missing attendance if the row is visible/active for the user
-                    missingAttendance.push(name || tr.cells[1].textContent);
+                    const docRef = await addDoc(collection(db, 'attendance_list'), {
+                        ...newData,
+                        createdAt: serverTimestamp()
+                    });
+                    currentEditingId = docRef.id;
                 }
-            });
 
-            if (missingAttendance.length > 0) {
-                const roleLower = (currentUser.role || '').toLowerCase();
-                const isAdmin = roleLower === 'admin' || roleLower === '관리자';
-                const isOfficerRole = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
-
-                if (!isAdmin && !isOfficerRole) {
-                    alert(`출결 상태가 선택되지 않은 단원이 있습니다:\n${missingAttendance.join(', ')}\n\n모든 단원의 출석 또는 결석을 체크해 주세요.`);
-                    return;
-                }
+                alert('출석부가 성공적으로 저장되었습니다.');
+                window.setDirty(false);
+                updateSessionList();
+                loadAttendanceBySession();
+            } catch (error) {
+                console.error("Error saving attendance:", error);
+                alert("저장 중 오류가 발생했습니다.");
             }
-
-            // [추가] 간부/관리자라도 최소 1명 이상은 체크해야 함
-            if (Object.keys(attendanceData).length === 0) {
-                alert('최소 1명 이상의 출결 상태를 선택해 주세요.');
-                return;
-            }
-
-            const newData = {
-                id: currentEditingId || 'att_' + (Date.now()),
-                church: churchSelect.value,
-                curia: curiaSelect.value,
-                presidium,
-                session,
-                date,
-                day: dayInput.value,
-                attendanceData,
-                summary: {
-                    total: document.getElementById('totalCount').textContent,
-                    officerAttendance: `${document.getElementById('officerAttendanceCount').textContent} / ${document.getElementById('totalOfficerCount').textContent}`,
-                    memberAttendance: `${document.getElementById('memberAttendanceCount').textContent} / ${document.getElementById('totalMemberCount').textContent}`
-                }
-            };
-
-            // [수정] ID 기반으로 위치 찾기
-            const idx = attendanceList.findIndex(a => a.id === newData.id);
-            if (idx > -1) {
-                attendanceList[idx] = newData;
-            } else {
-                attendanceList.push(newData);
-            }
-
-            localStorage.setItem('attendance_list', JSON.stringify(attendanceList));
-            alert('출석부가 성공적으로 저장되었습니다.');
-            window.setDirty(false);
-            currentEditingId = newData.id; // 저장 후 ID 유지
-            updateSessionList(); // [추가] 회차 목록(datalist)을 최신화하여 수정된 날짜가 반영되도록 함
-            loadAttendanceBySession();
         }
     </script>
 </body>

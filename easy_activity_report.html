@@ -798,8 +798,12 @@
 
     <script src="script.js?v=20260306_2320"></script>
     <script type="module">
+        import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260306_2320";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
         import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+
+        let activitySchemaMap = {}; // 성당별 스키마 캐시
+        let userPresetsMap = {}; // 사용자별 프리셋 캐시
 
         let currentUser = null;
         let currentPrAttendance = null; // Current week info
@@ -811,8 +815,7 @@
         initAuthObserver(async (user, profile) => {
             currentUser = profile;
             if (!currentUser) {
-                await showCustomAlert('로그인이 필요합니다.');
-                location.href = 'index.html';
+                window.location.href = 'index.html';
                 return;
             }
 
@@ -828,11 +831,33 @@
                 });
             }
 
+            // [수정] Firestore에서 초기 데이터 로드 (스키마 & 프리셋)
+            try {
+                // 1. 모든 성당 스키마 로드
+                const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
+                schemaSnap.forEach(doc => {
+                    activitySchemaMap[doc.id] = doc.data().categories;
+                });
+
+                // 2. 프리셋 로드 (본인 또는 관리권한인 경우 전체 로드 고려)
+                // 여기서는 일단 본인 것 우선 로드하고, 필요 시 실시간으로 더 가져옴
+                const uid = profile.id || profile.uid;
+                if (uid) {
+                    const presetDoc = await getDoc(doc(db, 'user_activity_presets', uid));
+                    if (presetDoc.exists()) {
+                        userPresetsMap[uid] = presetDoc.data().presets;
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading initial data:", error);
+                // Fallback to localStorage if needed
+            }
+
             document.getElementById('btnDelete').style.display = canManageOthers ? 'flex' : 'none';
-            setupUnifiedSelectors(isAdmin, isOfficer);
+            await setupUnifiedSelectors(isAdmin, isOfficer);
         });
 
-        function setupUnifiedSelectors(isAdmin, isOfficer) {
+        async function setupUnifiedSelectors(isAdmin, isOfficer) {
             const selChurch = document.getElementById('selChurch');
             const selCuria = document.getElementById('selCuria');
             const prInput = document.getElementById('prInput');
@@ -860,13 +885,13 @@
                 } else {
                     prDropdown.innerHTML = filtered.map(n => `<div class="dropdown-item" data-name="${n}">${n}</div>`).join('');
                     prDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                        item.onclick = () => {
+                        item.onclick = async () => {
                             const name = item.dataset.name;
                             prInput.value = name;
                             selPr.value = name;
                             prDropdown.style.display = 'none';
-                            syncDates(name);
-                            syncMembers(name);
+                            await syncDates(name);
+                            await syncMembers(name);
                         };
                     });
                 }
@@ -874,17 +899,17 @@
             };
 
             // --- Shared Listeners ---
-            selMember.onchange = () => {
+            selMember.onchange = async () => {
                 const member = selMember.options[selMember.selectedIndex];
                 if (!member || !member.dataset.uid) return;
 
                 const uid = member.dataset.uid;
-                updatePresets(uid);
+                await updatePresets(uid);
                 renderEntryForm();
-                loadExistingData();
+                await loadExistingData();
             };
 
-            selDate.onchange = () => {
+            selDate.onchange = async () => {
                 const opt = selDate.options[selDate.selectedIndex];
                 if (opt) {
                     currentPrAttendance = {
@@ -893,7 +918,7 @@
                     };
                 }
                 // Refresh member list based on the newly selected date
-                syncMembers(selPr.value);
+                await syncMembers(selPr.value);
             };
 
             // [삭제] btnSearch가 제거되었으므로 관련 이벤트 핸들러도 삭제합니다.
@@ -904,15 +929,15 @@
                 const churches = getChurches();
                 selChurch.innerHTML = churches.map(c => `<option value="${c}">${c}</option>`).join('');
 
-                selChurch.onchange = () => {
+                selChurch.onchange = async () => {
                     const c = selChurch.value;
                     updateSchema(c);
                     const curiae = getCuriae(c);
                     selCuria.innerHTML = curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
-                    selCuria.onchange();
+                    await selCuria.onchange();
                 };
 
-                selCuria.onchange = () => {
+                selCuria.onchange = async () => {
                     // Curia 변경 시 쁘레시디움 입력값 초기화
                     prInput.value = '';
                     selPr.value = '';
@@ -923,7 +948,7 @@
                     renderEntryForm(); // 빈 폼 렌더링
                 };
 
-                selChurch.onchange();
+                await selChurch.onchange();
             } else {
                 // Officer/Member: Fixed Org
                 const churchVal = currentUser.churchName || currentUser.church;
@@ -939,8 +964,8 @@
                 selPr.disabled = true;
 
                 updateSchema(churchVal);
-                syncDates(prName);
-                syncMembers(prName);
+                await syncDates(prName);
+                await syncMembers(prName);
 
                 // If ordinary member (not officer), hide member select or disable it
                 if (!isOfficer) {
@@ -949,87 +974,130 @@
             }
         }
 
-        function syncDates(prName) {
+        async function syncDates(prName) {
             const selDate = document.getElementById('selDate');
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            // date와 session이 있는 유효한 출석부 기록만 필터링
-            const myAttendance = allAttendance.filter(a => (a.presidium === prName || a.presidiumName === prName) && a.date && a.session)
-                .sort((a, b) => b.date.localeCompare(a.date));
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('presidiumName', '==', prName),
+                    orderBy('date', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const myAttendance = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.session) {
+                        myAttendance.push({ id: doc.id, ...data });
+                    }
+                });
 
-            if (myAttendance.length > 0) {
-                selDate.innerHTML = myAttendance.map(a => `<option value="${a.date}" data-session="${a.session}">${a.date} (${a.session}회)</option>`).join('');
-                selDate.onchange();
-            } else {
-                selDate.innerHTML = '<option value="">기록 없음</option>';
-                currentPrAttendance = null;
+                if (myAttendance.length > 0) {
+                    selDate.innerHTML = myAttendance.map(a => `<option value="${a.date}" data-session="${a.session}">${a.date} (${a.session}회)</option>`).join('');
+                    await selDate.onchange();
+                } else {
+                    selDate.innerHTML = '<option value="">기록 없음</option>';
+                    currentPrAttendance = null;
+                }
+            } catch (error) {
+                console.error("Error syncDates:", error);
+                selDate.innerHTML = '<option value="">오류 발생</option>';
             }
         }
 
-        function syncMembers(prName) {
+        async function syncMembers(prName) {
             const selMember = document.getElementById('selMember');
             const selDateValue = document.getElementById('selDate').value;
-            const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
 
-            // Normalize: include current user if they match the presidium
-            let prMembers = allMembers.filter(m => (m.presidiumName === prName || m.presidium === prName));
+            try {
+                // [수정] Firestore에서 단원 및 간부 목록 가져오기
+                const mQuery = query(collection(db, 'members_list'), where('presidiumName', '==', prName));
+                const oQuery = query(collection(db, 'officers_list'), where('presidiumName', '==', prName));
 
-            // Filter: Show members who were active at the time of the selected reporting week
-            if (selDateValue && prMembers.length > 0) {
-                prMembers = prMembers.filter(m => {
-                    // 1. Join Date Check: Must have joined before or on the session date
-                    if (m.joinDate && m.joinDate > selDateValue) return false;
+                const [mSnap, oSnap] = await Promise.all([getDocs(mQuery), getDocs(oQuery)]);
 
-                    // 2. Leave Date/Status Check:
-                    // If they have a leave date, they must have left AFTER the session date
-                    if (m.leaveDate) return m.leaveDate > selDateValue;
+                let prMembers = [];
+                mSnap.forEach(doc => prMembers.push({ id: doc.id, ...doc.data(), role: '단원' }));
+                oSnap.forEach(doc => prMembers.push({ id: doc.id, ...doc.data(), role: doc.data().role || '간부' }));
 
-                    // If they don't have a leave date but are marked as retired, 
-                    // we assume they are already gone (current state)
-                    if (m.status === 'retire') return false;
-
-                    // Otherwise, they are currently active and were active then
-                    return true;
-                });
-            }
-
-            if (prMembers.length > 0) {
-                selMember.innerHTML = prMembers.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || ''})</option>`).join('');
-
-                // If currentUser is in this list, auto-select them if it's the first sync or if it's the user's view
-                const myIdx = prMembers.findIndex(m => m.id === currentUser.id || m.id === currentUser.uid);
-                if (myIdx > -1) {
-                    selMember.selectedIndex = myIdx;
+                // Filter: Show members who were active at the time of the selected reporting week
+                if (selDateValue && prMembers.length > 0) {
+                    prMembers = prMembers.filter(m => {
+                        if (m.joinDate && m.joinDate > selDateValue) return false;
+                        if (m.leaveDate) return m.leaveDate > selDateValue;
+                        if (m.status === 'retire') return false;
+                        return true;
+                    });
                 }
 
-                selMember.onchange();
-            } else {
-                // If no members in members_list, fallback to current user info
-                selMember.innerHTML = `<option value="${currentUser.memberName || currentUser.name}" data-uid="${currentUser.id || currentUser.uid}">${currentUser.memberName || currentUser.name}</option>`;
-                selMember.onchange();
+                if (prMembers.length > 0) {
+                    selMember.innerHTML = prMembers.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || ''})</option>`).join('');
+
+                    const myId = currentUser.id || currentUser.uid;
+                    const myIdx = prMembers.findIndex(m => m.id === myId);
+                    if (myIdx > -1) {
+                        selMember.selectedIndex = myIdx;
+                    }
+                    await selMember.onchange();
+                } else {
+                    selMember.innerHTML = `<option value="${currentUser.memberName || currentUser.name}" data-uid="${currentUser.id || currentUser.uid}">${currentUser.memberName || currentUser.name}</option>`;
+                    await selMember.onchange();
+                }
+            } catch (error) {
+                console.error("Error syncMembers:", error);
             }
         }
 
         function updateSchema(churchName) {
-            const fullSchema = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
-            activitySchema = fullSchema[churchName] || [];
+            activitySchema = activitySchemaMap[churchName] || [];
         }
 
-        function updatePresets(uid) {
-            const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
-            myPresets = allPresets[uid] || [];
+        async function updatePresets(uid) {
+            if (userPresetsMap[uid]) {
+                myPresets = userPresetsMap[uid];
+                return;
+            }
+            try {
+                const presetDoc = await getDoc(doc(db, 'user_activity_presets', uid));
+                if (presetDoc.exists()) {
+                    myPresets = presetDoc.data().presets;
+                    userPresetsMap[uid] = myPresets;
+                } else {
+                    myPresets = [];
+                }
+            } catch (error) {
+                console.error("Error updatePresets:", error);
+                myPresets = [];
+            }
         }
 
-        function loadLatestAttendance(presidium) {
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const myAttendance = allAttendance.filter(a =>
-                (a.presidium === presidium || a.presidiumName === presidium)
-            ).sort((a, b) => b.date.localeCompare(a.date));
+        async function loadLatestAttendance(presidium) {
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('presidium', '==', presidium),
+                    orderBy('date', 'desc'),
+                    limit(1)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    currentPrAttendance = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+                    document.getElementById('displayDate').textContent = `${currentPrAttendance.date} (${currentPrAttendance.session}회)`;
+                } else {
+                    document.getElementById('displayDate').textContent = '등록된 주회합 정보 없음';
+                }
+            } catch (error) {
+                console.error("Error loadLatestAttendance from Firestore:", error);
+                const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
+                const myAttendance = allAttendance.filter(a =>
+                    (a.presidium === presidium || a.presidiumName === presidium)
+                ).sort((a, b) => b.date.localeCompare(a.date));
 
-            if (myAttendance.length > 0) {
-                currentPrAttendance = myAttendance[0];
-                document.getElementById('displayDate').textContent = `${currentPrAttendance.date} (${currentPrAttendance.session}회)`;
-            } else {
-                document.getElementById('displayDate').textContent = '등록된 주회합 정보 없음';
+                if (myAttendance.length > 0) {
+                    currentPrAttendance = myAttendance[0];
+                    document.getElementById('displayDate').textContent = `${currentPrAttendance.date} (${currentPrAttendance.session}회)`;
+                } else {
+                    document.getElementById('displayDate').textContent = '등록된 주회합 정보 없음';
+                }
             }
         }
 
@@ -1077,7 +1145,7 @@
             });
         }
 
-        function loadExistingData() {
+        async function loadExistingData() {
             if (!currentPrAttendance) return;
 
             const role = (currentUser.role || '').toLowerCase();
@@ -1087,9 +1155,14 @@
 
             let targetName = "";
             let churchVal = "", curiaVal = "", prVal = "";
+            let uid = null;
 
             if (canManageOthers) {
-                targetName = document.getElementById('selMember').value;
+                const selMemberObj = document.getElementById('selMember');
+                targetName = selMemberObj.value;
+                const opt = selMemberObj.options[selMemberObj.selectedIndex];
+                if (opt) uid = opt.dataset.uid;
+
                 if (isAdmin) {
                     churchVal = document.getElementById('selChurch').value;
                     curiaVal = document.getElementById('selCuria').value;
@@ -1101,47 +1174,28 @@
                 }
             } else {
                 targetName = (currentUser.memberName || currentUser.name);
+                uid = currentUser.id || currentUser.uid;
                 churchVal = currentUser.churchName || currentUser.church;
                 curiaVal = currentUser.curiaName || currentUser.curia;
                 prVal = currentUser.presidiumName || currentUser.presidium;
             }
 
             // --- 1. 출석 여부 화면단 사전 검증 ---
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const attRecord = allAttendance.find(a =>
-                (a.presidium === prVal || a.presidiumName === prVal) &&
-                a.date === currentPrAttendance.date &&
-                String(a.session) === String(currentPrAttendance.session)
-            );
-
             let isAttended = false;
-            if (attRecord && attRecord.attendanceData) {
-                let uid = null;
-                if (canManageOthers) {
-                    const selMember = document.getElementById('selMember');
-                    const opt = selMember.options[selMember.selectedIndex];
-                    if (opt) uid = opt.dataset.uid;
-                } else {
-                    uid = currentUser.id || currentUser.uid;
-                }
+            try {
+                const docId = `${churchVal}_${prVal}_${currentPrAttendance.session}`;
+                const attDoc = await getDoc(doc(db, 'attendance_list', docId));
 
-                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
-                if (data) {
-                    const status = (typeof data === 'object') ? data.status : data;
-                    if (status === 'P' || status === 'L') isAttended = true;
-                } else {
-                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                    const memberObj = allMembers.find(m => m.name === targetName && (m.presidium === prVal || m.presidiumName === prVal)) ||
-                        allOfficers.find(o => o.name === targetName && (o.presidium === prVal || o.presidiumName === prVal));
-                    if (memberObj) {
-                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
-                        if (dataById) {
-                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
-                            if (statusById === 'P' || statusById === 'L') isAttended = true;
-                        }
+                if (attDoc.exists()) {
+                    const attRecord = attDoc.data();
+                    const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
+                    if (data) {
+                        const status = (typeof data === 'object') ? data.status : data;
+                        if (status === 'P' || status === 'L') isAttended = true;
                     }
                 }
+            } catch (error) {
+                console.error("Error check attendance:", error);
             }
 
             const grid = document.getElementById('activityGrid');
@@ -1150,7 +1204,6 @@
             const btnSave = document.getElementById('btnSave');
 
             if (!isAttended) {
-                // 결석이거나 출석 정보가 없으면 폼을 숨기고 안내 메시지 노출
                 grid.style.display = 'none';
                 empty.style.display = 'none';
                 absentState.style.display = 'block';
@@ -1158,51 +1211,46 @@
                 btnSave.style.opacity = '0.5';
                 document.getElementById('btnDelete').disabled = true;
                 document.getElementById('btnDelete').style.opacity = '0.5';
-                return; // 이후 로직 중단
+                return;
             }
 
             // 출석한 경우 정상적으로 폼 노출
-            grid.style.display = 'grid'; // 원래 display 속성
+            grid.style.display = 'grid';
             absentState.style.display = 'none';
             btnSave.disabled = false;
             btnSave.style.opacity = '1';
-            renderEntryForm(); // 항목 다시 표시
+            renderEntryForm();
 
             // --- 2. 기존 데이터 로딩 ---
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            const record = records.find(r =>
-                (r.churchName === churchVal || r.church === churchVal) &&
-                (r.presidiumName === prVal || r.presidium === prVal) &&
-                r.memberName === targetName &&
-                r.date === currentPrAttendance.date &&
-                String(r.session) === String(currentPrAttendance.session)
-            );
+            const activityDocId = `${churchVal}_${prVal}_${currentPrAttendance.session}_${uid || targetName}`;
+            try {
+                const activityDoc = await getDoc(doc(db, 'activity_records', activityDocId));
+                const record = activityDoc.exists() ? activityDoc.data() : null;
 
-            const inputs = document.querySelectorAll('.easy-input');
-            inputs.forEach(input => input.value = ""); // Reset first
+                const inputs = document.querySelectorAll('.easy-input');
+                inputs.forEach(input => input.value = ""); // Reset first
 
-            // [핵심 수정] DB 기록과 현재 입력 중인 임시 데이터를 병합하여 표시
-            inputs.forEach(input => {
-                const name = input.dataset.name;
-                // 1. 먼저 임시 보관된(방금 입력한) 값이 있으면 우선 적용
-                if (tempInputData[name] !== undefined) {
-                    input.value = tempInputData[name];
+                inputs.forEach(input => {
+                    const name = input.dataset.name;
+                    if (tempInputData[name] !== undefined) {
+                        input.value = tempInputData[name];
+                    } else if (record && record.counts && record.counts[name] !== undefined) {
+                        input.value = record.counts[name];
+                    }
+                });
+
+                if (record && record.counts) {
+                    document.getElementById('btnDelete').disabled = false;
+                    document.getElementById('btnDelete').style.opacity = "1";
+                    document.getElementById('btnDelete').dataset.docId = activityDocId;
+                } else {
+                    document.getElementById('btnDelete').disabled = true;
+                    document.getElementById('btnDelete').style.opacity = "0.5";
                 }
-                // 2. 임시 값이 없고 DB에 기록된 값이 있으면 적용
-                else if (record && record.counts && record.counts[name] !== undefined) {
-                    input.value = record.counts[name];
-                }
-            });
-
-            if (record && record.counts) {
-                document.getElementById('btnDelete').disabled = false;
-                document.getElementById('btnDelete').style.opacity = "1";
-            } else {
-                document.getElementById('btnDelete').disabled = true;
-                document.getElementById('btnDelete').style.opacity = "0.5";
+            } catch (error) {
+                console.error("Error loading activity:", error);
             }
 
-            // [추가] 복원이 완료되었으므로 임시 데이터 비우기 (다음 모달 오픈 시 새로 채워짐)
             tempInputData = {};
         }
 
@@ -1347,8 +1395,7 @@
             updateSortUI();
         }
 
-        document.getElementById('btnApplySetup').onclick = () => {
-            // Note: myPresets is already updated by updateSortUI during selection/sorting
+        document.getElementById('btnApplySetup').onclick = async () => {
             const role = (currentUser.role || '').toLowerCase();
             const isAdmin = ['admin', '관리자'].includes(role);
             const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
@@ -1356,24 +1403,30 @@
 
             let targetId = "";
             if (canManageOthers) {
-                const selMember = document.getElementById('selMember');
-                targetId = selMember.options[selMember.selectedIndex].dataset.uid;
+                const selMemberObj = document.getElementById('selMember');
+                targetId = selMemberObj.options[selMemberObj.selectedIndex].dataset.uid;
             } else {
                 targetId = currentUser.id || currentUser.uid;
             }
 
-            const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
-            allPresets[targetId] = myPresets;
-            localStorage.setItem('user_activity_presets', JSON.stringify(allPresets));
+            if (!targetId) return;
+
+            try {
+                await setDoc(doc(db, 'user_activity_presets', targetId), {
+                    presets: myPresets,
+                    updatedAt: serverTimestamp()
+                });
+                userPresetsMap[targetId] = myPresets;
+            } catch (error) {
+                console.error("Error saving presets:", error);
+                // Fallback: localStorage
+                const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
+                allPresets[targetId] = myPresets;
+                localStorage.setItem('user_activity_presets', JSON.stringify(allPresets));
+            }
 
             renderEntryForm();
-            loadExistingData();
-
-            // [추가] 적용 후 임시 데이터 초기화 (loadExistingData에서 DB 값을 덮어쓸 수 있으므로 주의가 필요하나, 
-            // 신규 입력 중인 상황을 위해 loadExistingData 로직 확인 필요)
-            // loadExistingData() 내부에서 inputs.forEach(input => input.value = "") 로 초기화하므로 
-            // 새로 추가된 항목에 대해서는 tempInputData를 유지하거나 병합하는 처리가 필요할 수 있음.
-
+            await loadExistingData();
             setupModal.style.display = 'none';
         };
 
@@ -1427,7 +1480,6 @@
 
             inputs.forEach(input => {
                 const val = parseInt(input.value) || 0;
-                // [수정] 0이더라도 간편활동 화면에 있는 항목이면 명시적으로 기록 (나중에 병합 시 덮어쓰기 위해)
                 easyCounts[input.dataset.name] = val;
             });
 
@@ -1438,9 +1490,14 @@
 
             let targetName = "";
             let churchVal = "", curiaVal = "", prVal = "";
+            let uid = null;
 
             if (canManageOthers) {
-                targetName = document.getElementById('selMember').value;
+                const selMemberObj = document.getElementById('selMember');
+                targetName = selMemberObj.value;
+                const opt = selMemberObj.options[selMemberObj.selectedIndex];
+                if (opt) uid = opt.dataset.uid;
+
                 if (isAdmin) {
                     churchVal = document.getElementById('selChurch').value;
                     curiaVal = document.getElementById('selCuria').value;
@@ -1452,53 +1509,32 @@
                 }
             } else {
                 targetName = (currentUser.memberName || currentUser.name);
+                uid = currentUser.id || currentUser.uid;
                 churchVal = currentUser.churchName || currentUser.church;
                 curiaVal = currentUser.curiaName || currentUser.curia;
                 prVal = currentUser.presidiumName || currentUser.presidium;
             }
 
-            // [추가] 필수값 검증 (매칭 실패 방지)
             if (!targetName || !prVal) {
                 await showCustomAlert('단원 정보가 올바르지 않습니다. 다시 선택해 주세요.');
                 return;
             }
 
-            // [추가] 출석 여부 검증 (출석, 지각인 경우만 활동보고 가능)
-            const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const attRecord = allAttendance.find(a =>
-                (a.presidium === prVal || a.presidiumName === prVal) &&
-                a.date === currentPrAttendance.date &&
-                String(a.session) === String(currentPrAttendance.session)
-            );
-
+            // --- 1. 출석 여부 검증 (Firestore) ---
             let isAttended = false;
-            if (attRecord && attRecord.attendanceData) {
-                let uid = null;
-                if (canManageOthers) {
-                    const selMember = document.getElementById('selMember');
-                    const opt = selMember.options[selMember.selectedIndex];
-                    if (opt) uid = opt.dataset.uid;
-                } else {
-                    uid = currentUser.id || currentUser.uid;
-                }
-
-                const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
-                if (data) {
-                    const status = (typeof data === 'object') ? data.status : data;
-                    if (status === 'P' || status === 'L') isAttended = true;
-                } else {
-                    const allMembers = JSON.parse(localStorage.getItem('members_list') || '[]');
-                    const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                    const memberObj = allMembers.find(m => m.name === targetName && (m.presidium === prVal || m.presidiumName === prVal)) ||
-                        allOfficers.find(o => o.name === targetName && (o.presidium === prVal || o.presidiumName === prVal));
-                    if (memberObj) {
-                        const dataById = attRecord.attendanceData[memberObj.id] || attRecord.attendanceData[memberObj.memberId];
-                        if (dataById) {
-                            const statusById = (typeof dataById === 'object') ? dataById.status : dataById;
-                            if (statusById === 'P' || statusById === 'L') isAttended = true;
-                        }
+            try {
+                const attDocId = `${churchVal}_${prVal}_${currentPrAttendance.session}`;
+                const attDoc = await getDoc(doc(db, 'attendance_list', attDocId));
+                if (attDoc.exists()) {
+                    const attRecord = attDoc.data();
+                    const data = (uid && attRecord.attendanceData[uid]) || attRecord.attendanceData[targetName];
+                    if (data) {
+                        const status = (typeof data === 'object') ? data.status : data;
+                        if (status === 'P' || status === 'L') isAttended = true;
                     }
                 }
+            } catch (error) {
+                console.error("Error verify attendance:", error);
             }
 
             if (!isAttended) {
@@ -1506,70 +1542,52 @@
                 return;
             }
 
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
+            const docId = `${churchVal}_${prVal}_${currentPrAttendance.session}_${uid || targetName}`;
 
-            // [수정] 여러 중복 레코드가 있을 수 있으므로 filter를 사용해 모두 찾아낸 후 제거
-            const existingRecord = records.find(r =>
-                (r.churchName === churchVal || r.church === churchVal) &&
-                (r.presidiumName === prVal || r.presidium === prVal) &&
-                r.memberName === targetName &&
-                r.date === currentPrAttendance.date &&
-                String(r.session) === String(currentPrAttendance.session)
-            );
+            try {
+                const activityRef = doc(db, 'activity_records', docId);
+                const activitySnap = await getDoc(activityRef);
+                const existingRecord = activitySnap.exists() ? activitySnap.data() : null;
 
-            let finalCounts = {};
-            if (existingRecord && existingRecord.counts) {
-                // [핵심 로직 수정] 기존 데이터에서 간편활동 UI에 있는 항목은 무조건 덮어쓰고, 없는 항목은 유지함
-                finalCounts = { ...existingRecord.counts, ...easyCounts };
-            } else {
-                finalCounts = easyCounts;
+                let finalCounts = {};
+                if (existingRecord && existingRecord.counts) {
+                    finalCounts = { ...existingRecord.counts, ...easyCounts };
+                } else {
+                    finalCounts = easyCounts;
+                }
+
+                // 0인 항목 제거
+                for (const key in finalCounts) {
+                    if (finalCounts[key] === 0) delete finalCounts[key];
+                }
+
+                const newRecord = {
+                    churchName: churchVal,
+                    curiaName: curiaVal,
+                    presidiumName: prVal,
+                    memberName: targetName,
+                    memberId: uid || '',
+                    session: currentPrAttendance.session,
+                    date: currentPrAttendance.date,
+                    counts: finalCounts,
+                    updatedAt: serverTimestamp()
+                };
+
+                await setDoc(activityRef, newRecord);
+                await showCustomAlert('활동 보고가 성공적으로 저장되었습니다.');
+                location.href = 'dashboard.html';
+            } catch (error) {
+                console.error("Error saving activity:", error);
+                await showCustomAlert('저장 중 오류가 발생했습니다.');
             }
-
-            // 0인 항목은 최종 저장 시 제거 (데이터 효율을 위함, 원하시면 0도 남길 수 있으나 보통은 제거)
-            for (const key in finalCounts) {
-                if (finalCounts[key] === 0) delete finalCounts[key];
-            }
-
-            const newRecord = {
-                id: existingRecord ? existingRecord.id : Date.now(),
-                churchName: churchVal,
-                curiaName: curiaVal,
-                presidiumName: prVal,
-                memberName: targetName,
-                session: currentPrAttendance.session,
-                date: currentPrAttendance.date,
-                counts: finalCounts,
-                timestamp: new Date().toISOString()
-            };
-
-            // [수정] 동일 조건의 모든 기존/중복 레코드를 신뢰성 있게 제거
-            const filteredRecords = records.filter(r =>
-                !(
-                    (r.churchName === churchVal || r.church === churchVal) &&
-                    (r.presidiumName === prVal || r.presidium === prVal) &&
-                    r.memberName === targetName &&
-                    r.date === currentPrAttendance.date &&
-                    String(r.session) === String(currentPrAttendance.session)
-                )
-            );
-
-            filteredRecords.push(newRecord);
-            localStorage.setItem('activity_records', JSON.stringify(filteredRecords));
-
-            await showCustomAlert('활동 보고가 성공적으로 저장되었습니다.');
-            location.href = 'dashboard.html';
         };
 
         // --- Delete Logic ---
         document.getElementById('btnDelete').onclick = async () => {
             if (!currentPrAttendance) return;
 
-            const role = (currentUser.role || '').toLowerCase();
-            const isAdmin = ['admin', '관리자'].includes(role);
-            const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
-            const canManageOthers = isAdmin || isOfficer;
-
-            if (!canManageOthers) return;
+            const docId = document.getElementById('btnDelete').dataset.docId;
+            if (!docId) return;
 
             const targetName = document.getElementById('selMember').value;
             const date = currentPrAttendance.date;
@@ -1579,23 +1597,18 @@
                 return;
             }
 
-            const records = JSON.parse(localStorage.getItem('activity_records') || '[]');
-            const filtered = records.filter(r =>
-                !(r.memberName === targetName && r.date === date && r.session === session)
-            );
+            try {
+                await deleteDoc(doc(db, 'activity_records', docId));
+                await showCustomAlert('활동 보고가 삭제되었습니다.');
 
-            if (records.length === filtered.length) {
-                await showCustomAlert('삭제할 데이터가 이미 없거나 찾을 수 없습니다.');
-                return;
+                // UI 초기화
+                const inputs = document.querySelectorAll('.easy-input');
+                inputs.forEach(input => input.value = "");
+                await loadExistingData();
+            } catch (error) {
+                console.error("Error deleting activity:", error);
+                await showCustomAlert('삭제 중 오류가 발생했습니다.');
             }
-
-            localStorage.setItem('activity_records', JSON.stringify(filtered));
-            await showCustomAlert('활동 보고가 삭제되었습니다.');
-
-            // UI 초기화
-            const inputs = document.querySelectorAll('.easy-input');
-            inputs.forEach(input => input.value = "");
-            loadExistingData();
         };
 
     </script>

@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출결내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260306_1635">
+    <link rel="stylesheet" href="styles.css?v=20260307_2325">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260306_1635">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* Report specific styles */
         .summary-info {
@@ -19,6 +19,24 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
+        }
+
+        /* Top-right X button */
+        .btn-top-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            z-index: 100;
+        }
+
+        .btn-top-close:hover {
+            color: #888;
+            transform: scale(1.1);
         }
 
         .summary-card {
@@ -436,7 +454,10 @@
 
     <div class="main-content" style="padding: 120px 20px; align-items: flex-start;">
         <div class="container"
-            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px;">
+            style="width: 100%; max-width: 1400px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; min-height: 800px; position: relative;">
+            <!-- 상단 우측 X 버튼 추가 -->
+            <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
+
             <div class="filter-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
@@ -487,7 +508,7 @@
                 </div>
 
                 <div class="btn-group-bottom"
-                    style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
                     <button id="btnSearch"
                         style="height: 42px; width: 130px; background-color: #d4a017; color: white; border: none; padding: 0 25px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
                         <i class="fas fa-search"></i> 조회
@@ -553,9 +574,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260306_1635"></script>
+    <script src="script.js?v=20260307_2325"></script>
     <script type="module">
+        import { db, collection, query, where, getDocs, orderBy, limit } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
@@ -573,19 +596,26 @@
         const noDataMsg = document.getElementById('noDataMsg');
 
         let currentPresidia = [];
+        let allPresidia = [];
         yearFilter.value = new Date().getFullYear();
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
             if (window.initCommonMenus) window.initCommonMenus(profile, logoutUser);
             isAdmin = (profile.role === 'admin' || profile.role === '관리자');
+
+            await loadBaseData();
             setupControls(profile);
             if (!isAdmin) {
-                updateSessionSelects();
+                await updateSessionSelects();
             }
         }, () => {
             location.href = 'index.html';
         });
+
+        async function loadBaseData() {
+            allPresidia = await fetchPresidiaList();
+        }
 
         function setupControls(profile) {
             const ci = document.getElementById('churchInput');
@@ -609,20 +639,20 @@
             }
         }
 
-        function loadChurches() {
-            const presidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        async function loadChurches() {
+            const presidia = allPresidia;
             const churches = [...new Set(presidia.map(p => p.churchName))].sort();
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => churchFilter.add(new Option(c, c)));
-            churchFilter.onchange = () => {
+            churchFilter.onchange = async () => {
                 const selected = churchFilter.value;
-                if (!selected) { curiaFilter.disabled = true; presidiumFilter.disabled = true; return; }
+                if (!selected) { curiaFilter.disabled = true; return; }
                 const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
                 curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
                 curiae.forEach(c => curiaFilter.add(new Option(c, c)));
-                curiaFilter.disabled = false; presidiumFilter.disabled = true;
+                curiaFilter.disabled = false;
             };
-            curiaFilter.onchange = () => {
+            curiaFilter.onchange = async () => {
                 const selectedChurch = churchFilter.value; const selectedCuria = curiaFilter.value;
                 currentPresidia = [];
                 presidiumInput.value = '';
@@ -631,7 +661,7 @@
                 currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
                 presidiumInput.disabled = false;
                 renderDropdown('');
-                updateSessionSelects();
+                await updateSessionSelects();
             };
 
             const renderDropdown = (searchText) => {
@@ -644,10 +674,10 @@
                         const div = document.createElement('div');
                         div.className = 'dropdown-item';
                         div.textContent = p;
-                        div.onclick = () => {
+                        div.onclick = async () => {
                             presidiumInput.value = p;
                             presidiumDropdown.style.display = 'none';
-                            updateSessionSelects();
+                            await updateSessionSelects();
                         };
                         presidiumDropdown.appendChild(div);
                     });
@@ -663,10 +693,10 @@
                 }
             };
 
-            presidiumInput.oninput = (e) => {
+            presidiumInput.oninput = async (e) => {
                 renderDropdown(e.target.value);
                 presidiumDropdown.style.display = 'block';
-                updateSessionSelects();
+                await updateSessionSelects();
             };
 
             document.addEventListener('click', (e) => {
@@ -676,7 +706,7 @@
             });
         }
 
-        function updateSessionSelects() {
+        async function updateSessionSelects() {
             let church, curia, presidium;
             if (isAdmin) {
                 church = churchFilter.value;
@@ -693,18 +723,27 @@
                 endSessionFilter.innerHTML = '<option value="">회차 선택</option>';
                 return;
             }
-            const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const uniqueSessions = []; const seen = new Set();
-            attendanceList.filter(a => (a.presidium === presidium || a.presidiumName === presidium) && a.date && a.session)
-                .sort((a, b) => parseInt(b.session) - parseInt(a.session))
-                .forEach(a => { if (!seen.has(a.session)) { seen.add(a.session); uniqueSessions.push(a); } });
 
-            const optionsHtml = '<option value="">회차 선택</option>' + uniqueSessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
-            startSessionFilter.innerHTML = optionsHtml;
-            endSessionFilter.innerHTML = optionsHtml;
+            try {
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium),
+                    orderBy('session', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const uniqueSessions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const optionsHtml = '<option value="">회차 선택</option>' + uniqueSessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
+                startSessionFilter.innerHTML = optionsHtml;
+                endSessionFilter.innerHTML = optionsHtml;
+            } catch (error) {
+                console.error("Error updatesessionSelects:", error);
+            }
         }
 
-        function loadReport() {
+        async function loadReport() {
             const year = parseInt(yearFilter.value);
             const startSess = parseInt(startSessionFilter.value) || null;
             const endSess = parseInt(endSessionFilter.value) || null;
@@ -725,70 +764,91 @@
                 return;
             }
 
-            const attendanceList = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-            const membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const membersMap = {}; membersList.forEach(m => membersMap[String(m.id)] = m);
+            try {
+                // Fetch attendance_list from Firestore
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('church', '==', church),
+                    where('curia', '==', curia),
+                    where('presidium', '==', presidium)
+                );
+                const querySnapshot = await getDocs(q);
+                let attendanceList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            function getRoleAtDate(memberId, date) {
-                const term = officersList.find(o => String(o.memberId) === String(memberId) && (o.appointmentDate || '') <= date && (!(o.appointmentExpiryDate) || o.appointmentExpiryDate >= date));
-                return term ? term.role : '단원';
-            }
+                // Fetch members and officers for mapping
+                const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church), where('presidiumName', '==', presidium));
+                const memSnap = await getDocs(memQuery);
+                const membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            let filtered = attendanceList.filter(a => (a.presidium === presidium || a.presidiumName === presidium) && new Date(a.date).getFullYear() === year);
-            if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess);
-            if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
-            filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church), where('curia', '==', curia), where('presidium', '==', presidium));
+                const ofSnap = await getDocs(ofQuery);
+                const officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            if (filtered.length === 0) { reportContent.style.display = 'none'; noDataMsg.style.display = 'block'; return; }
-            noDataMsg.style.display = 'none'; reportContent.style.display = 'block';
+                const membersMap = {}; membersList.forEach(m => membersMap[String(m.id)] = m);
 
-            const first = filtered[0]; const last = filtered[filtered.length - 1];
-            document.getElementById('reportDateRange').textContent = `${first.session}회(${first.date}) ~ ${last.session}회(${last.date})`;
+                function getRoleAtDate(memberId, date) {
+                    const term = officersList.find(o => String(o.memberId) === String(memberId) && (o.appointmentDate || '') <= date && (!(o.appointmentExpiryDate) || o.appointmentExpiryDate >= date));
+                    return term ? term.role : '단원';
+                }
 
-            const sessions = filtered.map(r => parseInt(r.session));
-            document.getElementById('sumSessionRange').textContent = `${Math.min(...sessions)}회 ~ ${Math.max(...sessions)}회`;
-            document.getElementById('sumTotalSessions').textContent = `${filtered.length}회`;
+                let filtered = attendanceList.filter(a => new Date(a.date).getFullYear() === year);
+                if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess);
+                if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
+                filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
 
-            let totalP = 0, totalA = 0, offD = 0, offA = 0, memD = 0, memA = 0;
-            const offStats = { '단장': { p: filtered.length, a: 0 }, '부단장': { p: filtered.length, a: 0 }, '서기': { p: filtered.length, a: 0 }, '회계': { p: filtered.length, a: 0 } };
+                if (filtered.length === 0) { reportContent.style.display = 'none'; noDataMsg.style.display = 'block'; return; }
+                noDataMsg.style.display = 'none'; reportContent.style.display = 'block';
 
-            reportBody.innerHTML = '';
-            filtered.forEach(record => {
-                const data = record.attendanceData || {}; let firstRow = true;
-                const seenRoles = new Set();
-                Object.keys(data).forEach(id => {
-                    const rowData = data[id]; const status = (typeof rowData === 'object') ? rowData.status : rowData;
-                    const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
-                    const m = membersMap[id] || { name: '알수없음', baptismalName: '-' };
-                    const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : m.name;
+                const first = filtered[0]; const last = filtered[filtered.length - 1];
+                document.getElementById('reportDateRange').textContent = `${first.session}회(${first.date}) ~ ${last.session}회(${last.date})`;
 
-                    if (role !== 'admin') {
-                        totalP++; if (status === 'P') totalA++;
-                        if (['단장', '부단장', '서기', '회계'].includes(role)) {
-                            offD++; if (status === 'P') { offA++; if (!seenRoles.has(role)) { offStats[role].a++; seenRoles.add(role); } }
-                        } else if (role === '단원') { memD++; if (status === 'P') memA++; }
-                    }
+                const sessions = filtered.map(r => parseInt(r.session));
+                document.getElementById('sumSessionRange').textContent = `${Math.min(...sessions)}회 ~ ${Math.max(...sessions)}회`;
+                document.getElementById('sumTotalSessions').textContent = `${filtered.length}회`;
 
-                    const tr = document.createElement('tr');
-                    if (firstRow) tr.classList.add('group-header-row');
-                    tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date.substring(5) : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
-                    reportBody.appendChild(tr); firstRow = false;
+                let totalP = 0, totalA = 0, offD = 0, offA = 0, memD = 0, memA = 0;
+                const offStats = { '단장': { p: filtered.length, a: 0 }, '부단장': { p: filtered.length, a: 0 }, '서기': { p: filtered.length, a: 0 }, '회계': { p: filtered.length, a: 0 } };
+
+                reportBody.innerHTML = '';
+                filtered.forEach(record => {
+                    const data = record.attendanceData || {}; let firstRow = true;
+                    const seenRoles = new Set();
+                    Object.keys(data).forEach(id => {
+                        const rowData = data[id]; const status = (typeof rowData === 'object') ? rowData.status : rowData;
+                        const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
+                        const m = membersMap[id] || { name: '알수없음', baptismalName: '-' };
+                        const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : m.name;
+
+                        if (role !== 'admin') {
+                            totalP++; if (status === 'P') totalA++;
+                            if (['단장', '부단장', '서기', '회계'].includes(role)) {
+                                offD++; if (status === 'P') { offA++; if (!seenRoles.has(role)) { offStats[role].a++; seenRoles.add(role); } }
+                            } else if (role === '단원') { memD++; if (status === 'P') memA++; }
+                        }
+
+                        const tr = document.createElement('tr');
+                        if (firstRow) tr.classList.add('group-header-row');
+                        tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date.substring(5) : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
+                        reportBody.appendChild(tr); firstRow = false;
+                    });
                 });
-            });
+                // 5. Update Summary Cards
+                document.getElementById('sumAvgRate').textContent = totalP > 0 ? Math.round((totalA / totalP) * 100) + '%' : '0%';
+                document.getElementById('sumOfficerStat').textContent = offD > 0 ? `${offA}/${offD} (${Math.round((offA / offD) * 100)}%)` : '-';
+                document.getElementById('sumMemberStat').textContent = memD > 0 ? `${memA}/${memD} (${Math.round((memA / memD) * 100)}%)` : '-';
 
-            document.getElementById('sumAvgRate').textContent = totalP > 0 ? Math.round((totalA / totalP) * 100) + '%' : '0%';
-            document.getElementById('sumOfficerStat').textContent = offD > 0 ? `${offA}/${offD} (${Math.round((offA / offD) * 100)}%)` : '-';
-            document.getElementById('sumMemberStat').textContent = memD > 0 ? `${memA}/${memD} (${Math.round((memA / memD) * 100)}%)` : '-';
-
-            const ids = { '단장': 'ratePresident', '부단장': 'rateVicePresident', '서기': 'rateSecretary', '회계': 'rateTreasurer' };
-            Object.keys(offStats).forEach(r => {
-                const s = offStats[r]; const el = document.getElementById(ids[r]);
-                if (el) el.textContent = `${s.a}/${s.p} (${Math.round((s.a / s.p) * 100)}%)`;
-            });
+                const ids = { '단장': 'ratePresident', '부단장': 'rateVicePresident', '서기': 'rateSecretary', '회계': 'rateTreasurer' };
+                Object.keys(offStats).forEach(r => {
+                    const s = offStats[r]; const el = document.getElementById(ids[r]);
+                    if (el) el.textContent = `${s.a}/${s.p} (${Math.round((s.a / s.p) * 100)}%)`;
+                });
+            } catch (error) {
+                console.error("Error loading report:", error);
+                alert("보고서를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
-        btnSearch.onclick = loadReport;
+        btnSearch.addEventListener('click', loadReport);
         [yearFilter, startSessionFilter, endSessionFilter].forEach((f, i, arr) => {
             f.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i < arr.length - 1) arr[i + 1].focus(); else loadReport(); } };
         });

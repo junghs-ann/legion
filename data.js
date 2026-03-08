@@ -1,7 +1,26 @@
+import { db, collection, getDocs } from "./firebase-config.js?v=20260307_2342";
 
-// Helper to get Presidia List from LocalStorage
+let cachedPresidia = null;
+
+/**
+ * Fetch presidia list from Firestore and cache it.
+ */
+export async function fetchPresidiaList(forceRefresh = false) {
+    if (cachedPresidia && !forceRefresh) return cachedPresidia;
+    try {
+        const querySnapshot = await getDocs(collection(db, 'presidia_list'));
+        cachedPresidia = [];
+        querySnapshot.forEach(doc => cachedPresidia.push({ id: doc.id, ...doc.data() }));
+        return cachedPresidia;
+    } catch (error) {
+        console.error("Error fetching presidia_list from Firestore:", error);
+        return [];
+    }
+}
+
+// Helper to get Presidia List (Sync version using cache)
 function getStoredPresidia() {
-    return JSON.parse(localStorage.getItem('presidia_list') || '[]');
+    return cachedPresidia || [];
 }
 
 // Helper to get Churches

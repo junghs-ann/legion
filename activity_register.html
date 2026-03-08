@@ -304,6 +304,10 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db } from "./firebase-config.js";
+        import {
+            doc, getDoc, setDoc, collection, query, getDocs
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
         import { getChurches } from "./data.js?v=20260303_1210";
 
@@ -404,7 +408,7 @@
 
         let profileData = null;
 
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             profileData = profile;
 
             // [New] Role-based Menu Control & Common Menus
@@ -414,8 +418,8 @@
                 });
             }
 
+            await loadSchema();
             setupChurches(profile); // Pass profile to setupChurches
-            loadSchema();
             renderSchema();
         }, () => {
             location.href = 'index.html';
@@ -447,17 +451,30 @@
 
             document.getElementById('currentChurchName').textContent = currentChurch || "없음";
 
-            select.onchange = (e) => {
+            select.onchange = async (e) => {
                 currentChurch = e.target.value;
                 document.getElementById('currentChurchName').textContent = currentChurch || "없음";
                 renderSchema();
             };
         }
 
-        function loadSchema() {
-            const saved = localStorage.getItem('activity_schema_v2');
-            if (saved) {
-                activitySchema = JSON.parse(saved);
+        async function loadSchema() {
+            // Firestore에서 전체 스키마 데이터를 로드
+            try {
+                // Here we might not want to fetch EVERYTHING at once, but currently the code expects activitySchema to have all churches.
+                // However, we should only fetch the active one or some set. 
+                // Let's use a collection and fetch as needed, but for now we'll keep the local object for UI logic.
+                const q = query(collection(db, 'activity_schemas'));
+                const querySnapshot = await getDocs(collection(db, 'activity_schemas'));
+                querySnapshot.forEach(doc => {
+                    activitySchema[doc.id] = doc.data().categories;
+                });
+            } catch (error) {
+                console.error("Error loadSchema:", error);
+                const saved = localStorage.getItem('activity_schema_v2');
+                if (saved) {
+                    activitySchema = JSON.parse(saved);
+                }
             }
         }
 
@@ -627,10 +644,24 @@
             }
         };
 
-        document.getElementById('btnFinalSave').onclick = () => {
+        document.getElementById('btnFinalSave').onclick = async () => {
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
-            localStorage.setItem('activity_schema_v2', JSON.stringify(activitySchema));
-            alert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
+
+            try {
+                // Firestore에 성당별로 저장
+                const docRef = doc(db, 'activity_schemas', currentChurch);
+                await setDoc(docRef, {
+                    categories: activitySchema[currentChurch],
+                    updatedAt: new Date().toISOString()
+                });
+
+                // localStorage에도 백업
+                localStorage.setItem('activity_schema_v2', JSON.stringify(activitySchema));
+                alert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
+            } catch (error) {
+                console.error("Error saving schema:", error);
+                alert("활동 항목 저장 중 오류가 발생했습니다.");
+            }
         };
     </script>
 </body>

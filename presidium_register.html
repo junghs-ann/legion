@@ -447,13 +447,21 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
 
+        // State
+        let presidia_list = [];
+
         // Auth Guard
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             const currentUser = profile;
 
-            // 커스텀 알림/확인 함수
+            // Firestore real-time sync for presidia_list
+            onSnapshot(collection(db, 'presidia_list'), (snapshot) => {
+                presidia_list = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                updateChurchSelect();
+            });
             window.showCustomAlert = (message) => {
                 return new Promise((resolve) => {
                     const modal = document.getElementById('customModal');
@@ -505,28 +513,35 @@
                 });
             };
 
+            const updateChurchSelect = async () => {
+                try {
+                    // Extract Churches from Presidia & Users from Firestore if possible, 
+                    // but most authoritative is presidia_list now.
+                    // Also check users for any churches not yet in presidia_list
+                    const userSnapshot = await getDocs(collection(db, 'users'));
+                    const userChurches = userSnapshot.docs.map(u => u.data().church).filter(c => c);
+                    const presidiumChurches = presidia_list.map(p => p.churchName).filter(c => c);
+                    const uniqueChurches = [...new Set([...presidiumChurches, ...userChurches])].sort();
+
+                    const currentVal = churchSelect.value;
+                    churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                    uniqueChurches.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c;
+                        opt.textContent = c;
+                        churchSelect.appendChild(opt);
+                    });
+                    if (currentVal) churchSelect.value = currentVal;
+                } catch (error) {
+                    console.error("Error updating church select:", error);
+                }
+            };
+
             try {
-                // Populate Lists from DB
-                const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-                const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
-
-                // Extract Churches from Presidia & Users for Select List
-                const presidiumChurches = storedPresidia.map(p => p.churchName).filter(c => c);
-                const userChurches = Object.values(storedUsers).map(u => u.church).filter(c => c);
-                const uniqueChurches = [...new Set([...presidiumChurches, ...userChurches])].sort();
-
                 // DOM Elements
                 const churchSelect = document.getElementById('churchSelect');
-                const churchNameInput = document.getElementById('churchNameInput'); // Actual hidden input or visible input
+                const churchNameInput = document.getElementById('churchNameInput');
                 const btnToggleChurchInput = document.getElementById('btnToggleChurchInput');
-
-                // Populate Select
-                uniqueChurches.forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c;
-                    opt.textContent = c;
-                    churchSelect.appendChild(opt);
-                });
 
                 // Toggle Logic
                 let isDirectInput = false;
@@ -570,11 +585,10 @@
 
                 // 1. Update Presidium List
                 const updatePresidiumList = (filterText = '') => {
-                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
                     const selectedChurch = churchNameInput.value.trim();
                     const selectedCuria = curiaInputRef.value.trim();
 
-                    let filtered = storedPresidiaRef;
+                    let filtered = presidia_list;
 
                     if (selectedChurch) {
                         filtered = filtered.filter(p => p.churchName.trim() === selectedChurch);
@@ -610,10 +624,9 @@
 
                 // 2. Update Curia List
                 const updateCuriaList = (filterText = '') => {
-                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
                     const selectedChurch = churchNameInput.value.trim();
 
-                    let filtered = storedPresidiaRef;
+                    let filtered = presidia_list;
                     if (selectedChurch) {
                         filtered = filtered.filter(p => p.churchName.trim() === selectedChurch);
                     }
@@ -670,15 +683,14 @@
                     if (!input || !list) return () => { };
 
                     const updateList = (filterText = '') => {
-                        const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
                         let filteredData = [];
 
                         if (filterByChurch) {
                             const selectedChurch = churchNameInput.value.trim();
-                            const churchPresidia = storedPresidiaRef.filter(p => p.churchName.trim() === selectedChurch);
+                            const churchPresidia = presidia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
                             filteredData = churchPresidia.map(p => p[dataKey]);
                         } else {
-                            filteredData = storedPresidiaRef.map(p => p[dataKey]);
+                            filteredData = presidia_list.map(p => p[dataKey]);
                         }
                         filteredData = [...new Set(filteredData)].filter(item => item);
 
@@ -726,10 +738,9 @@
                         return;
                     }
 
-                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-                    const record = storedPresidiaRef.find(p =>
-                        p.churchName.trim() === selectedChurch &&
-                        p.presidiumName.trim() === selectedPresidium
+                    const record = presidia_list.find(p =>
+                        (p.churchName || '').trim() === selectedChurch &&
+                        (p.presidiumName || '').trim() === selectedPresidium
                     );
 
                     if (record) {
@@ -748,9 +759,8 @@
 
                 // Auto-fill Logic
                 const autoFillHigherCouncils = () => {
-                    const storedPresidiaRef = JSON.parse(localStorage.getItem('presidia_list') || '[]');
                     const selectedChurch = churchNameInput.value.trim();
-                    const churchPresidia = storedPresidiaRef.filter(p => p.churchName.trim() === selectedChurch);
+                    const churchPresidia = presidia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
 
                     if (churchPresidia.length > 0) {
                         const firstRecord = churchPresidia[0];
@@ -779,8 +789,8 @@
                 }
 
                 // Pre-fill Church Name with last used if exists
-                if (storedPresidia.length > 0) {
-                    const lastChurch = storedPresidia[storedPresidia.length - 1].churchName;
+                if (presidia_list.length > 0) {
+                    const lastChurch = presidia_list[presidia_list.length - 1].churchName;
                     if (churchNameInput) {
                         churchNameInput.value = lastChurch;
                         // Also set the select if not in direct input mode
@@ -803,50 +813,47 @@
                     window.initCommonMenus(currentUser, logoutUser);
                 }
 
-                form.addEventListener('submit', (e) => {
+                form.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const formData = new FormData(form);
                     const data = Object.fromEntries(formData.entries());
 
-                    // Basic Validation
                     if (!data.churchName || !data.presidiumName) {
                         window.showCustomAlert('성당 명과 쁘레시디움 명은 필수입니다.');
                         return;
                     }
 
-                    const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                    try {
+                        const existing = presidia_list.find(p =>
+                            p.churchName === data.churchName && p.presidiumName === data.presidiumName
+                        );
 
-                    // Check for existing record to update based on keys (Church + Presidium)
-                    // Or if we had an internal ID. For now, let's use Church + Presidium as unique key effectively.
-                    const existingIndex = storedPresidia.findIndex(p =>
-                        p.churchName === data.churchName && p.presidiumName === data.presidiumName
-                    );
-
-                    if (existingIndex >= 0) {
-                        // Update existing record - preserve other fields not in form if any
-                        const existing = storedPresidia[existingIndex];
-                        storedPresidia[existingIndex] = { ...existing, ...data };
-                        window.showCustomAlert('정보가 수정되었습니다.');
-                    } else {
-                        // Create new
-                        data.id = 'pr_' + Date.now();
-                        data.createdAt = new Date().toISOString();
-                        storedPresidia.push(data);
-                        window.showCustomAlert('성공적으로 등록되었습니다.');
-                        form.reset();
-                        // Reset select manually if needed
-                        if (!isDirectInput) {
-                            churchSelect.value = '';
-                            churchNameInput.value = '';
+                        if (existing) {
+                            await updateDoc(doc(db, 'presidia_list', existing.id), {
+                                ...data,
+                                updatedAt: serverTimestamp()
+                            });
+                            window.showCustomAlert('정보가 수정되었습니다.');
+                        } else {
+                            data.createdAt = serverTimestamp();
+                            data.updatedAt = serverTimestamp();
+                            await addDoc(collection(db, 'presidia_list'), data);
+                            window.showCustomAlert('성공적으로 등록되었습니다.');
+                            form.reset();
+                            if (!isDirectInput) {
+                                churchSelect.value = '';
+                                churchNameInput.value = '';
+                            }
                         }
+                    } catch (error) {
+                        console.error("Error saving presidium:", error);
+                        window.showCustomAlert('저장 중 오류가 발생했습니다.');
                     }
-
-                    localStorage.setItem('presidia_list', JSON.stringify(storedPresidia));
                 });
 
                 // [New] Delete Logic
                 if (btnDelete) {
-                    btnDelete.addEventListener('click', () => {
+                    btnDelete.addEventListener('click', async () => {
                         const selectedChurch = churchNameInput.value.trim();
                         const selectedPresidium = presidiumNameInput.value.trim();
 
@@ -855,26 +862,26 @@
                             return;
                         }
 
-                        window.showCustomConfirm(`정말로 '${selectedChurch}' 성당의 '${selectedPresidium}' 쁘레시디움 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`).then(confirmed => {
+                        window.showCustomConfirm(`정말로 '${selectedChurch}' 성당의 '${selectedPresidium}' 쁘레시디움 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`).then(async (confirmed) => {
                             if (confirmed) {
-                                let storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-                                const originalLength = storedPresidia.length;
+                                try {
+                                    const target = presidia_list.find(p =>
+                                        (p.churchName || '').trim() === selectedChurch && (p.presidiumName || '').trim() === selectedPresidium
+                                    );
 
-                                // Remove matching record
-                                storedPresidia = storedPresidia.filter(p =>
-                                    !(p.churchName.trim() === selectedChurch && p.presidiumName.trim() === selectedPresidium)
-                                );
-
-                                if (storedPresidia.length < originalLength) {
-                                    localStorage.setItem('presidia_list', JSON.stringify(storedPresidia));
-                                    window.showCustomAlert('성공적으로 삭제되었습니다.');
-                                    form.reset();
-                                    // Reset select/input manually
-                                    churchSelect.value = '';
-                                    churchNameInput.value = '';
-                                    churchNameInput.dispatchEvent(new Event('input'));
-                                } else {
-                                    window.showCustomAlert('삭제할 대상을 찾을 수 없습니다. 정보를 다시 확인해 주세요.');
+                                    if (target) {
+                                        await deleteDoc(doc(db, 'presidia_list', target.id));
+                                        window.showCustomAlert('성공적으로 삭제되었습니다.');
+                                        form.reset();
+                                        churchSelect.value = '';
+                                        churchNameInput.value = '';
+                                        churchNameInput.dispatchEvent(new Event('input'));
+                                    } else {
+                                        window.showCustomAlert('삭제할 대상을 찾을 수 없습니다. 정보를 다시 확인해 주세요.');
+                                    }
+                                } catch (error) {
+                                    console.error("Error deleting presidium:", error);
+                                    window.showCustomAlert('삭제 중 오류가 발생했습니다.');
                                 }
                             }
                         });
