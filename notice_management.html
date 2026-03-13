@@ -931,7 +931,7 @@
 
         async function loadData() {
             try {
-                const q = query(collection(db, 'notice_list'), orderBy('createdAt', 'desc'));
+                const q = query(collection(db, 'legion_notices_list'), orderBy('createdAt', 'desc'));
                 const querySnapshot = await getDocs(q);
                 notices = [];
                 querySnapshot.forEach(docSnap => {
@@ -1242,7 +1242,7 @@
                 if (!(isSuperAdmin || isAuthor)) return alert('권한이 없습니다.');
                 if (confirm('이 공지를 삭제하시겠습니까?')) {
                     try {
-                        await deleteDoc(doc(db, 'notice_list', id));
+                        await deleteDoc(doc(db, 'legion_notices_list', id));
                         await saveAndRefresh();
                         closeModal('detailModal');
                     } catch (error) {
@@ -1296,10 +1296,10 @@
 
             try {
                 if (id) {
-                    await updateDoc(doc(db, 'notice_list', id), data);
+                    await updateDoc(doc(db, 'legion_notices_list', id), data);
                 } else {
                     data.createdAt = serverTimestamp();
-                    await addDoc(collection(db, 'notice_list'), data);
+                    await addDoc(collection(db, 'legion_notices_list'), data);
                 }
                 await saveAndRefresh();
                 closeModal('writeModal');
