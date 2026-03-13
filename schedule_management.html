@@ -664,10 +664,10 @@
                 </div>
             </div>
 
-            <!-- 신규 등록 버튼 영역 (필터와 달력 사이) -->
-            <div class="btn-action-row">
-                <button id="btnOpenAdd" class="btn-primary" style="white-space: nowrap; padding: 10px 25px;">
-                    <i class="fas fa-plus"></i> 등 록
+            <!-- 신규 등록 버튼 영역 (정렬 보정) -->
+            <div class="btn-action-row" style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <button id="btnOpenAdd" class="btn-premium btn-premium-save" style="display: none; width: auto; min-width: 120px;">
+                    <i class="fas fa-plus"></i> 일정 등록
                 </button>
             </div>
 
@@ -693,8 +693,13 @@
                             <!-- JS로 채움 -->
                         </div>
                     </div>
+                <!-- Right: Event List Area (복구된 영역) -->
+                <div class="event-list-card">
+                    <div class="list-title" id="selectedDateTitle">일정 목록</div>
+                    <div id="eventListContainer" class="event-list-content">
+                        <!-- JS로 채움 -->
+                    </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -745,16 +750,16 @@
                 <input type="hidden" id="schedCuria">
                 <input type="hidden" id="schedPresidium">
 
-                <div class="btn-group" style="justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <button type="submit" class="btn-save" style="flex: 1; justify-content: center;">
+                <div class="btn-group" style="display: flex; gap: 15px; margin-top: 30px; justify-content: center; flex-wrap: wrap;">
+                    <button type="submit" class="btn-premium btn-premium-save" style="width: auto; min-width: 120px;">
                         <i class="fas fa-save"></i> 저 장
                     </button>
-                    <button type="button" id="btnDelete" class="btn-delete"
-                        style="display:none; flex: 1; justify-content: center;">
+                    <button type="button" id="btnDelete" class="btn-premium btn-premium-gray"
+                        style="display:none; width: auto; min-width: 120px; background-color: #e53e3e;">
                         <i class="fas fa-trash-alt"></i> 삭 제
                     </button>
-                    <button type="button" class="btn-close" id="btnCloseModal"
-                        style="flex: 1; justify-content: center;">
+                    <button type="button" class="btn-premium btn-premium-close" id="btnCloseModal"
+                        style="width: auto; min-width: 100px;">
                         <i class="fas fa-times"></i> 닫 기
                     </button>
                 </div>
