@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>일정 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260308_0048">
+    <link rel="stylesheet" href="styles.css?v=20260313_1720">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260308_0048">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260313_1720">
     <style>
         .schedule-container {
             background: white;
@@ -548,11 +548,80 @@
             color: #e53e3e;
         }
 
+        /* Premium Button Styles */
+        .btn-premium {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+            color: white;
+        }
+
+        .btn-premium-save {
+            background: linear-gradient(135deg, #d4a017 0%, #b38600 100%);
+        }
+
+        .btn-premium-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(179, 134, 0, 0.3);
+        }
+
+        .btn-premium-gray {
+            background: #f1f1f1;
+            color: #555 !important;
+        }
+
+        .btn-premium-gray:hover {
+            background: #e5e5e5;
+            color: #333 !important;
+        }
+
+        .btn-premium-close {
+            background: #666;
+        }
+
+        .btn-premium-close:hover {
+            background: #444;
+        }
+
+        /* Modal Close X Button (Premium) */
+        .btn-modal-close-x {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .btn-modal-close-x:hover {
+            background: #f5f5f5;
+            color: #333;
+            transform: rotate(90deg);
+        }
+
         /* New Action Button Row Style */
         .btn-action-row {
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             padding: 0 5px;
         }
     </style>
@@ -708,7 +777,8 @@
 
     <!-- Add/Edit Modal -->
     <div id="scheduleModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="position: relative;">
+            <div class="btn-modal-close-x" id="btnCloseModalX">&times;</div>
             <div class="modal-header">
                 <h3 id="modalTitle" style="margin:0;">일정 등록</h3>
             </div>
@@ -790,12 +860,13 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260308_0048"></script>
+    <script src="script.js?v=20260313_1720"></script>
     <script type="module">
-        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260304_1500";
-        import { fetchPresidiaList } from "./data.js?v=20260304_1500";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, deleteField } from "./firebase-config.js?v=20260313_1720";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1720";
+        import { fetchPresidiaList } from "./data.js?v=20260313_1720";
 
+        let categories = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
         let currentUser = null;
         let schedules = [];
         let orgFilter = { church: '', curia: '', presidium: '' };
@@ -907,8 +978,29 @@
                 });
 
                 refreshData();
+                refreshData();
             } else {
                 // Admin Cascading
+                if (userChurch) {
+                    filterChurch.value = userChurch;
+                    updateCuriaSelect(userChurch, userCuria);
+                    if (userCuria) {
+                        filterCuria.value = userCuria;
+                        filterCuria.disabled = false;
+                        updatePresidiumSelect(userChurch, userCuria, userPresidium);
+                        if (userPresidium) {
+                            filterPresidium.value = userPresidium;
+                            filterPresidium.disabled = false;
+                        }
+                    }
+                }
+                
+                orgFilter = {
+                    church: filterChurch.value,
+                    curia: filterCuria.value,
+                    presidium: filterPresidium.value
+                };
+
                 filterChurch.addEventListener('change', (e) => {
                     const church = e.target.value;
                     updateCuriaSelect(church);
@@ -932,6 +1024,8 @@
                     orgFilter.presidium = e.target.value;
                     refreshData();
                 });
+
+                refreshData();
             }
         }
 
@@ -971,7 +1065,7 @@
         let allSchedules = [];
         function startSchedulesSync() {
             if (unsubscribeSchedules) unsubscribeSchedules();
-            const q = query(collection(db, 'schedule_list'), orderBy('date', 'asc'));
+            const q = query(collection(db, 'schedules_list'), orderBy('date', 'asc'));
             unsubscribeSchedules = onSnapshot(q, (snapshot) => {
                 allSchedules = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
                 applySchedulesFilter();
@@ -982,26 +1076,37 @@
 
         function applySchedulesFilter() {
             // Filter by Org
+            const targetChurch = (orgFilter.church || '').trim();
+            const targetCuria = (orgFilter.curia || '').trim();
+            const targetPresidium = (orgFilter.presidium || '').trim();
+
+            console.log(`[Debug] Filtering for: Church="${targetChurch}", Curia="${targetCuria}", Presidium="${targetPresidium}"`);
+
             schedules = allSchedules.filter(s => {
-                const sChurch = s.churchName || s.church || '';
-                const sCuria = s.curiaName || s.curia || '';
-                const sPresidium = s.presidiumName || s.presidium || '';
+                const sChurch = (s.churchName || s.church || '').trim();
+                const sCuria = (s.curiaName || s.curia || '').trim();
+                const sPresidium = (s.presidiumName || s.presidium || '').trim();
 
-                if (!orgFilter.church) return false;
-                if (sChurch !== orgFilter.church) return false;
+                // 1. 성당 매칭 (가장 기본)
+                if (targetChurch && sChurch !== targetChurch) return false;
+                
+                // 2. 관리자이거나 성당만 선택된 경우: 해당 성당의 모든 공지(성당/꾸리아/쁘레) 다 보여줌
+                if (!targetCuria) return true;
 
+                // 3. 꾸리아가 선택된 경우
                 const isChurchLevel = !sCuria && !sPresidium;
-                const isCuriaLevel = orgFilter.curia && (sCuria === orgFilter.curia) && !sPresidium;
-                const isPresidiumLevel = orgFilter.curia && orgFilter.presidium && (sCuria === orgFilter.curia) && (sPresidium === orgFilter.presidium);
-
-                if (orgFilter.presidium) {
-                    return isChurchLevel || isCuriaLevel || isPresidiumLevel;
-                } else if (orgFilter.curia) {
-                    return isChurchLevel || isCuriaLevel;
-                } else {
-                    return isChurchLevel;
+                const isTargetCuriaLevel = (sCuria === targetCuria) && !sPresidium;
+                
+                if (!targetPresidium) {
+                    return isChurchLevel || isTargetCuriaLevel;
                 }
+
+                // 4. 쁘레시디움이 선택된 경우
+                const isTargetPresidiumLevel = (sCuria === targetCuria) && (sPresidium === targetPresidium);
+                return isChurchLevel || isTargetCuriaLevel || isTargetPresidiumLevel;
             });
+
+            console.log(`[Debug] Found ${schedules.length} schedules after filtering.`);
             renderCalendar();
             if (selectedDate) renderEventList();
         }
@@ -1018,10 +1123,10 @@
                 data.updatedAt = serverTimestamp();
 
                 if (id) {
-                    await updateDoc(doc(db, 'schedule_list', id), data);
+                    await updateDoc(doc(db, 'schedules_list', id), data);
                 } else {
                     data.createdAt = serverTimestamp();
-                    await addDoc(collection(db, 'schedule_list'), data);
+                    await addDoc(collection(db, 'schedules_list'), data);
                 }
                 refreshData();
             } catch (error) {
@@ -1032,7 +1137,7 @@
 
         async function deleteSchedule(id) {
             try {
-                await deleteDoc(doc(db, 'schedule_list', id));
+                await deleteDoc(doc(db, 'schedules_list', id));
                 refreshData();
             } catch (error) {
                 console.error("Error deleting schedule:", error);
@@ -1119,7 +1224,13 @@
                 div.addEventListener('click', () => {
                     selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), num);
                     renderEventList();
-                    // Mark as selected? (Optional UI polish)
+                    
+                    // 권한 확인 후 등록 모달 열기
+                    const role = (currentUser.role || '').toLowerCase();
+                    const canManage = ['admin', '관리자', '단장', '부단장', '서기', '회계', '단원'].some(r => role.includes(r.toLowerCase()));
+                    if (canManage) {
+                        openAddModalForDate(selectedDate);
+                    }
                 });
             }
 
@@ -1187,6 +1298,26 @@
             scheduleModal.style.display = 'none';
         });
 
+        // 우측 상단 X 버튼 이벤트 복구
+        document.getElementById('btnCloseModalX').addEventListener('click', () => {
+            scheduleModal.style.display = 'none';
+        });
+
+        function openAddModalForDate(date) {
+            document.getElementById('modalTitle').textContent = '일정 등록';
+            scheduleForm.reset();
+            document.getElementById('scheduleId').value = '';
+            
+            // 날짜 세팅 (YYYY-MM-DD)
+            const y = date.getFullYear();
+            const m = (date.getMonth() + 1).toString().padStart(2, '0');
+            const d = date.getDate().toString().padStart(2, '0');
+            document.getElementById('schedDate').value = `${y}-${m}-${d}`;
+            
+            document.getElementById('btnDelete').style.display = 'none';
+            scheduleModal.style.display = 'flex';
+        }
+
         function openEditModal(e) {
             document.getElementById('modalTitle').textContent = '일정 상세';
             document.getElementById('scheduleId').value = e.id;
@@ -1240,12 +1371,27 @@
         });
 
         // --- Category Dynamic Logic ---
-        let categories = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
         async function loadCategories() {
             try {
                 const docSnap = await getDocs(collection(db, 'schedule_categories'));
                 if (!docSnap.empty) {
-                    categories = docSnap.docs.map(d => d.data().name);
+                    const tempCats = [];
+                    for (const d of docSnap.docs) {
+                        const data = d.data();
+                        const id = d.id;
+                        
+                        if (data.name) {
+                            tempCats.push(data.name);
+                        } else if (data.value) {
+                            // legacy data: 'value' 필드를 'name'으로 자동 변환 (자가 치유)
+                            await updateDoc(doc(db, 'schedule_categories', id), {
+                                name: data.value,
+                                value: deleteField() // deleteField는 나중에 import 추가 필요
+                            });
+                            tempCats.push(data.value);
+                        }
+                    }
+                    categories = tempCats.length > 0 ? tempCats : categories;
                 } else {
                     // Initialize default categories if none exist
                     for (const cat of categories) {
@@ -1312,11 +1458,17 @@
         window.removeCategory = async (catName) => {
             if (confirm(`'${catName}' 분류를 삭제하시겠습니까?`)) {
                 try {
-                    const q = query(collection(db, 'schedule_categories'), where('name', '==', catName));
-                    const snapshot = await getDocs(q);
-                    for (const d of snapshot.docs) {
-                        await deleteDoc(doc(db, 'schedule_categories', d.id));
-                    }
+                    // name 또는 value 필드 모두에서 검색하여 삭제 (완벽한 데이터 정리)
+                    const qName = query(collection(db, 'schedule_categories'), where('name', '==', catName));
+                    const qValue = query(collection(db, 'schedule_categories'), where('value', '==', catName));
+                    
+                    const [snapName, snapValue] = await Promise.all([getDocs(qName), getDocs(qValue)]);
+                    
+                    const deletePromises = [];
+                    snapName.forEach(d => deletePromises.push(deleteDoc(doc(db, 'schedule_categories', d.id))));
+                    snapValue.forEach(d => deletePromises.push(deleteDoc(doc(db, 'schedule_categories', d.id))));
+                    
+                    await Promise.all(deletePromises);
                     await loadCategories();
                     renderCategoryList();
                 } catch (error) {
@@ -1353,7 +1505,9 @@
         function formatDate(y, m, d) {
             const mm = (m + 1).toString().padStart(2, '0');
             const dd = d.toString().padStart(2, '0');
-            return `${y}-${mm}-${dd}`;
+            const result = `${y}-${mm}-${dd}`;
+            // console.log(`[Debug] Formatting Date: ${y}, ${m}, ${d} => ${result}`);
+            return result;
         }
     </script>
 </body>
