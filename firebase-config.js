@@ -15,8 +15,7 @@ import {
     onSnapshot,
     getDoc,
     serverTimestamp,
-    addDoc,
-    deleteField
+    addDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
@@ -41,5 +40,5 @@ export {
     auth, db, storage,
     collection, getDocs, query, where, orderBy,
     doc, setDoc, updateDoc, deleteDoc, onSnapshot,
-    getDoc, serverTimestamp, addDoc, deleteField
+    getDoc, serverTimestamp, addDoc
 };

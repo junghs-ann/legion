@@ -862,7 +862,7 @@
 
     <script src="script.js?v=20260313_1720"></script>
     <script type="module">
-        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, deleteField } from "./firebase-config.js?v=20260313_1720";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260313_1720";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1720";
         import { fetchPresidiaList } from "./data.js?v=20260313_1720";
 
@@ -1375,23 +1375,7 @@
             try {
                 const docSnap = await getDocs(collection(db, 'schedule_categories'));
                 if (!docSnap.empty) {
-                    const tempCats = [];
-                    for (const d of docSnap.docs) {
-                        const data = d.data();
-                        const id = d.id;
-                        
-                        if (data.name) {
-                            tempCats.push(data.name);
-                        } else if (data.value) {
-                            // legacy data: 'value' 필드를 'name'으로 자동 변환 (자가 치유)
-                            await updateDoc(doc(db, 'schedule_categories', id), {
-                                name: data.value,
-                                value: deleteField() // deleteField는 나중에 import 추가 필요
-                            });
-                            tempCats.push(data.value);
-                        }
-                    }
-                    categories = tempCats.length > 0 ? tempCats : categories;
+                    categories = docSnap.docs.map(d => d.data().name || '미분류');
                 } else {
                     // Initialize default categories if none exist
                     for (const cat of categories) {
@@ -1458,15 +1442,9 @@
         window.removeCategory = async (catName) => {
             if (confirm(`'${catName}' 분류를 삭제하시겠습니까?`)) {
                 try {
-                    // name 또는 value 필드 모두에서 검색하여 삭제 (완벽한 데이터 정리)
-                    const qName = query(collection(db, 'schedule_categories'), where('name', '==', catName));
-                    const qValue = query(collection(db, 'schedule_categories'), where('value', '==', catName));
-                    
-                    const [snapName, snapValue] = await Promise.all([getDocs(qName), getDocs(qValue)]);
-                    
-                    const deletePromises = [];
-                    snapName.forEach(d => deletePromises.push(deleteDoc(doc(db, 'schedule_categories', d.id))));
-                    snapValue.forEach(d => deletePromises.push(deleteDoc(doc(db, 'schedule_categories', d.id))));
+                    const q = query(collection(db, 'schedule_categories'), where('name', '==', catName));
+                    const snapshot = await getDocs(q);
+                    const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'schedule_categories', d.id)));
                     
                     await Promise.all(deletePromises);
                     await loadCategories();
