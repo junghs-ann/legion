@@ -11,28 +11,128 @@
     <link rel="stylesheet" href="accounting_styles.css?v=20260306_2340">
     <style>
         /* Specific overrides for consistent design */
+        .search-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 200px;
+        }
+
+        /* Improved Search Controls Layout */
+        .search-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px !important;
+            width: 100%;
+        }
+
         .search-controls .form-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 15px !important;
             margin-bottom: 0;
-            flex: none;
-            /* 고정 너비 사용 */
+            width: 100%;
+        }
+
+        .search-controls label {
+            width: 100px !important;
+            min-width: 100px !important;
+            margin-bottom: 0 !important;
+            font-weight: 600;
+            color: #4a5568;
+            white-space: nowrap;
         }
 
         .search-controls select,
         .search-controls input {
-            width: 180px !important;
-            height: 38px;
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 0.9rem;
+            width: 100% !important;
+            max-width: 200px !important;
+            height: 40px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 0.95rem;
             box-sizing: border-box;
+            transition: all 0.2s;
         }
 
-        /* Searchable dropdown styles */
-        .search-container {
-            position: relative;
-            display: inline-block;
-            width: 180px;
+        .search-controls select:focus,
+        .search-controls input:focus {
+            border-color: #d4a017;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+        }
+
+        /* Responsive Table Wrapper */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-top: 10px;
+        }
+
+        .editable-table {
+            min-width: 600px; /* Ensure content doesn't squeeze on mobile */
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white !important; /* Block background image */
+        }
+
+        .editable-table tr, 
+        .editable-table td {
+            background-color: white !important; /* Block background image gaps */
+        }
+
+        .editable-table th {
+            white-space: nowrap !important;
+            background-color: #f8fafc !important;
+            color: #4a5568;
+            font-weight: 700;
+            padding: 12px 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .editable-table td {
+            padding: 6px 10px; /* Further reduced padding for density */
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+            white-space: nowrap; /* Prevent unwanted wrapping in cells */
+        }
+
+        .editable-table select,
+        .editable-table input {
+            width: 100%;
+            max-width: 100%;
+            padding: 6px 8px; /* Slightly smaller padding */
+            border-radius: 6px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        /* Specific constraints for narrower columns */
+        .editable-table td:nth-child(1) select,
+        .editable-table td:nth-child(3) select {
+            max-width: 100px;
+        }
+
+        .btn-delete {
+            background-color: #feb2b2;
+            color: #c53030;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap; /* Ensure button text is one line */
+        }
+
+        .btn-delete:hover {
+            background-color: #fc8181;
+            color: white;
         }
 
         .custom-dropdown {
@@ -244,14 +344,14 @@
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="search-controls" style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="search-controls">
                     <div class="form-group">
-                        <label for="churchSelect">성당</label>
+                        <label for="churchSelect">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;당</label>
                         <select id="churchSelect"></select>
                         <input type="text" id="churchInput" readonly style="display:none;">
                     </div>
                     <div class="form-group">
-                        <label for="curiaSelect">꾸리아</label>
+                        <label for="curiaSelect">꾸&nbsp;&nbsp;리&nbsp;&nbsp;아</label>
                         <select id="curiaSelect" disabled></select>
                         <input type="text" id="curiaInput" readonly style="display:none;">
                     </div>
@@ -273,8 +373,8 @@
             <button type="button" id="btnSearch" class="btn-premium btn-gold">
                 <i class="fas fa-search"></i> 조회
             </button>
-            <button type="button" id="btnInput" class="btn-premium btn-green">
-                <i class="fas fa-keyboard"></i> 입력
+            <button type="button" id="btnSave" class="btn-premium btn-green">
+                <i class="fas fa-save"></i> 저장
             </button>
             <button type="button" id="btnClose" class="btn-premium btn-grey">
                 <i class="fas fa-times"></i> 닫기
@@ -284,20 +384,20 @@
         <!-- Grid Section -->
         <div class="results-section">
             <h3 style="margin-bottom: 15px;">항목 목록</h3>
-            <div style="overflow-x: auto;">
+            <div class="table-responsive">
                 <table class="editable-table">
                     <thead>
                         <tr>
-                            <th style="width: 20%;">입/출구분</th>
+                            <th style="width: 15%;">입/출구분</th>
                             <th style="width: 50%;">항목명</th>
-                            <th style="width: 20%;">사용여부</th>
-                            <th style="width: 10%;">관리</th>
+                            <th style="width: 15%;">사용여부</th>
+                            <th style="width: 20%;">관리</th>
                         </tr>
                     </thead>
                     <tbody id="gridBody">
                         <tr>
                             <td colspan="4"
-                                style="text-align: center; padding: 50px; color: #888; border: 1px solid #ddd;">
+                                style="text-align: center; padding: 50px; color: #888;">
                                 성당과 꾸리아를 선택하고 [조회] 버튼을 눌러주세요.
                             </td>
                         </tr>
@@ -403,56 +503,63 @@
             }
         }
 
-        function loadChurches() {
-            const presidia = getStoredPresidiaList();
-            const churches = [...new Set(presidia.map(p => p.churchName || p.church).filter(name => name))].sort();
+        async function loadChurches() {
+            try {
+                // [New] Fetch Churches from presidia_list and users collection
+                const [presSnap, userSnap] = await Promise.all([
+                    getDocs(collection(db, 'presidia_list')),
+                    getDocs(collection(db, 'users'))
+                ]);
 
-            churchSelect.innerHTML = '<option value="">성당 선택</option>';
-            churches.forEach(church => {
-                const option = document.createElement('option');
-                option.value = church;
-                option.textContent = church;
-                churchSelect.appendChild(option);
-            });
+                const presChurches = presSnap.docs.map(doc => doc.data().churchName || doc.data().church).filter(c => c);
+                const userChurches = userSnap.docs.map(doc => doc.data().church).filter(c => c);
+                const churches = [...new Set([...presChurches, ...userChurches])].sort();
 
-            // 초기 로딩 시 꾸리아 연동을 위해 change 강제 발생
-            churchSelect.onchange = () => {
-                const church = churchSelect.value;
-                curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
-                curiaSelect.disabled = !church;
+                churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                churches.forEach(church => {
+                    const option = document.createElement('option');
+                    option.value = church;
+                    option.textContent = church;
+                    churchSelect.appendChild(option);
+                });
 
-                if (church) {
-                    const presidiaList = getStoredPresidiaList();
-                    const curiae = [...new Set(
-                        presidiaList
-                            .filter(p => (p.churchName || p.church) === church)
-                            .map(p => p.curiaName || p.curia)
-                            .filter(name => name)
-                    )].sort();
+                // 초기 로딩 시 꾸리아 연동을 위해 change 강제 발생
+                churchSelect.onchange = async () => {
+                    const church = churchSelect.value;
+                    curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
+                    curiaSelect.disabled = !church;
 
-                    curiae.forEach(curia => {
-                        const option = document.createElement('option');
-                        option.value = curia;
-                        option.textContent = curia;
-                        curiaSelect.appendChild(option);
-                    });
-                }
-                // 꾸리아 변경 시 쁘레시디움 초기화
-                curiaSelect.onchange();
-            };
+                    if (church) {
+                        const curiaeQuery = query(collection(db, 'presidia_list'), where('churchName', '==', church));
+                        const curiaeSnap = await getDocs(curiaeQuery);
+                        const curiae = [...new Set(curiaeSnap.docs.map(doc => doc.data().curiaName).filter(c => c))].sort();
 
-            curiaSelect.onchange = () => {
-                prInput.value = '';
-                selPr.value = '';
-                prDropdown.style.display = 'none';
-            };
+                        curiae.forEach(curia => {
+                            const option = document.createElement('option');
+                            option.value = curia;
+                            option.textContent = curia;
+                            curiaSelect.appendChild(option);
+                        });
+                    }
+                    // 꾸리아 변경 시 쁘레시디움 초기화
+                    curiaSelect.dispatchEvent(new Event('change'));
+                };
+
+                curiaSelect.onchange = () => {
+                    prInput.value = '';
+                    selPr.value = '';
+                    prDropdown.style.display = 'none';
+                };
+            } catch (error) {
+                console.error("Error loading churches:", error);
+            }
         }
 
         // --- Event Listeners ---
         function setupEventListeners() {
             // 쁘레시디움 검색창 상호작용
-            prInput.onfocus = () => showPrDropdown(prInput.value);
-            prInput.oninput = () => showPrDropdown(prInput.value);
+            prInput.onfocus = async () => await showPrDropdown(prInput.value);
+            prInput.oninput = async () => await showPrDropdown(prInput.value);
 
             document.addEventListener('click', (e) => {
                 if (!prInput.contains(e.target) && !prDropdown.contains(e.target)) {
@@ -460,7 +567,7 @@
                 }
             });
 
-            window.showPrDropdown = (filter = '') => {
+            window.showPrDropdown = async (filter = '') => {
                 const isAdmin = currentUserProfile.role === 'admin' || currentUserProfile.role === '관리자';
                 const c = isAdmin ? churchSelect.value : churchInput.value;
                 const cu = isAdmin ? curiaSelect.value : curiaInput.value;
@@ -471,11 +578,8 @@
                     return;
                 }
 
-                const presidia = getStoredPresidiaList();
-                const list = presidia
-                    .filter(p => (p.churchName || p.church) === c && (p.curiaName || p.curia) === cu)
-                    .map(p => p.name || p.presidiumName)
-                    .sort();
+                const presSnap = await getDocs(query(collection(db, 'presidia_list'), where('churchName', '==', c), where('curiaName', '==', cu)));
+                const list = presSnap.docs.map(doc => doc.data().presidiumName).filter(n => n).sort();
 
                 const filtered = filter ? list.filter(n => n.includes(filter)) : list;
 
@@ -496,7 +600,7 @@
             };
 
             // Search Action
-            btnSearch.addEventListener('click', () => {
+            btnSearch.addEventListener('click', async () => {
                 const isAdmin = currentUserProfile.role === 'admin' || currentUserProfile.role === '관리자';
                 const church = isAdmin ? churchSelect.value : churchInput.value;
                 const curia = isAdmin ? curiaSelect.value : curiaInput.value;
@@ -508,7 +612,7 @@
 
                 loadedChurch = church;
                 loadedCuria = curia;
-                loadItems(church, curia);
+                await loadItems(church, curia);
                 btnAddRow.style.display = 'inline-block';
             });
 

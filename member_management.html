@@ -4,9 +4,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원가입정보 관리 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <title>회원가입 계정 관리 - 레지오 마리애</title>
+    <!-- UI Update: 2026-03-13_1515 (Table Name Column Fixed) -->
+    <link rel="stylesheet" href="styles.css?v=20260313_1515">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Premium UI Standardization */
+        :root {
+            --primary-color: #2e7d32;
+            --secondary-color: #d4a017;
+        }
+
+        .member-mgmt-container {
+            background: rgba(255, 255, 248, 0.98); /* 배포 확인용 미색 */
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 120px auto 40px;
+            position: relative;
+        }
+
+        .form-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            font-size: 1.5rem;
+            word-break: keep-all;
+        }
+
+        .btn-close-x {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: #adb5bd;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close-x:hover {
+            color: #4a5568;
+            transform: scale(1.1);
+        }
+
+        .btn-premium {
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            white-space: nowrap;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-premium-search { background-color: var(--primary-color); }
+        .btn-premium-close { background-color: #718096; }
+
+        @media (max-width: 768px) {
+            .member-mgmt-container {
+                margin-top: 80px;
+                padding: 20px;
+                width: calc(100% - 30px);
+            }
+            .btn-close-x {
+                top: 15px;
+                right: 15px;
+                font-size: 1.5rem;
+            }
+        }
+
+        /* 테이블 첫 번째 열(이름) 고정 스타일 */
+        .results-section table th:nth-child(1),
+        .results-section table td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            background-color: white; /* 데이터 영역 배경 */
+            z-index: 5;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* 경계선 구분 */
+        }
+
+        .results-section table th:nth-child(1) {
+            z-index: 6;
+            background-color: var(--primary-color) !important; /* 헤더 영역 배경 유지 */
+        }
+    </style>
 </head>
 
 <body class="dashboard-body">
@@ -84,16 +186,14 @@
         </ul>
     </header>
 
-    <div class="main-content" style="padding: 100px 20px; align-items: flex-start;">
-        <div class="container"
-            style="width: 100%; max-width: 1200px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div class="main-content" style="padding: 0;">
+        <div class="member-mgmt-container">
+            <button type="button" class="btn-close-x" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i></button>
+            <h2 class="form-title">회원가입 계정 관리</h2>
 
             <!-- Search Filter Section -->
             <div class="search-section"
-                style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
-                <h3
-                    style="margin-bottom: 15px; border-bottom: 2px solid var(--secondary-color); display: inline-block;">
-                    검색 조건</h3>
+                style="margin-bottom: 30px; padding: 25px; background: #fdfdfd; border-radius: 12px; border: 1px solid #edf2f7;">
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
                         <label for="search-church">성당</label>
@@ -116,8 +216,9 @@
                     <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <input type="text" id="search-name" placeholder="이름 입력" style="width: 100%; padding: 8px;">
                     </div>
-                    <button id="btn-search" class="login-btn"
-                        style="width: auto; padding: 8px 20px; margin-bottom: 2px;">검색</button>
+                    <button id="btn-search" class="btn-premium btn-premium-search">
+                        <i class="fas fa-search"></i> 검색
+                    </button>
                 </div>
             </div>
 
@@ -150,9 +251,10 @@
             </div>
 
             <!-- Close Button -->
-            <div style="margin-top: 30px; text-align: center;">
-                <button onclick="location.href='dashboard.html'" class="login-btn"
-                    style="background-color: #757575; width: auto; padding: 10px 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">닫기</button>
+            <div style="margin-top: 40px; display: flex; justify-content: center;">
+                <button onclick="location.href='dashboard.html'" class="btn-premium btn-premium-close">
+                    <i class="fas fa-times"></i> 닫 기
+                </button>
             </div>
         </div>
     </div>
@@ -244,11 +346,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js?v=20260313_1515"></script>
     <script type="module">
-        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc } from "./firebase-config.js?v=20260303_1210";
-        import { fetchPresidiaList } from "./data.js?v=20260304_1500";
-        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc } from "./firebase-config.js?v=20260313_1515";
+        import { fetchPresidiaList } from "./data.js?v=20260313_1515";
+        import { initAuthObserver } from "./auth.js?v=20260313_1515";
 
         // DOM Elements
         const searchChurch = document.getElementById('search-church');

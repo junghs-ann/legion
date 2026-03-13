@@ -15,6 +15,7 @@
             background: white;
             border-radius: 12px;
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            position: relative; /* For X button positioning */
         }
 
         .church-selector {
@@ -107,19 +108,72 @@
             font-size: 0.9rem;
         }
 
-        .btn-sticky-save {
+        /* 상단 우측 X 버튼 */
+        .btn-close-x {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: #adb5bd;
+            cursor: pointer;
+            z-index: 10;
+            transition: color 0.2s, transform 0.2s;
+            padding: 5px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close-x:hover {
+            color: #495057;
+            transform: scale(1.1);
+        }
+
+        /* 하단 스티키 버튼 그룹 */
+        .btn-sticky-group {
             position: fixed;
             bottom: 30px;
-            right: 30px;
-            padding: 15px 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+            width: fit-content;
+        }
+
+        .btn-sticky-save, .btn-sticky-close {
+            padding: 12px 25px;
             border-radius: 30px;
-            background-color: var(--primary-color);
-            color: white;
             font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             border: none;
             cursor: pointer;
-            z-index: 100;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .btn-sticky-save {
+            background-color: var(--primary-color);
+            color: white;
+            min-width: 160px; /* 사각 틀보다 크게 확보 */
+            flex: 2; /* 공간을 더 많이 차지하도록 */
+        }
+
+        .btn-sticky-close {
+            background-color: #6c757d;
+            color: white;
+            min-width: 100px; /* 닫기 버튼은 작게 */
+            flex: 1;
+        }
+
+        .btn-sticky-save i, .btn-sticky-close i {
+            margin-right: 8px;
         }
 
         .cat-badge {
@@ -180,9 +234,31 @@
                 gap: 15px;
             }
 
-            .btn-close-top {
-                width: 100%;
-                padding: 12px;
+            .btn-close-x {
+                top: 15px;
+                right: 15px;
+                font-size: 1.5rem;
+            }
+
+            .btn-sticky-group {
+                bottom: 20px;
+                width: calc(100% - 20px);
+                max-width: 480px;
+                gap: 8px; /* 간격을 약간 줄여 공간 확보 */
+            }
+
+            .btn-sticky-save {
+                flex: 1.8; /* 저장 버튼에 더 많은 공간 할당 */
+                padding: 12px 10px;
+                font-size: 0.85rem;
+                min-width: auto; /* 강제 축소 방지 */
+            }
+
+            .btn-sticky-close {
+                flex: 1;
+                padding: 12px 10px;
+                font-size: 0.85rem;
+                min-width: auto; /* 강제 축소 방지 */
             }
 
             .church-selector {
@@ -272,8 +348,8 @@
                 <h2>활동항목 관리</h2>
                 <p>보고서의 '종목'과 '활동내용'의 계층 구조를 관리합니다.</p>
             </div>
-            <button onclick="location.href='dashboard.html'" class="btn btn-close-top">
-                <i class="fas fa-times"></i> 닫기
+            <button onclick="location.href='dashboard.html'" class="btn-close-x" title="닫기">
+                <i class="fas fa-times"></i>
             </button>
         </div>
 
@@ -298,9 +374,14 @@
         </div>
     </div>
 
-    <button id="btnFinalSave" class="btn-sticky-save">
-        <i class="fas fa-save" style="margin-right: 8px;"></i> [ <span id="currentChurchName">...</span> ] 설정 저장
-    </button>
+    <div class="btn-sticky-group">
+        <button id="btnFinalSave" class="btn-sticky-save">
+            <i class="fas fa-save"></i> [ <span id="currentChurchName">...</span> ] 설정 저장
+        </button>
+        <button onclick="location.href='dashboard.html'" class="btn-sticky-close">
+            <i class="fas fa-times"></i> 닫기
+        </button>
+    </div>
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
@@ -309,7 +390,7 @@
             doc, getDoc, setDoc, collection, query, getDocs
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
-        import { getChurches } from "./data.js?v=20260303_1210";
+        import { getChurches, fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentChurch = "";
         let activitySchema = {}; // { churchName: [ { id, title, items: [{name, unit}] } ] }
@@ -419,15 +500,18 @@
             }
 
             await loadSchema();
-            setupChurches(profile); // Pass profile to setupChurches
+            await setupChurches(profile); // Pass profile to setupChurches
             renderSchema();
         }, () => {
             location.href = 'index.html';
         });
 
-        function setupChurches(profile) {
+        async function setupChurches(profile) {
+            await fetchPresidiaList(); // Firestore에서 데이터 로드
             const churches = getChurches();
             const select = document.getElementById('churchSelect');
+
+            select.innerHTML = ''; // 초기화
 
             if (churches.length === 0) {
                 const opt = document.createElement('option');
