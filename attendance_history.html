@@ -462,7 +462,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
                         style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); display:inline-block; padding-bottom: 5px; margin: 0;">
-                        출결내역 보고서</h3>
+                        출결내역</h3>
                 </div>
 
                 <div class="filter-row"
@@ -525,8 +525,11 @@
             </div>
 
             <div id="reportContent" style="display: none; margin-top: 30px;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 id="reportTitle" style="margin-bottom: 10px;">주회합 출결내역 보고서</h2>
+                <div style="text-align: center; margin-bottom: 30px; position: relative;">
+                    <h2 id="reportTitle" style="margin-bottom: 10px;">주회합 출결내역</h2>
+                    <a id="cleanupBtn" href="data_cleanup.html" style="display: none; position: absolute; right: 0; top: 0; text-decoration: none; background: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                        <i class="fas fa-trash-alt"></i> 유령 데이터 정리
+                    </a>
                     <h3 id="reportDateRange"
                         style="display: inline-block; border-bottom: 2px solid #333; padding-bottom: 5px; min-width: 180px; font-weight: normal; font-size: 0.95rem; line-height: 1.4; word-break: keep-all; white-space: nowrap;">
                     </h3>
@@ -606,6 +609,11 @@
 
             await loadBaseData();
             setupControls(profile);
+            
+            // 관리자일 때만 정리 버튼 노출
+            const cleanupBtn = document.getElementById('cleanupBtn');
+            if (cleanupBtn) cleanupBtn.style.display = isAdmin ? 'block' : 'none';
+
             if (!isAdmin) {
                 await updateSessionSelects();
             }
@@ -729,11 +737,11 @@
                     collection(db, 'attendance_list'),
                     where('church', '==', church),
                     where('curia', '==', curia),
-                    where('presidium', '==', presidium),
-                    orderBy('session', 'desc')
+                    where('presidium', '==', presidium)
                 );
                 const querySnapshot = await getDocs(q);
-                const uniqueSessions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const uniqueSessions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
                 const optionsHtml = '<option value="">회차 선택</option>' + uniqueSessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
                 startSessionFilter.innerHTML = optionsHtml;
@@ -775,19 +783,27 @@
                 const querySnapshot = await getDocs(q);
                 let attendanceList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // Fetch members and officers for mapping
-                const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church), where('presidiumName', '==', presidium));
+                // Fetch members and officers for mapping (Wide search by church to catch transfers)
+                const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church));
                 const memSnap = await getDocs(memQuery);
                 const membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church), where('curia', '==', curia), where('presidium', '==', presidium));
+                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church));
                 const ofSnap = await getDocs(ofQuery);
                 const officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const membersMap = {}; membersList.forEach(m => membersMap[String(m.id)] = m);
+                const membersMap = {};
+                membersList.forEach(m => membersMap[String(m.id)] = m);
+                // Also map officers to caught those not in members_list or with different IDs
+                officersList.forEach(o => {
+                    const mid = o.memberId || o.id || o.uid;
+                    if (mid && !membersMap[String(mid)]) {
+                        membersMap[String(mid)] = { name: o.name, baptismalName: o.baptismalName || '-' };
+                    }
+                });
 
                 function getRoleAtDate(memberId, date) {
-                    const term = officersList.find(o => String(o.memberId) === String(memberId) && (o.appointmentDate || '') <= date && (!(o.appointmentExpiryDate) || o.appointmentExpiryDate >= date));
+                    const term = officersList.find(o => String(o.memberId || o.id) === String(memberId) && (o.appointmentDate || '') <= date && (!(o.appointmentExpiryDate) || o.appointmentExpiryDate >= date));
                     return term ? term.role : '단원';
                 }
 
@@ -807,17 +823,39 @@
                 document.getElementById('sumTotalSessions').textContent = `${filtered.length}회`;
 
                 let totalP = 0, totalA = 0, offD = 0, offA = 0, memD = 0, memA = 0;
+                const roleOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4, '단원': 5 };
                 const offStats = { '단장': { p: filtered.length, a: 0 }, '부단장': { p: filtered.length, a: 0 }, '서기': { p: filtered.length, a: 0 }, '회계': { p: filtered.length, a: 0 } };
 
                 reportBody.innerHTML = '';
                 filtered.forEach(record => {
-                    const data = record.attendanceData || {}; let firstRow = true;
+                    const data = record.attendanceData || {}; 
                     const seenRoles = new Set();
-                    Object.keys(data).forEach(id => {
-                        const rowData = data[id]; const status = (typeof rowData === 'object') ? rowData.status : rowData;
-                        const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
-                        const m = membersMap[id] || { name: '알수없음', baptismalName: '-' };
+                    
+                    // 정렬을 위해 데이터를 배열로 변환하고 정보 미리 수집
+                    const rowItems = Object.keys(data).map(id => {
+                        const rowData = data[id];
+                        const status = (typeof rowData === 'object') ? rowData.status : rowData;
+                        const m = membersMap[id] || { name: '알수없음', baptismalName: '-', probationaryDate: '9999-12-31' };
                         const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : m.name;
+                        const baptismalName = (typeof rowData === 'object' && rowData.baptismalName) ? rowData.baptismalName : (m.baptismalName || '-');
+                        const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
+                        const probationaryDate = m.probationaryDate || '9999-12-31';
+
+                        return { id, status, name, baptismalName, role, probationaryDate };
+                    });
+
+                    // 정렬: 1순위 직책(roleOrder), 2순위 입단일(admissionDate)
+                    rowItems.sort((a, b) => {
+                        const weightA = roleOrder[a.role] || 99;
+                        const weightB = roleOrder[b.role] || 99;
+                        if (weightA !== weightB) return weightA - weightB;
+                        // 입단일 비교 (문자열 오름차순 - 오래된 날짜가 위로)
+                        return (a.probationaryDate || '').localeCompare(b.probationaryDate || '');
+                    });
+
+                    let firstRow = true;
+                    rowItems.forEach(item => {
+                        const { id, status, name, baptismalName, role } = item;
 
                         if (role !== 'admin') {
                             totalP++; if (status === 'P') totalA++;
@@ -828,7 +866,7 @@
 
                         const tr = document.createElement('tr');
                         if (firstRow) tr.classList.add('group-header-row');
-                        tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date.substring(5) : ''}</td><td>${role}</td><td>${name}</td><td>${m.baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
+                        tr.innerHTML = `<td>${firstRow ? record.session + '회' : ''}</td><td>${firstRow ? record.date.substring(5) : ''}</td><td>${role}</td><td>${name}</td><td>${baptismalName}</td><td class="${status === 'P' ? 'status-present' : 'status-absent'}">${status === 'P' ? '출석' : '결석'}</td>`;
                         reportBody.appendChild(tr); firstRow = false;
                     });
                 });
@@ -844,7 +882,7 @@
                 });
             } catch (error) {
                 console.error("Error loading report:", error);
-                alert("보고서를 불러오는 중 오류가 발생했습니다.");
+                alert("출결내역을 불러오는 중 오류가 발생했습니다.");
             }
         }
 

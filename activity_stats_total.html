@@ -779,36 +779,25 @@
             try {
                 const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
                 schemaSnap.forEach(doc => {
-                    activitySchemaMap[doc.id] = doc.data().categories;
+                    // [수정] 성당 이름 공백 제거하여 저장
+                    activitySchemaMap[doc.id.trim()] = doc.data().categories;
                 });
+                console.log("[Schema] Loaded churches:", Object.keys(activitySchemaMap));
             } catch (error) {
                 console.error("Error loading schemas:", error);
                 activitySchemaMap = JSON.parse(localStorage.getItem('activity_schema_v2') || '{}');
             }
 
+            // [수정] 데이터 로딩 순서 조정: 공통 데이터 로드 후 셀렉터 초기화
+            await initCommonData();
             await initSelectors();
-            initCommonData();
             setupEventListeners();
         });
 
-        let allPresidia = [];
         async function initCommonData() {
-            allPresidia = await fetchPresidiaList();
+            await fetchPresidiaList();
         }
 
-        // --- Helper: Data Source (Organization) ---
-        function getChurches() {
-            return [...new Set(allPresidia.map(p => p.churchName))].sort();
-        }
-        function getCuriae(church) {
-            return [...new Set(allPresidia.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
-        }
-        function getPresidia(church, curia) {
-            return allPresidia.filter(p => p.churchName === church && p.curiaName === curia).map(p => ({
-                id: p.id,
-                name: p.presidiumName
-            }));
-        }
 
         /**
          * @function initSelectors
@@ -989,11 +978,16 @@
                     return true;
                 }).sort((a, b) => a.name.localeCompare(b.name));
 
+                // [수정] 이름 중복 제거 로직 추가
+                const renderedNames = new Set();
                 filteredMembers.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.name;
-                    opt.textContent = m.name;
-                    memberSelect.appendChild(opt);
+                    if (!renderedNames.has(m.name)) {
+                        renderedNames.add(m.name);
+                        const opt = document.createElement('option');
+                        opt.value = m.name;
+                        opt.textContent = m.name;
+                        memberSelect.appendChild(opt);
+                    }
                 });
             } catch (error) {
                 console.error("Error updateMembers:", error);
@@ -1074,10 +1068,10 @@
             }
 
             try {
+                // [수정] 복합 인덱스 오류 회피를 위해 orderBy 제거 후 자바스크립트에서 정렬
                 const q = query(
                     collection(db, 'attendance_list'),
-                    where('presidiumName', '==', prName),
-                    orderBy('date', 'desc')
+                    where('presidiumName', '==', prName)
                 );
                 const querySnapshot = await getDocs(q);
                 const myHistory = [];
@@ -1087,6 +1081,9 @@
                         myHistory.push({ id: doc.id, ...data });
                     }
                 });
+
+                // [추가] 날짜 기준 내림차순 정렬 (최신순)
+                myHistory.sort((a, b) => b.date.localeCompare(a.date));
 
                 if (myHistory.length === 0) {
                     dateListPopup.innerHTML = `
@@ -1141,9 +1138,12 @@
                 return;
             }
 
-            const prSchema = activitySchemaMap[church] || [];
+            // [수정] 공백 제거하여 매칭 시도
+            const churchKey = (church || '').trim();
+            const prSchema = activitySchemaMap[churchKey] || [];
+            
             if (prSchema.length === 0) {
-                alert('해당 성당의 활동 항목 설정이 없습니다. 관리자 메뉴에서 먼저 설정해주세요.');
+                alert(`[${churchKey}] 성당의 활동 항목 설정이 없습니다.\n\n관리자 -> 활동항목 관리 메뉴에서 해당 성당을 선택하고 [내용 저장]을 먼저 진행해주세요.`);
                 return;
             }
 
@@ -1401,7 +1401,7 @@
             }
 
             const church = churchSelect.value;
-            const pr = presidiumSelect.value;
+            const pr = presidiumInput.value;
             const filename = `활동내역_${church}_${pr}_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
             try {
