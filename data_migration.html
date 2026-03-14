@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>레지오 마리애 시스템 - 데이터 마이그레이션 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260303_1210">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .migration-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .header-section {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #f1f3f5;
+            padding-bottom: 20px;
+        }
+        .header-section h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .warning-card {
+            background-color: #fff9db;
+            border-left: 5px solid #fcc419;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .collection-list {
+            margin-bottom: 30px;
+        }
+        .collection-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        .collection-item:hover {
+            border-color: #d4a017;
+            background-color: #fffaf0;
+        }
+        .collection-info {
+            flex-grow: 1;
+        }
+        .collection-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        .collection-desc {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .status-pending { background: #e9ecef; color: #495057; }
+        .status-processing { background: #e7f5ff; color: #228be6; }
+        .status-done { background: #ebfbee; color: #40c057; }
+        .status-error { background: #fff5f5; color: #fa5252; }
+
+        .progress-bar-container {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #d4a017;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .log-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #212529;
+            color: #f8f9fa;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            height: 250px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #343a40; padding-bottom: 5px; }
+        .log-time { color: #adb5bd; margin-right: 10px; }
+        .log-info { color: #4dabf7; }
+        .log-success { color: #69db7c; }
+        .log-error { color: #ff8787; }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .btn-migration {
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary { background: #d4a017; color: white; }
+        .btn-primary:hover { background: #b88a15; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-disabled { background: #dee2e6; color: #adb5bd; cursor: not-allowed; }
+    </style>
+</head>
+<body class="dashboard-body">
+    <div class="migration-container">
+        <div class="header-section">
+            <h1><i class="fas fa-database"></i> 데이터 마이그레이션 도구</h1>
+            <p>레거시 필드(`presidium`)를 표준 필드(`presidiumName`)로 통합합니다.</p>
+        </div>
+
+        <div class="warning-card">
+            <h3><i class="fas fa-exclamation-triangle"></i> 주의사항</h3>
+            <p>1. 이 도구는 Firestore의 실제 데이터를 변경합니다. 반드시 사전에 백업을 확인하세요.</p>
+            <p>2. 마이그레이션이 진행되는 동안 브라우저 창을 닫거나 새로고침하지 마세요.</p>
+            <p>3. 대량의 데이터 처리 시 비용이 발생할 수 있으며 시간이 소요될 수 있습니다.</p>
+        </div>
+
+        <div class="collection-list" id="collectionContainer">
+            <!-- Dynamic Content -->
+        </div>
+
+        <div class="progress-bar-container" id="globalProgressContainer">
+            <div class="progress-bar" id="globalProgressBar"></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="btnScan" class="btn-migration btn-secondary">
+                <i class="fas fa-search"></i> 대상 문서 검사
+            </button>
+            <button id="btnStart" class="btn-migration btn-primary">
+                <i class="fas fa-play"></i> 마이그레이션 시작
+            </button>
+            <button id="btnBack" class="btn-migration btn-secondary" onclick="location.href='dashboard.html'">
+                <i class="fas fa-arrow-left"></i> 돌아가기
+            </button>
+        </div>
+
+        <div class="log-container" id="logContainer">
+            <div class="log-entry"><span class="log-time">[H:i:s]</span> <span class="log-info">시스템 준비 완료. 마이그레이션 조사를 시작하려면 '대상 문서 검사'를 클릭하세요.</span></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc, writeBatch } from "./firebase-config.js?v=20260303_1210";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+
+        const collections = [
+            { id: 'attendance_list', name: '출석 기록 (attendance_list)', desc: 'presidium -> presidiumName' },
+            { id: 'activity_records', name: '활동 보고 (activity_records)', desc: 'presidium -> presidiumName' },
+            { id: 'members_list', name: '단원 명부 (members_list)', desc: 'presidium -> presidiumName 보정' },
+            { id: 'officers_list', name: '간부 명부 (officers_list)', desc: 'presidium -> presidiumName' },
+            { id: 'auxiliary_care_list', name: '협조단원 돌봄 (auxiliary_care_list)', desc: 'presidium -> presidiumName, curia -> curiaName' },
+            { id: 'accounting_transactions', name: '회계 거래 (accounting_transactions)', desc: 'presidium -> presidiumName' },
+            { id: 'accounting_summaries', name: '회계 요약 (accounting_summaries)', desc: 'presidium -> presidiumName' },
+            { id: 'events_list', name: '행사 기록 (events_list)', desc: 'presidium -> presidiumName' },
+            { id: 'adjutorium_members_list', name: '아듀또리움 명부 (adjutorium_members_list)', desc: 'presidium -> presidiumName' }
+        ];
+
+        let currentUser = null;
+        let scanResults = {};
+
+        const container = document.getElementById('collectionContainer');
+        const logContainer = document.getElementById('logContainer');
+        const btnScan = document.getElementById('btnScan');
+        const btnStart = document.getElementById('btnStart');
+        const globalProgress = document.getElementById('globalProgressBar');
+
+        // Init UI
+        collections.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'collection-item';
+            div.id = `item-${c.id}`;
+            div.innerHTML = `
+                <div class="collection-info">
+                    <div class="collection-name">${c.name}</div>
+                    <div class="collection-desc">${c.desc}</div>
+                </div>
+                <div class="status-badge status-pending" id="status-${c.id}">대기 중</div>
+            `;
+            container.appendChild(div);
+        });
+
+        initAuthObserver((user, profile) => {
+            if (!profile || (profile.role !== 'admin' && profile.role !== '관리자')) {
+                alert('관리자 전용 페이지입니다.');
+                location.href = 'dashboard.html';
+                return;
+            }
+            currentUser = profile;
+        }, () => location.href = 'index.html');
+
+        function addLog(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${msg}</span>`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function scanCollections() {
+            btnScan.disabled = true;
+            btnScan.classList.add('btn-disabled');
+            addLog('컬렉션 검사를 시작합니다...', 'info');
+            
+            let totalToFix = 0;
+
+            for (const c of collections) {
+                const badge = document.getElementById(`status-${c.id}`);
+                badge.textContent = '검사 중...';
+                badge.className = 'status-badge status-processing';
+
+                try {
+                    const snapshot = await getDocs(collection(db, c.id));
+                    const docs = snapshot.docs;
+                    const toFix = docs.filter(d => {
+                        const data = d.data();
+                        // presidium이 있고 presidiumName이 없거나, presidiumName이 있어도 presidium과 다른 경우 (보통은 없는 경우)
+                        // 또는 보조 필드(curiaName)가 없는 경우 (auxiliary_care_list 전용)
+                        let needFix = (data.presidium && !data.presidiumName);
+                        
+                        if (c.id === 'auxiliary_care_list' && data.curia && !data.curiaName) {
+                            needFix = true;
+                        }
+
+                        return needFix;
+                    });
+
+                    scanResults[c.id] = toFix;
+                    totalToFix += toFix.length;
+
+                    badge.textContent = `${toFix.length}건 발견`;
+                    badge.className = toFix.length > 0 ? 'status-badge status-error' : 'status-badge status-done';
+                    addLog(`${c.name}: ${toFix.length}건의 대상 문서 발견`, toFix.length > 0 ? 'error' : 'success');
+                } catch (err) {
+                    badge.textContent = '오류';
+                    badge.className = 'status-badge status-error';
+                    addLog(`${c.name} 검사 실패: ${err.message}`, 'error');
+                }
+            }
+
+            addLog(`조사 완료. 총 ${totalToFix}건의 문서를 보정해야 합니다.`, 'info');
+            btnScan.disabled = false;
+            btnScan.classList.remove('btn-disabled');
+            
+            if (totalToFix > 0) {
+                btnStart.disabled = false;
+                btnStart.classList.remove('btn-disabled');
+            } else {
+                addLog('모든 데이터가 표준화되어 있습니다. 마이그레이션이 필요하지 않습니다.', 'success');
+            }
+        }
+
+        async function startMigration() {
+            if (!confirm('정말로 마이그레이션을 시작하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+
+            btnStart.disabled = true;
+            btnStart.classList.add('btn-disabled');
+            btnScan.disabled = true;
+            btnScan.classList.add('btn-disabled');
+            
+            document.getElementById('globalProgressContainer').style.display = 'block';
+            addLog('마이그레이션 프로세스 시작...', 'info');
+
+            const totalDocs = Object.values(scanResults).reduce((acc, curr) => acc + curr.length, 0);
+            let processedDocs = 0;
+
+            for (const c of collections) {
+                const targets = scanResults[c.id];
+                if (!targets || targets.length === 0) continue;
+
+                const badge = document.getElementById(`status-${c.id}`);
+                badge.textContent = '보정 중...';
+                badge.className = 'status-badge status-processing';
+                addLog(`${c.name} 보정 중...`, 'info');
+
+                // Firestore Batch (Max 500 records per batch)
+                const chunks = [];
+                for (let i = 0; i < targets.length; i += 500) {
+                    chunks.push(targets.slice(i, i + 500));
+                }
+
+                for (const chunk of chunks) {
+                    const batch = writeBatch(db);
+                    chunk.forEach(d => {
+                        const data = d.data();
+                        const updateData = {};
+                        
+                        if (data.presidium && !data.presidiumName) {
+                            updateData.presidiumName = data.presidium;
+                        }
+                        
+                        if (c.id === 'auxiliary_care_list') {
+                            if (data.curia && !data.curiaName) updateData.curiaName = data.curia;
+                        }
+
+                        if (Object.keys(updateData).length > 0) {
+                            batch.update(d.ref, updateData);
+                        }
+                    });
+
+                    try {
+                        await batch.commit();
+                        processedDocs += chunk.length;
+                        const progress = (processedDocs / totalDocs) * 100;
+                        globalProgress.style.width = `${progress}%`;
+                    } catch (err) {
+                        addLog(`${c.name} 보정 중 오류 발생: ${err.message}`, 'error');
+                    }
+                }
+
+                badge.textContent = '수정 완료';
+                badge.className = 'status-badge status-done';
+                addLog(`${c.name}: 보정 완료`, 'success');
+            }
+
+            addLog('모든 마이그레이션 작업이 성공적으로 종료되었습니다.', 'success');
+            alert('데이터 정규화가 완료되었습니다.\n이제 소스 코드 수정을 진행해 주세요.');
+        }
+
+        btnScan.addEventListener('click', scanCollections);
+        btnStart.addEventListener('click', startMigration);
+        btnStart.disabled = true;
+        btnStart.classList.add('btn-disabled');
+
+    </script>
+</body>
+</html>

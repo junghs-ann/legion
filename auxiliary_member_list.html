@@ -543,7 +543,7 @@
 
             try {
                 // Fetch members for this presidium to populate filter
-                const q = query(collection(db, 'members_list'), where('presidium', '==', presidiumValue));
+                const q = query(collection(db, 'members_list'), where('presidiumName', '==', presidiumValue));
                 const qSnap = await getDocs(q);
                 membersList = [];
                 qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
@@ -580,7 +580,7 @@
 
             try {
                 // Fetch all members of the presidium from Firestore
-                const q = query(collection(db, 'members_list'), where('presidium', '==', presidium));
+                const q = query(collection(db, 'members_list'), where('presidiumName', '==', presidium));
                 const qSnap = await getDocs(q);
                 membersList = [];
                 qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
@@ -592,7 +592,7 @@
                 const targetStatus = statusFilter.value;
                 const todayStr = new Date().toISOString().split('T')[0];
 
-                let filtered = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidium);
+                let filtered = auxiliaryList.filter(a => a.presidiumName === presidium);
 
                 if (targetId !== 'all') {
                     filtered = filtered.filter(a => String(a.activeMemberId) === String(targetId));

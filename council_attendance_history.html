@@ -715,13 +715,17 @@
             try {
                 const q = query(collection(db, 'council_attendance_list'),
                     where('church', '==', church),
-                    where('curia', '==', curia),
-                    orderBy('date', 'desc'),
-                    orderBy('session', 'desc'));
+                    where('curia', '==', curia));
 
                 const querySnapshot = await getDocs(q);
                 const allData = [];
                 querySnapshot.forEach(docSnap => allData.push(docSnap.data()));
+
+                // [추가] 복합 인덱스 오류 방지를 위해 메모리 정렬 수행
+                allData.sort((a, b) => {
+                    if (b.date !== a.date) return b.date.localeCompare(a.date);
+                    return parseInt(b.session) - parseInt(a.session);
+                });
 
                 // Sort by session descending and remove duplicates
                 const sessions = [...new Map(allData.filter(r => r.date && r.session).map(item => [item.session, item])).values()]
@@ -803,17 +807,19 @@
             try {
                 const q = query(collection(db, 'council_attendance_list'),
                     where('church', '==', church),
-                    where('curia', '==', curia),
-                    orderBy('date', 'desc'),
-                    orderBy('session', 'desc'));
+                    where('curia', '==', curia));
 
                 const querySnapshot = await getDocs(q);
                 const allData = [];
-                querySnapshot.forEach(docSnap => allData.push(docSnap.data()));
+                querySnapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // [추가] 쿼리에서 연도 필터링을 할 수 없으므로 메모리에서 수행
+                    if (new Date(data.date).getFullYear() === year) {
+                        allData.push(data);
+                    }
+                });
 
-                let filtered = allData.filter(r =>
-                    new Date(r.date).getFullYear() === year
-                );
+                let filtered = allData;
 
                 if (startSess) filtered = filtered.filter(r => parseInt(r.session) >= startSess);
                 if (endSess) filtered = filtered.filter(r => parseInt(r.session) <= endSess);
