@@ -309,20 +309,32 @@
                 <h3 style="margin-bottom: 20px;"><i class="fas fa-key"></i> 비밀번호 변경</h3>
                 <div class="edit-options">
                     <div class="signature-method" style="background: #fff8f8; border-color: #ffe0e0;">
-                        <div class="form-group" style="margin-bottom: 15px;">
+                        <div class="form-group" style="margin-bottom: 15px; position: relative;">
                             <label style="color: #d32f2f;">현재 비밀번호 확인</label>
                             <input type="password" id="current-password" placeholder="현재 비밀번호를 입력하세요"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
+                            <button type="button" class="pwd-toggle" data-target="current-password"
+                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
                         </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
+                        <div class="form-group" style="margin-bottom: 15px; position: relative;">
                             <label>새 비밀번호</label>
                             <input type="password" id="new-password" placeholder="새 비밀번호 (6자 이상)"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
+                            <button type="button" class="pwd-toggle" data-target="new-password"
+                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0; position: relative;">
                             <label>새 비밀번호 확인</label>
                             <input type="password" id="confirm-password" placeholder="새 비밀번호를 한 번 더 입력하세요"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
+                            <button type="button" class="pwd-toggle" data-target="confirm-password"
+                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -375,10 +387,22 @@
         function loadProfile() {
             if (!currentUser) return;
 
+            // [New] 직책 한글 변환 로직 (v16.33)
+            const roleMap = {
+                'admin': '관리자',
+                'president': '단장',
+                'vice_president': '부단장',
+                'secretary': '서기',
+                'treasurer': '회계',
+                'member': '단원'
+            };
+            const roleKey = (currentUser.role || '').toLowerCase().trim();
+            const roleDisp = roleMap[roleKey] || currentUser.role || '-';
+
             document.getElementById('disp-name').textContent = currentUser.name || '-';
             document.getElementById('disp-baptismal').textContent = currentUser.baptismalName || '-';
             document.getElementById('disp-username').textContent = currentUser.username || '-';
-            document.getElementById('disp-role').textContent = currentUser.role || 'Member';
+            document.getElementById('disp-role').textContent = roleDisp;
             document.getElementById('disp-church').textContent = currentUser.church || '-';
             document.getElementById('disp-presidium').textContent = currentUser.presidiumName || '-';
 
@@ -535,6 +559,17 @@
                     alert('오류 발생: ' + e.message);
                 }
             }
+        });
+
+        // --- Password Visibility Toggle Logic ---
+        document.querySelectorAll('.pwd-toggle').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const input = document.getElementById(targetId);
+                const isPwd = input.type === 'password';
+                input.type = isPwd ? 'text' : 'password';
+                this.innerHTML = isPwd ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
         });
 
     </script>

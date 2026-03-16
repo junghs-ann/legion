@@ -477,19 +477,37 @@
         async function setupControls(profile) {
             if (isAdmin) {
                 churchFilter.disabled = false;
+                curiaFilter.disabled = true;
+                if (presidiumSearch) {
+                    presidiumSearch.disabled = true;
+                }
                 loadChurches();
             } else {
                 // For President, Vice-President, Secretary, Treasurer, Member
-                setFixedSelect(churchFilter, profile.churchName || profile.church || '');
-                setFixedSelect(curiaFilter, profile.curiaName || profile.curia || '');
-                setFixedSelect(presidiumFilter, profile.presidiumName || profile.presidium || '');
+                const cName = profile.churchName || profile.church || '';
+                const cuName = profile.curiaName || profile.curia || '';
+                const prName = profile.presidiumName || profile.presidium || '';
+                
+                setFixedSelect(churchFilter, cName);
+                setFixedSelect(curiaFilter, cuName);
+                
+                if (presidiumFilter) presidiumFilter.value = prName;
+                if (presidiumSearch) {
+                    presidiumSearch.value = prName;
+                    presidiumSearch.disabled = true;
+                }
                 await updateActiveMemberFilter();
             }
         }
 
         function setFixedSelect(select, value) {
-            select.innerHTML = `<option value="${value}">${value}</option>`;
-            select.value = value;
+            if (!select) return;
+            if (select.tagName === 'INPUT') {
+                select.value = value;
+            } else {
+                select.innerHTML = `<option value="${value}">${value}</option>`;
+                select.value = value;
+            }
             select.disabled = true;
         }
 
@@ -535,26 +553,45 @@
             if (isAdmin) {
                 presidiumValue = presidiumFilter.value;
             } else {
-                presidiumValue = currentUser.presidiumName || currentUser.presidium || '';
+                const p = currentUser || {};
+                presidiumValue = p.presidiumName || p.presidium || '';
             }
 
             activeMemberFilter.innerHTML = '<option value="all">전체</option>';
             if (!presidiumValue) return;
 
             try {
-                // Fetch members for this presidium to populate filter
-                const q = query(collection(db, 'members_list'), where('presidiumName', '==', presidiumValue));
-                const qSnap = await getDocs(q);
+                // Fetch members using both old and new field names for robustness
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', presidiumValue))),
+                    getDocs(query(collection(db, 'members_list'), where('presidium', '==', presidiumValue)))
+                ]);
+                
                 membersList = [];
-                qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
+                const seenIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenIds.has(docSnap.id)) {
+                            seenIds.add(docSnap.id);
+                            const data = docSnap.data();
+                            const isRetired = data.status === '퇴단' || data.status === '전출';
+                            if (!isRetired) {
+                                membersList.push({ id: docSnap.id, ...data });
+                            }
+                        }
+                    });
+                });
 
-                const activeMembers = membersList.filter(m => m.role !== '협조단원');
+                const activeMembers = membersList.filter(m => {
+                    const role = (m.role || '').toLowerCase();
+                    return !role.includes('협조단원') && !role.includes('쁘레또리움') && !role.includes('아듀또리움');
+                });
                 activeMembers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                 activeMembers.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
-                    opt.textContent = m.name;
+                    opt.textContent = m.name + (m.baptismalName ? ` (${m.baptismalName})` : '');
                     activeMemberFilter.appendChild(opt);
                 });
             } catch (error) {
@@ -579,20 +616,37 @@
             }
 
             try {
-                // Fetch all members of the presidium from Firestore
-                const q = query(collection(db, 'members_list'), where('presidiumName', '==', presidium));
-                const qSnap = await getDocs(q);
+                // Fetch all members of the presidium using both field names
+                const [mSnap1, mSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'members_list'), where('presidium', '==', presidium)))
+                ]);
                 membersList = [];
-                qSnap.forEach(docSnap => membersList.push({ id: docSnap.id, ...docSnap.data() }));
+                const mIds = new Set();
+                [mSnap1, mSnap2].forEach(snap => {
+                    snap.forEach(d => {
+                        if (!mIds.has(d.id)) { mIds.add(d.id); membersList.push({ id: d.id, ...d.data() }); }
+                    });
+                });
 
-                // Auxiliary members are members with role '협조단원'
-                auxiliaryList = membersList.filter(m => m.role === '협조단원');
+                // Fetch auxiliary members using both field names
+                const [aSnap1, aSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidium', '==', presidium)))
+                ]);
+                auxiliaryList = [];
+                const aIds = new Set();
+                [aSnap1, aSnap2].forEach(snap => {
+                    snap.forEach(d => {
+                        if (!aIds.has(d.id)) { aIds.add(d.id); auxiliaryList.push({ id: d.id, ...d.data() }); }
+                    });
+                });
 
                 const targetId = activeMemberFilter.value;
                 const targetStatus = statusFilter.value;
                 const todayStr = new Date().toISOString().split('T')[0];
 
-                let filtered = auxiliaryList.filter(a => a.presidiumName === presidium);
+                let filtered = auxiliaryList.filter(a => (a.presidiumName || a.presidium) === presidium);
 
                 if (targetId !== 'all') {
                     filtered = filtered.filter(a => String(a.activeMemberId) === String(targetId));

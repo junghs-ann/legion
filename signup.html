@@ -174,7 +174,7 @@
     <div class="signup-container">
         <div class="signup-card ime-active">
             <h2>회원가입</h2>
-            <form id="signup-form">
+            <form id="signup-form" autocomplete="off">
                 <!-- Step 1: Organization -->
                 <div class="step-content">
                     <div class="section-title">1. 소속 선택</div>
@@ -197,14 +197,17 @@
                 <div class="step-content">
                     <div class="section-title">2. 개인 정보</div>
                     <div class="form-group">
-                        <input type="text" id="name" class="ime-active" placeholder="이름 (실명)" required>
+                        <select id="member-select" class="ime-active" required disabled>
+                            <option value="">단원 선택 (성명)</option>
+                        </select>
+                        <input type="hidden" id="name">
                     </div>
                     <div class="form-group">
-                        <input type="text" id="baptismal-name" class="ime-active" placeholder="세례명" required>
+                        <input type="text" id="baptismal-name" class="ime-active" placeholder="세례명" required readonly style="background-color: #f0f0f0;">
                     </div>
                     <div class="form-group">
                         <select id="gender" required
-                            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 2px;">
+                            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 2px; background-color: #f0f0f0;" disabled>
                             <option value="">성별 선택</option>
                             <option value="남">남</option>
                             <option value="여">여</option>
@@ -215,7 +218,7 @@
                             required style="ime-mode: inactive;">
                     </div>
                     <div class="form-group">
-                        <input type="password" id="password" class="ime-active" placeholder="비밀번호" required>
+                        <input type="password" id="password" class="ime-active" placeholder="비밀번호" required autocomplete="new-password">
                     </div>
                 </div>
 
@@ -306,26 +309,59 @@
     </div>
     <script src="script.js?v=20260308_0345"></script>
     <script type="module">
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { db, collection, query, where, getDocs } from "./firebase-config.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
         import { registerUser, logoutUser } from "./auth.js?v=20260308_0345";
 
         const churchSelect = document.getElementById('church-select');
         const curiaSelect = document.getElementById('curia-select');
         const presidiumSelect = document.getElementById('presidium-select');
+        const memberSelect = document.getElementById('member-select');
+        const nameInput = document.getElementById('name');
+        const baptismalNameInput = document.getElementById('baptismal-name');
+        const genderSelect = document.getElementById('gender');
         const roleSelect = document.getElementById('role-select');
         const roleError = document.getElementById('role-error');
         const adminNotice = document.getElementById('admin-notice');
         const signupForm = document.getElementById('signup-form');
         const submitBtn = signupForm.querySelector('button[type="submit"]');
 
-        // --- 1. Populate Churches ---
-        const churches = getChurches();
-        churches.forEach(church => {
-            const option = document.createElement('option');
-            option.value = church;
-            option.textContent = church;
-            churchSelect.appendChild(option);
-        });
+        // --- [NEW] Initialization ---
+        async function initializeSignup() {
+            try {
+                // 1. Ensure basic data is loaded from Firestore first
+                const presidia = await fetchPresidiaList();
+                console.log("📍 기초 조직 데이터 로드 완료:", presidia.length, "건");
+
+                // 2. Populate Churches
+                const churches = getChurches();
+                churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                churches.forEach(church => {
+                    const option = document.createElement('option');
+                    option.value = church;
+                    option.textContent = church;
+                    churchSelect.appendChild(option);
+                });
+
+                // [Fix] Force clear username/password to prevent browser autofill
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('password');
+                if (usernameInput) usernameInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                
+                // Double safety: clear again after a short delay for late autofill
+                setTimeout(() => {
+                    if (usernameInput) usernameInput.value = '';
+                    if (passwordInput) passwordInput.value = '';
+                }, 100);
+
+            } catch (error) {
+                console.error("초기 데이터 로딩 실패:", error);
+                await window.showGlobalAlert("데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            }
+        }
+
+        initializeSignup();
 
         // --- 2. Handle Church Selection ---
         churchSelect.addEventListener('change', function () {
@@ -335,6 +371,7 @@
             curiaSelect.disabled = !selectedChurch;
             presidiumSelect.innerHTML = '<option value="">쁘레지디움(Pr.) 선택</option>';
             presidiumSelect.disabled = true;
+            resetMemberSelect(); // Reset member selection when church changes
 
             if (selectedChurch) {
                 const curiae = getCuriae(selectedChurch);
@@ -366,7 +403,120 @@
                     presidiumSelect.appendChild(option);
                 });
             }
+            // 쁘레시디움 선택 초기화 시 단원 선택도 초기화
+            resetMemberSelect();
         });
+
+        // --- 3.1 Handle Presidium Selection (Fetch Members & Officers) ---
+        presidiumSelect.addEventListener('change', async function () {
+            const prName = this.options[this.selectedIndex]?.text;
+            resetMemberSelect();
+            if (!prName || prName === '쁘레지디움(Pr.) 선택') return;
+
+            try {
+                console.log(`🔍 [${prName}] 단원 및 간부 목록 조회 시작...`);
+                
+                // 1. Fetch from members_list (More inclusive: Remove status 'in' filter to be safe)
+                const qMem1 = query(collection(db, 'members_list'), where('presidiumName', '==', prName));
+                const qMem2 = query(collection(db, 'members_list'), where('presidium', '==', prName));
+                
+                // 2. Fetch from officers_list
+                const qOff1 = query(collection(db, 'officers_list'), where('presidiumName', '==', prName));
+                const qOff2 = query(collection(db, 'officers_list'), where('presidium', '==', prName));
+
+                // 3. Fetch already registered users
+                const qUsers = query(collection(db, 'users'), where('presidiumName', '==', prName));
+
+                const [snapMem1, snapMem2, snapOff1, snapOff2, snapUsers] = await Promise.all([
+                    getDocs(qMem1), getDocs(qMem2),
+                    getDocs(qOff1), getDocs(qOff2),
+                    getDocs(qUsers)
+                ]);
+
+                const registeredNames = new Set();
+                snapUsers.forEach(docSnap => registeredNames.add(docSnap.data().name));
+
+                const mergedMembers = new Map();
+
+                const processSnap = (snap, isOfficerSnap = false) => {
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const name = data.name;
+                        // Filter out 'retired/transferred' only if status field exists
+                        const isRetired = ['퇴단', '전출'].includes(data.status);
+                        
+                        if (name && !registeredNames.has(name) && !isRetired) {
+                            if (!mergedMembers.has(name) || (!mergedMembers.get(name).gender && data.gender)) {
+                                mergedMembers.set(name, {
+                                    id: docSnap.id,
+                                    name: name,
+                                    baptismalName: data.baptismalName || '',
+                                    gender: data.gender || '',
+                                    role: data.role || 'member'
+                                });
+                            }
+                        }
+                    });
+                };
+
+                [snapMem1, snapMem2].forEach(s => processSnap(s, false));
+                [snapOff1, snapOff2].forEach(s => processSnap(s, true));
+
+                const finalMembers = Array.from(mergedMembers.values());
+
+                if (finalMembers.length === 0) {
+                    memberSelect.innerHTML = '<option value="">선택 가능한 단원이 없습니다.</option>';
+                    memberSelect.disabled = true;
+                    console.log("⚠️ 선택 가능한 단원이 없습니다. (모두 가입되었거나 등록된 정보 없음)");
+                    return;
+                }
+
+                memberSelect.innerHTML = '<option value="">단원 선택 (성명)</option>';
+                finalMembers.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = m.id;
+                    option.textContent = m.name;
+                    option.dataset.memberInfo = JSON.stringify({
+                        name: m.name,
+                        baptismalName: m.baptismalName,
+                        gender: m.gender
+                    });
+                    memberSelect.appendChild(option);
+                });
+                memberSelect.disabled = false;
+                console.log(`✅ 통합 단원 목록 로드 완료: ${finalMembers.length}명`);
+            } catch (error) {
+                console.error("단원 목록 로드 중 오류 발생:", error);
+                memberSelect.innerHTML = '<option value="">단원 로드 오류</option>';
+            }
+        });
+
+        // --- 3.2 Handle Member Selection (Auto-fill) ---
+        memberSelect.addEventListener('change', function () {
+            const selectedOpt = this.options[this.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.memberInfo) {
+                const info = JSON.parse(selectedOpt.dataset.memberInfo);
+                nameInput.value = info.name;
+                baptismalNameInput.value = info.baptismalName || '';
+                genderSelect.value = info.gender || '';
+                
+                // Auto-detect role potentially
+                autoDetectRole();
+                checkRoleConflict();
+            } else {
+                nameInput.value = '';
+                baptismalNameInput.value = '';
+                genderSelect.value = '';
+            }
+        });
+
+        function resetMemberSelect() {
+            memberSelect.innerHTML = '<option value="">단원 선택 (성명)</option>';
+            memberSelect.disabled = true;
+            nameInput.value = '';
+            baptismalNameInput.value = '';
+            genderSelect.value = '';
+        }
 
         // --- 3.5 Handle Role Selection (New) ---
         function updateRoleState() {
@@ -381,11 +531,13 @@
                 churchSelect.disabled = true;
                 curiaSelect.disabled = true;
                 presidiumSelect.disabled = true;
+                memberSelect.disabled = true; // Disable member select for admin
 
                 // Remove required attribute explicitly
                 churchSelect.removeAttribute('required');
                 curiaSelect.removeAttribute('required');
                 presidiumSelect.removeAttribute('required');
+                memberSelect.removeAttribute('required'); // Remove required for member select
 
                 // [Bug Fix] Do not clear values here, just disable them. 
                 // This allows preservation if user switches back from admin to officer.
@@ -400,18 +552,28 @@
 
                 // Re-enable (restore initial logic)
                 churchSelect.disabled = false;
+                memberSelect.disabled = false; // Re-enable member select
 
                 // Restore organization selection logic
                 if (!churchSelect.value) {
                     curiaSelect.disabled = true;
                     presidiumSelect.disabled = true;
+                    memberSelect.disabled = true; // If no church, no member select
                 } else {
                     curiaSelect.disabled = false;
-                    if (!curiaSelect.value) presidiumSelect.disabled = true;
-                    else presidiumSelect.disabled = false;
+                    if (!curiaSelect.value) {
+                        presidiumSelect.disabled = true;
+                        memberSelect.disabled = true; // If no curia, no member select
+                    }
+                    else {
+                        presidiumSelect.disabled = false;
+                        // Member select enabled if presidium is selected, otherwise disabled
+                        memberSelect.disabled = !presidiumSelect.value;
+                    }
                 }
 
                 churchSelect.setAttribute('required', '');
+                memberSelect.setAttribute('required', ''); // Restore required for member select
 
                 adminNotice.style.display = 'none';
             }
@@ -425,7 +587,8 @@
         // --- 3.5.1 [New] Reset Personal Info but Keep Organization ---
         function resetPersonalInfo() {
             console.log("필드 초기화 실행 (소속 제외)");
-            // 1. 개인 정보 초기화
+            document.getElementById('member-select').value = '';
+            document.getElementById('member-select').disabled = true;
             document.getElementById('name').value = '';
             document.getElementById('baptismal-name').value = '';
             document.getElementById('gender').value = '';
@@ -458,10 +621,8 @@
             document.getElementById('name').focus();
         }
 
-        // --- 3.5.2 Auto Detect Role from Officers List (New) ---
-        const nameInput = document.getElementById('name');
-
-        function autoDetectRole() {
+        // --- 3.5.2 Auto Detect Role from Officers List (Refined with Firestore) ---
+        async function autoDetectRole() {
             const role = roleSelect.value;
             if (role === 'admin') return; // Admin is manual
 
@@ -470,37 +631,46 @@
             const presidiumName = presidiumSelect.options[presidiumSelect.selectedIndex]?.text || '';
 
             if (name && church && presidiumName && presidiumName !== '쁘레지디움(Pr.) 선택') {
-                const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                // [개선] 임명일(appointmentDate) 기준 내림차순 정렬하여 가장 최신 기록(예: 단장)을 우선적으로 찾음
-                const matchedOfficers = officers
-                    .filter(o =>
-                        o.name === name &&
-                        (o.churchName === church || o.church === church) &&
-                        (o.presidiumName === presidiumName || o.presidium === presidiumName)
-                    )
-                    .sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
+                try {
+                    // [Refine] Prefer Firestore for real-time accuracy
+                    const q = query(collection(db, 'officers_list'), 
+                        where('name', '==', name),
+                        where('churchName', '==', church),
+                        where('presidiumName', '==', presidiumName)
+                    );
+                    const qSnap = await getDocs(q);
+                    
+                    const matchedOfficers = [];
+                    qSnap.forEach(docSnap => matchedOfficers.push(docSnap.data()));
+                    
+                    // Sort by appointment date descending
+                    matchedOfficers.sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
 
-                const found = matchedOfficers[0];
+                    const found = matchedOfficers[0];
+                    const today = new Date().toISOString().split('T')[0];
 
-                if (found) {
-                    console.log("Auto-matched officer role:", found.role);
-                    // Map Korean role to English values used in auth
-                    const roleMap = { '단장': 'president', '부단장': 'vice_president', '서기': 'secretary', '회계': 'treasurer' };
-                    const engRole = roleMap[found.role];
-                    if (engRole) {
-                        roleSelect.value = engRole;
-                        roleSelect.disabled = true; // Lock it
-                        adminNotice.style.display = 'block';
-                        adminNotice.textContent = `공식 간부 정보(${found.role})가 확인되어 직급이 고정되었습니다.`;
-                        adminNotice.style.color = 'green';
+                    if (found && (!found.appointmentExpiryDate || found.appointmentExpiryDate >= today)) {
+                        console.log("📍 실시간 간부 정보 매칭 완료:", found.role);
+                        const roleMap = { '단장': 'president', '부단장': 'vice_president', '서기': 'secretary', '회계': 'treasurer' };
+                        const engRole = roleMap[found.role];
+                        if (engRole) {
+                            roleSelect.value = engRole;
+                            roleSelect.disabled = true; // Lock for officers
+                            adminNotice.style.display = 'block';
+                            adminNotice.textContent = `✅ 공식 간부 정보(${found.role})가 확인되어 직급이 고정되었습니다.`;
+                            adminNotice.style.color = 'green';
+                            return;
+                        }
                     }
-                } else {
-                    // Not an officer, default to member and allow selection (or keep member)
-                    // If previously disabled by auto-detect, re-enable
-                    if (roleSelect.disabled && roleSelect.value !== 'admin') {
-                        roleSelect.disabled = false;
-                        adminNotice.style.display = 'none';
-                    }
+                    
+                    // If not found or not active officer, default to 'member'
+                    console.log("📍 일반 단원으로 감지되었습니다.");
+                    roleSelect.value = 'member';
+                    roleSelect.disabled = false; // Allow manual change if needed, though usually 'member'
+                    adminNotice.style.display = 'none';
+
+                } catch (error) {
+                    console.error("간부 정보 조회 실패:", error);
                 }
             }
         }
@@ -509,8 +679,8 @@
         curiaSelect.addEventListener('change', () => { autoDetectRole(); checkRoleConflict(); });
         churchSelect.addEventListener('change', () => { autoDetectRole(); checkRoleConflict(); });
 
-        // --- 3.5.2 Check Role Conflict (Refined with Curia & Global Admin) ---
-        function checkRoleConflict() {
+        // --- 3.5.2 Check Role Conflict (Refined with Firestore) ---
+        async function checkRoleConflict() {
             const role = roleSelect.value;
             const church = churchSelect.value;
             const curia = curiaSelect.value;
@@ -523,37 +693,42 @@
             submitBtn.style.opacity = '1';
 
             if (!role) return;
-
-            // 1. 관리자 체크 (서버에서 처리되도록 로컬 체크 제거)
-            if (role === 'admin') {
-                return;
-            }
-
-            // 2. 간부 소속별 체크 (성당, 꾸리아, 쁘레시디움 완벽 대조)
+            if (role === 'admin') return;
             if (role === 'member') return;
-            if (!church || !curia || !presidiumName || presidiumName === '쁘레시디움(Pr.) 선택') return;
+            if (!church || !curia || !presidiumName || presidiumName === '쁘레지디움(Pr.) 선택') return;
 
-            const officers = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            const roleMap = { 'president': '단장', 'vice_president': '부단장', 'secretary': '서기', 'treasurer': '회계' };
-            const targetRoleName = roleMap[role];
+            try {
+                const roleMap = { 'president': '단장', 'vice_president': '부단장', 'secretary': '서기', 'treasurer': '회계' };
+                const targetRoleName = roleMap[role];
+                const name = document.getElementById('name').value;
+                const today = new Date().toISOString().split('T')[0];
 
-            const name = document.getElementById('name').value; // 현재 입력중인 성명
-            const today = new Date().toISOString().split('T')[0];
-            const activeOfficer = officers.find(o =>
-                o.role === targetRoleName &&
-                (o.churchName === church || o.church === church) &&
-                (o.curiaName === curia || o.curia === curia) &&
-                (o.presidiumName === presidiumName || o.presidium === presidiumName) &&
-                !['퇴단', '전출'].includes(o.status) &&
-                (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today) &&
-                o.name !== name // [핵심] 가입하려는 본인인 경우는 제외 (본인 직책 찾기 허용)
-            );
+                // [Refine] Real-time query to check if role is already taken
+                const q = query(collection(db, 'officers_list'),
+                    where('role', '==', targetRoleName),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidiumName)
+                );
+                const qSnap = await getDocs(q);
+                
+                let activeOfficer = null;
+                qSnap.forEach(docSnap => {
+                    const o = docSnap.data();
+                    const isActive = !o.appointmentExpiryDate || o.appointmentExpiryDate >= today;
+                    if (isActive && o.name !== name) {
+                        activeOfficer = o;
+                    }
+                });
 
-            if (activeOfficer) {
-                roleError.textContent = `⚠️ 오류: ${church} > ${curia} > ${presidiumName}에 이미 활동 중인 '${targetRoleName}'(${activeOfficer.name})님이 존재합니다. 중복 가입은 불가능합니다.\n(본인이 직접 가입하시는 것이라면 '개인 정보'의 성명을 확인해 주세요. 타인인 경우 관리자 메뉴에서 기존 간부의 임기 정보를 만료 처리해야 합니다.)`;
-                roleError.style.display = 'block';
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.5';
+                if (activeOfficer) {
+                    roleError.textContent = `⚠️ 오류: ${church} > ${curia} > ${presidiumName}에 이미 활동 중인 '${targetRoleName}'(${activeOfficer.name})님이 존재합니다. 중복 가입은 불가능합니다.\n(본인이 직접 가입하시는 것이라면 '개인 정보'의 성명을 확인해 주세요.)`;
+                    roleError.style.display = 'block';
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                }
+            } catch (error) {
+                console.error("중복 체크 실패:", error);
             }
         }
 
@@ -703,15 +878,18 @@
             const email = `${username}@legion.app`;
 
             const userData = {
-                name,
-                baptismalName,
+                name: name.trim(),
+                baptismalName: baptismalName.trim(),
                 gender,
-                username,
+                username: username.trim(),
                 role,
-                church,
-                curia,
+                church: church.trim(),
+                churchName: church.trim(),
+                curia: curia.trim(),
+                curiaName: curia.trim(),
                 presidiumId,
-                presidiumName,
+                presidiumName: presidiumName.trim(),
+                password, // [추가] 관리자 조회를 위해 비밀번호 저장
                 signature: finalSignature // 서명 이미지 보관
             };
 
@@ -723,8 +901,8 @@
                 document.getElementById('successMsg').innerHTML = `<b>${name}</b> 단원님, 환영합니다!<br>회원가입이 완료되어<br>즉시 서비스를 이용하실 수 있습니다.`;
                 document.getElementById('successModal').style.display = 'flex';
             } catch (error) {
-                // [시니어 팁] 사용자에게 구체적인 실패 원인을 알리고 포커스 유지
-                alert("회원가입 실패: " + error.message);
+                // [시니어 팁] 사용자에게 구체적인 실패 원인을 알리고 전산 지원을 위해 로그 남김
+                await window.showGlobalAlert("🚨 회원가입 실패: " + error.message);
                 console.error(error);
 
                 // 에러 발생 시 최상단으로 스크롤하여 문제를 확인하게 함

@@ -469,9 +469,11 @@
             await fetchPresidiaList();
             await initFilters(); checkPermissions(); setupEnterToNext();
 
-            // 권한에 따른 모드 제어
+            // [보강] 엄격한 권한에 따른 모드 제어 (꼼수 없는 정확한 직책 비교)
             const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
-            const isOfficer = officerRoles.some(r => (userProfile.role || '').toLowerCase().includes(r.toLowerCase()));
+            const userRole = String(userProfile.role || '').toLowerCase().trim();
+            const isOfficer = officerRoles.includes(userRole);
+            
             if (!isOfficer) {
                 document.getElementById('modeContainer').style.display = 'none';
                 reportModeRadios[1].checked = true; // '조회' 모드로 강제
@@ -543,8 +545,7 @@
             try {
                 const q = query(
                     collection(db, 'attendance_list'),
-                    where('presidiumName', '==', pr),
-                    orderBy('date', 'desc')
+                    where('presidiumName', '==', pr)
                 );
                 const querySnapshot = await getDocs(q);
                 const filteredAtts = [];
@@ -554,6 +555,9 @@
                         filteredAtts.push(data);
                     }
                 });
+
+                // 메모리에서 날짜 내림차순 정렬 (인덱스 에러 방지)
+                filteredAtts.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
                 filteredAtts.forEach(a => {
                     const optText = `${a.session}회 (${a.date})`;

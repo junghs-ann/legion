@@ -595,9 +595,10 @@
                 curia = curiaFilter.value;
                 presidium = presidiumInput.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
+                const p = currentUser || {};
+                church = p.churchName || p.church || '';
+                curia = p.curiaName || p.curia || '';
+                presidium = presidiumInput.value || p.presidiumName || p.presidium || '';
             }
 
             return { year, startDate, endDate, church, curia, presidium };
@@ -613,6 +614,7 @@
             try {
                 // 1. Load Initial Balance (from accounting_summaries) from Firestore
                 const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
+                // Try direct ID lookup first, then fallback to filtered query for robustness
                 const summaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', summaryId)));
 
                 let initialCarryover = 0;
@@ -621,39 +623,57 @@
                 } else {
                     // Fallback to calculate from previous year if not found
                     const prevYear = (parseInt(filters.year) - 1).toString();
-                    const prevSummaryId = `${prevYear}_${filters.church}_${filters.curia}_${filters.presidium}`;
-                    const prevSummaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', prevSummaryId)));
-                    const prevInitial = !prevSummaryDoc.empty ? (prevSummaryDoc.docs[0].data().initialBalance || 0) : 0;
+                    
+                    // Robust lookup for previous year's transactions
+                    const [qSnapPrev1, qSnapPrev2] = await Promise.all([
+                        getDocs(query(collection(db, 'accounting_transactions'),
+                            where('year', '==', prevYear),
+                            where('churchName', '==', filters.church),
+                            where('presidiumName', '==', filters.presidium))),
+                        getDocs(query(collection(db, 'accounting_transactions'),
+                            where('year', '==', prevYear),
+                            where('church', '==', filters.church),
+                            where('presidium', '==', filters.presidium)))
+                    ]);
 
-                    const prevTransQuery = query(
-                        collection(db, 'accounting_transactions'),
-                        where('year', '==', prevYear),
-                        where('church', '==', filters.church),
-                        where('curia', '==', filters.curia),
-                        where('presidium', '==', filters.presidium)
-                    );
-                    const prevTransSnap = await getDocs(prevTransQuery);
-
-                    let prevBalance = prevInitial;
-                    prevTransSnap.docs.forEach(docSnap => {
-                        const t = docSnap.data();
-                        const amt = parseInt(t.amount) || 0;
-                        if (t.type === 'deposit') prevBalance += amt;
-                        else prevBalance -= amt;
+                    let prevBalance = 0; 
+                    const seenPrevIds = new Set();
+                    [qSnapPrev1, qSnapPrev2].forEach(snap => {
+                        snap.forEach(docSnap => {
+                            if (!seenPrevIds.has(docSnap.id)) {
+                                seenPrevIds.add(docSnap.id);
+                                const t = docSnap.data();
+                                const amt = parseInt(t.amount) || 0;
+                                if (t.type === 'deposit') prevBalance += amt;
+                                else prevBalance -= amt;
+                            }
+                        });
                     });
                     initialCarryover = prevBalance;
                 }
 
-                // 2. Load all transactions for this Org+Year
-                const transQuery = query(
-                    collection(db, 'accounting_transactions'),
-                    where('year', '==', filters.year.toString()),
-                    where('church', '==', filters.church),
-                    where('curia', '==', filters.curia),
-                    where('presidium', '==', filters.presidium)
-                );
-                const transSnap = await getDocs(transQuery);
-                let orgTrans = transSnap.docs.map(docSnap => docSnap.data());
+                // 2. Load all transactions for this Org+Year using Robust Query
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'accounting_transactions'),
+                        where('year', '==', filters.year.toString()),
+                        where('churchName', '==', filters.church),
+                        where('presidiumName', '==', filters.presidium))),
+                    getDocs(query(collection(db, 'accounting_transactions'),
+                        where('year', '==', filters.year.toString()),
+                        where('church', '==', filters.church),
+                        where('presidium', '==', filters.presidium)))
+                ]);
+
+                const orgTrans = [];
+                const seenTransIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenTransIds.has(docSnap.id)) {
+                            seenTransIds.add(docSnap.id);
+                            orgTrans.push(docSnap.data());
+                        }
+                    });
+                });
 
                 orgTrans.sort((a, b) => {
                     const dateA = new Date(parseInt(a.year), parseInt(a.month) - 1, parseInt(a.day));

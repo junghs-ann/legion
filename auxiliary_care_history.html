@@ -835,13 +835,6 @@
                 yearSelect.appendChild(opt);
             }
             yearSelect.value = currentYear;
-
-            // Set default date range (current month)
-            const now = new Date();
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-            startDateInput.value = firstDay;
-            endDateInput.value = lastDay;
         }
 
         async function setupOrgSelectors() {
@@ -947,7 +940,7 @@
 
             // startSessionInput, endSessionInput removed
 
-            document.getElementById('btnSearch').onclick = async () => await renderReport();
+            document.getElementById('btnSearch').onclick = async () => await renderReport(true);
             document.getElementById('btnPrint').onclick = () => window.print();
         }
 
@@ -955,13 +948,14 @@
             // Function removed as we use manual date range now
         }
 
-        async function renderReport() {
+        async function renderReport(isManualSearch = false) {
             const pr = presidiumInput.value;
             const startD = startDateInput.value;
             const endD = endDateInput.value;
 
             if (!pr || !startD || !endD) {
-                showCustomAlert('조직과 기준일 범위를 정확히 선택해 주세요.');
+                // 수동 검색일 때만 필수 입력 알림 표시
+                if (isManualSearch) showCustomAlert('조직과 기준일 범위를 정확히 선택해 주세요.');
                 return;
             }
 
@@ -983,7 +977,8 @@
                 });
 
                 if (relevantRecords.length === 0) {
-                    showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
+                    // [수정] 수동으로 [조회] 버튼을 눌렀을 때만 내역 없음 알림 표시
+                    if (isManualSearch) showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
                     return;
                 }
 

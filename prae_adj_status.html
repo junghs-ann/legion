@@ -639,9 +639,9 @@
 
             // 쁘레또리움 필터링 (praetorium_list 사용)
             let fPrae = praeList.filter(r => {
-                const matchC = !church || r.church === church;
-                const matchCu = !curia || r.curia === curia;
-                const matchP = !presidium || r.presidiumName === presidium;
+                const matchC = !church || (r.churchName || r.church) === church;
+                const matchCu = !curia || (r.curiaName || r.curia) === curia;
+                const matchP = !presidium || (r.presidiumName || r.presidium) === presidium;
                 const matchN = !name || (r.memberName || '').includes(name);
                 const s = r.status === 'active' ? '활동' : '퇴단';
                 const matchS = status === '전체' || s === status;

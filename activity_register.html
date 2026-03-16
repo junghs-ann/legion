@@ -385,12 +385,14 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { db } from "./firebase-config.js";
         import {
-            doc, getDoc, setDoc, collection, query, getDocs
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { initAuthObserver } from "./auth.js?v=20260303_1210";
-        import { getChurches, fetchPresidiaList } from "./data.js?v=20260303_1210";
+            auth, db, storage,
+            collection, getDocs, query, where, orderBy,
+            doc, setDoc, updateDoc, deleteDoc, onSnapshot,
+            getDoc, serverTimestamp, addDoc, limit, deleteField, writeBatch
+        } from "./firebase-config.js";
+        import { initAuthObserver } from "./auth.js";
+        import { getChurches, fetchPresidiaList } from "./data.js";
 
         let currentChurch = "";
         let activitySchema = {}; // { churchName: [ { id, title, items: [{name, unit}] } ] }
@@ -536,7 +538,7 @@
             document.getElementById('currentChurchName').textContent = currentChurch || "없음";
 
             select.onchange = async (e) => {
-                currentChurch = e.target.value;
+                currentChurch = e.target.value.trim();
                 document.getElementById('currentChurchName').textContent = currentChurch || "없음";
                 renderSchema();
             };
@@ -566,7 +568,21 @@
             const container = document.getElementById('categoryContainer');
             container.innerHTML = '';
 
-            const churchItems = activitySchema[currentChurch] || DEFAULT_SCHEMA;
+            // [강화] 유연한 매칭: 공백 제거 후 비교 등
+            const normalize = (s) => (s || '').toString().replace(/\s/g, '');
+            const targetNorm = normalize(currentChurch);
+            
+            let churchItems = activitySchema[currentChurch];
+            
+            // 직접 매칭 실패 시 공백 무시하고 다시 찾기
+            if (!churchItems) {
+                const foundKey = Object.keys(activitySchema).find(k => normalize(k) === targetNorm);
+                if (foundKey) churchItems = activitySchema[foundKey];
+            }
+            
+            // 그래도 없으면 기본값 사용
+            if (!churchItems) churchItems = DEFAULT_SCHEMA;
+
             const isAdmin = profileData?.role?.toLowerCase() === 'admin';
 
             // Hide/Show Admin only elements
@@ -634,14 +650,17 @@
         }
 
         // --- Action Functions ---
-        window.addItem = (btn, gIdx) => {
-            if (profileData?.role !== 'Admin') return; // Only Admin can add
+        window.addItem = async (btn, gIdx) => {
+            if (profileData?.role !== 'Admin' && !profileData?.role?.includes('관리자')) return; 
             const name = btn.parentNode.querySelector('.new-item-name').value.trim();
             const unit = btn.parentNode.querySelector('.new-item-unit').value.trim();
-            if (!name) return;
+            if (!name) {
+                await showGlobalAlert('활동 내용을 입력해 주세요.');
+                return;
+            }
 
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
-            activitySchema[currentChurch][gIdx].items.push({ name, unit, isActive: true });
+            activitySchema[currentChurch][gIdx].items.push({ name, unit: unit || '회', isActive: true });
             renderSchema();
         };
 
@@ -652,14 +671,14 @@
             renderSchema();
         };
 
-        window.moveItem = (gIdx, iIdx) => {
+        window.moveItem = async (gIdx, iIdx) => {
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
             const schema = activitySchema[currentChurch];
             const item = schema[gIdx].items[iIdx];
 
             // Generate category list for selection
-            const catList = schema.map((cat, idx) => `${idx + 1}. ${cat.title}`).join('\n');
-            const choice = prompt(`[ ${item.name} ] 항목을 이동할 종목의 번호를 입력하세요:\n\n${catList}`);
+            const catList = schema.map((cat, idx) => `${idx + 1}. ${cat.title}`).join('<br>');
+            const choice = await showGlobalPrompt(`[ ${item.name} ] 항목을 이동할 종목의 번호를 입력하세요:<br><br>${catList}`);
 
             if (choice) {
                 const targetIdx = parseInt(choice) - 1;
@@ -667,36 +686,36 @@
                     const movedItem = schema[gIdx].items.splice(iIdx, 1)[0];
                     schema[targetIdx].items.push(movedItem);
                     renderSchema();
-                    alert(`[ ${item.name} ] 항목이 [ ${schema[targetIdx].title} ] 종목으로 이동되었습니다.`);
+                    await showGlobalAlert(`[ ${item.name} ] 항목이 [ ${schema[targetIdx].title} ] 종목으로 이동되었습니다.`);
                 } else if (targetIdx === gIdx) {
-                    alert('현재와 같은 종목입니다.');
+                    await showGlobalAlert('현재와 같은 종목입니다.');
                 } else {
-                    alert('올바른 종목 번호를 입력해 주세요.');
+                    await showGlobalAlert('올바른 종목 번호를 입력해 주세요.');
                 }
             }
         };
 
-        window.deleteItem = (gIdx, iIdx) => {
-            if (!confirm('해당 활동내용을 삭제하시겠습니까?')) return;
+        window.deleteItem = async (gIdx, iIdx) => {
+            if (!(await showGlobalConfirm('해당 활동내용을 삭제하시겠습니까?'))) return;
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
             activitySchema[currentChurch][gIdx].items.splice(iIdx, 1);
             renderSchema();
         };
 
-        window.editItem = (gIdx, iIdx) => {
+        window.editItem = async (gIdx, iIdx) => {
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
             const item = activitySchema[currentChurch][gIdx].items[iIdx];
-            const newName = prompt('활동 내용을 수정하세요:', item.name);
+            const newName = await showGlobalPrompt('활동 내용을 수정하세요:', item.name);
             if (newName && newName.trim()) {
-                const newUnit = prompt('단위를 수정하세요:', item.unit || '회');
+                const newUnit = await showGlobalPrompt('단위를 수정하세요:', item.unit || '회');
                 item.name = newName.trim();
                 item.unit = newUnit || '회';
                 renderSchema();
             }
         };
 
-        window.addCategory = () => {
-            const title = prompt('새로운 상위 종목(카테고리) 명을 입력하세요:');
+        window.addCategory = async () => {
+            const title = await showGlobalPrompt('새로운 상위 종목(카테고리) 명을 입력하세요:');
             if (title && title.trim()) {
                 if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
                 activitySchema[currentChurch].push({ id: 'cat_' + Date.now(), title: title.trim(), items: [] });
@@ -704,47 +723,57 @@
             }
         };
 
-        window.editCategory = (gIdx) => {
+        window.editCategory = async (gIdx) => {
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
             const oldVal = activitySchema[currentChurch][gIdx].title;
-            const newVal = prompt('종목 명을 수정하세요:', oldVal);
+            const newVal = await showGlobalPrompt('종목 명을 수정하세요:', oldVal);
             if (newVal && newVal.trim()) {
                 activitySchema[currentChurch][gIdx].title = newVal.trim();
                 renderSchema();
             }
         };
 
-        window.deleteCategory = (gIdx) => {
-            if (!confirm('종목을 삭제하면 하위 활동내용도 모두 삭제됩니다. 계속하시겠습니까?')) return;
+        window.deleteCategory = async (gIdx) => {
+            if (!(await showGlobalConfirm('종목을 삭제하면 하위 활동내용도 모두 삭제됩니다. 계속하시겠습니까?'))) return;
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
             activitySchema[currentChurch].splice(gIdx, 1);
             renderSchema();
         };
 
-        document.getElementById('btnReset').onclick = () => {
-            if (confirm(`[${currentChurch}]의 설정을 이미지 기반 기본 데이터로 초기화하시겠습니까?\n현재 저장된 내용은 사라집니다.`)) {
+        document.getElementById('btnReset').onclick = async () => {
+            if (await showGlobalConfirm(`[${currentChurch}]의 설정을 이미지 기반 기본 데이터로 초기화하시겠습니까?\n현재 저장된 내용은 사라집니다.`)) {
                 activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
                 renderSchema();
             }
         };
 
         document.getElementById('btnFinalSave').onclick = async () => {
+            if (!currentChurch) {
+                await showGlobalAlert("저장할 성당이 선택되지 않았습니다.");
+                return;
+            }
+
             if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
 
             try {
+                // [개선] Firestore에 저장하기 전 데이터 무결성 검사 (undefined 방지)
+                const cleanCategories = JSON.parse(JSON.stringify(activitySchema[currentChurch]));
+                
                 // Firestore에 성당별로 저장
-                const docRef = doc(db, 'activity_schemas', currentChurch);
+                const churchNameVal = currentChurch.trim();
+                const docRef = doc(db, 'activity_schemas', churchNameVal);
                 await setDoc(docRef, {
-                    categories: activitySchema[currentChurch],
+                    churchName: churchNameVal, // [추가] 표준 필드 명시
+                    categories: cleanCategories,
                     updatedAt: new Date().toISOString()
                 });
 
                 // localStorage에도 백업
                 localStorage.setItem('activity_schema_v2', JSON.stringify(activitySchema));
-                alert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
+                await showGlobalAlert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
             } catch (error) {
                 console.error("Error saving schema:", error);
-                alert("활동 항목 저장 중 오류가 발생했습니다.");
+                await showGlobalAlert("활동 항목 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
             }
         };
     </script>

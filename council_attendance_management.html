@@ -350,6 +350,7 @@
                     <li><a href="activity_register.html">활동항목 관리</a></li>
                     <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
                     <li><a href="member_management.html">회원가입정보 관리</a></li>
+                    <li><a href="data_cleanup.html" style="color: #ef4444; font-weight: bold;">⚠️ 데이터 일괄 정리</a></li>
                 </ul>
             </li>
         </ul>
@@ -463,7 +464,7 @@
     <script type="module">
         import { db, collection, query, where, getDocs, setDoc, deleteDoc, doc, serverTimestamp, orderBy, getDoc } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
-        import { fetchPresidiaList } from "./data.js?v=20260303_1210";
+        import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
         // Global State
         let currentUser = null;
@@ -494,9 +495,9 @@
             currentUser = profile;
 
             // [권한 제한 추가] 관리자 또는 간부(단장, 부단장, 서기, 회계)만 접근 가능
-            const roleLower = (profile.role || '').toLowerCase();
-            isAdmin = roleLower === '관리자' || roleLower.includes('admin') || roleLower.includes('시스템');
-            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(profile.role);
+            const roleLower = (profile.role || '').toLowerCase().trim();
+            isAdmin = ['admin', '관리자', '시스템'].some(r => roleLower.includes(r));
+            const isOfficer = ['단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'].includes(roleLower);
 
             if (!isAdmin && !isOfficer) {
                 alert('평의회 출석 관리 페이지는 관리자 및 간부만 접근할 수 있습니다.');
@@ -599,10 +600,17 @@
         }
 
         async function updateHistoryList() {
-            const q = query(collection(db, 'council_attendance_list'), orderBy('date', 'desc'), orderBy('session', 'desc'));
+            // [Fix] Remove orderBy to avoid Firebase Index Error (Requires composite index)
+            const q = query(collection(db, 'council_attendance_list')); 
             const querySnapshot = await getDocs(q);
             const allSaved = [];
             querySnapshot.forEach(docSnap => allSaved.push({ id: docSnap.id, ...docSnap.data() }));
+
+            // [Fix] Perform manual sorting in memory to ensure stability without index settings (v16.33)
+            allSaved.sort((a, b) => {
+                if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+                return Number(b.session || 0) - Number(a.session || 0);
+            });
 
             const customSessionList = document.getElementById('customSessionList');
             if (!customSessionList) return;
@@ -769,69 +777,102 @@
             }
 
             try {
-                // Fetch from Firestore
-                const q = query(collection(db, 'council_attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('session', '==', session),
-                    where('date', '==', baseDate));
+                // Robust Query for council_attendance_list (Management Load)
+                const [qSnapL1, qSnapL2] = await Promise.all([
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia),
+                        where('session', '==', session),
+                        where('date', '==', baseDate))),
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('church', '==', church),
+                        where('curia', '==', curia),
+                        where('session', '==', session),
+                        where('date', '==', baseDate)))
+                ]);
 
-                const querySnapshot = await getDocs(q);
                 let existing = null;
-                querySnapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (presidium === "" || data.presidium === presidium) {
-                        existing = data;
-                    }
+                [qSnapL1, qSnapL2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (presidium === "" || (data.presidiumName || data.presidium) === presidium) {
+                            existing = data;
+                        }
+                    });
                 });
 
                 if (existing) {
+                    console.log("📝 기존 저장된 기록 발견 - 기록 데이터를 불러옵니다.");
                     renderAttendanceRows(existing.attendanceData);
                 } else {
-                    let scopeOfficers = officersList.filter(o =>
-                        o.church === church &&
-                        o.curia === curia &&
-                        (presidium === "" || o.presidium === presidium)
-                    );
+                    console.log("🆕 기존 기록 없음 - 간부 명부에서 신규 명단을 생성합니다.");
+                    let scopeOfficers = officersList.filter(o => {
+                        const oChurch = (o.churchName || o.church || '').toString().trim();
+                        const oCuria = (o.curiaName || o.curia || '').toString().trim();
+                        const oPresidium = (o.presidiumName || o.presidium || '').toString().trim();
+                        
+                        const targetChurch = (church || '').toString().trim();
+                        const targetCuria = (curia || '').toString().trim();
+                        const targetPresidium = (presidium || '').toString().trim();
+
+                        return oChurch === targetChurch && 
+                               oCuria === targetCuria && 
+                               (targetPresidium === "" || oPresidium === targetPresidium);
+                    });
+
+                    // [New] Robust Sorting & Mapping for initial registration (v16.33)
+                    const roleOrder = { 
+                        "단장": 1, "president": 1,
+                        "부단장": 2, "vice_president": 2,
+                        "서기": 3, "secretary": 3,
+                        "회계": 4, "treasurer": 4 
+                    };
+
+                    const roleMap = {
+                        "president": "단장",
+                        "vice_president": "부단장",
+                        "secretary": "서기",
+                        "treasurer": "회계"
+                    };
 
                     const grouped = {};
                     scopeOfficers.forEach(o => {
-                        const key = `${o.presidium}|${o.role}`;
+                        const role = (o.role || '').toLowerCase().trim();
+                        const key = `${(o.presidiumName || o.presidium || '').trim()}|${role}`;
                         if (!grouped[key]) grouped[key] = [];
                         grouped[key].push(o);
                     });
 
                     const finalOfficers = [];
                     for (const key in grouped) {
-                        const candidates = grouped[key].filter(o => o.appointmentDate && o.appointmentDate <= baseDate);
-                        if (candidates.length === 0) continue;
-
-                        const activeAtBase = candidates.filter(o => !o.appointmentExpiryDate || o.appointmentExpiryDate >= baseDate);
-                        const retiredBeforeBase = candidates.filter(o => o.appointmentExpiryDate && o.appointmentExpiryDate < baseDate);
-
-                        let best = null;
-                        if (activeAtBase.length > 0) {
-                            best = activeAtBase.sort((a, b) => b.appointmentDate.localeCompare(a.appointmentDate))[0];
-                        } else if (retiredBeforeBase.length > 0) {
-                            best = retiredBeforeBase.sort((a, b) => b.appointmentExpiryDate.localeCompare(a.appointmentExpiryDate))[0];
+                        const candidates = grouped[key];
+                        // 1. 임기 만료 안 된 사람 2. 임명일 최신 3. 그냥 최신 데이터
+                        let best = candidates.find(o => !o.appointmentExpiryDate || o.appointmentExpiryDate >= baseDate);
+                        if (!best) {
+                            best = candidates.sort((a, b) => (b.appointmentDate || '').localeCompare(a.appointmentDate || ''))[0];
                         }
-
                         if (best) finalOfficers.push(best);
                     }
 
-                    const roleOrder = { "단장": 1, "부단장": 2, "서기": 3, "회계": 4 };
                     finalOfficers.sort((a, b) => {
-                        if (a.presidium !== b.presidium) return a.presidium.localeCompare(b.presidium);
-                        return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+                        const roleA = (a.role || '').toLowerCase().trim();
+                        const roleB = (b.role || '').toLowerCase().trim();
+                        const prA = (a.presidiumName || a.presidium || '').trim();
+                        const prB = (b.presidiumName || b.presidium || '').trim();
+                        if (prA !== prB) return prA.localeCompare(prB);
+                        return (roleOrder[roleA] || 99) - (roleOrder[roleB] || 99);
                     });
 
-                    const initialData = finalOfficers.map(o => ({
-                        presidiumName: o.presidium,
-                        role: o.role,
-                        memberName: o.name,
-                        baptismalName: o.baptismalName,
-                        status: '결석'
-                    }));
+                    const initialData = finalOfficers.map(o => {
+                        const rawRole = (o.role || '').toLowerCase().trim();
+                        return {
+                            presidiumName: (o.presidiumName || o.presidium || '').trim(),
+                            role: roleMap[rawRole] || o.role,
+                            memberName: o.name,
+                            baptismalName: o.baptismalName,
+                            status: '결석'
+                        };
+                    });
 
                     renderAttendanceRows(initialData);
                 }
@@ -930,7 +971,14 @@
                 const docId = `attendance_${church}_${curia}_${presidium || 'all'}_${session}_${date}`.replace(/\s+/g, '_');
 
                 const record = {
-                    church, curia, presidium, session, date,
+                    churchName: church,
+                    church,
+                    curiaName: curia,
+                    curia,
+                    presidiumName: presidium,
+                    presidium,
+                    session,
+                    date,
                     attendanceData,
                     updatedAt: serverTimestamp()
                 };

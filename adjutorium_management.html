@@ -386,13 +386,13 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>성당</label>
-                            <select id="churchSelect" name="church" required>
+                            <select id="churchSelect" name="churchName" required>
                                 <option value="">성당 선택</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>꾸리아(Cu.)</label>
-                            <select id="curiaSelect" name="curia" required disabled>
+                            <select id="curiaSelect" name="curiaName" required disabled>
                                 <option value="">꾸리아 선택</option>
                             </select>
                         </div>
@@ -403,7 +403,7 @@
                                 <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
                                     disabled class="nav-enter"
                                     style="width: 100%; box-sizing: border-box; padding: 10px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
-                                <input type="hidden" id="presidiumSelect" name="presidium">
+                                <input type="hidden" id="presidiumSelect" name="presidiumName">
                                 <div id="presidiumDropdown" class="custom-dropdown"
                                     style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                                 </div>
@@ -591,9 +591,9 @@
                 churches.forEach(c => churchSelect.add(new Option(c, c)));
                 churchSelect.disabled = false;
             } else if (isOfficer) {
-                const uc = currentUser.church || currentUser.churchName;
-                const ucu = currentUser.curia || currentUser.curiaName;
-                const upr = currentUser.presidium || currentUser.presidiumName;
+                const uc = currentUser.churchName || currentUser.church;
+                const ucu = currentUser.curiaName || currentUser.curia;
+                const upr = currentUser.presidiumName || currentUser.presidium;
 
                 if (!uc || !ucu || !upr) {
                     showGlobalAlert('로그인 정보에 소속 정보가 부족합니다. 관리자에게 문의해 주세요.').then(() => {
@@ -751,8 +751,8 @@
             nameInput.addEventListener('input', () => {
                 const val = nameInput.value;
                 const matched = adjutoriumList.find(a =>
-                    a.church === churchSelect.value &&
-                    a.presidium === presidiumSelect.value &&
+                    (a.churchName === churchSelect.value || a.church === churchSelect.value) &&
+                    (a.presidiumName === presidiumSelect.value || a.presidium === presidiumSelect.value) &&
                     a.name === val
                 );
                 if (matched) {
@@ -781,7 +781,7 @@
             if (!church || !presidium) return;
 
             const names = [...new Set(adjutoriumList
-                .filter(a => a.church === church && a.presidium === presidium)
+                .filter(a => (a.churchName === church || a.church === church) && (a.presidiumName === presidium || a.presidium === presidium))
                 .map(a => a.name))
             ].sort();
 
@@ -821,9 +821,9 @@
             if (!admissionDateInput.value) return showGlobalAlert('입단일 정보가 누락되었습니다.\n입단일은 필수 입력 사항입니다.');
 
             const data = {
-                church,
-                curia: curiaSelect.value,
-                presidium,
+                churchName: church,
+                curiaName: curiaSelect.value,
+                presidiumName: presidium,
                 name,
                 baptismalName: baptismalNameInput.value.trim(),
                 gender: genderSelect.value,
@@ -905,7 +905,10 @@
                 return;
             }
 
-            const filtered = adjutoriumList.filter(a => a.church === church && a.presidium === presidium)
+            const filtered = adjutoriumList.filter(a => 
+                (a.churchName === church || a.church === church) && 
+                (a.presidiumName === presidium || a.presidium === presidium)
+            )
                 .sort((a, b) => b.admissionDate.localeCompare(a.admissionDate));
 
             tableBody.innerHTML = '';

@@ -1,33 +1,32 @@
-const fetch = require('node-fetch');
-async function check() {
-    const projectId = 'legion-f319a';
-    const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+const https = require('https');
 
-    console.log('--- Checking global_configs/accounting_summaries ---');
-    try {
-        const res = await fetch(`${baseUrl}/global_configs/accounting_summaries`);
-        const json = await res.json();
-        if (json.fields) {
-            console.log('Found in global_configs!');
-        } else {
-            console.log('Not found in global_configs.');
-        }
-    } catch (e) {
-        console.log('Error checking global_configs');
-    }
+const PROJECT_ID = 'legion-f319a';
+const COLLECTION = 'accounting_items';
+const URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}?pageSize=5`;
 
-    console.log('--- Checking accounting_summaries collection ---');
-    try {
-        const res = await fetch(`${baseUrl}/accounting_summaries?pageSize=1`);
-        const json = await res.json();
-        if (json.documents) {
-            console.log('Found accounting_summaries collection!');
-            console.log(JSON.stringify(json.documents[0], null, 2));
-        } else {
-            console.log('Accounting_summaries collection is empty or not found.');
+https.get(URL, (res) => {
+    let body = '';
+    res.on('data', d => body += d);
+    res.on('end', () => {
+        try {
+            const data = JSON.parse(body);
+            if (!data.documents || data.documents.length === 0) {
+                console.log('No documents found in accounting_items');
+                return;
+            }
+            console.log(`Checking ${data.documents.length} records...`);
+            data.documents.forEach((d, i) => {
+                const fields = d.fields;
+                console.log(`--- Record ${i+1} ---`);
+                console.log('Fields present:', Object.keys(fields).join(', '));
+                if (fields.name) console.log('name:', fields.name.stringValue);
+                if (fields.category) console.log('category:', fields.category.stringValue);
+                if (fields.itemName) console.log('itemName:', fields.itemName.stringValue);
+                if (fields.churchName) console.log('churchName:', fields.churchName.stringValue);
+                if (fields.church) console.log('church:', fields.church.stringValue);
+            });
+        } catch (e) {
+            console.error('Error:', e.message);
         }
-    } catch (e) {
-        console.log('Error checking accounting_summaries collection');
-    }
-}
-check();
+    });
+});

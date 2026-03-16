@@ -624,6 +624,78 @@
             margin-bottom: 20px;
             padding: 0 5px;
         }
+
+        /* Searchable Select Premium Styling (from notice_management) */
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+
+        #presidiumInput {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        #presidiumInput:focus {
+            border-color: #d4a017;
+            box-shadow: 0 0 8px rgba(212, 160, 23, 0.2);
+        }
+
+        #presidiumInput:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            color: #adb5bd;
+        }
+
+        .custom-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1.5px solid #d4a017;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            display: none;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f8f9fa;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #fffcf0;
+            color: #d4a017;
+            font-weight: 600;
+        }
+
+        .no-result {
+            padding: 15px;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -727,9 +799,11 @@
                 </div>
                 <div class="filter-group">
                     <label>쁘레시디움</label>
-                    <select id="filterPresidium" disabled>
-                        <option value="">쁘레시디움 선택</option>
-                    </select>
+                    <div class="search-container">
+                        <input type="text" id="presidiumInput" placeholder="쁘레시디움 선택" disabled autocomplete="off">
+                        <input type="hidden" id="filterPresidium">
+                        <div id="presidiumDropdown" class="custom-dropdown"></div>
+                    </div>
                 </div>
             </div>
 
@@ -872,6 +946,7 @@
         let orgFilter = { church: '', curia: '', presidium: '' };
         let currentDate = new Date(); // 달력 표시용
         let selectedDate = new Date(); // 리스트 표시용 (오늘 날짜 기본값)
+        let currentPresidia = []; // [추가] 현재 선택된 꾸리아의 쁘레시디움 목록
 
         // DOM Elements
         const monthDisplay = document.getElementById('monthDisplay');
@@ -881,6 +956,11 @@
         const btnOpenAdd = document.getElementById('btnOpenAdd');
         const scheduleModal = document.getElementById('scheduleModal');
         const scheduleForm = document.getElementById('scheduleForm');
+        
+        // Searchable Presidium Elements
+        const presidiumInput = document.getElementById('presidiumInput');
+        const presidiumDropdown = document.getElementById('presidiumDropdown');
+        const filterPresidium = document.getElementById('filterPresidium');
 
         // Logic Initialization
         initAuthObserver(async (user, profile) => {
@@ -924,7 +1004,6 @@
         function setupOrgFilters() {
             const filterChurch = document.getElementById('filterChurch');
             const filterCuria = document.getElementById('filterCuria');
-            const filterPresidium = document.getElementById('filterPresidium');
 
             const churchList = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
             churchList.forEach(c => {
@@ -940,7 +1019,6 @@
             const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
 
             if (!isAdmin) {
-                // Lock for non-admins: Only lock if data exists
                 if (userChurch) {
                     filterChurch.value = userChurch;
                     if (filterChurch.value === userChurch) filterChurch.disabled = true;
@@ -949,14 +1027,14 @@
                     if (userCuria) {
                         filterCuria.value = userCuria;
                         if (filterCuria.value === userCuria) filterCuria.disabled = true;
-                        updatePresidiumSelect(userChurch, userCuria, userPresidium);
+                        updatePresidiumList(userChurch, userCuria); // [변경] 검색 목록 업데이트
 
                         if (userPresidium) {
+                            presidiumInput.value = userPresidium;
                             filterPresidium.value = userPresidium;
-                            // [수정] 일반 단원도 쁘레시디움 선택을 해제하여 상위 일정을 볼 수 있도록 허용
-                            filterPresidium.disabled = false;
+                            presidiumInput.disabled = false;
                         } else {
-                            filterPresidium.disabled = false;
+                            presidiumInput.disabled = false;
                         }
                     } else {
                         filterCuria.disabled = false;
@@ -971,12 +1049,6 @@
                     presidium: filterPresidium.value
                 };
 
-                // [추가] 일반 사용자도 쁘레시디움 필터 변경 시 데이터 갱신
-                filterPresidium.addEventListener('change', (e) => {
-                    orgFilter.presidium = e.target.value;
-                    refreshData();
-                });
-
                 refreshData();
                 refreshData();
             } else {
@@ -987,10 +1059,11 @@
                     if (userCuria) {
                         filterCuria.value = userCuria;
                         filterCuria.disabled = false;
-                        updatePresidiumSelect(userChurch, userCuria, userPresidium);
+                        updatePresidiumList(userChurch, userCuria); // [변경]
                         if (userPresidium) {
+                            presidiumInput.value = userPresidium;
                             filterPresidium.value = userPresidium;
-                            filterPresidium.disabled = false;
+                            presidiumInput.disabled = false;
                         }
                     }
                 }
@@ -1005,23 +1078,22 @@
                     const church = e.target.value;
                     updateCuriaSelect(church);
                     filterCuria.disabled = !church;
-                    filterPresidium.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                    filterPresidium.disabled = true;
+                    
+                    presidiumInput.value = '';
+                    filterPresidium.value = '';
+                    presidiumInput.disabled = true;
+                    currentPresidia = [];
+
                     orgFilter = { church: church, curia: '', presidium: '' };
                     refreshData();
                 });
 
                 filterCuria.addEventListener('change', (e) => {
                     const curia = e.target.value;
-                    updatePresidiumSelect(filterChurch.value, curia);
-                    filterPresidium.disabled = !curia;
+                    updatePresidiumList(filterChurch.value, curia); // [변경]
+                    presidiumInput.disabled = !curia;
                     orgFilter.curia = curia;
                     orgFilter.presidium = '';
-                    refreshData();
-                });
-
-                filterPresidium.addEventListener('change', (e) => {
-                    orgFilter.presidium = e.target.value;
                     refreshData();
                 });
 
@@ -1042,23 +1114,49 @@
             });
         }
 
-        function updatePresidiumSelect(church, curia, preselect = '') {
-            const filterPresidium = document.getElementById('filterPresidium');
-            filterPresidium.innerHTML = '<option value="">쁘레시디움 선택</option>';
+        function updatePresidiumList(church, curia) { // [변경] 검색용 목록 로드 함수
+            presidiumInput.value = '';
+            filterPresidium.value = '';
+            presidiumInput.disabled = true;
+            currentPresidia = [];
+
             if (!church || !curia) return;
-            const presidia = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
-            presidia.forEach(pName => {
-                const opt = document.createElement('option');
-                opt.value = pName; opt.textContent = pName;
-                if (pName === preselect) opt.selected = true;
-                filterPresidium.appendChild(opt);
+
+            const prs = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            currentPresidia = prs;
+            presidiumInput.disabled = false;
+            console.log(`[Debug] 쁘레시디움 목록 로드: ${currentPresidia.length}개`);
+        }
+
+        function renderDropdown(filter = '') { // [추가] 드롭다운 렌더링 함수
+            const list = currentPresidia.filter(p => filter === '' || p.toLowerCase().includes(filter.toLowerCase()));
+
+            if (list.length === 0) {
+                presidiumDropdown.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            presidiumDropdown.innerHTML = list.map(name => `
+                <div class="dropdown-item" data-name="${name}">${name}</div>
+            `).join('');
+
+            presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.onclick = (e) => {
+                    const name = item.dataset.name;
+                    presidiumInput.value = name;
+                    filterPresidium.value = name;
+                    presidiumDropdown.style.display = 'none';
+                    orgFilter.presidium = name;
+                    refreshData();
+                };
             });
         }
 
         function refreshData() {
-            loadSchedules();
+            // [수정] 필터 변경 시 즉시 반영되도록 필터 적용 함수 호출
+            applySchedulesFilter(); 
             renderCalendar();
-            // renderEventList() 호출 삭제
+            // renderEventList() 호출 삭제 (applySchedulesFilter 내부에서 처리됨)
         }
 
         // --- Data Logic ---
@@ -1477,6 +1575,35 @@
 
         // Initialize dynamic parts
         renderCategoryOptions();
+
+        // --- Searchable Presidium Input Events ---
+        presidiumInput.addEventListener('focus', () => {
+            if (!presidiumInput.disabled) {
+                renderDropdown(presidiumInput.value);
+                presidiumDropdown.style.display = 'block';
+            }
+        });
+
+        presidiumInput.addEventListener('input', () => {
+            renderDropdown(presidiumInput.value);
+            presidiumDropdown.style.display = 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!presidiumInput.contains(e.target) && !presidiumDropdown.contains(e.target)) {
+                presidiumDropdown.style.display = 'none';
+                
+                // 선택되지 않은 경우 입력값 검증: 목록에 없으면 이전 값으로 복구하거나 비움
+                const val = presidiumInput.value.trim();
+                if (val === '') {
+                    filterPresidium.value = '';
+                    orgFilter.presidium = '';
+                    refreshData();
+                } else if (!currentPresidia.includes(val)) {
+                    presidiumInput.value = filterPresidium.value || '';
+                }
+            }
+        });
 
 
         // --- Helper Helpers ---

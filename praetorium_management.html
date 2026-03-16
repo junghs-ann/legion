@@ -1057,23 +1057,23 @@
         async function handleSave() {
             try {
                 if (!selectedMember) {
-                    alert('먼저 단원을 선택해 주세요.');
+                    await showGlobalAlert('먼저 단원을 선택해 주세요.');
                     return;
                 }
 
-                if (!confirm('저장하시겠습니까?')) return;
+                if (!await showGlobalConfirm('저장하시겠습니까?')) return;
 
                 const joinDate = document.getElementById('joinDate').value;
                 const leaveDate = document.getElementById('leaveDate').value;
 
                 if (!joinDate) {
-                    alert('입단일을 입력해 주세요.');
+                    await showGlobalAlert('입단일을 입력해 주세요.');
                     document.getElementById('joinDate').focus();
                     return;
                 }
 
                 if (leaveDate && new Date(leaveDate) < new Date(joinDate)) {
-                    alert('퇴단일은 입단일보다 빠를 수 없습니다.');
+                    await showGlobalAlert('퇴단일은 입단일보다 빠를 수 없습니다.');
                     return;
                 }
 
@@ -1089,7 +1089,7 @@
                         status: 'retire',
                         updatedAt: serverTimestamp()
                     });
-                    alert('쁘레또리움 퇴단 처리되었습니다.');
+                    await showGlobalAlert('쁘레또리움 퇴단 처리되었습니다.');
                 } else if (latest && latest.leaveDate && !leaveDate) {
                     // 2. 재입단 (새 레코드 생성)
                     await addDoc(collection(db, 'praetorium_list'), {
@@ -1105,7 +1105,7 @@
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     });
-                    alert('쁘레또리움 재입단 처리되었습니다.');
+                    await showGlobalAlert('쁘레또리움 재입단 처리되었습니다.');
                 } else if (latest) {
                     // 3. 기존 이력 수정
                     await updateDoc(doc(db, 'praetorium_list', latest.id), {
@@ -1114,7 +1114,7 @@
                         status: leaveDate ? 'retire' : 'active',
                         updatedAt: serverTimestamp()
                     });
-                    alert('정보가 수정되었습니다.');
+                    await showGlobalAlert('정보가 수정되었습니다.');
                 } else {
                     // 4. 최초 입단
                     await addDoc(collection(db, 'praetorium_list'), {
@@ -1130,14 +1130,14 @@
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     });
-                    alert('쁘레또리움 입단 처리되었습니다.');
+                    await showGlobalAlert('쁘레또리움 입단 처리되었습니다.');
                 }
 
                 await loadPraetoriumHistory(selectedMember.id);
                 await renderPraetoriumHistoryList(church, presidium);
             } catch (err) {
                 console.error('Save Error:', err);
-                alert('저장 중 오류가 발생했습니다: ' + err.message);
+                await showGlobalAlert('저장 중 오류가 발생했습니다: ' + err.message);
             }
         }
 
@@ -1145,15 +1145,15 @@
 
         btnDelete.addEventListener('click', async () => {
             if (!currentPraetoriumRecord) return;
-            if (confirm('해당 쁘레또리움 이력 정보를 삭제하시겠습니까? (행동단원 정보는 삭제되지 않습니다)')) {
+            if (await showGlobalConfirm('해당 쁘레또리움 이력 정보를 삭제하시겠습니까? (행동단원 정보는 삭제되지 않습니다)')) {
                 try {
                     await deleteDoc(doc(db, 'praetorium_list', currentPraetoriumRecord.id));
-                    alert('삭제되었습니다.');
+                    await showGlobalAlert('삭제되었습니다.');
                     await renderPraetoriumHistoryList(churchSelect.value, document.getElementById('presidiumSelect').value);
                     resetPraetoriumView();
                 } catch (error) {
                     console.error("Error deleting record:", error);
-                    alert("삭제 중 오류가 발생했습니다.");
+                    await showGlobalAlert("삭제 중 오류가 발생했습니다.");
                 }
             }
         });

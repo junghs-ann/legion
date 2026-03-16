@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단원 등록 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Reuse styles from presidium_register.html for consistency */
@@ -292,10 +292,9 @@
                             <label>쁘레시디움 (Pr.)</label>
                             <div class="search-container" id="presidiumSearchContainer"
                                 style="position: relative; width: 100%;">
-                                <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
+                                <input type="text" id="presidiumInput" name="presidiumName" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
                                     disabled class="nav-enter"
                                     style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
-                                <input type="hidden" id="presidiumSelect" name="presidiumName">
                                 <div id="presidiumDropdown" class="custom-dropdown"
                                     style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                                 </div>
@@ -303,10 +302,12 @@
                         </div>
                     </div>
                     <!-- Action Buttons for Unit Info -->
-                    <div class="form-btn-group" style="margin-top: 15px; justify-content: flex-end;">
-                        <button type="button" id="btnNewRegister" class="btn-submit"
-                            style="background-color: #28a745;">신규 등록</button>
+                    <div class="form-btn-group" style="margin-top: 15px; justify-content: flex-end; gap: 8px;">
+                        <button type="button" id="btnNewForm" class="btn-submit" 
+                            style="background-color: #007bff; color: white; border: none;"><i class="fas fa-plus"></i> 신규 입력</button>
                         <button type="button" id="btnInquiryMember" class="btn-submit btn-secondary">조 회</button>
+                        <button type="button" id="btnViewAllDB" class="btn-submit" 
+                            style="background-color: #007bff; color: white; border: none;">전체 목록 진단</button>
                     </div>
                 </div>
 
@@ -394,7 +395,7 @@
                 <div class="form-btn-group">
                     <button type="submit" class="btn btn-save"
                         style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 80px;"><i
-                            class="fas fa-save"></i> 저장</button>
+                            class="fas fa-save"></i> 저 장</button>
                     <button type="button" id="btnDeleteMember" class="btn btn-delete"
                         style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
                             class="fas fa-trash-alt"></i> 삭제</button>
@@ -422,27 +423,42 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260303_1255_fix"></script>
+    <script src="script.js"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-        import { db } from "./firebase-config.js";
-        import {
-            collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-            query, where, orderBy, serverTimestamp
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy } from './firebase-config.js';
+        import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from './data.js';
+        import { initAuthObserver, logoutUser } from "./auth.js";
+
+        console.log("Member Register Script Loaded: 20260315_V16_CLEAN_DUAL");
 
         // Define Organization Data Logic
-        const initOrgSelectors = () => {
-            // Populate Lists from DB (Still using localStorage for static-ish org data)
-            const storedPresidia = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+        const initOrgSelectors = async () => {
+            // [Safety] Reset to 'Registration Mode' when church selection changes
+            document.getElementById('churchSelect').addEventListener('change', () => {
+                const form = document.getElementById('memberRegisterForm');
+                if (form.hasAttribute('data-edit-id')) {
+                    console.log("🔄 성당 선택이 바뀌어 '등록 모드'로 초기화합니다.");
+                    form.removeAttribute('data-edit-id');
+                    form.removeAttribute('data-original-status');
+                    form.removeAttribute('data-initial-prob-date');
+                    document.querySelector('.form-title').textContent = '단원정보 등록';
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.textContent = '저 장';
+                    document.getElementById('btnDeleteMember').style.display = 'none';
+                }
+            });
+
+            // [Fix] Use Firestore instead of LocalStorage to ensure data integrity
+            const storedPresidia = await fetchPresidiaList();
 
             // DOM Elements
             const churchSelect = document.getElementById('churchSelect');
             const curiaSelect = document.getElementById('curiaSelect');
-            const presidiumSelect = document.getElementById('presidiumSelect');
+            const presidiumInput = document.getElementById('presidiumInput');
+            const presidiumDropdown = document.getElementById('presidiumDropdown');
 
-            // 1. Populate Church Select
-            const churches = [...new Set(storedPresidia.map(p => p.churchName).filter(Boolean))].sort();
+            // 1. Populate Church Select (Robust)
+            const churches = [...new Set(storedPresidia.map(p => (p.churchName || '').trim()).filter(Boolean))].sort();
 
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -453,17 +469,18 @@
 
             // 2. Cascading Logic: Church -> Curia
             churchSelect.addEventListener('change', () => {
-                const selectedChurch = churchSelect.value;
+                const selectedChurch = churchSelect.value.trim();
                 curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
                 curiaSelect.disabled = !selectedChurch;
                 curiaSelect.style.backgroundColor = selectedChurch ? 'white' : '#f9f9f9';
-                presidiumSelect.innerHTML = '<option value="">쁘레시디움 선택</option>';
-                presidiumSelect.disabled = true;
-                presidiumSelect.style.backgroundColor = '#f9f9f9';
+                presidiumInput.value = '';
+                presidiumInput.disabled = true;
+                presidiumInput.style.backgroundColor = '#f9f9f9';
+                presidiumDropdown.innerHTML = '';
 
                 if (selectedChurch) {
-                    const filtered = storedPresidia.filter(p => p.churchName === selectedChurch);
-                    const curiae = [...new Set(filtered.map(p => p.curiaName).filter(Boolean))].sort();
+                    const filtered = storedPresidia.filter(p => (p.churchName || '').trim() === selectedChurch);
+                    const curiae = [...new Set(filtered.map(p => (p.curiaName || '').trim()).filter(Boolean))].sort();
                     curiae.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = c;
@@ -475,8 +492,6 @@
 
             // 3. Cascading Logic: Curia -> Presidium
             let currentPresidia = [];
-            const presidiumInput = document.getElementById('presidiumInput');
-            const presidiumDropdown = document.getElementById('presidiumDropdown');
 
             function renderDropdown(filter = '') {
                 if (!currentPresidia) return;
@@ -494,25 +509,28 @@
                     item.addEventListener('click', () => {
                         const name = item.dataset.name;
                         presidiumInput.value = name;
-                        presidiumSelect.value = name;
                         presidiumDropdown.style.display = 'none';
                     });
                 });
             }
 
             curiaSelect.addEventListener('change', () => {
-                const selectedChurch = churchSelect.value;
-                const selectedCuria = curiaSelect.value;
+                const selectedChurch = churchSelect.value.trim();
+                const selectedCuria = curiaSelect.value.trim();
                 presidiumInput.value = '';
-                presidiumSelect.value = '';
                 currentPresidia = [];
+
                 if (!selectedChurch || !selectedCuria) {
                     presidiumInput.disabled = true;
                     presidiumInput.style.backgroundColor = '#f9f9f9';
                     return;
                 }
-                const filtered = storedPresidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria);
-                currentPresidia = [...new Set(filtered.map(p => p.presidiumName).filter(Boolean))].sort();
+
+                const filtered = storedPresidia.filter(p => 
+                    (p.churchName || '').trim() === selectedChurch && 
+                    (p.curiaName || '').trim() === selectedCuria
+                );
+                currentPresidia = [...new Set(filtered.map(p => (p.presidiumName || '').trim()).filter(Boolean))].sort();
                 presidiumInput.disabled = false;
                 presidiumInput.style.backgroundColor = 'white';
             });
@@ -537,9 +555,6 @@
                         const currentVal = presidiumInput.value.trim();
                         if (currentVal && !currentPresidia.includes(currentVal)) {
                             presidiumInput.value = '';
-                            presidiumSelect.value = '';
-                        } else if (currentVal && currentPresidia.includes(currentVal)) {
-                            presidiumSelect.value = currentVal;
                         }
                     }
                 }
@@ -550,15 +565,20 @@
         let currentUserProfile = null;
         initAuthObserver(async (user, profile) => {
             if (!user) {
-                window.location.href = "index.html";
+                console.log("Auth state: Not logged in. Waiting a bit before redirect...");
+                setTimeout(() => {
+                    if (!auth.currentUser) {
+                        window.location.href = "index.html";
+                    }
+                }, 2000); 
                 return;
             }
             currentUserProfile = profile;
-            initOrgSelectors();
+            await initOrgSelectors();
 
             const churchSelect = document.getElementById('churchSelect');
             const curiaSelect = document.getElementById('curiaSelect');
-            const presidiumSelect = document.getElementById('presidiumSelect');
+            const presidiumInput = document.getElementById('presidiumInput');
 
             const role = (profile.role || user.role || '').toLowerCase();
             const isAdmin = role === 'admin' || role === '관리자';
@@ -566,65 +586,79 @@
             const isMember = !isAdmin && !isOfficer;
 
             if (!isAdmin) {
-                if (profile.church) {
-                    churchSelect.value = profile.church;
+                const profileChurch = (profile.churchName || profile.church || "").trim();
+                const profileCuria = (profile.curiaName || profile.curia || "").trim();
+                const profilePresidium = (profile.presidiumName || profile.presidium || "").trim();
+
+                // 1. Set Church (Match trimmed)
+                if (profileChurch) {
+                    for(let i=0; i<churchSelect.options.length; i++) {
+                        if(churchSelect.options[i].value.trim() === profileChurch) {
+                            churchSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
                     churchSelect.dispatchEvent(new Event('change'));
                     churchSelect.disabled = true;
                     churchSelect.style.backgroundColor = '#f9f9f9';
                 }
 
+                // 2. Set Curia (Sequential wait for cascading churchSelect change)
                 setTimeout(() => {
-                    if (profile.church) {
-                        churchSelect.value = profile.church;
-                        churchSelect.dispatchEvent(new Event('change'));
-                    }
-                    setTimeout(async () => {
-                        if (profile.curia) {
-                            curiaSelect.value = profile.curia;
-                            curiaSelect.dispatchEvent(new Event('change'));
-                            curiaSelect.disabled = true;
-                            curiaSelect.style.backgroundColor = '#f9f9f9';
-                        }
-                        setTimeout(async () => {
-                            if (profile.presidium) {
-                                const pInput = document.getElementById('presidiumInput');
-                                if (pInput) {
-                                    pInput.value = profile.presidium;
-                                    pInput.disabled = true;
-                                    pInput.style.backgroundColor = '#f9f9f9';
-                                }
-                                presidiumSelect.value = profile.presidium;
+                    if (profileCuria) {
+                        for(let i=0; i<curiaSelect.options.length; i++) {
+                            if(curiaSelect.options[i].value.trim() === profileCuria) {
+                                curiaSelect.selectedIndex = i;
+                                break;
                             }
+                        }
+                        curiaSelect.dispatchEvent(new Event('change'));
+                        curiaSelect.disabled = true;
+                        curiaSelect.style.backgroundColor = '#f9f9f9';
+                    }
+                }, 100);
+
+                // 3. Set Presidium (Sequential wait for curiaSelect change)
+                setTimeout(() => {
+                    if (profilePresidium) {
+                        if (presidiumInput) {
+                            presidiumInput.value = profilePresidium;
+                            presidiumInput.disabled = true;
+                            presidiumInput.style.backgroundColor = '#f9f9f9';
+                        }
+                    }
+                }, 200);
+            }
 
                             if (isMember) {
                                 document.getElementById('btnNewRegister').style.display = 'none';
                                 document.getElementById('btnInquiryMember').style.display = 'none';
 
-                                // Auto-load self from Firestore
+                                // [Emergency Fix] Simplified query to avoid 400 Bad Request (Missing Index)
                                 try {
-                                    const q = query(collection(db, "members_list"),
-                                        where("name", "==", profile.name || user.name),
-                                        where("presidiumName", "==", profile.presidium)
-                                    );
-                                    const querySnapshot = await getDocs(q);
-                                    if (!querySnapshot.empty) {
-                                        const myData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+                                    const qSnapshot = await getDocs(collection(db, "members_list"));
+                                    const myDoc = qSnapshot.docs.find(docSnap => {
+                                        const d = docSnap.data();
+                                        const dName = (d.name || '').trim();
+                                        const dPr = (d.presidiumName || d.presidium || '').trim();
+                                        const targetName = (profile.memberName || profile.name || user.displayName || "").trim();
+                                        const targetPr = (profile.presidiumName || profile.presidium || "").trim();
+                                        return dName === targetName && dPr === targetPr;
+                                    });
+
+                                    if (myDoc) {
+                                        const myData = { id: myDoc.id, ...myDoc.data() };
                                         loadMemberDataForEdit(myData);
                                         document.querySelector('.form-title').textContent = '내 정보 관리';
                                     } else {
-                                        alert("등록된 단원 정보를 찾을 수 없습니다. 관리자에게 문의하세요.");
-                                        const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
-                                        submitBtn.disabled = true;
-                                        submitBtn.style.backgroundColor = '#ccc';
+                                        // Silent fail or minimal notice for member view if not found
+                                        console.log("No matching member record found for this user account.");
                                     }
                                 } catch (err) {
                                     console.error("Self load error:", err);
                                 }
                             }
-                        }, 50);
-                    }, 50);
-                }, 50);
-            }
+
 
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, logoutUser);
@@ -632,21 +666,7 @@
         });
 
         // Top Operation Buttons Logic
-        document.getElementById('btnNewRegister').addEventListener('click', () => {
-            const presidiumName = document.getElementById('presidiumSelect').value;
-            if (!presidiumName) {
-                alert('먼저 쁘레시디움을 선택해주세요.');
-                return;
-            }
-            const form = document.getElementById('memberRegisterForm');
-            form.removeAttribute('data-edit-id');
-            form.reset();
-            document.querySelector('.form-title').textContent = '단원정보 관리';
-            const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
-            submitBtn.textContent = '저 장';
-            document.getElementById('btnDeleteMember').style.display = 'none';
-            document.getElementById('classificationSelect').focus();
-        });
+        // [Cleanup] Redundant top save button removed per user request.
 
         const statusSelect = document.querySelector('select[name="status"]');
         const leaveDateInput = document.querySelector('input[name="leaveDate"]');
@@ -687,7 +707,7 @@
             }
         };
 
-        const validatePromiseDate = () => {
+        const validatePromiseDate = async () => {
             const probDate = probationaryDateInput.value;
             const promDate = promiseDateInput.value;
             if (promDate) {
@@ -697,21 +717,21 @@
                     return;
                 }
                 if (new Date(promDate) <= new Date(probDate)) {
-                    alert('선서일은 입단/전입일보다 나중의 날짜여야 합니다.');
+                    await window.showGlobalAlert('선서일은 입단/전입일보다 나중의 날짜여야 합니다.');
                     promiseDateInput.value = '';
                 }
             }
         };
 
         let isProbDateAlertShown = false;
-        probationaryDateInput.addEventListener('change', function () {
+        probationaryDateInput.addEventListener('change', async function () {
             const form = document.getElementById('memberRegisterForm');
             const initialDate = form.getAttribute('data-initial-prob-date') || '';
             const originalStatus = form.getAttribute('data-original-status') || '';
             const isAlreadyLeft = originalStatus === '퇴단' || originalStatus === '전출';
 
             if (initialDate && this.value !== initialDate && !isAlreadyLeft && !isProbDateAlertShown) {
-                alert("입단/전입일 변경시 퇴단/전출 단원이 새로 입단한 경우이면 퇴단, 전출 처리 후 수정해 주세요");
+                await window.showGlobalAlert("입단/전입일 변경시 퇴단/전출 단원이 새로 입단한 경우이면 퇴단, 전출 처리 후 수정해 주세요");
                 isProbDateAlertShown = true;
                 this.value = initialDate;
                 return;
@@ -722,6 +742,143 @@
 
         leaveDateInput.addEventListener('change', validateLeaveDate);
         promiseDateInput.addEventListener('change', validatePromiseDate);
+
+        // Reusable display logic for search results
+        async function displaySearchResults(querySnapshot) {
+            const memberList = document.getElementById('memberList');
+            const modal = document.getElementById('memberSearchModal');
+            memberList.innerHTML = '';
+
+            if (querySnapshot.empty) {
+                memberList.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
+            } else {
+                querySnapshot.forEach(docSnap => {
+                    const m = { id: docSnap.id, ...docSnap.data() };
+                    console.log("RAW DATA [%s]:", docSnap.ref.parent.id, m); // 컬렉션 명칭과 데이터를 함께 출력하여 명확히 함
+                    const li = document.createElement('li');
+                    li.style.padding = '10px';
+                    li.style.borderBottom = '1px solid #eee';
+                    li.style.cursor = 'pointer';
+                    li.style.display = 'flex';
+                    li.style.justifyContent = 'space-between';
+                    
+                    // [Compatibility] Display regardless of old (church) or new (churchName) tags
+                    const displayChurch = (m.churchName || m.church || '성당미정').trim();
+                    const displayPresidium = (m.presidiumName || m.presidium || m.name || 'Pr.미정').trim();
+                    const orgInfo = `[${displayChurch} / ${displayPresidium}]`;
+                    li.innerHTML = `
+                        <div>
+                            <strong>${m.name}</strong> (${m.baptismalName || ''})
+                            <div style="font-size:0.8em; color:#888;">${orgInfo}</div>
+                        </div>
+                        <span style="font-size:0.9em; color:#888;">${m.status || ''}</span>
+                    `;
+                    li.onclick = () => {
+                        loadMemberDataForEdit(m);
+                        modal.style.display = 'none';
+                    };
+                    memberList.appendChild(li);
+                });
+            }
+            modal.style.display = 'flex';
+        }
+
+        // Standard Inquiry (3-level organization match)
+        document.getElementById('btnInquiryMember').addEventListener('click', async () => {
+            const churchName = document.getElementById('churchSelect').value.trim();
+            const curiaName = document.getElementById('curiaSelect').value.trim();
+            const presidiumName = document.getElementById('presidiumInput').value.trim();
+
+            if (!presidiumName) {
+                await window.showGlobalAlert('먼저 쁘레시디움 혹은 꾸리아를 선택해주세요.');
+                return;
+            }
+
+            try {
+                console.log("Inquiry matching for compatibility:", { churchName, curiaName, presidiumName });
+                // [Compatibility Fix] Fetch all and filter client-side to handle both church/churchName fields
+                const qSnapshot = await getDocs(collection(db, "members_list"));
+                const filteredDocs = qSnapshot.docs.filter(docSnap => {
+                    const d = docSnap.data();
+                    const dChurch = (d.churchName || d.church || '').toString().trim();
+                    const dCuria = (d.curiaName || d.curia || '').toString().trim();
+                    const dPr = (d.presidiumName || d.presidium || d.name || '').toString().trim();
+                    
+                    const isMatch = dChurch === churchName && dCuria === curiaName && dPr === presidiumName;
+                    
+                    if (!isMatch && d.name === "김지수") {
+                        console.log("🔍 [김지수 단원 불일치 분석]:", {
+                            DB성당: dChurch, 검색성당: churchName,
+                            DB꾸리아: dCuria, 검색꾸리아: curiaName,
+                            DB쁘레: dPr, 검색쁘레: presidiumName
+                        });
+                    }
+                    return isMatch;
+                });
+
+                // Mock a QuerySnapshot-like object for displaySearchResults
+                const mockSnapshot = {
+                    empty: filteredDocs.length === 0,
+                    forEach: (callback) => filteredDocs.forEach(callback)
+                };
+                
+                await displaySearchResults(mockSnapshot);
+            } catch (err) {
+                console.error("Inquiry error:", err);
+                alert('조회 중 오류가 발생했습니다.');
+            }
+        });
+
+        // [Emergency View All] Shows EVERYTHING in the DB without any filters
+        document.getElementById('btnViewAllDB').addEventListener('click', async () => {
+            if (!confirm('DB의 모든 컬렉션을 정밀 진단합니다. (단원, 사용자, 부락 등) \n모든 데이터를 불러오시겠습니까?')) return;
+
+            try {
+                console.log("--- [DB 정밀 진단 시작] ---");
+                
+                // 1. Members Check (Force Server)
+                console.log("1. 'members_list' 컬렉션 확인 중 (서버 직접 조회)...");
+                const memberSnap = await getDocs(collection(db, "members_list")); 
+                // Note: Standard getDocs usually fetches from server, but let's be explicit in logs
+                console.log(`=> 'members_list' 결과: ${memberSnap.size}건 발견`);
+                
+                if (memberSnap.size > 0) {
+                    console.log("첫 번째 문서 샘플:", memberSnap.docs[0].data());
+                }
+                
+                // 2. Users Check
+                console.log("2. 'users' 컬렉션 확인 중...");
+                const userSnap = await getDocs(query(collection(db, "users")));
+                console.log(`=> 'users' 결과: ${userSnap.size}건 발견`);
+
+                // 3. Presidia Check
+                console.log("3. 'presidia_list' 컬렉션 확인 중...");
+                const prSnap = await getDocs(query(collection(db, "presidia_list")));
+                console.log(`=> 'presidia_list' 결과: ${prSnap.size}건 발견`);
+
+                // 4. Auxiliary Members Check
+                console.log("4. 'auxiliary_members_list' 컬렉션 확인 중...");
+                const auxSnap = await getDocs(query(collection(db, "auxiliary_members_list")));
+                console.log(`=> 'auxiliary_members_list' 결과: ${auxSnap.size}건 발견`);
+
+                console.log("--- [진단 완료] ---");
+
+                if (memberSnap.empty && userSnap.empty && prSnap.empty) {
+                    alert(`경고: DB의 모든 주요 컬렉션이 비어있습니다.\n(접속 프로젝트: ${db.app.options.projectId})\n설정이 올바른지 확인이 필요합니다.`);
+                }
+
+                await displaySearchResults(memberSnap);
+                
+                if (!memberSnap.empty) {
+                    alert(`${memberSnap.size}명의 단원을 찾았습니다. 리스트를 확인해주세요.`);
+                } else {
+                    alert(`단원 목록(members_list)이 비어있습니다.\n(접속 프로젝트: ${db.app.options.projectId})\n콘솔(F12)에서 상세 데이터를 확인해주세요.`);
+                }
+            } catch (err) {
+                console.error("View All error:", err);
+                alert('전체 조희 중 오류가 발생했습니다: ' + err.message);
+            }
+        });
 
         // Delete Member Logic (Firestore)
         document.getElementById('btnDeleteMember').addEventListener('click', async () => {
@@ -741,72 +898,72 @@
             }
         });
 
-        // Inquiry Member Logic (Firestore)
-        document.getElementById('btnInquiryMember').addEventListener('click', async () => {
-            const churchName = document.getElementById('churchSelect').value;
-            const curiaName = document.getElementById('curiaSelect').value;
-            const presidiumName = document.getElementById('presidiumSelect').value;
-
-            if (!presidiumName) {
-                alert('먼저 쁘레시디움을 선택해주세요.');
-                return;
-            }
-
-            try {
-                const q = query(
-                    collection(db, "members_list"),
-                    where("churchName", "==", churchName),
-                    where("presidiumName", "==", presidiumName)
-                );
-                const querySnapshot = await getDocs(q);
-                const memberList = document.getElementById('memberList');
-                const modal = document.getElementById('memberSearchModal');
-
-                memberList.innerHTML = '';
-                if (querySnapshot.empty) {
-                    memberList.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
-                } else {
-                    querySnapshot.forEach(docSnap => {
-                        const m = { id: docSnap.id, ...docSnap.data() };
-                        const li = document.createElement('li');
-                        li.style.padding = '10px';
-                        li.style.borderBottom = '1px solid #eee';
-                        li.style.cursor = 'pointer';
-                        li.style.display = 'flex';
-                        li.style.justifyContent = 'space-between';
-                        li.innerHTML = `<span><strong>${m.name}</strong> (${m.baptismalName})</span> <span style="font-size:0.9em; color:#888;">${m.status}</span>`;
-                        li.onclick = () => {
-                            loadMemberDataForEdit(m);
-                            modal.style.display = 'none';
-                        };
-                        memberList.appendChild(li);
-                    });
-                }
-                modal.style.display = 'flex';
-            } catch (err) {
-                console.error("Inquiry error:", err);
-                alert('조회 중 오류가 발생했습니다.');
-            }
-        });
-
         document.getElementById('btnCloseModal').addEventListener('click', () => {
             document.getElementById('memberSearchModal').style.display = 'none';
         });
 
         function loadMemberDataForEdit(member) {
+            console.log("📝 [데이터 로드 시작] 선택된 단원:", member);
             const form = document.getElementById('memberRegisterForm');
-            Object.keys(member).forEach(key => {
-                if (form.elements[key]) form.elements[key].value = member[key] || '';
-            });
-
-            document.querySelector('.form-title').textContent = '단원정보 관리';
-            const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
-            submitBtn.textContent = '저 장';
-
+            
+            // 1. Reset specific internal attributes
             form.setAttribute('data-edit-id', member.id);
-            form.setAttribute('data-original-status', member.status);
+            form.setAttribute('data-original-status', member.status || '');
             form.setAttribute('data-initial-prob-date', member.probationaryDate || '');
             isProbDateAlertShown = false;
+
+            // 2. Map fields explicitly to form elements
+            // Note: form.elements[key] matches name="..." attribute
+            const fieldMap = {
+                name: member.name || '',
+                baptismalName: member.baptismalName || '',
+                gender: member.gender || '',
+                feastDate: member.feastDate || '',
+                probationaryDate: member.probationaryDate || '',
+                promiseDate: member.promiseDate || '',
+                confirmationDate: member.confirmationDate || '',
+                birthDate: member.birthDate || '',
+                phone: member.phone || '',
+                address: member.address || '',
+                status: member.status || '',
+                classification: member.classification || '행동단원',
+                notes: member.notes || '',
+                leaveDate: member.leaveDate || ''
+            };
+
+            Object.keys(fieldMap).forEach(key => {
+                const el = form.elements[key];
+                if (el) {
+                    el.value = fieldMap[key];
+                    console.log(`   - 필드 세팅: ${key} = ${fieldMap[key]}`);
+                }
+            });
+
+            // 3. Organization Info (Special UI sync)
+            const churchVal = (member.churchName || member.church || '').trim();
+            const curiaVal = (member.curiaName || member.curia || '').trim();
+            const presidiumVal = (member.presidiumName || member.presidium || member.name || '').trim();
+
+            if (document.getElementById('churchSelect')) document.getElementById('churchSelect').value = churchVal;
+            
+            // Manual trigger of chain reactions for dropdowns if needed
+            // But for edit, we often just want them visible
+            if (document.getElementById('curiaSelect')) {
+                const curiaEl = document.getElementById('curiaSelect');
+                curiaEl.disabled = false;
+                curiaEl.value = curiaVal;
+            }
+            if (document.getElementById('presidiumInput')) {
+                const prEl = document.getElementById('presidiumInput');
+                prEl.disabled = false;
+                prEl.value = presidiumVal;
+            }
+
+            // 4. UI Polish
+            document.querySelector('.form-title').textContent = '단원정보 수정';
+            const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = '수 정';
+            
             updateLeaveDateState();
 
             const role = (currentUserProfile.role || '').toLowerCase();
@@ -817,44 +974,125 @@
         // Form Submission (Firestore)
         document.getElementById('memberRegisterForm').addEventListener('submit', async function (e) {
             e.preventDefault();
+            
             const formData = new FormData(this);
-            const memberData = Object.fromEntries(formData.entries());
+            const rawData = Object.fromEntries(formData.entries());
+
+            // [원칙 준수] 화면에 보이는 성당, 꾸리아, 쁘레시디움 값을 그대로 사용
+            const memberData = {};
+            Object.keys(rawData).forEach(key => {
+                memberData[key] = (typeof rawData[key] === 'string') ? rawData[key].trim() : rawData[key];
+            });
+
+            // [Dual Schema Normalization] Save BOTH old and new field names for maximum compatibility
+            const screenChurch = document.getElementById('churchSelect').value.trim();
+            const screenCuria = document.getElementById('curiaSelect').value.trim();
+            const screenPresidium = document.getElementById('presidiumInput').value.trim();
+
+            memberData.church = screenChurch;
+            memberData.churchName = screenChurch;
+            memberData.curia = screenCuria;
+            memberData.curiaName = screenCuria;
+            memberData.presidium = screenPresidium; // For some files using m.presidium
+            memberData.presidiumName = screenPresidium;
+            if (!memberData.name) {
+                memberData.name = rawData.name; // Fallback
+            }
+
             const editId = this.getAttribute('data-edit-id');
 
             if (!memberData.churchName || !memberData.presidiumName || !memberData.name || !memberData.probationaryDate) {
-                alert('성당, 쁘레시디움, 성명, 입단/전입일은 필수 입력입니다.');
+                await window.showGlobalAlert('성당, 쁘레시디움, 성명, 입단/전입일은 필수 입력입니다.');
                 return;
             }
 
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true; // [Double-click Protection]
+
             try {
+                console.log("🚀 [저장 프로세스 시작] 수집된 데이터:", memberData);
                 memberData.updatedAt = serverTimestamp();
+                
                 if (editId) {
+                    console.log("📝 수정 시도 중... ID:", editId);
                     await updateDoc(doc(db, "members_list", editId), memberData);
+                    console.log("✅ 수정 성공!");
                     await syncUserAccountStatus(memberData);
-                    alert('수정 완료되었습니다.');
+                    await window.showGlobalAlert(`✅ 수정 완료되었습니다.\n(문서 ID: ${editId})`);
                 } else {
-                    memberData.createdAt = serverTimestamp();
-                    await addDoc(collection(db, "members_list"), memberData);
+                    console.log("🆕 신규 등록 시도 중 (members_list)...");
+                    const docRef = await addDoc(collection(db, "members_list"), memberData);
+                    console.log("✅ 신규 등록 성공! 서버 생성 ID:", docRef.id);
+                    
                     await syncUserAccountStatus(memberData);
-                    alert('신규 등록 완료되었습니다.');
+                    
+                    // [Anti-Duplicate Fix] Switch to Edit mode immediately after first save
+                    this.setAttribute('data-edit-id', docRef.id);
+                    this.setAttribute('data-original-status', memberData.status || '');
+                    document.querySelector('.form-title').textContent = '단원정보 수정';
+                    if (submitBtn) submitBtn.textContent = '수 정';
+
+                    await window.showGlobalAlert(`🎊 신규 등록 성공!\n(서버 문서 ID: ${docRef.id})\n\n이제 이어서 수정하시거나 [조회]로 돌아가실 수 있습니다.`);
                 }
-                location.reload();
             } catch (err) {
-                console.error("Save error:", err);
-                alert('저장 중 오류가 발생했습니다: ' + err.message);
+                console.error("🚨 [치명적 저장 실패] 에러 상세:", err);
+                await window.showGlobalAlert('🚨 저장패 (전산오류):\n' + err.message + '\n\n관리자에게 위 메시지를 전달해주세요.');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false; // [Clean Up] Re-enable button
             }
+        });
+
+        // [New Entry] Reset form for fresh registration (Keep Org Info)
+        document.getElementById('btnNewForm').addEventListener('click', () => {
+            const form = document.getElementById('memberRegisterForm');
+            
+            // 1. Capture current Org Info to keep
+            const curChurch = document.getElementById('churchSelect').value;
+            const curCuria = document.getElementById('curiaSelect').value;
+            const curPresidium = document.getElementById('presidiumInput').value;
+            const isCuriaDisabled = document.getElementById('curiaSelect').disabled;
+            const isPrDisabled = document.getElementById('presidiumInput').disabled;
+
+            // 2. Clear personal data
+            form.reset();
+            form.removeAttribute('data-edit-id');
+            form.removeAttribute('data-original-status');
+            form.removeAttribute('data-initial-prob-date');
+            document.querySelector('.form-title').textContent = '단원정보 등록';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = '저 장';
+            document.getElementById('btnDeleteMember').style.display = 'none';
+
+            // 3. Restore Org Info
+            document.getElementById('churchSelect').value = curChurch;
+            document.getElementById('curiaSelect').value = curCuria;
+            document.getElementById('curiaSelect').disabled = isCuriaDisabled;
+            document.getElementById('presidiumInput').value = curPresidium;
+            document.getElementById('presidiumInput').disabled = isPrDisabled;
+
+            updateLeaveDateState();
+            console.log("🧹 개인 정보만 초기화되었습니다. 조직 정보는 유지됩니다.");
         });
 
         async function syncUserAccountStatus(memberData) {
             try {
-                const q = query(collection(db, "users"),
-                    where("name", "==", memberData.name),
-                    where("church", "==", memberData.churchName),
-                    where("presidium", "==", memberData.presidiumName)
-                );
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    const userDoc = querySnapshot.docs[0];
+                // [Normalization] Search for both 'church' and 'churchName' fields for compatibility
+                const usersRef = collection(db, "users");
+                const qName = memberData.name;
+                const qChurch = memberData.churchName;
+                const qPr = memberData.presidiumName;
+
+                const querySnapshot = await getDocs(query(usersRef, where("name", "==", qName)));
+                
+                // Client-side filtering for better flexibility with field names (church vs churchName)
+                const userDoc = querySnapshot.docs.find(d => {
+                    const data = d.data();
+                    const dChurch = (data.church || data.churchName || '').toString().trim();
+                    const dPr = (data.presidiumName || data.presidium || '').toString().trim();
+                    return dChurch === qChurch && dPr === qPr;
+                });
+
+                if (userDoc) {
                     const userData = userDoc.data();
                     let updateData = {};
                     if (memberData.status === '퇴단' || memberData.status === '전출') {
@@ -864,8 +1102,10 @@
                         updateData.status = 'active';
                         updateData.leaveDate = null;
                     }
+                    
                     if (Object.keys(updateData).length > 0) {
                         await updateDoc(doc(db, "users", userDoc.id), updateData);
+                        console.log("User account synced successfully.");
                     }
                 }
             } catch (err) {

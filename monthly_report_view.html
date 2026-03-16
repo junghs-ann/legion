@@ -262,28 +262,53 @@
         }
 
         .digital-stamp {
-            color: #000;
-            border: 3.5px solid #000;
-            /* 테두리 더 두껍게 */
+            color: #d32f2f;
+            border: 2px solid #d32f2f;
             border-radius: 50%;
-            width: 85px;
-            /* 65px에서 85px로 추가 확대 */
-            height: 85px;
+            width: 32px;
+            height: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            /* 글자 크기도 시원하게 확대 */
+            font-size: 15px;
             font-weight: bold;
-            margin-left: -15px;
-            /* 성함과 더 많이 겹치도록 조정 */
+            margin-left: 4px;
             vertical-align: middle;
-            transform: rotate(-8deg);
-            background: rgba(231, 76, 60, 0.01);
+            transform: rotate(-5deg);
+            background-color: rgba(211, 47, 47, 0.05);
             line-height: 1;
             flex-shrink: 0;
-            background-color: white;
             z-index: 10;
+        }
+
+        /* 서명 이미지 전용 스타일 - 정렬 및 밀착도 보강 */
+        .signature-image-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30mm; /* 너비를 줄여 이름 쪽으로 더 붙게 함 */
+            height: 14mm;
+            vertical-align: middle;
+            margin-left: -18px; /* 이름 밑줄 쪽으로 더 깊게 밀착 */
+            margin-bottom: -2mm; /* 베이스라인에 더 가깝게 내림 */
+            overflow: visible;
+            position: relative;
+            pointer-events: none;
+            mix-blend-mode: multiply; /* 배경과 자연스럽게 합성 (이미지에 배경이 있을 경우 대비) */
+        }
+
+        .signature-image-container img {
+            max-width: 100%;
+            max-height: 180%; /* 이미지 크기를 조금 더 키움 */
+            object-fit: contain;
+        }
+
+        .sig-line {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            white-space: nowrap;
+            width: 100%;
         }
 
         /* 커스텀 모달 스타일 추가 */
@@ -447,7 +472,7 @@
                 </div>
             </div>
 
-            <div style="font-size: 11pt; font-weight: bold; margin-bottom: 3mm;">
+            <div style="font-size: 11pt; font-weight: bold; margin-top: 10mm; margin-bottom: 3mm;">
                 1. 주회합 일시 : 매주 <span id="repDay" class="underline">화</span>요일 <span id="repHour"
                     class="underline">20</span>시 <span id="repMin" class="underline">20</span>분
                 &nbsp;&nbsp;&nbsp;&nbsp; 2. 장 소 : <span id="repPlace" class="underline">-</span><br>
@@ -697,7 +722,7 @@
                     <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(평의회)</span>
                     <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>직속</b>
                 </div>
-                <div style="font-weight:bold; font-size:12.5pt; margin-bottom: 3.5mm;">
+                <div class="sig-line" style="font-weight:bold; font-size:12.5pt; margin-bottom: 3.5mm;">
                     <span id="footChurch" class="underline" style="min-width:30mm">-</span>
                     <span id="footPr" class="underline" style="min-width:35mm">-</span> 쁘레시디움 단장
                     <span id="footName" class="underline" style="min-width:30mm">-</span> (인)
@@ -829,77 +854,78 @@
 
             const targetChurch = t(church);
             const targetPr = t(pr);
+            let officialPresidentName = '';
 
-            // [수정] Firestore에서 데이터 병렬 로드
+            // [수정] 표준 필드(presidiumName)만을 사용하여 데이터 로드
             try {
                 const [
-                    presSnap,
-                    attSnap,
-                    memSnap,
-                    offSnap,
-                    recSnap,
-                    transSnap,
-                    eventSnap,
-                    auxSnap,
-                    pretSnap,
-                    adjSnap,
+                    presSnapN,
+                    attSnapN,
+                    memSnapN,
+                    offSnapN,
+                    recSnapN,
+                    transSnapN,
+                    eventSnapN,
+                    auxSnapN,
+                    pretSnapN,
+                    adjSnapN,
                     schemaSnap
                 ] = await Promise.all([
-                    getDocs(query(collection(db, 'presidia_list'), where('name', '==', targetPr))),
+                    getDocs(query(collection(db, 'presidia_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidium', '==', targetPr))),
+                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
                     getDoc(doc(db, 'activity_schemas', church))
                 ]);
 
-                // 데이터 정제 및 필터링
-                const info = presSnap.docs.map(d => d.data()).find(p => isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['name', 'presidium']))) || {};
+                // 데이터 병합 및 중복 제거 유틸리티
+                const mergeDocs = (snapN, snapO) => {
+                    const map = new Map();
+                    if (snapN && snapN.docs) snapN.docs.forEach(d => map.set(d.id, { ...d.data(), id: d.id }));
+                    if (snapO && snapO.docs) snapO.docs.forEach(d => map.set(d.id, { ...d.data(), id: d.id }));
+                    return Array.from(map.values());
+                };
 
-                const allAtt = []; attSnap.forEach(d => allAtt.push(d.data()));
-                let atts = allAtt.filter(a => a.date >= start && a.date <= end).sort((a, b) => a.date.localeCompare(b.date));
+                const info = presSnapN.docs.map(d => ({ ...d.data(), id: d.id })).find(p => isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'name']))) || {};
 
-                // 전 회차 일자 계산
-                let prevDate = start;
-                if (ssValue) {
-                    const prAtts = allAtt.sort((a, b) => parseInt(a.session) - parseInt(b.session));
-                    const currIdx = prAtts.findIndex(a => String(a.session) === String(ssValue));
-                    if (currIdx > 0) prevDate = prAtts[currIdx - 1].date;
-                }
+                const attsAll = attSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const atts = attsAll.filter(a => a.date >= start && a.date <= end).sort((a, b) => a.date.localeCompare(b.date));
 
-                const mms = []; memSnap.forEach(d => mms.push(d.data()));
-                const offs = []; offSnap.forEach(d => {
-                    const o = d.data();
-                    if ((getField(o, ['appointmentDate']) || '') <= end && (!(getField(o, ['appointmentExpiryDate'])) || getField(o, ['appointmentExpiryDate']) > end)) {
-                        offs.push(o);
-                    }
-                });
+                const mms = memSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const offsAll = offSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const offs = offsAll.filter(o => 
+                    (getField(o, ['appointmentDate']) || '') <= end && 
+                    (!(getField(o, ['appointmentExpiryDate'])) || getField(o, ['appointmentExpiryDate']) > end)
+                );
 
-                const recs = []; recSnap.forEach(d => {
-                    const r = d.data();
-                    if (r.date >= start && r.date <= end) recs.push(r);
-                });
+                const recsAll = recSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const recs = recsAll.filter(r => r.date >= start && r.date <= end);
 
-                const leds = []; transSnap.forEach(d => {
-                    const l = d.data();
+                const ledsAll = transSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const leds = ledsAll.filter(l => {
                     const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
-                    if (lDate >= start && lDate <= end) leds.push(l);
+                    return lDate >= start && lDate <= end;
                 });
 
-                const evs = []; eventSnap.forEach(d => {
-                    const e = d.data();
-                    if (e.eventDate >= start) evs.push(e);
-                });
-                evs.sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+                const evsAll = eventSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const evs = evsAll.filter(e => e.eventDate >= start).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
 
-                const ams = []; auxSnap.forEach(d => ams.push(d.data()));
-                const pretHistory = []; pretSnap.forEach(d => pretHistory.push(d.data()));
-                const adjHistory = []; adjSnap.forEach(d => adjHistory.push(d.data()));
+                const ams = auxSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const pts = pretSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                const adjs = adjSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+
+                // [Fix] 전월 기준일(prevDate) 계산 로직 추가
+                const prevAtts = attsAll.filter(a => a.date < start).sort((a, b) => b.date.localeCompare(a.date));
+                const prevDate = prevAtts.length > 0 ? prevAtts[0].date : null;
+
+                const pretHistory = pts;
+                const adjHistory = adjs;
                 const prSchema = schemaSnap.exists() ? schemaSnap.data().categories : DEFAULT_SCHEMA;
 
                 const offIds = new Set(offs.map(o => String(o.memberId || o.id)));
@@ -1155,18 +1181,76 @@
                 setVal('a_i_m', fLen(aux_i, '남')); setVal('a_i_f', fLen(aux_i, '여')); setVal('a_i_t', aux_i.length);
                 setVal('a_o_m', fLen(aux_o, '남')); setVal('a_o_f', fLen(aux_o, '여')); setVal('a_o_t', aux_o.length);
 
-                // 5. 행사 내역
-                document.getElementById('eventTableBody').innerHTML = evs.slice(0, 5).map(e => `
-                <tr><td>${e.category || ''}</td><td style="text-align:left;">${e.eventName || ''}</td><td>${e.organizer || ''}</td><td>${e.eventDate || ''}</td><td>${e.venue || ''}</td><td>${e.attendanceCount || 0}</td></tr>
-            `).join('') || '<tr><td colspan="6" style="height:10mm">기간 내 행사가 없습니다.</td></tr>';
+                // 5. 행사 내역 (주요 사항) - [고도화]
+                // 기준 월(당월) 및 익월(다음달) 계산
+                const refYear = endYear;
+                const refMonth = endMonth;
+                const nextYear = refMonth === 12 ? refYear + 1 : refYear;
+                const nextMonth = refMonth === 12 ? 1 : refMonth + 1;
+
+                const curPrefix = `${refYear}-${String(refMonth).padStart(2, '0')}`;
+                const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+
+                const executedEvs = evsAll.filter(e => {
+                    const cat = t(e.category);
+                    const d = t(e.eventDate);
+                    return cat === '실행' && d.startsWith(curPrefix);
+                });
+
+                const plannedEvs = evsAll.filter(e => {
+                    const cat = t(e.category);
+                    const d = t(e.eventDate);
+                    return (cat === '계획' || cat === '예정') && d.startsWith(nextPrefix);
+                });
+
+                // 합치고 날짜순 정렬
+                const finalEvs = [...executedEvs, ...plannedEvs].sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+
+                // 가변 행 유지 (데이터가 있을 때는 그만큼, 없을 때는 최소 1행)
+                const rowCount = Math.max(finalEvs.length, 1);
+                const tableRows = [];
+                for (let i = 0; i < rowCount; i++) {
+                    const e = finalEvs[i] || {};
+                    tableRows.push(`
+                        <tr>
+                            <td style="height:8mm">${e.category || ''}</td>
+                            <td style="text-align:left;">${e.eventName || ''}</td>
+                            <td>${e.organizer || ''}</td>
+                            <td>${e.eventDate || ''}</td>
+                            <td>${e.venue || ''}</td>
+                            <td>${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
+                        </tr>
+                    `);
+                }
+                document.getElementById('eventTableBody').innerHTML = tableRows.join('');
 
                 // 6. 회계 보고 (UI상 7번)
                 let totalIn = 0, totalOut = 0;
                 let expCont = 0, expFlow = 0;
 
+                // [추가] 당월 거래 내역 집계 로직
+                leds.forEach(l => {
+                    const amt = parseInt(l.amount) || 0;
+                    const isDeposit = (l.type === 'deposit' || l.type === 'income');
+                    
+                    // [필드 보강] item(신규)과 category(레거시), remarks(신규)와 remark(레거시) 모두 확인
+                    const item = String(l.item || l.category || '').trim();
+                    const remark = String(l.remarks || l.remark || '').trim();
+
+                    if (isDeposit) {
+                        totalIn += amt;
+                    } else {
+                        totalOut += amt;
+                        // 중요 지출 내역 자동 분류 (이미지 규격에 맞춰 의연금, 꽃값 감지)
+                        if (item.includes('의연금') || remark.includes('의연금')) {
+                            expCont += amt;
+                        } else if (item.includes('꽃값') || item.includes('꽃비') || remark.includes('꽃값')) {
+                            expFlow += amt;
+                        }
+                    }
+                });
+
                 // [개선] 이월금 계산: 연초 기초 잔액 + 보고 기간 이전 누적 수지 합계
-                // [수정] Firestore에서 이월금 데이터 로드 지원 필요 (현재는 일단 0으로 하거나 이전 방식 유지)
-                // 여기서는 transSnap으로부터 전체 연도 데이터를 다시 가져와서 계산해야 함 (query 제한 때문)
                 let initBal = 0;
                 try {
                     const summarySnap = await getDoc(doc(db, 'accounting_summaries', `${endYear}_${church}_${info.curiaName || ''}_${pr}`));
@@ -1175,12 +1259,10 @@
 
                 let carryOverIn = 0, carryOverOut = 0;
                 const startStr = t(start);
-
-                // 모든 거래 내역 재조회 (이월금 계산용)
-                const allTransSnap = await getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', pr), where('year', '==', endYear)));
-                allTransSnap.forEach(d => {
-                    const l = d.data();
+                ledsAll.forEach(l => {
+                    if (parseInt(l.year) !== endYear) return;
                     if (!isOrgMatch(getField(l, ['churchName', 'church']), getField(l, ['presidiumName', 'presidium']))) return;
+                    
                     const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
                     const amt = parseInt(l.amount) || 0;
                     const isDeposit = (l.type === 'deposit' || l.type === 'income');
@@ -1402,7 +1484,7 @@
 
                 // 9. 푸터
                 setVal('footChurch', church);
-                setVal('footCu', info.curiaName || userProfile.curia || userProfile.curiaName || '-');
+                setVal('footCu', info.curiaName || (userProfile ? (userProfile.curia || userProfile.curiaName) : '') || '-');
                 setVal('footPr', pr);
 
                 // 단장 성명 찾기 (간부 현황에서 조회 - Robust Match)
@@ -1410,11 +1492,11 @@
                 const today = new Date().toISOString().split('T')[0];
                 const president = offs.find(o =>
                     isOrgMatch(getField(o, ['churchName', 'church']), getField(o, ['presidiumName', 'presidium'])) &&
-                    (o.role === '단장' || String(o.role).toLowerCase() === 'president') &&
+                    ((String(o.role).includes('단장') && !String(o.role).includes('부단장')) || String(o.role).toLowerCase().includes('president') && !String(o.role).toLowerCase().includes('vice')) &&
                     (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
                 );
 
-                const officialPresidentName = president ? president.name : '';
+                officialPresidentName = president ? president.name : '';
                 setVal('footName', officialPresidentName || (userProfile.name || '-'));
 
             } catch (error) {
@@ -1442,25 +1524,40 @@
             };
 
             const renderStatus = async () => {
-                const data = await getStatusData();
-                const status = data ? data.status : 'Draft';
-                const role = String(userProfile.role || '').toLowerCase().trim();
+                try {
+                    console.log("Starting renderStatus...");
+                    const data = await getStatusData();
+                    const status = data ? data.status : 'Draft';
 
-                // [보강] 권한 그룹 정의
-                const officerRoles = ['관리자', 'admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
-                const presidentRoles = ['단장', '관리자', 'admin', 'president'];
+                    // [보강] 권한 확인을 위한 사용자 정보 추출
+                    const profile = userProfile || {};
+                    const role = String(profile.role || '').toLowerCase().trim();
+                    const currentUserName = String(profile.name || '').replace(/\s/g, '');
+                    const targetPresName = String(officialPresidentName || '').replace(/\s/g, '');
 
-                const isOfficer = officerRoles.some(r => role === r.toLowerCase()); // exact match for roles
+                    // [보강] 엄격한 권한 그룹 정의 (꼼수 없는 정확한 데이터 비교)
+                    const isSystemAdmin = role === '관리자' || role === 'admin';
+                    
+                    // 1. 단장 권한 (Approval): 시스템 관리자이거나, DB상의 공식 단장 성명과 로그인 성명이 일치할 때
+                    //    또는 직책이 '단장'이면서 '부단장'이 아닐 때 (단, 성명 매칭을 최우선으로 함)
+                    const isPresident = isSystemAdmin || 
+                        (currentUserName !== '' && targetPresName !== '' && currentUserName === targetPresName) ||
+                        (role === '단장' || role === 'president');
 
-                // [보강] 더욱 강력한 권한 체크: 직책(Role)이 정확히 일치하거나, 로그인 성함이 공식 단장 성명과 일치하면 승인 권한 부여
-                // '부단장' 등 문자열이 포함된 직책은 제외하고 '단장', 'admin', '관리자', 'president'만 필터링
-                const currentUserName = String(userProfile.name || '').replace(/\s/g, '');
-                const targetPresName = String(officialPresidentName || '').replace(/\s/g, '');
+                    // 2. 간부 권한 (Preparation/Edit): 모든 간부 (단장, 부단장, 서기, 회계) 및 관리자
+                    const officerRoles = ['단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'];
+                    const isOfficer = isSystemAdmin || officerRoles.includes(role) || isPresident;
 
-                const isPresident = ['단장', '관리자', 'admin', 'president'].includes(role) ||
-                    (currentUserName !== '' && targetPresName !== '' && currentUserName === targetPresName);
-
-                console.log("Permission Log:", { role, currentUserName, targetPresName, isOfficer, isPresident, status, mode });
+                    console.log("Permission Analysis:", { 
+                        role, 
+                        currentUserName, 
+                        targetPresName, 
+                        isOfficer, 
+                        isPresident, 
+                        status, 
+                        mode,
+                        profileFound: !!userProfile 
+                    });
 
                 const badge = document.getElementById('reportStatusBadge');
                 const btnFin = document.getElementById('btnFinalize');
@@ -1484,9 +1581,15 @@
                 }
 
                 // 2. 버튼 가시성 제어
-                // 생성 모드이거나 이미 생성된 문서(data 존재)인 경우 권한에 따라 버튼 노출
-                btnFin.style.display = ((mode === 'create' || (data && mode === 'view')) && isOfficer && status !== 'Approved') ? 'block' : 'none';
+                // [근본적 조치] '생성/수정' 모드로 열었다면 이미 이전 페이지에서 간부임을 확인한 것이므로 버튼을 상시 노출합니다.
+                // 일반 단원이 '조회' 모드로 들어왔을 때만 버튼을 숨깁니다. (단, 이미 확정된 상태라면 간부에게는 '조회' 모드에서도 수정 버튼 노출)
+                const canFinalize = (mode === 'create') || (isOfficer && status !== 'Approved' && (mode === 'create' || (data && mode === 'view')));
+                btnFin.style.display = canFinalize ? 'block' : 'none';
+                
+                // 승인 버튼은 단장에게만 노출 (조회/생성 모드 관계없이 승인 전이면 노출)
                 btnApp.style.display = (isPresident && status !== 'Approved') ? 'block' : 'none';
+                
+                // 승인 취소 버튼은 단장에게만 승인 완료 상태에서 노출
                 btnCan.style.display = (isPresident && status === 'Approved') ? 'block' : 'none';
 
                 // 3. 서명(직인) 및 성명 렌더링
@@ -1495,65 +1598,72 @@
                     // 성함: 공식 단장 이름 우선, 없으면 서명자 이름 표시
                     footNameArea.textContent = officialPresidentName || data.signer || '-';
 
-                    // 서명자(signer)의 실제 데이터 찾기 (Firestore profiles)
+                    // [개선] 서명 이미지 조회 (복합 인덱스 오류 방지를 위해 쿼리 단순화)
                     let signatureImg = null;
                     try {
-                        const profileSnap = await getDocs(query(collection(db, 'profiles'), where('name', '==', (officialPresidentName || data.signer)), where('church', '==', church), where('presidiumName', '==', pr)));
-                        if (!profileSnap.empty) {
-                            signatureImg = profileSnap.docs[0].data().signature;
+                        const targetName = officialPresidentName || data.signer;
+                        const profileSnap = await getDocs(query(collection(db, 'users'), where('name', '==', targetName)));
+                        const matchedProfile = profileSnap.docs.map(d => d.data()).find(p => 
+                            isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'presidium']))
+                        );
+                        if (matchedProfile) {
+                            signatureImg = matchedProfile.signature || matchedProfile.signImage;
                         }
-                    } catch (e) { }
+                    } catch (e) { console.warn("Signature fetch failed:", e); }
 
                     // 서명(직인) 렌더링
                     if (signMark && signMark.nodeType === 3 && signMark.textContent.includes('(인)')) {
-                        const stamp = document.createElement('span');
-                        stamp.className = 'digital-stamp';
-
-                        if (signatureImg && signatureImg.length > 500) {
+                        const isValidSign = signatureImg && (signatureImg.startsWith('data:image') || signatureImg.length > 20);
+                        
+                        if (isValidSign) {
+                            const stamp = document.createElement('span');
+                            stamp.className = 'signature-image-container';
                             const img = document.createElement('img');
                             img.src = signatureImg;
-                            img.style.width = '100%';
-                            img.style.height = '100%';
-                            img.style.objectFit = 'contain';
-                            stamp.innerHTML = '';
                             stamp.appendChild(img);
-                            stamp.style.border = 'none';
-                            stamp.style.background = 'transparent';
+                            footNameArea.parentNode.replaceChild(stamp, signMark);
                         } else {
+                            const stamp = document.createElement('span');
+                            stamp.className = 'digital-stamp';
                             const stampChar = (officialPresidentName || data.signer || '-').substring(0, 1);
                             stamp.innerHTML = stampChar;
+                            footNameArea.parentNode.replaceChild(stamp, signMark);
                         }
-                        footNameArea.parentNode.replaceChild(stamp, signMark);
                     } else {
                         const existingStamp = footNameArea.parentNode.querySelector('.digital-stamp');
                         if (existingStamp) {
-                            if (signatureImg && signatureImg.length > 500) {
-                                let img = existingStamp.querySelector('img');
-                                if (!img) {
-                                    img = document.createElement('img');
-                                    existingStamp.innerHTML = '';
-                                    existingStamp.appendChild(img);
-                                }
+                            // [보강] 가변 서명 데이터 대응
+                            const isValidSign = signatureImg && (signatureImg.startsWith('data:image') || signatureImg.length > 20);
+                            
+                            if (isValidSign) {
+                                const newStamp = document.createElement('span');
+                                newStamp.className = 'signature-image-container';
+                                const img = document.createElement('img');
                                 img.src = signatureImg;
-                                existingStamp.style.border = 'none';
-                                existingStamp.style.background = 'transparent';
+                                newStamp.appendChild(img);
+                                existingStamp.parentNode.replaceChild(newStamp, existingStamp);
                             } else {
                                 const stampChar = (officialPresidentName || data.signer || '-').substring(0, 1);
+                                existingStamp.className = 'digital-stamp';
+                                existingStamp.style = ''; // Reset inline styles
                                 existingStamp.innerHTML = stampChar;
                             }
                         }
                     }
                 } else {
                     // 미승인(Draft 등): 현재 단장 혹은 내 이름 표시 (원래 로직 유지)
-                    const currentPres = officialPresidentName || (userProfile.name || '-');
+                    const currentPres = officialPresidentName || (userProfile ? userProfile.name : '-');
                     footNameArea.textContent = currentPres;
 
-                    // 승인 취소 시 서명 제거하고 (인) 복구
-                    const stamp = footNameArea.parentNode.querySelector('.digital-stamp');
+                    // 승인 취소 시 서명(이미지 또는 텍스트 직인) 제거하고 (인) 복구
+                    const stamp = footNameArea.parentNode.querySelector('.digital-stamp, .signature-image-container');
                     if (stamp) {
                         const text = document.createTextNode(' (인)');
                         footNameArea.parentNode.replaceChild(text, stamp);
                     }
+                }
+                } catch (e) {
+                    console.error("renderStatus Error:", e);
                 }
             };
 

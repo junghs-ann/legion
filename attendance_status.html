@@ -141,6 +141,13 @@
             text-align: right;
         }
 
+        .guide-text {
+            font-size: 0.85rem;
+            color: #d4a017;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
         .form-group input,
         .form-group select {
             flex: 1;
@@ -510,6 +517,18 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* [추가] 회차 안내 문구 스타일 */
+        .guide-text {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 4px;
+            padding-left: 2px;
+            min-height: 1.2rem;
+        }
+        .guide-text b {
+            color: #2e7d32;
+        }
     </style>
 </head>
 
@@ -610,7 +629,7 @@
         <div class="register-form-container">
             <div class="form-header">
                 <h2 class="form-title">주회합 출석 관리</h2>
-                <button type="button" class="btn-close-top" onclick="location.href='dashboard.html'" title="닫기">
+                <button type="button" class="btn-close-top" onclick="window.safeNavigate('dashboard.html')" title="닫기">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -636,20 +655,12 @@
                     <label>쁘레시디움(Pr.)</label>
                     <div class="search-container" id="presidiumSearchContainer">
                         <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
-                            class="nav-enter"
-                            style="border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important;">
+                            class="nav-enter">
                         <input type="hidden" id="presidiumSelect"> <!-- For compatibility with existing JS -->
                         <div id="presidiumDropdown" class="custom-dropdown"></div>
                     </div>
                 </div>
 
-                <!-- 3행: 회차, 날짜, 요일 (2+2+2) -->
-                <div class="form-group col-span-2 session-container">
-                    <label>주회합 회차</label>
-                    <input type="text" id="session" placeholder="회차 또는 목록 선택" inputmode="numeric" pattern="[0-9]*"
-                        autocomplete="off">
-                    <div id="sessionDropdown" class="custom-dropdown-list"></div>
-                </div>
                 <div class="form-group col-span-2">
                     <label>날짜</label>
                     <input type="date" id="dateInput">
@@ -657,6 +668,13 @@
                 <div class="form-group col-span-2">
                     <label>요일</label>
                     <input type="text" id="dayInput" readonly placeholder="자동 계산">
+                </div>
+                <div class="form-group col-span-2 session-container">
+                    <label>주회합 회차</label>
+                    <input type="text" id="session" placeholder="회차 또는 목록 선택" inputmode="numeric" pattern="[0-9]*"
+                        autocomplete="off">
+                    <div id="sessionDropdown" class="custom-dropdown-list"></div>
+                    <div id="sessionGuide" class="guide-text" style="display: block;">날짜를 선택해 주세요.</div>
                 </div>
             </div>
 
@@ -704,7 +722,7 @@
                     <i class="fas fa-trash-alt"></i> 삭 제
                 </button>
                 <button type="button" id="btnClose" class="btn-submit btn-close"
-                    style="flex: 1; max-width: 120px; padding: 12px 0;" onclick="location.href='dashboard.html'">
+                    style="flex: 1; max-width: 120px; padding: 12px 0;" onclick="window.safeNavigate('dashboard.html')">
                     <i class="fas fa-times"></i> 닫 기
                 </button>
             </div>
@@ -746,30 +764,26 @@
                 return;
             }
             currentUser = profile;
+            console.log(`[Auth] User: ${currentUser.name} (${currentUser.role})`);
 
-            // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
-                window.initCommonMenus(profile, logoutUser);
+                window.initCommonMenus(currentUser, logoutUser);
             }
 
-            // [Important] Wait for global data sync to complete (especially on mobile)
-            if (window.dataReady) {
-                await window.dataReady;
-            }
-
-            window.loadData();
+            // [V16.32] 단순한 정석 절차: 데이터 로드 -> 선택창 설정 -> 이벤트 등록
+            await window.loadData();
             await window.setupOrgSelectors();
             setupEventListeners();
         });
 
         window.loadData = async function () {
             try {
-                // Fetch Members and Officers from Firestore for the specific organization
-                // But since we need them for rendering, we'll fetch them in loadAttendanceList()
-                presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]') || [];
-
-                // For attendance_list, we'll fetch from Firestore based on selection
-                console.log("Local loadData complete (reference lists only).");
+                const stored = localStorage.getItem('presidia_list');
+                if (stored) {
+                    presidiaList = typeof stored === 'string' && stored.startsWith('[') ? JSON.parse(stored) : (stored || []);
+                    if (typeof presidiaList === 'string') presidiaList = JSON.parse(presidiaList);
+                }
+                console.log(`[Data] Loaded ${presidiaList.length} presidia.`);
             } catch (e) {
                 console.error("Data parse error", e);
                 presidiaList = [];
@@ -777,48 +791,20 @@
         };
 
         window.setupOrgSelectors = async function () {
-            const role = (currentUser.role || '').toLowerCase();
-            const isAdmin = role === 'admin' || role === '관리자';
+            const role = (currentUser.role || '').trim();
+            const isAdmin = ['관리자', 'admin', 'Admin'].includes(role);
 
-            // [Emergency Fallback] 데이터 유효성 체크 개정
-            const isMissing = !presidiaList || !Array.isArray(presidiaList) || presidiaList.length === 0;
-            if (isMissing) {
-                console.warn("Presidia list empty, checking sync...");
-                const overlay = document.getElementById('dataSyncOverlay');
-                if (overlay) overlay.style.display = 'flex';
-                if (window.dataReady) await window.dataReady;
-                window.loadData();
-
-                // 그럼에도 비어있다면 긴급 fetch (캐시 방지 포함)
-                if (!presidiaList || presidiaList.length === 0) {
-                    try {
-                        const res = await fetch(`./backup_data.json?t=${Date.now()}`);
-                        const backup = await res.json();
-                        if (backup && backup.presidia_list) {
-                            localStorage.setItem('presidia_list', backup.presidia_list);
-                            // [수정] stringified JSON인 경우와 일반 배열인 경우 모두 대응
-                            presidiaList = typeof backup.presidia_list === 'string' ? JSON.parse(backup.presidia_list) : backup.presidia_list;
-                        }
-                    } catch (e) { console.error("Emergency fetch failed", e); }
-                }
-                if (overlay) overlay.style.display = 'none';
-            }
-
+            // 성당 목록 만들기 (기본 정보에서 추출)
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
-            // churchName과 church 속성 모두 대응하는 견고한 매핑
-            const churches = [...new Set((presidiaList || []).map(p => p.churchName || p.church))].filter(Boolean).sort();
-
-            if (churches.length === 0) {
-                console.error("Churches still empty after sync attempts.");
-            }
-
+            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(Boolean).sort();
             churches.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
+                opt.value = opt.textContent = c;
                 churchSelect.appendChild(opt);
             });
 
             if (!isAdmin) {
+                // [일반 사용자] 로그인 정보로 고정
                 const userChurch = currentUser.churchName || currentUser.church || '';
                 const userCuria = currentUser.curiaName || currentUser.curia || '';
                 const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
@@ -828,24 +814,25 @@
                     churchSelect.disabled = true;
                     updateCuriaList();
                 }
-
                 if (userCuria) {
                     curiaSelect.value = userCuria;
                     curiaSelect.disabled = true;
                     updatePresidiumList();
                 }
-
                 if (userPresidium) {
+                    presidiumInput.value = userPresidium;
                     presidiumSelect.value = userPresidium;
-                    presidiumSelect.disabled = true;
+                    presidiumInput.disabled = true;
                 }
-
                 loadAttendanceList();
                 updateSessionList();
             } else {
-                // These event listeners are now moved to setupEventListeners
+                // [관리자] 모든 선택창 활성화
+                churchSelect.disabled = false;
+                curiaSelect.disabled = false;
+                presidiumInput.disabled = false;
             }
-        }
+        };
 
         function setupEventListeners() {
             // Track changes for isDirty
@@ -856,7 +843,7 @@
             const btnSync = document.getElementById('btnEmergencySync');
             if (btnSync) {
                 btnSync.addEventListener('click', async () => {
-                    if (confirm('서버에서 최신 성당 및 단원 목록을 다시 가져오시겠습니까?')) {
+                    if (await window.showGlobalConfirm('🔄 서버에서 최신 성당 및 단원 목록을 다시 가져오시겠습니까?\n(네트워크 상태에 따라 시간이 걸릴 수 있습니다.)')) {
                         await window.forceDataRefresh();
                     }
                 });
@@ -869,13 +856,18 @@
             sessionInput.addEventListener('input', () => loadAttendanceBySession(false, false));
 
             // [New] Custom Dropdown Logic for Mobile
-            sessionInput.addEventListener('focus', () => {
-                updateSessionList();
-                sessionDropdown.style.display = 'block';
+            sessionInput.addEventListener('focus', async () => {
+                await updateSessionList(sessionInput.value);
+                if (attendanceList.length > 0) {
+                    sessionDropdown.style.display = 'block';
+                }
             });
 
-            sessionInput.addEventListener('input', () => {
-                updateSessionList(sessionInput.value);
+            sessionInput.addEventListener('input', async () => {
+                await updateSessionList(sessionInput.value);
+                if (attendanceList.length > 0) {
+                    sessionDropdown.style.display = 'block';
+                }
             });
 
             // Prevent blur from closing before item click is registered
@@ -901,7 +893,7 @@
 
             // Generic Enter key navigation for all relevant input/select elements
             document.querySelectorAll('input, select').forEach(input => {
-                input.addEventListener('keydown', (e) => {
+                input.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         const inputs = Array.from(document.querySelectorAll('input, select, button')).filter(el => {
@@ -913,7 +905,7 @@
                         if (index > -1 && index < inputs.length - 1) {
                             const nextEl = inputs[index + 1];
                             if (nextEl.tagName === 'BUTTON') {
-                                if (confirm('저장하시겠습니까?')) {
+                                if (await window.showGlobalConfirm('💾 입력하신 내용을 저장하시겠습니까?')) {
                                     saveAttendance();
                                 }
                             } else {
@@ -929,20 +921,38 @@
 - [x] 신규 회차 입력 시 마지막 회차 + 1 여부 확인 로직 복구 `[x]`
 - [x] 비연속 회차 입력 시 경고 메시지 표시 및 확인 절차 추가 `[x]`
              */
-            dateInput.addEventListener('change', () => {
+            dateInput.addEventListener('change', async () => {
                 const date = dateInput.value;
                 if (!date) {
                     dayInput.value = '';
                     return;
                 }
 
-                // 요일 자동 계산 (정상적인 날짜일 경우에만 실행됨)
+                // 요일 자동 계산
                 const d = new Date(date);
-                // Date 객체가 Invalid Date 인지 확인 (혹시 모를 에러 방지)
                 if (isNaN(d.getTime())) return;
 
                 const week = ['일', '월', '화', '수', '목', '금', '토'];
                 dayInput.value = week[d.getDay()] + '요일';
+
+                // [추가] 날짜 선택 시 해당 날짜의 기존 회차가 있는지 검색
+                const presidium = presidiumSelect.value;
+                if (presidium) {
+                    // 데이터가 아직 로드되지 않았거나 현재 선택된 Pr의 데이터가 아닌 경우 로드
+                    await updateSessionList();
+                    
+                    const existing = attendanceList.find(a => a.date === date);
+                    if (existing) {
+                        sessionInput.value = existing.session;
+                        loadAttendanceBySession(false, true); // 경고 없이 로드
+                        console.log(`[Debug] 해당 날짜(${date})의 기존 회차(${existing.session}회)를 자동으로 찾았습니다.`);
+                    } else {
+                        // 기존 기록이 없으면 회차 입력창으로 포커스 이동
+                        sessionInput.value = '';
+                        sessionInput.focus();
+                        console.log(`[Debug] 해당 날짜(${date})의 기존 기록이 없습니다. 새 회차를 입력하세요.`);
+                    }
+                }
 
                 if (!currentEditingId) {
                     loadAttendanceList();
@@ -960,10 +970,16 @@
             const church = churchSelect.value;
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) { curiaSelect.disabled = true; return; }
-            const curias = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+            
+            // 쁘레시디움 기본 정보에서 해당 성당에 속한 꾸리아만 추출
+            const curias = [...new Set(presidiaList
+                .filter(p => (p.churchName === church || p.church === church))
+                .map(p => p.curiaName || p.curia)
+            )].filter(Boolean).sort();
+
             curias.forEach(cu => {
                 const opt = document.createElement('option');
-                opt.value = cu; opt.textContent = cu;
+                opt.value = opt.textContent = cu;
                 curiaSelect.appendChild(opt);
             });
             curiaSelect.disabled = false;
@@ -981,38 +997,41 @@
             presidiumInput.disabled = false;
         }
 
-        function showPresidiumDropdown(filter = '') {
+        function showPresidiumDropdown(filterText = '') {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
             if (!curia) return;
 
-            const list = presidiaList.filter(p =>
-                p.churchName === church &&
-                p.curiaName === curia &&
-                (filter === '' || p.presidiumName.includes(filter))
-            ).map(p => p.presidiumName).sort();
+            // 쁘레시디움 기본 정보에서 해당 성당/꾸리아에 속한 쁘레시디움만 추출
+            const filtered = presidiaList.filter(p => 
+                (p.churchName === church || p.church === church) &&
+                (p.curiaName === curia || p.curia === curia) &&
+                (p.presidiumName || p.presidium || p.name || '').includes(filterText)
+            ).sort((a, b) => (a.presidiumName || a.presidium || '').localeCompare(b.presidiumName || b.presidium || ''));
 
-            if (list.length === 0) {
+            presidiumDropdown.innerHTML = '';
+            if (filtered.length === 0) {
                 presidiumDropdown.innerHTML = '<div class="no-result">일치하는 쁘레시디움이 없습니다.</div>';
             } else {
-                presidiumDropdown.innerHTML = list.map(name =>
-                    `<div class="dropdown-item" data-name="${name}">${name}</div>`
-                ).join('');
-
-                presidiumDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const name = item.dataset.name;
+                filtered.forEach(p => {
+                    const name = p.presidiumName || p.presidium || p.name;
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.textContent = name;
+                    div.addEventListener('click', () => {
                         presidiumInput.value = name;
                         presidiumSelect.value = name;
                         presidiumDropdown.style.display = 'none';
-                        loadAttendanceList();
                         updateSessionList();
+                        loadAttendanceList();
                     });
+                    presidiumDropdown.appendChild(div);
                 });
             }
             presidiumDropdown.style.display = 'block';
         }
 
+        let currentSessionCacheKey = ''; // [추가] 중복 쿼리 방지용 키
         async function updateSessionList(filter = '') {
             const presidium = presidiumSelect.value;
             const church = churchSelect.value;
@@ -1022,17 +1041,61 @@
                 return;
             }
 
-            try {
-                const q = query(
-                    collection(db, 'attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
-                );
-                const querySnapshot = await getDocs(q);
-                attendanceList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const cacheKey = `${church}-${curia}-${presidium}`;
 
+            try {
+                // [Robust Parallel Query] 필드명 차이(churchName vs church)를 극복하기 위해 병렬 조회
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'attendance_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia))),
+                    getDocs(query(collection(db, 'attendance_list'),
+                        where('church', '==', church),
+                        where('curia', '==', curia)))
+                ]);
+
+                const seenIds = new Set();
+                const rawDocs = [];
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(d => {
+                        if (!seenIds.has(d.id)) {
+                            seenIds.add(d.id);
+                            rawDocs.push({ id: d.id, ...d.data() });
+                        }
+                    });
+                });
+
+                // JS 단계에서 presidiumName 또는 presidium(레거시) 필드 모두 체크 (공백 등 불일치 방지 트리밍)
+                attendanceList = rawDocs
+                    .filter(doc => {
+                        const prName = (doc.presidiumName || doc.presidium || '').toString().trim();
+                        const targetPr = (presidium || '').toString().trim();
+                        return prName === targetPr;
+                    })
+                    .map(doc => {
+                        // [보정] date 필드가 Timestamp 객체인 경우 문자열로 변환
+                        let finalDate = doc.date;
+                        if (finalDate && typeof finalDate === 'object' && finalDate.seconds) {
+                            const d = new Date(finalDate.seconds * 1000);
+                            finalDate = d.toISOString().split('T')[0];
+                        }
+                        return { ...doc, date: finalDate };
+                    });
+
+                currentSessionCacheKey = cacheKey;
                 const sortedRecords = attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
+                
+                // [추가] 최종 회차 안내 업데이트 (목록 로딩 즉시 반영)
+                const guideEl = document.getElementById('sessionGuide');
+                if (guideEl) {
+                    if (sortedRecords.length > 0) {
+                        const latest = sortedRecords[0];
+                        guideEl.innerHTML = `최종 회차: <b>${latest.session}회</b> (${latest.date})`;
+                    } else {
+                        guideEl.textContent = '등록된 회차가 없습니다.';
+                    }
+                    guideEl.style.display = 'block';
+                }
 
                 // Filter by typing
                 const filtered = filter
@@ -1040,7 +1103,9 @@
                     : sortedRecords;
 
                 if (filtered.length === 0) {
-                    sessionDropdown.innerHTML = '<div class="no-result">일치하는 회차가 없습니다.</div>';
+                    // [변경] 일치하는 회차가 없으면 목록을 비우고 드롭다운 숨김
+                    sessionDropdown.innerHTML = '';
+                    sessionDropdown.style.display = 'none';
                     return;
                 }
 
@@ -1065,13 +1130,13 @@
         }
 
         let isProcessingSession = false;
-        function loadAttendanceBySession(showWarning = false, preventFocusShift = false) {
+        async function loadAttendanceBySession(showWarning = false, preventFocusShift = false) {
             if (isProcessingSession) return;
             const sessionRaw = sessionInput.value;
             const presidium = presidiumSelect.value;
 
             if (sessionRaw && !presidium) {
-                alert('쁘레시디움을 먼저 선택해 주세요.');
+                await window.showGlobalAlert('⚠️ 쁘레시디움을 먼저 선택해 주세요.');
                 sessionInput.value = '';
                 presidiumSelect.focus();
                 return;
@@ -1086,21 +1151,24 @@
             const numericSession = parseInt(sessionRaw);
             if (isNaN(numericSession)) return;
 
-            const prRecords = attendanceList.filter(a => a.presidium === presidium);
+            const prRecords = attendanceList.filter(a => {
+                const prName = (a.presidiumName || a.presidium || '').toString().trim();
+                const targetPr = (presidium || '').toString().trim();
+                return prName === targetPr;
+            });
             const existing = prRecords.find(a => parseInt(a.session) === numericSession);
 
             if (existing) {
                 isProcessingSession = true;
                 currentEditingId = existing.id; // [추가] 편집 ID 저장
                 // If it's an existing session, we load its data
-                dateInput.value = existing.date;
-                const date = new Date(existing.date);
-                const week = ['일', '월', '화', '수', '목', '금', '토'];
-                dayInput.value = week[date.getDay()] + '요일';
-                loadAttendanceList();
-                if (!preventFocusShift) {
-                    dateInput.focus();
+                if (dateInput.value !== existing.date) {
+                    dateInput.value = existing.date;
+                    const date = new Date(existing.date);
+                    const week = ['일', '월', '화', '수', '목', '금', '토'];
+                    dayInput.value = week[date.getDay()] + '요일';
                 }
+                loadAttendanceList();
                 isProcessingSession = false;
             } else {
                 currentEditingId = null; // [추가] 신규 회차이므로 ID 초기화
@@ -1110,14 +1178,17 @@
                 if (showWarning && prRecords.length > 0) {
                     const maxSession = Math.max(...prRecords.map(r => parseInt(r.session)));
                     if (numericSession !== maxSession + 1) {
-                        alert(`입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n입력하려는 회차를 확인하시기 바랍니다.`);
+                        await window.showGlobalAlert(`⚠️ 입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n입력하려는 회차를 다시 한번 확인해 주시기 바랍니다.`);
                     }
                 }
 
-                // New session, clear fields
-                dateInput.value = '';
-                dayInput.value = '';
+                // [V16.27] 신규 회차이므로 기존 출결 체크 초기화
                 tableBody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+                // New session, update UI but don't clear date if user entered it first
+                if (!dateInput.value) {
+                    dayInput.value = '';
+                }
                 updateSummary();
             }
         }
@@ -1126,15 +1197,15 @@
             const date = dateInput.value;
             const presidium = presidiumSelect.value;
             if (!date || !presidium || !currentEditingId) {
-                alert('삭제할 기록을 먼저 선택(조직 및 날짜)해 주세요.');
+                await window.showGlobalAlert('🔍 삭제할 기록을 먼저 선택(조직 및 날짜 선택)해 주세요.');
                 return;
             }
 
-            if (!confirm(`${date}일자 ${presidium}의 출석 기록을 정말 삭제하시겠습니까?`)) return;
+            if (!await window.showGlobalConfirm(`🗑️ ${date}일자 ${presidium}의 출석 기록을 정말 삭제하시겠습니까?`)) return;
 
             try {
                 await deleteDoc(doc(db, 'attendance_list', currentEditingId));
-                alert('출석 기록이 삭제되었습니다.');
+                await window.showGlobalAlert('✅ 출석 기록이 성공적으로 삭제되었습니다.');
                 window.setDirty(false);
                 currentEditingId = null;
                 sessionInput.value = '';
@@ -1144,7 +1215,7 @@
                 loadAttendanceList();
             } catch (error) {
                 console.error("Error deleting attendance:", error);
-                alert("삭제 중 오류가 발생했습니다.");
+                await window.showGlobalAlert("🚨 삭제 중 오류가 발생했습니다. 전산 담당자에게 문의해 주세요.");
             }
         }
 
@@ -1160,38 +1231,36 @@
             }
 
             try {
-                // 1. Fetch Officers and Members from Firestore
-                const ofQuery = query(
-                    collection(db, 'officers_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
-                );
-                const ofSnap = await getDocs(ofQuery);
-                officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // [V16.32] 단순한 조회: 선택한 쁘레시디움의 간부와 단원만 가져오기
+                const [ofSnap, memSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', presidium)))
+                ]);
 
-                const memQuery = query(
-                    collection(db, 'members_list'),
-                    where('churchName', '==', church),
-                    where('presidiumName', '==', presidium)
-                );
-                const memSnap = await getDocs(memQuery);
-                membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // 성당 정보가 일치하는지 한 번 더 JS에서 체크 (이중 필드 대응)
+                officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(o => (o.churchName === church || o.church === church));
+                
+                membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(m => (m.churchName === church || m.church === church));
 
                 const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
                 const filterDate = meetingDate || new Date().toISOString().split('T')[0];
 
-                const officers = officersList.filter(o =>
-                    o.appointmentDate <= filterDate &&
-                    (!o.appointmentExpiryDate || o.appointmentExpiryDate > filterDate)
-                ).sort((a, b) => (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99));
+                // [가장 단순한 날짜 비교] 그날 간부인가 아닌가!
+                const officers = officersList.filter(o => {
+                    const start = (o.appointmentDate || '').trim();
+                    const end = (o.appointmentExpiryDate || '').trim();
+                    return start <= filterDate && (!end || end > filterDate);
+                }).sort((a, b) => (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99));
 
-                const officerIds = new Set(officers.map(o => o.memberId));
+                const currentOfficerIds = new Set(officers.map(o => o.memberId));
 
-                const members = membersList.filter(m =>
-                    (!m.leaveDate || m.leaveDate > filterDate) &&
-                    !officerIds.has(m.id)
-                ).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
+                const members = membersList.filter(m => {
+                    const isRetired = m.status === '퇴단' || m.status === '전출' || m.status === 'retire' || m.status === 'transfer';
+                    const hasLeftBefore = m.leaveDate && m.leaveDate <= filterDate;
+                    return !isRetired && !hasLeftBefore && !currentOfficerIds.has(m.id);
+                }).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
 
                 renderTable(officers, members);
 
@@ -1225,13 +1294,20 @@
             tr.setAttribute('data-id', id);
             if (isOfficer) tr.classList.add('officer-row');
 
-            const roleLower = (currentUser.role || '').toLowerCase();
-            const isAdmin = roleLower === 'admin' || roleLower === '관리자';
-            const isSelf = (currentUser.id === id || currentUser.uid === id) ||
-                (currentUser.name === name && (currentUser.baptismalName === (baptismal || '')));
-            const isOfficerRole = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
+            // [V16.26] 관리자 및 4대 간부 통합 판정 (단순화 버전)
+            const curRole = (currentUser.role || '').trim().toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(curRole);
+            const isOfficerRole = ['단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'].includes(curRole);
 
-            // [정책 원복] 단원은 본인 소속의 본인 출결 내용만 보여야 함
+            const rowName = (name || '').trim();
+            const rowBaptismal = (baptismal || '').trim();
+            const curName = (currentUser.name || '').trim();
+            const curBaptismal = (currentUser.baptismalName || '').trim();
+
+            const isSelf = (currentUser.id === id || currentUser.uid === id) ||
+                (curName === rowName && curBaptismal === rowBaptismal);
+
+            // [정책] 관리자나 간부는 전체 열람 가능, 단원은 본인만 가능
             if (!isAdmin && !isOfficerRole && !isSelf) return;
 
             tr.innerHTML = `
@@ -1282,13 +1358,16 @@
                 return;
             }
 
-            const existing = attendanceList.find(a => a.date === date && a.presidium === presidium);
+            const existing = attendanceList.find(a => {
+                const prMatch = (a.presidiumName || a.presidium || '').toString().trim() === (presidium || '').toString().trim();
+                return a.date === date && prMatch;
+            });
 
             // Conditional Delete Button Visibility (Admin only and only if record exists)
-            const role = (currentUser.role || '').toLowerCase();
-            const isAdmin = role === 'admin' || role === '관리자';
-            // [Security Update] Role-based Date Editing Restriction
-            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
+            // [V16.26] 관리자 및 간부 권한 동기화
+            const curRole = (currentUser.role || '').trim().toLowerCase();
+            const isAdmin = ['admin', '관리자'].includes(curRole);
+            const isOfficer = ['단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'].includes(curRole);
 
             if (existing && !isAdmin && !isOfficer) {
                 dateInput.readOnly = true; // 일반 단원은 기존 기록 날짜 수정 불가
@@ -1331,7 +1410,7 @@
             const date = dateInput.value;
 
             if (!presidium || !session || !date) {
-                alert('소속, 회차, 날짜를 모두 입력해주세요.');
+                await window.showGlobalAlert('⚠️ 소속, 회차, 날짜를 모두 정확히 입력해 주세요.');
                 return;
             }
 
@@ -1340,9 +1419,9 @@
                 // Refetch attendance_list for validation
                 const q = query(
                     collection(db, 'attendance_list'),
-                    where('church', '==', churchSelect.value),
-                    where('curia', '==', curiaSelect.value),
-                    where('presidium', '==', presidium)
+                    where('churchName', '==', churchSelect.value),
+                    where('curiaName', '==', curiaSelect.value),
+                    where('presidiumName', '==', presidium)
                 );
                 const querySnapshot = await getDocs(q);
                 const prRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1350,15 +1429,15 @@
                 const existingSession = prRecords.find(a => parseInt(a.session) === numericSession);
 
                 if (existingSession && existingSession.id !== currentEditingId && existingSession.date !== date) {
-                    alert(`이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
+                    await window.showGlobalAlert(`⚠️ 이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
                     return;
                 }
 
                 if (!currentEditingId && !existingSession && prRecords.length > 0) {
                     const maxSession = Math.max(...prRecords.map(r => parseInt(r.session)));
                     if (numericSession !== maxSession + 1) {
-                        alert(`입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n입력하려는 회차를 확인하시기 바랍니다.`);
-                        return;
+                        const moveForward = await window.showGlobalConfirm(`❓ 입력하신 회차(${numericSession}회)는 마지막 회차(${maxSession}회)와 연속되지 않습니다.\n그래도 이 회차로 저장하시겠습니까?`);
+                        if (!moveForward) return;
                     }
                 }
 
@@ -1368,7 +1447,7 @@
                 if (pastSessions.length > 0) {
                     const lastPrev = pastSessions.reduce((p, c) => parseInt(c.session) > parseInt(p.session) ? c : p);
                     if (date <= lastPrev.date) {
-                        alert(`입력하신 날짜(${date})가 이전 회차(${lastPrev.session}회)의 날짜(${lastPrev.date})보다 빠르거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
+                        await window.showGlobalAlert(`📅 입력하신 날짜(${date})가 이전 회차(${lastPrev.session}회)의 날짜(${lastPrev.date})보다 빠르거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
                         return;
                     }
                 }
@@ -1377,7 +1456,7 @@
                 if (futureSessions.length > 0) {
                     const firstNext = futureSessions.reduce((p, c) => parseInt(c.session) < parseInt(p.session) ? c : p);
                     if (date >= firstNext.date) {
-                        alert(`입력하신 날짜(${date})가 이후 회차(${firstNext.session}회)의 날짜(${firstNext.date})보다 늦거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
+                        await window.showGlobalAlert(`📅 입력하신 날짜(${date})가 이후 회차(${firstNext.session}회)의 날짜(${firstNext.date})보다 늦거나 같습니다.\n입력 날짜를 다시 확인해 주세요.`);
                         return;
                     }
                 }
@@ -1404,14 +1483,14 @@
                 });
 
                 if (Object.keys(attendanceData).length === 0) {
-                    alert('최소 1명 이상의 출결 상태를 선택해 주세요.');
+                    await window.showGlobalAlert('👤 최소 1명 이상의 출결 상태를 선택해 주세요.');
                     return;
                 }
 
                 const newData = {
-                    church: churchSelect.value,
-                    curia: curiaSelect.value,
-                    presidium,
+                    churchName: churchSelect.value,
+                    curiaName: curiaSelect.value,
+                    presidiumName: presidium,
                     session: session.toString(),
                     date,
                     day: dayInput.value,
@@ -1422,9 +1501,9 @@
                         memberAttendance: `${document.getElementById('memberAttendanceCount').textContent} / ${document.getElementById('totalMemberCount').textContent}`
                     },
                     updatedAt: serverTimestamp()
-                };
+            };
 
-                if (currentEditingId) {
+            if (currentEditingId) {
                     await updateDoc(doc(db, 'attendance_list', currentEditingId), newData);
                 } else {
                     const docRef = await addDoc(collection(db, 'attendance_list'), {
@@ -1434,13 +1513,13 @@
                     currentEditingId = docRef.id;
                 }
 
-                alert('출석부가 성공적으로 저장되었습니다.');
+                await window.showGlobalAlert('✅ 출석부가 성공적으로 저장되었습니다!');
                 window.setDirty(false);
                 updateSessionList();
                 loadAttendanceBySession();
             } catch (error) {
                 console.error("Error saving attendance:", error);
-                alert("저장 중 오류가 발생했습니다.");
+                await window.showGlobalAlert("🚨 저장 중 오류가 발생했습니다. 다시 시도해 주세요.");
             }
         }
     </script>

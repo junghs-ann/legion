@@ -668,11 +668,26 @@
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach(doc => officersList.push(doc.data()));
 
+            // [New] 직책 한글 변환 및 정규화 (v16.33)
+            const roleMap = {
+                'admin': '관리자',
+                'president': '단장',
+                'vice_president': '부단장',
+                'secretary': '서기',
+                'treasurer': '회계',
+                'member': '단원'
+            };
+
             let filtered = officersList.filter(o => {
                 const isChurchMatch = !church || (o.church || o.churchName) === church;
                 const isCuriaMatch = !curia || (o.curia || o.curiaName) === curia;
                 const isPresidiumMatch = !presidium || (o.presidium || o.presidiumName) === presidium;
-                const isRankMatch = rank === '전체' || o.role === rank;
+                
+                // 직책 필터링 보강: DB 값이 영어여도 한글 필터와 매칭되도록 함
+                const oRoleKey = (o.role || '').toLowerCase().trim();
+                const oRoleKR = roleMap[oRoleKey] || o.role;
+                const isRankMatch = rank === '전체' || oRoleKR === rank || o.role === rank;
+
                 const isNameMatch = !name || (o.name || '').includes(name);
 
                 // [사용자 요청] 재직 기간 필터링 로직 정교화
@@ -698,10 +713,13 @@
             }
 
             // 정렬 로직: 직급순(단장, 부단장, 서기, 회계) -> 임명일 오름차순
-            const rankOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+            const rankOrder = { 
+                '단장': 1, '부단장': 2, '서기': 3, '회계': 4,
+                'president': 1, 'vice_president': 2, 'secretary': 3, 'treasurer': 4
+            };
             filtered.sort((a, b) => {
-                const orderA = rankOrder[a.role] || 99;
-                const orderB = rankOrder[b.role] || 99;
+                const orderA = rankOrder[(a.role || '').toLowerCase().trim()] || rankOrder[a.role] || 99;
+                const orderB = rankOrder[(b.role || '').toLowerCase().trim()] || rankOrder[b.role] || 99;
                 if (orderA !== orderB) return orderA - orderB;
                 return (a.appointmentDate || '').localeCompare(b.appointmentDate || '');
             });
@@ -719,14 +737,20 @@
                 const o = filtered[i];
                 const tr = document.createElement('tr');
 
-                // 직급 RowSpan 처리
+                // 직급 표시 및 RowSpan 처리 (한글 변환 적용)
+                const roleKey = (o.role || '').toLowerCase().trim();
+                const roleDisp = roleMap[roleKey] || o.role || '-';
+
                 let rankTd = '';
-                if (i === 0 || filtered[i - 1].role !== o.role) {
+                if (i === 0 || (roleMap[(filtered[i - 1].role || '').toLowerCase().trim()] || filtered[i - 1].role) !== roleDisp) {
                     let span = 0;
-                    for (let j = i; j < filtered.length && filtered[j].role === o.role; j++) {
-                        span++;
+                    for (let j = i; j < filtered.length; j++) {
+                        const jRoleKey = (filtered[j].role || '').toLowerCase().trim();
+                        const jRoleKR = roleMap[jRoleKey] || filtered[j].role;
+                        if (jRoleKR === roleDisp) span++;
+                        else break;
                     }
-                    rankTd = `<td rowspan="${span}" class="col-rank-sticky" style="rowspan: ${span}; font-weight:bold;">${o.role}</td>`;
+                    rankTd = `<td rowspan="${span}" class="col-rank-sticky" style="rowspan: ${span}; font-weight:bold;">${roleDisp}</td>`;
                 }
 
                 tr.innerHTML = `

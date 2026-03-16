@@ -1,4 +1,4 @@
-import { db, collection, getDocs } from "./firebase-config.js?v=20260307_2342";
+import { db, collection, getDocs } from "./firebase-config.js";
 
 let cachedPresidia = null;
 
@@ -23,7 +23,6 @@ function getStoredPresidia() {
     return cachedPresidia || [];
 }
 
-// Helper to get Churches
 // Helper to get Churches
 export function getChurches() {
     const data = getStoredPresidia();

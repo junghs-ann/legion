@@ -382,7 +382,7 @@
             <div
                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--secondary-color); margin-bottom: 20px; padding-bottom: 10px;">
                 <h2 class="form-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">협조단원 돌봄 관리</h2>
-                <button type="button" onclick="location.href='dashboard.html'"
+                <button type="button" onclick="window.safeNavigate('dashboard.html')"
                     style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; margin: 0; line-height: 1;"><i
                         class="fas fa-times"></i></button>
             </div>
@@ -449,13 +449,12 @@
 
             <div class="action-buttons">
                 <button type="button" id="btnSave" class="btn-submit">저장</button>
-                <button type="button" class="btn-close" onclick="location.href='dashboard.html'"><i
+                <button type="button" class="btn-close" onclick="window.safeNavigate('dashboard.html')"><i
                         class="fas fa-times"></i> 닫기</button>
                 <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭제</button>
             </div>
-        </div>
-    </div>
-
+    <div class="summary-bar" style="display: none;"></div> <!-- dummy for script.js compatibility if needed -->
+    <script src="script.js?v=20260308_0430"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -497,7 +496,8 @@
 
         async function loadData() {
             presidiaList = await fetchPresidiaList();
-            // Other lists will be fetched on demand (attendance, members, auxiliary, careHistory)
+            // [추가] 성당/꾸리아/쁘레시디움 이름 정규화 유틸리티
+            window.normalize = (s) => (s || '').toString().replace(/\s/g, '');
         }
 
         async function setupOrgSelectors() {
@@ -511,13 +511,29 @@
             });
 
             if (!isAdmin) {
-                churchSelect.value = currentUser.churchName || currentUser.church || '';
+                const myChurch = currentUser.churchName || currentUser.church || '';
+                const targetNorm = window.normalize(myChurch);
+                
+                // [강화] 드롭다운에서 가장 잘 맞는 항목 찾기
+                const matchedChurch = Array.from(churchSelect.options).find(opt => window.normalize(opt.value) === targetNorm);
+                if (matchedChurch) churchSelect.value = matchedChurch.value;
+                
                 churchSelect.disabled = true;
                 updateCuriaList();
-                curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
+                
+                const myCuria = currentUser.curiaName || currentUser.curia || '';
+                const cuNorm = window.normalize(myCuria);
+                const matchedCuria = Array.from(curiaSelect.options).find(opt => window.normalize(opt.value) === cuNorm);
+                if (matchedCuria) curiaSelect.value = matchedCuria.value;
+                
                 curiaSelect.disabled = true;
                 updatePresidiumList();
-                presidiumInput.value = currentUser.presidiumName || currentUser.presidium || '';
+                
+                const myPr = currentUser.presidiumName || currentUser.presidium || '';
+                const prNorm = window.normalize(myPr);
+                const matchedPr = currentPresidia.find(p => window.normalize(p) === prNorm);
+                if (matchedPr) presidiumInput.value = matchedPr;
+                
                 presidiumInput.disabled = true;
                 await updateSessionList();
             }
@@ -564,10 +580,22 @@
             }
 
             try {
-                const q = query(collection(db, 'attendance_list'), where('presidium', '==', pr));
-                const querySnapshot = await getDocs(q);
+                // [강화] 병렬 쿼리: presidiumName(신) vs presidium(구)
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', pr))),
+                    getDocs(query(collection(db, 'attendance_list'), where('presidium', '==', pr)))
+                ]);
+
                 attendanceList = [];
-                querySnapshot.forEach(doc => attendanceList.push({ id: doc.id, ...doc.data() }));
+                const seenIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenIds.has(docSnap.id)) {
+                            seenIds.add(docSnap.id);
+                            attendanceList.push({ id: docSnap.id, ...docSnap.data() });
+                        }
+                    });
+                });
 
                 attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
                 attendanceList.forEach(a => {
@@ -659,10 +687,17 @@
                 dateInput.value = extractedDate;
 
                 const pr = presidiumInput.value;
-                const record = attendanceList.find(a => a.presidium === pr && String(a.session) === sessionNum);
+                // [수정] 신규 필드(presidiumName)와 구 필드(presidium) 모두를 고려하여 레코드 찾기
+                const record = attendanceList.find(a => 
+                    (a.presidiumName === pr || a.presidium === pr) && 
+                    String(a.session) === sessionNum
+                );
                 if (record) {
                     await loadCareList(record);
                     await updateDeleteButtonState(record.session);
+                } else {
+                    console.warn(`[Care] No attendance record found for Pr: ${pr}, Session: ${sessionNum}`);
+                    tableBody.innerHTML = '<tr><td colspan="5" style="color: #e53935; padding: 40px;">해당 회차의 출석 기록을 매칭할 수 없습니다.</td></tr>';
                 }
             };
 
@@ -673,11 +708,16 @@
         async function updateDeleteButtonState(sessionNum) {
             const pr = presidiumInput.value;
             try {
-                const q = query(collection(db, 'auxiliary_care_list'),
-                    where('presidium', '==', pr),
-                    where('session', '==', String(sessionNum)));
-                const querySnapshot = await getDocs(q);
-                const existingCare = !querySnapshot.empty;
+                // [강화] 병렬 쿼리 적용
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'auxiliary_care_list'),
+                        where('presidiumName', '==', pr),
+                        where('session', '==', String(sessionNum)))),
+                    getDocs(query(collection(db, 'auxiliary_care_list'),
+                        where('presidium', '==', pr),
+                        where('session', '==', String(sessionNum))))
+                ]);
+                const existingCare = !qSnap1.empty || !qSnap2.empty;
 
                 const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
                 if (existingCare && isAdmin) {
@@ -696,20 +736,27 @@
 
             if (!session) return;
 
-            if (!confirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
+            if (!await showGlobalConfirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
 
             try {
-                const q = query(collection(db, 'auxiliary_care_list'),
-                    where('presidium', '==', pr),
-                    where('session', '==', String(session)));
-                const querySnapshot = await getDocs(q);
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'auxiliary_care_list'),
+                        where('presidiumName', '==', pr),
+                        where('session', '==', String(session)))),
+                    getDocs(query(collection(db, 'auxiliary_care_list'),
+                        where('presidium', '==', pr),
+                        where('session', '==', String(session))))
+                ]);
+
                 const deletePromises = [];
-                querySnapshot.forEach(docSnap => {
-                    deletePromises.push(deleteDoc(doc(db, 'auxiliary_care_list', docSnap.id)));
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        deletePromises.push(deleteDoc(doc(db, 'auxiliary_care_list', docSnap.id)));
+                    });
                 });
                 await Promise.all(deletePromises);
 
-                alert('삭제되었습니다.');
+                await showGlobalAlert('삭제되었습니다.');
                 window.setDirty(false);
                 // Reset/Reload
                 sessionInput.value = '';
@@ -718,8 +765,7 @@
                 btnDelete.style.display = 'none';
                 updateCaredCount();
             } catch (error) {
-                console.error("Error deleting care data:", error);
-                alert("삭제 중 오류가 발생했습니다.");
+                await showGlobalAlert("삭제 중 오류가 발생했습니다.");
             }
         }
 
@@ -734,50 +780,81 @@
                     mSnap.forEach(doc => membersList.push({ id: doc.id, ...doc.data() }));
                 }
 
-                // Fetch auxiliary members for this presidium
-                const auxQ = query(collection(db, 'members_list'),
-                    where('presidium', '==', pr),
-                    where('role', '==', '협조단원'));
-                const auxSnap = await getDocs(auxQ);
+                // [수정] members_list(일반 단원) 대신 auxiliary_members_list(협조단원 전용) 컬렉션 참조
+                const auxSnap = await getDocs(collection(db, 'auxiliary_members_list'));
+                
                 auxiliaryList = [];
-                auxSnap.forEach(doc => auxiliaryList.push({ id: doc.id, ...doc.data() }));
+                auxSnap.forEach(docSnap => {
+                    const aux = { id: docSnap.id, ...docSnap.data() };
+                    const auxPrNorm = window.normalize(aux.presidiumName || aux.presidium);
+                    const targetPrNorm = window.normalize(pr);
+                    
+                    // [개선] 멘티님 제언 반영: 서버 쿼리 대신 로컬에서 공백 무시하고 쁘레시디움 매칭
+                    if (auxPrNorm === targetPrNorm) {
+                        auxiliaryList.push(aux);
+                    }
+                });
 
-                // Fetch existing care history for this session
-                const careQ = query(collection(db, 'auxiliary_care_list'),
-                    where('presidium', '==', pr),
-                    where('session', '==', String(attendanceRecord.session)));
-                const careSnap = await getDocs(careQ);
+                // Fetch existing care history for this session [강화: 병렬]
+                const [careSnap1, careSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'auxiliary_care_list'), where('presidiumName', '==', pr), where('session', '==', String(attendanceRecord.session)))),
+                    getDocs(query(collection(db, 'auxiliary_care_list'), where('presidium', '==', pr), where('session', '==', String(attendanceRecord.session))))
+                ]);
+
                 let existingCare = null;
-                if (!careSnap.empty) {
-                    existingCare = { id: careSnap.docs[0].id, ...careSnap.docs[0].data() };
-                }
+                if (!careSnap1.empty) existingCare = { id: careSnap1.docs[0].id, ...careSnap1.docs[0].data() };
+                else if (!careSnap2.empty) existingCare = { id: careSnap2.docs[0].id, ...careSnap2.docs[0].data() };
 
-                // 1. Get present active members for this session
-                const presentActiveMemberIds = Object.entries(attendanceRecord.attendanceData)
-                    .filter(([id, data]) => {
-                        const status = (typeof data === 'object') ? data.status : data;
-                        return status === 'P';
+                // 1. Get present active members for this session (ID 또는 성합 둘 다 수집)
+                const presentActiveMembers = Object.entries(attendanceRecord.attendanceData || {})
+                    .filter(([key, data]) => {
+                        let status = '';
+                        if (data && typeof data === 'object') {
+                            status = data.status;
+                        } else {
+                            status = data;
+                        }
+                        return status === 'P' || status === 'L'; // 출석 또는 지각
                     })
-                    .map(([id]) => id);
+                    .map(([key]) => key.trim());
 
-                // 2. Map to auxiliary members they manage (active ONLY)
-                let matchedAuxiliaries = auxiliaryList.filter(aux =>
-                    String(aux.presidium) === String(pr) &&
-                    presentActiveMemberIds.includes(String(aux.activeMemberId)) &&
-                    // Active condition: No withdrawal date OR withdrawal date is in the future compared to session date
-                    (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date)
-                );
-
-                // [추가] 단원은 본인이 담당하는 협조단원만 돌봄 등록 가능
+                // [수정] 권한 인식 로직 강화 (영문/한글 직책 정규화 및 표준화)
                 const roleLower = (currentUser.role || '').toLowerCase();
                 const isAdmin = roleLower === 'admin' || roleLower === '관리자';
-                const isOfficer = ['단장', '부단장', '서기', '회계'].includes(currentUser.role);
+                // [표준화] roleMap을 기준으로 모든 한글/영문 직책 대응
+                const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].some(r => roleLower.includes(r.toLowerCase()));
 
+                // 2. Map to auxiliary members (Scope logic based on Role)
+                let matchedAuxiliaries = auxiliaryList.filter(aux => {
+                    // 담당 행동단원의 출석 여부 확인 (하이브리드 매칭)
+                    const isActiveMemberMatch = presentActiveMembers.some(key => {
+                        const trimmedKey = key.trim();
+                        // 1) ID 일치 확인
+                        if (trimmedKey === String(aux.activeMemberId)) return true;
+                        if (trimmedKey === String(aux.activeMemberUid)) return true;
+                        // 2) 이름 일치 확인
+                        if (trimmedKey === aux.activeMemberName) return true;
+                        // 3) 이름(세례명) 형식 일치 확인
+                        const nameWithBaptism = `${aux.activeMemberName}(${aux.activeMemberBaptismalName || ''})`;
+                        if (trimmedKey === nameWithBaptism) return true;
+                        return false;
+                    });
+
+                    // [핵심] 관리자/간부/단원 모두 공통적으로 '출석(지각 포함)한 행동단원'이 담당하는 협조단원만 표시
+                    const isWithinTerm = (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date);
+                    
+                    return isActiveMemberMatch && isWithinTerm;
+                });
+
+                // [강화] 일반 단원은 본인이 담당하는 협조단원만 필터링 (관리자/간부가 아닐 때)
                 if (!isAdmin && !isOfficer) {
-                    matchedAuxiliaries = matchedAuxiliaries.filter(aux =>
-                        String(aux.activeMemberId) === String(currentUser.id || currentUser.uid) ||
-                        (aux.activeMemberName === currentUser.name && (aux.activeMemberBaptismalName === (currentUser.baptismalName || '')))
-                    );
+                    matchedAuxiliaries = matchedAuxiliaries.filter(aux => {
+                        const myId = String(currentUser.id || currentUser.uid || currentUser.memberId);
+                        const isMyId = String(aux.activeMemberId) === myId || String(aux.activeMemberUid) === myId;
+                        const isMyName = aux.activeMemberName === (currentUser.name || currentUser.memberName) && 
+                                         (aux.activeMemberBaptismalName === (currentUser.baptismalName || ''));
+                        return isMyId || isMyName;
+                    });
                 }
 
                 if (matchedAuxiliaries.length === 0) {
@@ -842,8 +919,7 @@
                     cb.onchange = updateCaredCount;
                 });
             } catch (error) {
-                console.error("Error loading care list:", error);
-                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+                await showGlobalAlert("데이터를 불러오는 중 오류가 발생했습니다.");
             }
         }
 
@@ -858,7 +934,7 @@
             const date = dateInput.value;
 
             if (!pr || !session || !date) {
-                alert('회차 정보를 확인해 주세요.');
+                await showGlobalAlert('회차 정보를 확인해 주세요.');
                 return;
             }
 
@@ -892,19 +968,25 @@
                     docId = querySnapshot.docs[0].id;
                 }
 
+                const church = churchSelect.value;
+                const curia = curiaSelect.value;
+
                 const newEntry = {
+                    presidiumName: pr,
                     presidium: pr,
                     session: String(session),
                     date: date,
-                    church: churchSelect.value,
-                    curia: curiaSelect.value,
+                    churchName: church,
+                    church: church,
+                    curiaName: curia,
+                    curia: curia,
                     careData: careData,
                     careDataSnapshot: careDataSnapshot,
                     updatedAt: serverTimestamp()
                 };
 
                 await setDoc(doc(db, 'auxiliary_care_list', docId), newEntry);
-                alert('저장되었습니다.');
+                await showGlobalAlert('저장되었습니다.');
                 window.setDirty(false);
 
                 // Clear session input to encourage next entry
@@ -915,8 +997,7 @@
                 btnDelete.style.display = 'none';
                 sessionInput.focus();
             } catch (error) {
-                console.error("Error saving care data:", error);
-                alert("저장 중 오류가 발생했습니다.");
+                await showGlobalAlert("저장 중 오류가 발생했습니다.");
             }
         }
     </script>

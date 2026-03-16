@@ -306,7 +306,7 @@ body {
 }
 
 .nav-item.active-menu .sub-menu {
-    max-height: 500px;
+    max-height: 800px;
     /* High enough to fit labels */
     opacity: 1;
     visibility: visible;
@@ -337,7 +337,9 @@ body {
 
 .nav-item:hover .sub-menu {
     display: block;
+    max-height: 800px;
     opacity: 1;
+    visibility: visible;
     margin-top: 5px;
 }
 

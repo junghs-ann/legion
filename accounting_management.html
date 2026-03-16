@@ -493,11 +493,6 @@
             if (profile.role === 'admin') {
                 loadChurches();
             } else {
-                churchSelect.style.display = 'none';
-                curiaSelect.style.display = 'none';
-                churchInput.style.display = 'block';
-                curiaInput.style.display = 'block';
-
                 churchInput.value = profile.churchName || profile.church || '';
                 curiaInput.value = profile.curiaName || profile.curia || '';
             }
@@ -635,18 +630,29 @@
         // --- Data Management ---
         async function loadItems(church, curia) {
             try {
-                const itemsQuery = query(
-                    collection(db, 'accounting_items'),
+                // [강화] 병렬 쿼리: 새로운 필드명(churchName, curiaName)과 기존 필드명(church, curia) 모두 지원
+                const qNew = query(collection(db, 'accounting_items'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia)
+                );
+                const qOld = query(collection(db, 'accounting_items'),
                     where('church', '==', church),
                     where('curia', '==', curia)
                 );
-                const itemsSnap = await getDocs(itemsQuery);
-                currentItems = itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                
+                // 중복 제거 (ID 기준)
+                const docMap = new Map();
+                snapNew.docs.forEach(d => docMap.set(d.id, d.data()));
+                snapOld.docs.forEach(d => docMap.set(d.id, d.data()));
+
+                currentItems = Array.from(docMap.entries()).map(([id, data]) => ({ id, ...data }));
 
                 // Sort: Deposit first, then Withdrawal
                 currentItems.sort((a, b) => {
                     if (a.type !== b.type) return a.type === 'deposit' ? -1 : 1;
-                    return a.name.localeCompare(b.name);
+                    return (a.name || '').localeCompare(b.name || '');
                 });
 
                 renderGrid();
@@ -733,8 +739,8 @@
                 // Fetch existing items for this church/curia to handle deletions
                 const itemsQuery = query(
                     collection(db, 'accounting_items'),
-                    where('church', '==', loadedChurch),
-                    where('curia', '==', loadedCuria)
+                    where('churchName', '==', loadedChurch),
+                    where('curiaName', '==', loadedCuria)
                 );
                 const existingSnap = await getDocs(itemsQuery);
 
@@ -749,23 +755,27 @@
 
                     if (!name) return;
 
+                    const recordData = {
+                        type, name, isActive,
+                        churchName: loadedChurch,
+                        curiaName: loadedCuria,
+                        // [보강] 레거시 필드 동시 저장
+                        church: loadedChurch,
+                        curia: loadedCuria,
+                        updatedAt: serverTimestamp()
+                    };
+
                     if (id) {
                         // Update existing
                         const docRef = doc(db, 'accounting_items', id);
-                        batch.update(docRef, {
-                            type, name, isActive,
-                            updatedAt: serverTimestamp()
-                        });
+                        batch.update(docRef, recordData);
                         activeIds.push(id);
                     } else {
                         // Add new
                         const newDocRef = doc(collection(db, 'accounting_items'));
                         batch.set(newDocRef, {
-                            church: loadedChurch,
-                            curia: loadedCuria,
-                            type, name, isActive,
-                            createdAt: serverTimestamp(),
-                            updatedAt: serverTimestamp()
+                            ...recordData,
+                            createdAt: serverTimestamp()
                         });
                     }
                 });

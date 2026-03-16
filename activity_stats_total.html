@@ -714,6 +714,9 @@
                 <button id="btnSearch" class="btn-search">
                     <i class="fas fa-search"></i> 조회
                 </button>
+                <button id="btnDiagnostics" class="btn-search" style="background-color: #666; display: none;">
+                    <i class="fas fa-microscope"></i> 데이터 진단
+                </button>
             </div>
         </div>
 
@@ -773,6 +776,18 @@
                 window.initCommonMenus(currentUser, () => {
                     import("./auth.js").then(auth => auth.logoutUser());
                 });
+            }
+
+            // [New] Diagnostics button visibility
+            const btnDiag = document.getElementById('btnDiagnostics');
+            if (btnDiag) {
+                const role = currentUser.role?.toLowerCase();
+                const isAdmin = ['admin', '관리자'].includes(role);
+                const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
+                if (isAdmin || isOfficer) {
+                    btnDiag.style.display = 'flex';
+                    btnDiag.onclick = () => location.href = 'diagnostics.html';
+                }
             }
 
             // [수정] Firestore에서 초기 데이터 로드 (스키마)
@@ -859,7 +874,7 @@
 
                 // 쁘레시디움 목록 업데이트 후 값을 먼저 설정
                 updatePresidiumList(userChurch, userCuria);
-                const userPr = currentUser.presidiumName || currentUser.presidium;
+                const userPr = currentUser.presidiumName;
                 presidiumInput.value = userPr; // Changed from presidiumSelect
                 presidiumInput.disabled = true; // Changed from presidiumSelect
 
@@ -1188,21 +1203,30 @@
                 schemaCopy.unshift(otherGroup);
             }
 
-            // 1. Firestore 데이터 쿼리
+            // 1. Firestore 데이터 쿼리 (병렬 쿼리로 신구 필드명 모두 검색)
             let records = [];
             try {
-                let q = query(
-                    collection(db, 'activity_records'),
+                const qNew = query(collection(db, 'activity_records'),
                     where('churchName', '==', church),
                     where('presidiumName', '==', pr)
                 );
+                const qOld = query(collection(db, 'activity_records'),
+                    where('church', '==', church),
+                    where('presidium', '==', pr)
+                );
 
-                // Firestore limit: cannot have range filters on different fields easily with equalities.
-                // We'll filter date and member in memory for simplicity if query is complex,
-                // but date range is usually fine.
-                const querySnap = await getDocs(q);
-                querySnap.forEach(doc => {
-                    const data = doc.data();
+                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                
+                // [수정] 중복 도큐먼트 제거 (Map 사용)
+                const allDocsMap = new Map();
+                snapNew.forEach(doc => allDocsMap.set(doc.id, doc.data()));
+                snapOld.forEach(doc => {
+                    if (!allDocsMap.has(doc.id)) {
+                        allDocsMap.set(doc.id, doc.data());
+                    }
+                });
+                
+                allDocsMap.forEach((data, id) => {
                     const isDateMatch = (!startD || data.date >= startD) && (!endD || data.date <= endD);
                     const isMemberMatch = !selectedMember || data.memberName === selectedMember;
                     if (isDateMatch && isMemberMatch) {
@@ -1273,8 +1297,7 @@
                     <td class="sticky-col col-year"></td>
                     <td class="sticky-col col-month"></td>
                     <td class="sticky-col col-session"></td>
-                    <td class="sticky-col col-member" style="color:#333;">총계</td>
-                    <td style="color:var(--primary-color);">${grandTotal.toLocaleString()}</td>`;
+                    <td class="sticky-col col-member" style="color:#333;">총계</td>`;
 
                 filteredSchema.forEach(group => {
                     group.items.forEach(item => {
@@ -1375,8 +1398,7 @@
                 <td class="sticky-col col-year"></td>
                 <td class="sticky-col col-month"></td>
                 <td class="sticky-col col-session"></td>
-                <td class="sticky-col col-member">함 계</td>
-                <td style="color: var(--secondary-color);">${grandTotal.toLocaleString()}</td>`;
+                <td class="sticky-col col-member">함 계</td>`;
             schema.forEach(group => {
                 const activeItems = group.items.filter(item => item.isActive !== false);
                 activeItems.forEach(item => {

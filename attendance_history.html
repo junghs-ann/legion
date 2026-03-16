@@ -641,6 +641,7 @@
                 presidiumInput.value = profile.presidiumName || profile.presidium || '';
                 presidiumInput.disabled = true;
 
+                // Ensure internal profile values are set for queries
                 currentUser.churchName = ci.value;
                 currentUser.curiaName = cui.value;
                 currentUser.presidiumName = presidiumInput.value;
@@ -721,9 +722,10 @@
                 curia = curiaFilter.value;
                 presidium = presidiumInput.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
+                const p = currentUser || {};
+                church = p.churchName || p.church || '';
+                curia = p.curiaName || p.curia || '';
+                presidium = presidiumInput.value || p.presidiumName || p.presidium || '';
             }
 
             if (!church || !curia || !presidium) {
@@ -733,17 +735,30 @@
             }
 
             try {
-                const q = query(
-                    collection(db, 'attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
-                );
-                const querySnapshot = await getDocs(q);
-                const uniqueSessions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                    .sort((a, b) => parseInt(b.session) - parseInt(a.session));
+                // Fetch attendance_list using both old and new field names for robustness
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'attendance_list'), 
+                        where('churchName', '==', church),
+                        where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'attendance_list'), 
+                        where('church', '==', church),
+                        where('presidium', '==', presidium)))
+                ]);
 
-                const optionsHtml = '<option value="">회차 선택</option>' + uniqueSessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
+                const sessions = [];
+                const seenIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenIds.has(docSnap.id)) {
+                            seenIds.add(docSnap.id);
+                            sessions.push({ id: docSnap.id, ...docSnap.data() });
+                        }
+                    });
+                });
+
+                sessions.sort((a, b) => parseInt(b.session) - parseInt(a.session));
+
+                const optionsHtml = '<option value="">회차 선택</option>' + sessions.map(a => `<option value="${parseInt(a.session)}">${parseInt(a.session)}회 (${a.date})</option>`).join('');
                 startSessionFilter.innerHTML = optionsHtml;
                 endSessionFilter.innerHTML = optionsHtml;
             } catch (error) {
@@ -773,22 +788,30 @@
             }
 
             try {
-                // Fetch attendance_list from Firestore
-                const q = query(
-                    collection(db, 'attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
-                );
-                const querySnapshot = await getDocs(q);
-                let attendanceList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Fetch attendance_list from Firestore using both field names
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'attendance_list'), 
+                        where('churchName', '==', church),
+                        where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'attendance_list'), 
+                        where('church', '==', church),
+                        where('presidium', '==', presidium)))
+                ]);
+                
+                let attendanceList = [];
+                const seenAttIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(d => {
+                        if (!seenAttIds.has(d.id)) { seenAttIds.add(d.id); attendanceList.push({ id: d.id, ...d.data() }); }
+                    });
+                });
 
                 // Fetch members and officers for mapping (Wide search by church to catch transfers)
                 const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church));
                 const memSnap = await getDocs(memQuery);
                 const membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church));
+                const ofQuery = query(collection(db, 'officers_list'), where('churchName', '==', church));
                 const ofSnap = await getDocs(ofQuery);
                 const officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 

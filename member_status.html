@@ -422,7 +422,7 @@
                             <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
                                 disabled class="nav-enter"
                                 style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
-                            <input type="hidden" id="presidiumSelect" name="presidium">
+                            <input type="hidden" id="presidiumSelect" name="presidiumName">
                             <div id="presidiumDropdown" class="custom-dropdown"
                                 style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                             </div>
@@ -435,11 +435,8 @@
                             <option value="">행동단원 선택</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>행동단원 세례명</label>
-                        <input type="text" id="activeMemberBaptismal" readonly>
-                    </div>
-                    <div><!-- Spacer for Grid --></div>
+                    <div><!-- Spacer --></div>
+                    <div><!-- Spacer --></div>
 
                     <!-- 협조단원 정보 -->
                     <div class="section-header"><i class="fas fa-user-friends"></i> 협조단원 상세 정보</div>
@@ -533,6 +530,7 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
+        import { db, collection, getDocs, setDoc, deleteDoc, doc, query, where, serverTimestamp } from "./firebase-config.js?v=20260307_2342";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
         import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
 
@@ -550,12 +548,11 @@
         const curiaSelect = document.getElementById('curiaSelect');
         const presidiumSelect = document.getElementById('presidiumSelect');
         const activeMemberSelect = document.getElementById('activeMemberSelect');
-        const activeMemberBaptismal = document.getElementById('activeMemberBaptismal');
         const tableBody = document.getElementById('auxiliaryTableBody');
         const btnDelete = document.getElementById('btnDelete');
 
         // Init
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             currentUser = profile;
 
             // [New] Role-based Menu Control & Common Menus
@@ -563,20 +560,40 @@
                 window.initCommonMenus(profile, logoutUser);
             }
 
-            loadData();
-            setupPermissions();
+            await loadData();
+            await setupPermissions();
             setupEventListeners();
         }, () => {
             location.href = 'index.html';
         });
 
-        function loadData() {
-            membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
-            presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
-            auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+        async function loadData() {
+            try {
+                const [memSnap, auxSnap] = await Promise.all([
+                    getDocs(collection(db, 'members_list')),
+                    getDocs(collection(db, 'auxiliary_members_list'))
+                ]);
+                
+                membersList = [];
+                memSnap.forEach(doc => membersList.push({ id: doc.id, ...doc.data() }));
+                
+                auxiliaryList = [];
+                auxSnap.forEach(doc => auxiliaryList.push({ id: doc.id, ...doc.data() }));
+
+                presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                
+                // Backup to localStorage
+                localStorage.setItem('members_list', JSON.stringify(membersList));
+                localStorage.setItem('auxiliary_members_list', JSON.stringify(auxiliaryList));
+            } catch (error) {
+                console.error("Error loading data from Firestore:", error);
+                membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
+                presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                auxiliaryList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
+            }
         }
 
-        function setupPermissions() {
+        async function setupPermissions() {
             const role = (currentUser.role || '').toLowerCase();
             const isAdmin = role === 'admin' || role === '관리자';
             const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].includes(role);
@@ -584,54 +601,53 @@
             if (isAdmin) {
                 // Admin: Full Access
                 const churches = getChurches();
+                churchSelect.innerHTML = '<option value="">성당 선택</option>';
                 churches.forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
                     churchSelect.appendChild(opt);
                 });
-                btnDelete.style.display = 'none'; // Only show when editing
-            } else if (isOfficer) {
-                // Officer: Fix to Org
-                const userChurch = currentUser.church || currentUser.churchName;
-                const userCuria = currentUser.curia || currentUser.curiaName;
-                const userPresidium = currentUser.presidium || currentUser.presidiumName;
-
-                setFixedOption(churchSelect, userChurch);
-                setFixedOption(curiaSelect, userCuria);
-                setFixedOption(presidiumSelect, userPresidium);
-
-                loadActiveMembers(userChurch, userCuria, userPresidium);
-                renderTable();
+                churchSelect.disabled = false;
+                curiaSelect.disabled = true;
+                const pInputAdmin = document.getElementById('presidiumInput');
+                if (pInputAdmin) {
+                    pInputAdmin.disabled = true;
+                    pInputAdmin.style.backgroundColor = '#f3f4f6';
+                }
+                btnDelete.style.display = 'none';
             } else {
-                // Regular Member: Fix to Org & Self
-                const userChurch = currentUser.church || currentUser.churchName;
-                const userCuria = currentUser.curia || currentUser.curiaName;
-                const userPresidium = currentUser.presidium || currentUser.presidiumName;
-                const userName = currentUser.name;
+                // Officer or Regular Member: Fix to Org
+                const userChurch = currentUser.churchName || currentUser.church || '';
+                const userCuria = currentUser.curiaName || currentUser.curia || '';
+                const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
 
                 setFixedOption(churchSelect, userChurch);
                 setFixedOption(curiaSelect, userCuria);
 
-                const pInput = document.getElementById('presidiumInput');
-                if (pInput) {
-                    pInput.value = userPresidium || '';
-                    pInput.disabled = true;
-                    pInput.style.backgroundColor = '#f9f9f9';
+                const pInputFixed = document.getElementById('presidiumInput');
+                if (pInputFixed) {
+                    pInputFixed.value = userPresidium;
+                    pInputFixed.disabled = true;
+                    pInputFixed.style.backgroundColor = '#f3f4f6';
                 }
                 const pSelect = document.getElementById('presidiumSelect');
-                if (pSelect) {
-                    pSelect.value = userPresidium || '';
-                }
+                if (pSelect) pSelect.value = userPresidium;
 
-                const myMember = membersList.find(m => m.name === userName && m.presidiumName === userPresidium && m.status !== '퇴단' && m.status !== '전출');
-                if (myMember) {
-                    setFixedOption(activeMemberSelect, myMember.id, `${myMember.name} (본인)`);
-                    activeMemberBaptismal.value = myMember.baptismalName || '';
+                if (isOfficer) {
+                    loadActiveMembers(userChurch, userCuria, userPresidium);
                     renderTable();
+                    updateAuxDatalist();
                 } else {
-                    alert('행동 단원으로 등록되지 않았거나 퇴단/전출 상태입니다.');
-                    location.href = 'dashboard.html';
+                    const userName = currentUser.name;
+                    const myMember = membersList.find(m => m.name === userName && (m.presidiumName === userPresidium || m.presidium === userPresidium) && m.status !== '퇴단' && m.status !== '전출');
+                    if (myMember) {
+                        setFixedOption(activeMemberSelect, myMember.id, `${myMember.name} (본인)`);
+                        renderTable();
+                        updateAuxDatalist();
+                    } else {
+                        await showGlobalAlert('본인 정보를 찾을 수 없거나 퇴단 상태입니다.');
+                    }
                 }
             }
         }
@@ -803,7 +819,6 @@
 
                 const mid = activeMemberSelect.value;
                 const member = membersList.find(m => m.id === mid);
-                activeMemberBaptismal.value = member ? (member.baptismalName || '') : '';
 
                 // [Fix] Clear auxiliary member detail fields only on manual selection change
                 auxNameInput.value = '';
@@ -825,9 +840,9 @@
 
                 // [Fix] Search for match within the entire Presidium (Global)
                 const found = auxiliaryList.find(a =>
-                    a.church === church &&
-                    a.curia === curia &&
-                    a.presidium === presidium &&
+                    (a.churchName === church || a.church === church) &&
+                    (a.curiaName === curia || a.curia === curia) &&
+                    (a.presidiumName === presidium || a.presidium === presidium) &&
                     a.name === val
                 );
 
@@ -868,7 +883,9 @@
 
                 const seenNames = new Set();
                 const filtered = auxiliaryList.filter(a => {
-                    const orgMatch = a.church === church && a.curia === curia && a.presidium === presidium;
+                    const orgMatch = (a.churchName === church || a.church === church) && 
+                                   (a.curiaName === curia || a.curia === curia) && 
+                                   (a.presidiumName === presidium || a.presidium === presidium);
                     if (!orgMatch) return false;
                     // Filter out already withdrawn members from the quick list for better UX
                     return !a.withdrawalDate || a.withdrawalDate === '';
@@ -968,14 +985,19 @@
             // Get IDs of active members who are already registered in the auxiliary list
             const registeredActiveMemberIds = new Set(auxiliaryList.map(a => a.activeMemberId));
 
-            const filtered = membersList.filter(m =>
-                m.churchName === church &&
-                m.presidiumName === presidium &&
-                (
-                    (m.status !== '퇴단' && m.status !== '전출') ||
-                    registeredActiveMemberIds.has(m.id)
-                )
-            ).sort((a, b) => {
+            const filtered = membersList.filter(m => {
+                const mChurch = (m.churchName || m.church || '').toString().trim();
+                const mPresidium = (m.presidiumName || m.presidium || '').toString().trim();
+                const fChurch = (church || '').toString().trim();
+                const fPresidium = (presidium || '').toString().trim();
+                
+                return mChurch === fChurch && 
+                       mPresidium === fPresidium &&
+                       (
+                           (m.status !== '퇴단' && m.status !== '전출') ||
+                           registeredActiveMemberIds.has(m.id)
+                       );
+            }).sort((a, b) => {
                 // 1. Status Rank: Active (0) > Retired/Moved (1)
                 const isRetiredA = (a.status === '퇴단' || a.status === '전출');
                 const isRetiredB = (b.status === '퇴단' || b.status === '전출');
@@ -1002,29 +1024,29 @@
             activeMemberSelect.disabled = false;
         }
 
-        function handleSave(e) {
+        async function handleSave(e) {
             e.preventDefault();
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
             // [Fix] Manually add organizational info as disabled fields are excluded from FormData
-            data.church = churchSelect.value;
-            data.curia = curiaSelect.value;
-            data.presidium = presidiumSelect.value;
+            data.churchName = churchSelect.value;
+            data.curiaName = curiaSelect.value;
+            data.presidiumName = presidiumSelect.value;
 
             // Check for duplicates (same name and no withdrawal date)
             if (!editId) {
                 const duplicate = auxiliaryList.find(a =>
-                    a.church === data.church &&
-                    a.curia === data.curia &&
-                    a.presidium === data.presidium &&
+                    (a.churchName === data.churchName || a.church === data.churchName) &&
+                    (a.curiaName === data.curiaName || a.curia === data.curiaName) &&
+                    (a.presidiumName === data.presidiumName || a.presidium === data.presidiumName) &&
                     a.activeMemberId === data.activeMemberId &&
                     a.name === data.name &&
                     (!a.withdrawalDate || a.withdrawalDate.trim() === '')
                 );
 
                 if (duplicate) {
-                    alert(`이미 활동 중인 동일한 성명의 협조단원(${data.name})이 존재합니다. 중복으로 입력할 수 없습니다.`);
+                    await showGlobalAlert(`이미 활동 중인 동일한 성명의 협조단원(${data.name})이 존재합니다. 중복으로 입력할 수 없습니다.`);
                     return;
                 }
             }
@@ -1034,7 +1056,7 @@
 
             // [New] Block new registration for retired/moved active members
             if (!editId && activeMember && (activeMember.status === '퇴단' || activeMember.status === '전출')) {
-                alert(`해당 행동단원은 현재 '${activeMember.status}' 상태이므로 새로운 협조단원을 등록할 수 없습니다.\n기존 등록된 정보의 조회 및 수정만 가능합니다.`);
+                await showGlobalAlert(`해당 행동단원은 현재 '${activeMember.status}' 상태이므로 새로운 협조단원을 등록할 수 없습니다.\n기존 등록된 정보의 조회 및 수정만 가능합니다.`);
                 return;
             }
 
@@ -1043,31 +1065,46 @@
                 data.activeMemberBaptismalName = activeMember.baptismalName;
             }
 
-            if (editId) {
-                const idx = auxiliaryList.findIndex(a => a.id === editId);
-                auxiliaryList[idx] = { ...data, id: editId };
-                alert('수정되었습니다.');
-            } else {
-                data.id = 'aux_' + Date.now();
-                auxiliaryList.push(data);
-                alert('저장되었습니다.');
-            }
+            try {
+                if (editId) {
+                    const idx = auxiliaryList.findIndex(a => a.id === editId);
+                    const updatedData = { ...data, id: editId, updatedAt: serverTimestamp() };
+                    auxiliaryList[idx] = updatedData;
+                    await setDoc(doc(db, 'auxiliary_members_list', editId), updatedData);
+                    await showGlobalAlert('수정되었습니다.');
+                } else {
+                    const newId = 'aux_' + Date.now();
+                    const newData = { ...data, id: newId, createdAt: serverTimestamp() };
+                    auxiliaryList.push(newData);
+                    await setDoc(doc(db, 'auxiliary_members_list', newId), newData);
+                    await showGlobalAlert('저장되었습니다.');
+                }
 
-            localStorage.setItem('auxiliary_members_list', JSON.stringify(auxiliaryList));
-            resetForm();
-            renderTable();
-            updateAuxDatalist();
-        }
-
-        function handleDelete() {
-            if (!editId) return;
-            if (confirm('정말 삭제하시겠습니까?')) {
-                auxiliaryList = auxiliaryList.filter(a => a.id !== editId);
                 localStorage.setItem('auxiliary_members_list', JSON.stringify(auxiliaryList));
-                alert('삭제되었습니다.');
                 resetForm();
                 renderTable();
                 updateAuxDatalist();
+            } catch (error) {
+                console.error("Error saving data:", error);
+                await showGlobalAlert('저장 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        async function handleDelete() {
+            if (!editId) return;
+            if (await showGlobalConfirm('정말 삭제하시겠습니까?')) {
+                try {
+                    await deleteDoc(doc(db, 'auxiliary_members_list', editId));
+                    auxiliaryList = auxiliaryList.filter(a => a.id !== editId);
+                    localStorage.setItem('auxiliary_members_list', JSON.stringify(auxiliaryList));
+                    await showGlobalAlert('삭제되었습니다.');
+                    resetForm();
+                    renderTable();
+                    updateAuxDatalist();
+                } catch (error) {
+                    console.error("Error deleting data:", error);
+                    await showGlobalAlert('삭제 중 오류가 발생했습니다.');
+                }
             }
         }
 
@@ -1076,8 +1113,7 @@
                 church: churchSelect.value,
                 curia: curiaSelect.value,
                 presidium: presidiumSelect.value,
-                activeMemberId: activeMemberSelect.value,
-                activeMemberBaptismal: activeMemberBaptismal.value
+                activeMemberId: activeMemberSelect.value
             };
 
             form.reset();
@@ -1097,7 +1133,6 @@
                 }
             }
             activeMemberSelect.value = preserved.activeMemberId;
-            activeMemberBaptismal.value = preserved.activeMemberBaptismal;
         }
 
         function resetDetailsOnly() {
@@ -1122,7 +1157,9 @@
             }
 
             let filtered = auxiliaryList.filter(a =>
-                a.church === church && a.curia === curia && a.presidium === presidium
+                (a.churchName === church || a.church === church) && 
+                (a.curiaName === curia || a.curia === curia) && 
+                (a.presidiumName === presidium || a.presidium === presidium)
             );
 
             // Admin/Officer: All in Org, Member: Only Self
@@ -1169,24 +1206,23 @@
             editId = data.id;
 
             // Fill Form
-            churchSelect.value = data.church;
+            churchSelect.value = data.churchName || data.church;
             if (churchSelect.disabled === false) churchSelect.dispatchEvent(new Event('change'));
 
             // Cascading selects are a bit tricky when async-ish or triggered by dispatch. 
             // In this specific implementation, they are sync.
 
-            curiaSelect.value = data.curia;
+            curiaSelect.value = data.curiaName || data.curia;
             if (curiaSelect.disabled === false) curiaSelect.dispatchEvent(new Event('change'));
 
             if (document.getElementById('presidiumSelect')) {
-                document.getElementById('presidiumSelect').value = data.presidium;
+                document.getElementById('presidiumSelect').value = data.presidiumName || data.presidium;
                 if (document.getElementById('presidiumInput')) {
-                    document.getElementById('presidiumInput').value = data.presidium;
+                    document.getElementById('presidiumInput').value = data.presidiumName || data.presidium;
                 }
             }
 
             activeMemberSelect.value = data.activeMemberId;
-            activeMemberBaptismal.value = data.activeMemberBaptismalName || '';
 
             const fields = ['name', 'baptismalName', 'gender', 'feastDate', 'admissionDate', 'birthDate', 'phone', 'address', 'withdrawalDate', 'notes'];
             fields.forEach(f => {
@@ -1200,6 +1236,24 @@
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+
+        function updateAuxDatalist() {
+            if (!auxNamesDatalist) return;
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const presidium = presidiumSelect.value;
+
+            const names = [...new Set(auxiliaryList
+                .filter(a =>
+                    (a.churchName === church || a.church === church) &&
+                    (a.curiaName === curia || a.curia === curia) &&
+                    (a.presidiumName === presidium || a.presidium === presidium)
+                )
+                .map(a => a.name)
+            )].sort();
+
+            auxNamesDatalist.innerHTML = names.map(name => `<option value="${name}">`).join('');
+        }
     </script>
 </body>
 

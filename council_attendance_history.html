@@ -713,13 +713,26 @@
             if (!church || !curia) return;
 
             try {
-                const q = query(collection(db, 'council_attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia));
+                // Robust Query for council_attendance_list (Sessions)
+                const [qSnapS1, qSnapS2] = await Promise.all([
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia))),
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('church', '==', church),
+                        where('curia', '==', curia)))
+                ]);
 
-                const querySnapshot = await getDocs(q);
                 const allData = [];
-                querySnapshot.forEach(docSnap => allData.push(docSnap.data()));
+                const seenDocIds = new Set();
+                [qSnapS1, qSnapS2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenDocIds.has(docSnap.id)) {
+                            seenDocIds.add(docSnap.id);
+                            allData.push(docSnap.data());
+                        }
+                    });
+                });
 
                 // [추가] 복합 인덱스 오류 방지를 위해 메모리 정렬 수행
                 allData.sort((a, b) => {
@@ -805,18 +818,29 @@
             }
 
             try {
-                const q = query(collection(db, 'council_attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia));
+                // Robust Query for council_attendance_list (Report Data)
+                const [qSnapR1, qSnapR2] = await Promise.all([
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia))),
+                    getDocs(query(collection(db, 'council_attendance_list'),
+                        where('church', '==', church),
+                        where('curia', '==', curia)))
+                ]);
 
-                const querySnapshot = await getDocs(q);
                 const allData = [];
-                querySnapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    // [추가] 쿼리에서 연도 필터링을 할 수 없으므로 메모리에서 수행
-                    if (new Date(data.date).getFullYear() === year) {
-                        allData.push(data);
-                    }
+                const seenRDocIds = new Set();
+                [qSnapR1, qSnapR2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenRDocIds.has(docSnap.id)) {
+                            seenRDocIds.add(docSnap.id);
+                            const data = docSnap.data();
+                            // [추가] 쿼리에서 연도 필터링을 할 수 없으므로 메모리에서 수행
+                            if (new Date(data.date).getFullYear() === year) {
+                                allData.push(data);
+                            }
+                        }
+                    });
                 });
 
                 let filtered = allData;
@@ -841,7 +865,7 @@
                 if (presidium) {
                     finalData = filtered.map(r => ({
                         ...r,
-                        attendanceData: (r.attendanceData || []).filter(a => a.presidiumName === presidium)
+                        attendanceData: (r.attendanceData || []).filter(a => (a.presidiumName || a.presidium) === presidium)
                     })).filter(r => r.attendanceData.length > 0);
                 }
 
@@ -901,7 +925,7 @@
                     tr.innerHTML = `
                         <td class="group-cell">${firstRow ? record.session + '차' : ''}</td>
                         <td class="group-cell">${firstRow ? record.date : ''}</td>
-                        <td>${row.presidiumName}</td>
+                        <td>${row.presidiumName || row.presidium || '-'}</td>
                         <td>${row.role}</td>
                         <td>${row.memberName}</td>
                         <td>${row.baptismalName}</td>

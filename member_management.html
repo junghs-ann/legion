@@ -326,8 +326,12 @@
                 </div>
                 <div class="form-group">
                     <label>비밀번호</label>
-                    <div style="display: flex; gap: 10px; align-items: flex-start;">
-                        <input type="text" id="edit-password" placeholder="비밀번호를 입력하세요" required style="flex: 1;">
+                    <div style="display: flex; gap: 10px; align-items: flex-start; position: relative;">
+                        <input type="password" id="edit-password" placeholder="비밀번호를 입력하세요" required style="flex: 1; padding-right: 40px;">
+                        <button type="button" id="toggle-password" 
+                            style="position: absolute; right: 110px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.1rem; padding: 5px;">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
                         <button type="button" id="btn-reset-password"
                             style="padding: 10px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">1234로
                             초기화</button>
@@ -398,6 +402,8 @@
             // Setup Search Filters based on Role
             setupFilters(profile);
 
+            // [New] 비밀번호 가독성 토글 초기화
+            initPasswordToggle();
         }, () => {
             window.location.href = 'index.html';
         });
@@ -420,14 +426,14 @@
 
             if (profile.role === 'president') {
                 // Lock filters for President
-                searchChurch.value = profile.church || '';
+                searchChurch.value = profile.churchName || profile.church || '';
                 searchChurch.disabled = true;
 
                 // Load Curiae for this church
-                loadCuriae(profile.church, profile.curia);
+                loadCuriae(profile.churchName || profile.church, profile.curiaName || profile.curia);
 
                 // Load Presidia
-                loadPresidia(profile.church, profile.curia, profile.presidiumId);
+                loadPresidia(profile.churchName || profile.church, profile.curiaName || profile.curia, profile.presidiumName || profile.presidium);
 
                 searchCuria.disabled = true;
                 searchPresidium.disabled = true;
@@ -456,6 +462,19 @@
             // Trigger initial data load if President (optional, or wait for search click)
             if (profile.role === 'president') {
                 searchMembers(); // Auto search for their group
+            }
+        }
+
+        // [New] 비밀번호 보기/숨기기 기능 초기화
+        function initPasswordToggle() {
+            const pwdInput = document.getElementById('edit-password');
+            const pwdToggle = document.getElementById('toggle-password');
+            if (pwdToggle && pwdInput) {
+                pwdToggle.addEventListener('click', () => {
+                    const isPwd = pwdInput.type === 'password';
+                    pwdInput.type = isPwd ? 'text' : 'password';
+                    pwdToggle.innerHTML = isPwd ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                });
             }
         }
 
@@ -493,22 +512,37 @@
             const sChurch = searchChurch.value;
             const sCuria = searchCuria.value;
             const sPresidiumId = searchPresidium.value;
-            const sName = searchName.value.trim().toLowerCase();
+            const sName = (searchName.value || '').trim().toLowerCase();
+            
+            // [강화] 정규화 함수
+            const norm = (s) => (s || '').toString().replace(/\s/g, '');
 
             try {
-                let q = collection(db, 'users');
-                const constraints = [];
-                if (sChurch) constraints.push(where('church', '==', sChurch));
-                if (sCuria) constraints.push(where('curia', '==', sCuria));
-                if (sPresidiumId) constraints.push(where('presidiumName', '==', sPresidiumId)); // Note: old code used presidiumId but registry uses Name often in users
-
-                const queryRef = constraints.length > 0 ? query(q, ...constraints) : q;
-                const snapshot = await getDocs(queryRef);
+                // [강화] 모든 사용자를 가져와서 클라이언트 사이드에서 유연하게 필터링 (가장 확실한 방법)
+                const snapshot = await getDocs(collection(db, 'users'));
                 let results = snapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() }));
 
-                // Client-side filtering for name (partial match)
+                // 1. 성당 필터링 (churchName 또는 church)
+                if (sChurch) {
+                    const targetChurchNorm = norm(sChurch);
+                    results = results.filter(u => norm(u.churchName || u.church) === targetChurchNorm);
+                }
+
+                // 2. 꾸리아 필터링 (curiaName 또는 curia)
+                if (sCuria) {
+                    const targetCuriaNorm = norm(sCuria);
+                    results = results.filter(u => norm(u.curiaName || u.curia) === targetCuriaNorm);
+                }
+
+                // 3. 쁘레시디움 필터링 (presidiumName 또는 presidium)
+                if (sPresidiumId) {
+                    const targetPrNorm = norm(sPresidiumId);
+                    results = results.filter(u => norm(u.presidiumName || u.presidium) === targetPrNorm);
+                }
+
+                // 4. 이름 필터링 (부분 일치)
                 if (sName) {
-                    results = results.filter(u => u.name && u.name.toLowerCase().includes(sName));
+                    results = results.filter(u => (u.name || '').toLowerCase().includes(sName));
                 }
 
                 await renderTable(results);
@@ -604,7 +638,7 @@
                 // 1순위: 간부 명단에서 활동 중인 직책 확인
                 const offQuery = query(collection(db, 'officers_list'),
                     where('name', '==', u.name),
-                    where('churchName', '==', u.church),
+                    where('churchName', '==', u.churchName || u.church),
                     where('presidiumName', '==', u.presidiumName)
                 );
                 const offSnapshot = await getDocs(offQuery);
@@ -622,7 +656,7 @@
                 // 2순위: 단원 명단에서 활동 중인지 확인
                 const memQuery = query(collection(db, 'members_list'),
                     where('name', '==', u.name),
-                    where('churchName', '==', u.church),
+                    where('churchName', '==', u.churchName || u.church),
                     where('presidiumName', '==', u.presidiumName)
                 );
                 const memSnapshot = await getDocs(memQuery);
@@ -702,6 +736,7 @@
                     leaveDateGroup.style.display = 'none';
                 }
 
+                // [Fix] Reset Password 버튼 핸들러 (기존 리스너 제거를 위해 복제 후 교체)
                 const resetBtn = document.getElementById('btn-reset-password');
                 const newResetBtn = resetBtn.cloneNode(true);
                 resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
@@ -711,7 +746,6 @@
                         alert("비밀번호가 '1234'로 설정되었습니다.\n'저장' 버튼을 눌러야 최종 반영됩니다.");
                     }
                 });
-
                 editModal.style.display = 'flex';
             } catch (error) {
                 console.error("Error opening edit modal:", error);

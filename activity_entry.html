@@ -671,7 +671,7 @@
             doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy, serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver } from "./auth.js?v=20260306_1720";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260306_1720";
+        import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260306_1720";
 
         let currentUser = null;
         let activitySchemaMap = {}; // 성당별 스키마 맵
@@ -696,6 +696,9 @@
                 return;
             }
             currentUser = profile;
+            
+            // [추가] 성당/쁘레시디움 목록 데이터 로드 (Firestore 캐싱)
+            await fetchPresidiaList();
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
@@ -753,8 +756,8 @@
                 curiaSelect.disabled = true;
 
                 // updatePresidiumList(userChurch, userCuria); // Custom dropdown will handle this
-                presidiumInput.value = currentUser.presidiumName || currentUser.presidium;
-                presidiumSelect.value = currentUser.presidiumName || currentUser.presidium;
+                presidiumInput.value = currentUser.presidiumName;
+                presidiumSelect.value = currentUser.presidiumName;
                 presidiumInput.disabled = true;
 
 
@@ -827,16 +830,51 @@
             if (!presidium || !church || !curia) return;
 
             try {
-                // Firestore에서 출석 기록 가져오기
-                const q = query(
-                    collection(db, 'attendance_list'),
+                // [수정] 병렬 쿼리: 새로운 필드명(churchName, presidiumName)과 기존 필드명(church, presidium) 모두 지원
+                const qNew = query(collection(db, 'attendance_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
+                );
+                const qOld = query(collection(db, 'attendance_list'),
                     where('church', '==', church),
                     where('curia', '==', curia),
-                    where('presidium', '==', presidium),
-                    orderBy('date', 'desc')
+                    where('presidium', '==', presidium)
                 );
-                const querySnapshot = await getDocs(q);
-                const myAttendance = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                const combinedDocs = [...snapNew.docs, ...snapOld.docs];
+
+                // 중복 제거 및 데이터 정리 (날짜 데이터 타입 보정 포함)
+                const seenIds = new Set();
+                let myAttendance = [];
+
+                combinedDocs.forEach(docSnap => {
+                    if (!seenIds.has(docSnap.id)) {
+                        seenIds.add(docSnap.id);
+                        const data = docSnap.id === 'dummy' ? {} : docSnap.data(); // ID가 dummy인 경우 방어 코드
+                        if (!data) return;
+
+                        // 날짜 타입 보정 (Timestamp 객체인 경우 문자열로 변환)
+                        let dateStr = data.date;
+                        if (dateStr && typeof dateStr === 'object' && dateStr.toDate) {
+                            dateStr = dateStr.toDate().toISOString().split('T')[0];
+                        } else if (dateStr && typeof dateStr === 'object' && dateStr.seconds) {
+                            dateStr = new Date(dateStr.seconds * 1000).toISOString().split('T')[0];
+                        }
+
+                        if (dateStr && data.session) {
+                            myAttendance.push({
+                                id: docSnap.id,
+                                ...data,
+                                date: dateStr // 보정된 날짜 사용
+                            });
+                        }
+                    }
+                });
+
+                // 메모리에서 날짜 내림차순 정렬
+                myAttendance.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
                 if (myAttendance.length === 0) {
                     const opt = document.createElement('option');
@@ -850,12 +888,12 @@
                     const opt = document.createElement('option');
                     opt.value = a.date;
                     opt.dataset.session = a.session;
-                    opt.dataset.attendanceId = a.id; // [추가] 고유 ID 저장
+                    opt.dataset.attendanceId = a.id; 
                     opt.textContent = `${a.date} (${a.session}회)`;
                     reportDateSelect.appendChild(opt);
                 });
 
-                // [추가] 최신 주회합 날짜 자동 선택 및 단원 목록 로드
+                // 최신 주회합 날짜 자동 선택 및 단원 목록 로드
                 if (myAttendance.length > 0) {
                     reportDateSelect.value = myAttendance[0].date;
                     await updateMemberList();
@@ -894,7 +932,7 @@
                 const memSnap = await getDocs(memQuery);
                 const allMembers = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const ofQuery = query(collection(db, 'officers_list'), where('church', '==', church), where('curia', '==', curia), where('presidium', '==', presidium));
+                const ofQuery = query(collection(db, 'officers_list'), where('churchName', '==', church), where('curiaName', '==', curia), where('presidiumName', '==', presidium));
                 const ofSnap = await getDocs(ofQuery);
                 const allOfficers = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -958,21 +996,29 @@
 
         /**
          * @function handleChurchSelection
-         * @description 성당 선택 시 해당 성당의 활동 스키마를 로드하고 폼을 렌더링합니다.
-         *              또한, 해당 쁘레시디움의 마지막 주회합 회차를 추정하여 입력 필드를 채웁니다.
-         * @param {string} churchName - 선택된 성당 이름.
          */
         function handleChurchSelection(churchName) {
-            let schema = activitySchemaMap[churchName] || [];
-
+            // [강화] 유연한 매칭: 공백 제거 후 비교
+            const normalize = (s) => (s || '').toString().replace(/\s/g, '');
+            const targetNorm = normalize(churchName);
+            
+            let schema = activitySchemaMap[churchName];
+            
+            // 직접 매칭 실패 시 공백 무시하고 다시 찾기
+            if (!schema) {
+                const foundKey = Object.keys(activitySchemaMap).find(k => normalize(k) === targetNorm);
+                if (foundKey) schema = activitySchemaMap[foundKey];
+            }
+            
+            currentSchema = schema || [];
+            
             // [추가/수정] 선배님 요청: '기타활동(2)'를 '교구 또는 레지오 세나뚜스 지시 사항' 왼쪽(맨 앞)으로 이동
-            const otherIdx = schema.findIndex(group => group.title === '기타활동(2)');
+            const otherIdx = currentSchema.findIndex(group => group.title === '기타활동(2)');
             if (otherIdx > 0) {
-                const otherGroup = schema.splice(otherIdx, 1)[0];
-                schema.unshift(otherGroup); // 맨 앞으로 이동
+                const otherGroup = currentSchema.splice(otherIdx, 1)[0];
+                currentSchema.unshift(otherGroup); // 맨 앞으로 이동
             }
 
-            currentSchema = schema;
             renderForm();
         }
 
@@ -1204,13 +1250,48 @@
                     btnSaveReport.style.opacity = '1';
                 }
 
-                // 2. 저장된 기록 검색
-                const docId = `${church}_${presidium}_${session}_${uid || memberName}`;
-                const reportDoc = await getDoc(doc(db, 'activity_records', docId));
+                // [강화] 다중 병렬 쿼리: church/presidium (신구) + session (숫자/문자열) + ID/이름 검색
+                const sessNum = parseInt(session);
+                const sessStr = session.toString();
+                const mName = memberName.trim();
+                const mId = uid || '';
 
-                // 3. 데이터가 있으면 폼에 채우기
-                if (reportDoc.exists()) {
-                    const record = reportDoc.data();
+                const buildQuery = (cField, pField, sVal, mField, mVal) => 
+                    query(collection(db, 'activity_records'),
+                        where(cField, '==', church),
+                        where(pField, '==', presidium),
+                        where('session', '==', sVal),
+                        where(mField, '==', mVal)
+                    );
+
+                const queries = [
+                    buildQuery('churchName', 'presidiumName', sessNum, 'memberId', mId),
+                    buildQuery('churchName', 'presidiumName', sessStr, 'memberId', mId),
+                    buildQuery('church', 'presidium', sessNum, 'memberId', mId),
+                    buildQuery('church', 'presidium', sessStr, 'memberId', mId)
+                ];
+
+                // ID가 바뀌었을 경우를 대비해 성함(이름) 기반 검색도 병렬로 수행
+                if (mName) {
+                    queries.push(buildQuery('churchName', 'presidiumName', sessNum, 'memberName', mName));
+                    queries.push(buildQuery('churchName', 'presidiumName', sessStr, 'memberName', mName));
+                }
+
+                const snapShots = await Promise.all(queries.map(q => getDocs(q)));
+                
+                // 중복 제거하며 병합
+                const docMap = new Map();
+                snapShots.forEach(snap => {
+                    snap.docs.forEach(d => docMap.set(d.id, d.data()));
+                });
+                
+                const activityDocs = Array.from(docMap.entries()).map(([id, data]) => ({ id, ...data }));
+
+                // 데이터가 있으면 채우기 (가장 최근 업데이트된 것 기준 하나만 사용)
+                if (activityDocs.length > 0) {
+                    const record = activityDocs[0];
+                    const currentDocId = record.id;
+
                     console.log(`[LoadReport] Found existing record for ${memberName} (${session}차)`);
 
                     // counts 채우기
@@ -1222,7 +1303,7 @@
                     }
 
                     btnDeleteReport.style.display = isAdmin ? 'flex' : 'none';
-                    btnDeleteReport.dataset.docId = docId; // Store for deletion
+                    btnDeleteReport.dataset.docId = currentDocId; 
                 } else {
                     console.log(`[LoadReport] No existing record for ${memberName} (${session}차)`);
                     btnDeleteReport.style.display = 'none';
@@ -1457,6 +1538,10 @@
                     churchName: church,
                     curiaName: curia,
                     presidiumName: presidium,
+                    // [추가] 레거시 필드 지원
+                    church: church,
+                    curia: curia,
+                    presidium: presidium,
                     memberName: memberName,
                     memberId: uid || '',
                     session: session,

@@ -1,5 +1,5 @@
-// === Version: 20260308_0430_auth_fix ===
-console.log("Legion Script Loaded: 20260308_0430_auth_fix");
+// === Version: 20260315_V16_CLEAN_DUAL ===
+console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
 
 // === Global Custom Modal CSS Injection ===
 (function injectGlobalModalCSS() {
@@ -158,10 +158,71 @@ window.showGlobalConfirm = function (message) {
         };
     });
 };
-// === Global State for Unsaved Changes ===
+
+window.showGlobalPrompt = function (message, defaultValue = '') {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('globalCustomModal');
+        if (!modal) {
+            showGlobalAlert('');
+            modal = document.getElementById('globalCustomModal');
+        }
+
+        const msgEl = document.getElementById('globalCustomModalMessage');
+        const confirmBtn = document.getElementById('globalCustomModalConfirm');
+        const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        // Input field injection
+        msgEl.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>
+            <input type="text" id="globalCustomModalInput" 
+            style="width: 100%; padding: 10px; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1rem;" 
+            value="${defaultValue}" autocomplete="off">`;
+
+        cancelBtn.style.display = 'inline-block';
+        modal.style.display = 'flex';
+
+        const inputEl = document.getElementById('globalCustomModalInput');
+        inputEl.focus();
+        inputEl.select();
+
+        // Handle Enter key
+        const handleEnter = (e) => {
+            if (e.key === 'Enter') {
+                confirmBtn.click();
+            }
+        };
+        inputEl.addEventListener('keydown', handleEnter);
+
+        confirmBtn.onclick = () => {
+            const result = inputEl.value;
+            inputEl.removeEventListener('keydown', handleEnter);
+            modal.style.display = 'none';
+            resolve(result);
+        };
+        cancelBtn.onclick = () => {
+            inputEl.removeEventListener('keydown', handleEnter);
+            modal.style.display = 'none';
+            resolve(null);
+        };
+    });
+};
 window.isDirty = false;
 window.setDirty = (dirty) => {
     window.isDirty = dirty;
+};
+
+/**
+ * [Common Navigation Helper]
+ * 변경 사항이 있는 경우 확인창을 띄우고 안전하게 이동합니다.
+ */
+window.safeNavigate = async (url) => {
+    if (window.isDirty) {
+        if (await window.showGlobalConfirm('저장하지 않은 변경 사항이 있습니다. 이동하시겠습니까?')) {
+            window.setDirty(false);
+            window.location.href = url;
+        }
+    } else {
+        window.location.href = url;
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -182,10 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.isDirty) {
             e.preventDefault();
             const targetUrl = e.currentTarget.href;
-            if (await window.showGlobalConfirm('저장하지 않은 변경 사항이 있습니다. 이동하시겠습니까?')) {
-                window.setDirty(false);
-                window.location.href = targetUrl;
-            }
+            await window.safeNavigate(targetUrl);
             return false;
         }
     };
@@ -313,6 +371,14 @@ window.initCommonMenus = (profile, logoutUser) => {
         navMenu.querySelectorAll('.nav-item').forEach(item => {
             if (item.textContent.includes('관리자')) {
                 item.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
+                
+                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 일괄 정리' 링크 동적 주입
+                const subMenu = item.querySelector('.sub-menu');
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="data_cleanup"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="data_cleanup.html" style="color: #ef4444; font-weight: bold;">⚠️ 데이터 일괄 정리</a>';
+                    subMenu.appendChild(li);
+                }
             }
         });
 

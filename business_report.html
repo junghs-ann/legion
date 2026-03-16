@@ -548,8 +548,7 @@
                 try {
                     const q = query(
                         collection(db, 'attendance_list'),
-                        where('presidiumName', '==', pr),
-                        orderBy('date', 'desc')
+                        where('presidiumName', '==', pr)
                     );
                     const querySnapshot = await getDocs(q);
                     const filteredAtts = [];
@@ -559,6 +558,9 @@
                             filteredAtts.push(data);
                         }
                     });
+
+                    // 메모리에서 날짜 내림차순 정렬 (인덱스 에러 방지)
+                    filteredAtts.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
                     filteredAtts.forEach(a => {
                         const optText = `${a.session}회 (${a.date})`;

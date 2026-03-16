@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>데이터 정리 도구 - 레지오 통합 서버</title>
+    <title>데이터 일괄 정리 도구 - 레지오 통합 서버</title>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
             --primary: #4f46e5;
             --primary-dark: #4338ca;
             --danger: #ef4444;
-            --bg: #f9fafb;
+            --bg: #f3f4f6;
             --card: #ffffff;
             --text: #1f2937;
+            --border: #e5e7eb;
         }
         body {
             font-family: 'Pretendard', sans-serif;
@@ -20,194 +22,352 @@
             color: var(--text);
             margin: 0;
             padding: 20px;
+            line-height: 1.5;
         }
         .container {
             max-width: 1000px;
             margin: 0 auto;
         }
-        h1 { font-size: 1.5rem; margin-bottom: 20px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--primary);
+        }
+        h1 { font-size: 1.8rem; margin: 0; color: var(--primary); }
+        .back-btn {
+            background: #6b7280;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .admin-warning {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #b91c1c;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            display: none;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
         .card {
             background: var(--card);
-            padding: 24px;
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            transition: transform 0.2s;
         }
-        .filter-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        select, input {
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            width: 100%;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            background: var(--primary);
+        .card:hover { transform: translateY(-2px); }
+        .card h3 { margin: 0 0 10px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .card p { font-size: 0.85rem; color: #6b7280; margin-bottom: 20px; flex-grow: 1; }
+        .card .btn-delete {
+            background: var(--danger);
             color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
-        }
-        button:hover { background: var(--primary-dark); }
-        button.delete { background: var(--danger); }
-        button.secondary { background: #6b7280; margin-left: 8px; }
-        button.secondary:hover { background: #4b5563; }
-        
-        table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
+        .card .btn-delete:disabled { background: #d1d5db; cursor: not-allowed; }
+        .card .btn-delete:hover:not(:disabled) { background: #dc2626; }
+
+        /* Loading Overlay */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            flex-direction: column;
+            gap: 15px;
         }
-        th { background: #f3f4f6; }
-        .ghost { color: var(--danger); font-weight: bold; background: #fee2e2; }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #e5e7eb;
+            color: #4b5563;
+        }
     </style>
 </head>
 <body>
+    <div id="overlay">
+        <div class="spinner"></div>
+        <div id="statusText">데이터 삭제 중...</div>
+    </div>
+
     <div class="container">
-        <h1>🛠️ 데이터 정리 도구 (유령 데이터 삭제)</h1>
-        <div class="card">
-            <div class="filter-group">
-                <select id="presidiumSelect">
-                    <option value="천사의 모후">천사의 모후</option>
-                </select>
-                <input type="text" id="sessionInput" placeholder="주회합 단계 (예: 917)">
-                <button id="searchBtn">조회하기</button>
-                <button type="button" class="secondary" onclick="location.href='attendance_history.html'">이전으로 (출결내역)</button>
-            </div>
+        <div class="header">
+            <h1><i class="fas fa-tools"></i> 데이터 일괄 정리 도구</h1>
+            <a href="dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> 대시보드로 이동</a>
         </div>
 
-        <div id="resultCard" class="card" style="display:none;">
-            <h2 id="sessionTitle"></h2>
-            <table id="attendanceTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>성명 (명단 기준)</th>
-                        <th>세례명</th>
-                        <th>기록된 이름</th>
-                        <th>상태</th>
-                        <th>작업</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceBody"></tbody>
-            </table>
+        <div id="adminWarning" class="admin-warning">
+            <i class="fas fa-exclamation-triangle"></i> 이 페이지는 시스템 관리자만 접근할 수 있습니다.
+        </div>
+
+        <p style="margin-bottom: 20px; color: #4b5563; font-size: 0.95rem;">
+            ⚠️ <b>주의사항</b>: 각 항목의 [데이터 전체 삭제] 버튼을 클릭하면 해당 컬렉션의 <b>모든 기록이 영구적으로 삭제</b>됩니다.<br>
+            관리자 설정 데이터(쁘레시디움 정보, 활동 항목 등)는 보호되므로 안심하고 활동 기록만 정리하세요.
+        </p>
+
+        <div class="grid" id="actionGrid">
+            <!-- 1. 주회합 출석 -->
+            <div class="card">
+                <h3><i class="fas fa-clipboard-check"></i> 주회합 출석 관리</h3>
+                <p>매주 등록된 단원들의 주회합 출석 기록을 모두 삭제합니다.</p>
+                <div class="status-badge">대상: attendance_list</div>
+                <button class="btn-delete" onclick="handleDelete('attendance_list', '주회합 출석 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 2. 단원활동보고 -->
+            <div class="card">
+                <h3><i class="fas fa-tasks"></i> 단원활동보고</h3>
+                <p>단원들이 개별적으로 입력한 모든 활동 보고 내역을 삭제합니다.</p>
+                <div class="status-badge">대상: activity_records</div>
+                <button class="btn-delete" onclick="handleDelete('activity_records', '단원활동보고 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 3. 입출내역 관리 (회계) -->
+            <div class="card">
+                <h3><i class="fas fa-file-invoice-dollar"></i> 입출내역 관리 (회계)</h3>
+                <p>금전출납부에 등록된 모든 수입/지출 내역을 삭제합니다.</p>
+                <div class="status-badge">대상: accounting_transactions</div>
+                <button class="btn-delete" onclick="handleDelete('accounting_transactions', '회계 입출 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 4. 협조단원 돌봄 관리 -->
+            <div class="card">
+                <h3><i class="fas fa-heart"></i> 협조단원 돌봄 관리</h3>
+                <p>협조단원 돌봄 방문 및 활동 내역을 모두 삭제합니다.</p>
+                <div class="status-badge">대상: auxiliary_care_list</div>
+                <button class="btn-delete" onclick="handleDelete('auxiliary_care_list', '협조단원 돌봄 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 5. 행사 관리 -->
+            <div class="card">
+                <h3><i class="fas fa-calendar-star"></i> 행사(행사/교육/피정) 관리</h3>
+                <p>등록된 모든 행사 정보 및 참여 내역을 삭제합니다.</p>
+                <div class="status-badge">대상: events_list</div>
+                <button class="btn-delete" onclick="handleDelete('events_list', '행사 및 교육 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 6. 평의회 출석 관리 -->
+            <div class="card">
+                <h3><i class="fas fa-users-cog"></i> 평의회 출석 관리</h3>
+                <p>꾸리아 평의회 월례회의에 참석한 간부들의 모든 출결 기록을 삭제합니다.</p>
+                <div class="status-badge">대상: council_attendance_list</div>
+                <button class="btn-delete" onclick="handleDelete('council_attendance_list', '평의회 출석 기록')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 7. 단원정보 관리 -->
+            <div class="card">
+                <h3><i class="fas fa-user-friends"></i> 단원정보 관리</h3>
+                <p>시스템에 등록된 모든 단원 정보를 삭제합니다. (주의: 계정 정보 포함)</p>
+                <div class="status-badge">대상: members_list</div>
+                <button class="btn-delete" onclick="handleDelete('members_list', '전체 단원 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 8. 간부관리 -->
+            <div class="card">
+                <h3><i class="fas fa-user-tie"></i> 간부관리</h3>
+                <p>각 조직의 간부(단장, 부단장 등) 임명 기록을 모두 삭제합니다.</p>
+                <div class="status-badge">대상: officers_list</div>
+                <button class="btn-delete" onclick="handleDelete('officers_list', '간부 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 9. 협조단원 관리 -->
+            <div class="card">
+                <h3><i class="fas fa-user-plus"></i> 협조단원 관리</h3>
+                <p>시스템에 등록된 협조단원 명부를 모두 삭제합니다.</p>
+                <div class="status-badge">대상: auxiliary_members_list</div>
+                <button class="btn-delete" onclick="handleDelete('auxiliary_members_list', '협조단원 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 10. 공지사항 -->
+            <div class="card">
+                <h3><i class="fas fa-bullhorn"></i> 공지사항</h3>
+                <p>등록된 모든 공지사항 글을 삭제합니다.</p>
+                <div class="status-badge">대상: legion_notices_list</div>
+                <button class="btn-delete" onclick="handleDelete('legion_notices_list', '공지사항')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 11. 일정관리 -->
+            <div class="card">
+                <h3><i class="fas fa-calendar-alt"></i> 일정관리</h3>
+                <p>캘린더에 등록된 모든 공지/공유 일정을 삭제합니다.</p>
+                <div class="status-badge">대상: schedules_list</div>
+                <button class="btn-delete" onclick="handleDelete('schedules_list', '캘린더 일정')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- [NEW] 14. 회원가입 계정 관리 -->
+            <div class="card highlight">
+                <h3><i class="fas fa-user-shield"></i> 회원가입 계정 관리</h3>
+                <p>시스템에 가입된 모든 사용자 계정(아이디/비번) 정보를 삭제합니다. (초기화용)</p>
+                <div class="status-badge">대상: users</div>
+                <button class="btn-delete" onclick="handleDelete('users', '가입 계정 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 12. 월례보고서 생성 내역 -->
+            <div class="card">
+                <h3><i class="fas fa-file-alt"></i> 월례보고서 내역</h3>
+                <p>과거에 생성하여 확정/승인된 모든 월례보고서 상태 정보를 삭제합니다.</p>
+                <div class="status-badge">대상: monthly_report_status</div>
+                <button class="btn-delete" onclick="handleDelete('monthly_report_status', '월례보고서 상태 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
+
+            <!-- 13. 사업보고서 생성 내역 -->
+            <div class="card">
+                <h3><i class="fas fa-file-medical-alt"></i> 사업보고서 내역</h3>
+                <p>과거에 생성하여 확정/승인된 모든 사업보고서 상태 정보를 삭제합니다.</p>
+                <div class="status-badge">대상: business_report_status</div>
+                <button class="btn-delete" onclick="handleDelete('business_report_status', '사업보고서 상태 정보')">
+                    <i class="fas fa-trash-alt"></i> 데이터 전체 삭제
+                </button>
+            </div>
         </div>
     </div>
 
     <script type="module">
-        console.log('시스템: 데이터 정리 도구 스크립트 로드됨');
-        import { db, collection, getDocs, query, where, doc, updateDoc, deleteField } from './firebase-config.js?v=20260314_11';
+        import { db, collection, getDocs, deleteDoc, doc } from './firebase-config.js?v=20260314_23';
+        import { initAuthObserver } from './auth.js?v=20260314_23';
 
-        const searchBtn = document.getElementById('searchBtn');
-        const sessionInput = document.getElementById('sessionInput');
-        const presidiumSelect = document.getElementById('presidiumSelect');
-        const resultCard = document.getElementById('resultCard');
-        const attendanceBody = document.getElementById('attendanceBody');
-        const sessionTitle = document.getElementById('sessionTitle');
+        const overlay = document.getElementById('overlay');
+        const statusText = document.getElementById('statusText');
+        const warning = document.getElementById('adminWarning');
+        const buttons = document.querySelectorAll('.btn-delete');
 
-        console.log('시스템: 엘리먼트 바인딩 완료', { searchBtn, sessionInput });
+        // [시니어 멘토 가이드] 관리자 권한 확인 로직
+        initAuthObserver(async (user, profile) => {
+            if (!user) {
+                location.href = 'index.html';
+                return;
+            }
+            const role = (profile.role || '').toLowerCase();
+            const isAdmin = role === '관리자' || role.includes('admin') || role.includes('시스템');
 
-        let currentDocId = null;
+            if (!isAdmin) {
+                warning.style.display = 'block';
+                buttons.forEach(btn => btn.disabled = true);
+                console.warn("[시니어 개발자] 관리자 권한이 없습니다. 접근이 제한됩니다.");
+            } else {
+                console.log("[시니어 개발자] 관리자 권한 확인됨. 모든 삭제 기능 활성화.");
+            }
+        });
 
-        searchBtn.onclick = async () => {
-            console.log('시스템: 조회 버튼 클릭됨');
-            const session = sessionInput.value;
-            const presidium = presidiumSelect.value;
-            if (!session) return alert('회기 번호를 입력하세요.');
+        // [핵심] 일괄 삭제 공통 함수
+        window.handleDelete = async function(colName, label) {
+            const firstConfirm = await showConfirm(`[${label}] 항목의 모든 데이터를 정말로 삭제하시겠습니까?\n이 작업은 절대로 되돌릴 수 없습니다.`);
+            if (!firstConfirm) return;
+
+            const secondConfirm = await showConfirm(`마지막 확인입니다.\n데이터베이스의 '${colName}' 컬렉션에 있는 모든 문서를 삭제하시겠습니까?`);
+            if (!secondConfirm) return;
 
             try {
-                searchBtn.disabled = true;
-                searchBtn.textContent = '조회 중...';
-                
-                attendanceBody.innerHTML = '<tr><td colspan="6">조회 중...</td></tr>';
-                resultCard.style.display = 'block';
+                showLoading(`'${label}' 데이터를 삭제하는 중입니다...`);
+                console.log(`[시니어 진단] '${colName}' 컬렉션 조회 중...`);
+                const snap = await getDocs(collection(db, colName));
+                const total = snap.size;
 
-                // 1. 단원 목록 가져오기 (매핑용)
-                const memSnap = await getDocs(collection(db, 'members_list'));
-                const membersMap = {};
-                memSnap.forEach(d => membersMap[d.id] = d.data());
-
-                // 2. 해당 회기 출석부 찾기
-                const q = query(collection(db, 'attendance_list'), 
-                    where('presidium', '==', presidium),
-                    where('session', '==', session)
-                );
+                console.log(`[시니어 진단] '${colName}'에서 ${total}개의 문서를 찾았습니다.`);
                 
-                const snap = await getDocs(q);
-                if (snap.empty) {
-                    attendanceBody.innerHTML = '<tr><td colspan="6">기록을 찾을 수 없습니다. 회기 번호를 확인해 주세요.</td></tr>';
+                if (total === 0) {
+                    hideLoading();
+                    alert('삭제할 데이터가 없습니다.');
                     return;
                 }
 
-                const attDoc = snap.docs[0];
-                currentDocId = attDoc.id;
-                const data = attDoc.data();
-                const attData = data.attendanceData || {};
-
-                sessionTitle.textContent = `${session}회 주회합 출석 목록 (${data.date})`;
-                attendanceBody.innerHTML = '';
-
-                const entries = Object.entries(attData);
-                if (entries.length === 0) {
-                    attendanceBody.innerHTML = '<tr><td colspan="6">해당 회기에 등록된 출석 데이터가 없습니다.</td></tr>';
-                }
-
-                entries.forEach(([id, val]) => {
-                    const member = membersMap[id] || { name: '알수없음', baptismalName: '-' };
-                    const isGhost = member.name === '알수없음';
-                    
-                    const recName = (typeof val === 'object') ? (val.name || '-') : '-';
-                    const status = (typeof val === 'object') ? val.status : val;
-
-                    const tr = document.createElement('tr');
-                    if (isGhost) tr.classList.add('ghost');
-                    
-                    tr.innerHTML = `
-                        <td><code>${id}</code></td>
-                        <td>${member.name}</td>
-                        <td>${member.baptismalName}</td>
-                        <td>${recName}</td>
-                        <td>${status === 'P' ? '출석' : '결석'}</td>
-                        <td><button class="delete" onclick="deleteEntry('${id}')">삭제</button></td>
-                    `;
-                    attendanceBody.appendChild(tr);
+                // [최적화] 병렬 삭제 처리
+                const deletePromises = [];
+                snap.forEach(docSnap => {
+                    deletePromises.push(deleteDoc(doc(db, colName, docSnap.id)));
                 });
+
+                await Promise.all(deletePromises);
+                
+                hideLoading();
+                alert(`성공적으로 총 ${total}건의 [${label}] 기록을 삭제했습니다.`);
             } catch (e) {
                 console.error(e);
-                alert('데이터 조회 중 오류가 발생했습니다: ' + e.message);
-                attendanceBody.innerHTML = `<tr><td colspan="6" style="color:red">에러: ${e.message}</td></tr>`;
-            } finally {
-                searchBtn.disabled = false;
-                searchBtn.textContent = '조회하기';
+                hideLoading();
+                alert(`삭제 중 오류가 발생했습니다: ${e.message}`);
             }
         };
 
-        window.deleteEntry = async (memberId) => {
-            if (!confirm(`ID: ${memberId} 의 출석 기록을 정말 삭제하시겠습니까?`)) return;
-
-            try {
-                const docRef = doc(db, 'attendance_list', currentDocId);
-                await updateDoc(docRef, {
-                    [`attendanceData.${memberId}`]: deleteField()
-                });
-                alert('성공적으로 삭제되었습니다. 출결내역 화면으로 돌아갑니다.');
-                location.href = 'attendance_history.html';
-            } catch (e) {
-                console.error(e);
-                alert('삭제 중 오류가 발생했습니다: ' + e.message);
+        // UI 유틸리티
+        function showLoading(msg) {
+            statusText.textContent = msg;
+            overlay.style.display = 'flex';
+        }
+        function hideLoading() {
+            overlay.style.display = 'none';
+        }
+        async function showConfirm(msg) {
+            if (window.showCustomConfirm) {
+                return await window.showCustomConfirm(msg);
             }
-        };
+            return confirm(msg);
+        }
     </script>
 </body>
 </html>

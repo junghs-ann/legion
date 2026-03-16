@@ -780,9 +780,10 @@
                     return;
                 }
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = currentUser.presidiumName || currentUser.presidium || '';
+                const p = currentUser || {};
+                church = p.churchName || p.church || '';
+                curia = p.curiaName || p.curia || '';
+                presidium = p.presidiumName || p.presidium || '';
             }
 
             const start = startDateFilter.value;
@@ -790,15 +791,26 @@
 
             let filtered = [];
             try {
-                let q = query(
-                    collection(db, 'events_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
-                );
-                const querySnapshot = await getDocs(q);
+                // Robust Query for events_list
+                const [qSnap1, qSnap2] = await Promise.all([
+                    getDocs(query(collection(db, 'events_list'),
+                        where('churchName', '==', church),
+                        where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'events_list'),
+                        where('church', '==', church),
+                        where('presidium', '==', presidium)))
+                ]);
+
                 const results = [];
-                querySnapshot.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
+                const seenIds = new Set();
+                [qSnap1, qSnap2].forEach(snap => {
+                    snap.forEach(docSnap => {
+                        if (!seenIds.has(docSnap.id)) {
+                            seenIds.add(docSnap.id);
+                            results.push({ id: docSnap.id, ...docSnap.data() });
+                        }
+                    });
+                });
 
                 // Firestore multiple where with range needs index, so keep simple and filter manually for date if needed
                 // or just sort and filter by date here.

@@ -290,7 +290,7 @@
                             <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
                                 disabled class="nav-enter"
                                 style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
-                            <input type="hidden" id="presidiumSelect" name="presidium">
+                            <input type="hidden" id="presidiumSelect" name="presidiumName">
                             <div id="presidiumDropdown" class="custom-dropdown"
                                 style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                             </div>
@@ -382,9 +382,12 @@
                 </div>
 
                 <div class="form-btn-group">
+                    <button type="button" id="btnNewForm" class="btn btn-save"
+                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #007bff; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                            class="fas fa-plus"></i> 신규 입력</button>
                     <button type="submit" class="btn btn-save"
                         style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 80px;"><i
-                            class="fas fa-save"></i> 저장</button>
+                            class="fas fa-save"></i> 저 장</button>
                     <button type="button" id="btnDelete" class="btn btn-delete"
                         style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
                             class="fas fa-trash-alt"></i> 삭제</button>
@@ -460,8 +463,8 @@
         }
 
         function setupPermissions() {
-            // [Crucial] Allowed Roles Check
-            const allowedRoles = ['admin', '단장', '부단장', '서기', '회계', 'president', 'vicePresident', 'secretary', 'treasurer', '관리자'];
+            // [Crucial] Allowed Roles Check (v16.33 snake_case support)
+            const allowedRoles = ['admin', '단장', '부단장', '서기', '회계', 'president', 'vice_president', 'vicePresident', 'secretary', 'treasurer', '관리자'];
             const userRole = String(currentUser.role || '').toLowerCase();
             const isAllowed = allowedRoles.some(r => userRole.includes(r.toLowerCase()));
 
@@ -494,9 +497,9 @@
                 if (pInput) pInput.disabled = false;
             } else {
                 // Officer: Lock to their own org from login profile
-                const userChurch = currentUser.church || currentUser.churchName;
-                const userCuria = currentUser.curia || currentUser.curiaName;
-                const userPresidium = currentUser.presidium || currentUser.presidiumName;
+                const userChurch = currentUser.churchName || currentUser.church;
+                const userCuria = currentUser.curiaName || currentUser.curia;
+                const userPresidium = currentUser.presidiumName || currentUser.presidium;
 
                 // Fixed Church
                 churchSelect.innerHTML = '';
@@ -758,6 +761,29 @@
             const btnDelete = document.getElementById('btnDelete');
             btnDelete.addEventListener('click', handleDelete);
 
+            // [New Entry] Guard original values
+            const btnNewForm = document.getElementById('btnNewForm');
+            if (btnNewForm) {
+                btnNewForm.addEventListener('click', () => {
+                    const cVal = churchSelect.value;
+                    const cuVal = curiaSelect.value;
+                    const prVal = document.getElementById('presidiumInput').value;
+                    const prHiddenVal = document.getElementById('presidiumSelect').value;
+
+                    form.reset();
+                    form.removeAttribute('data-edit-id');
+                    resetMemberUI();
+
+                    churchSelect.value = cVal;
+                    curiaSelect.value = cuVal;
+                    document.getElementById('presidiumInput').value = prVal;
+                    document.getElementById('presidiumSelect').value = prHiddenVal;
+                    
+                    updateDeleteButtonVisibility();
+                    console.log("🧹 간부 입력창이 초기화되었습니다. 기존 조직 정보는 유지됩니다.");
+                });
+            }
+
             // Form Submit
             form.addEventListener('submit', handleSave);
         }
@@ -787,9 +813,9 @@
             try {
                 const q = query(
                     collection(db, 'officers_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium)
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
                 );
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => officersList.push({ id: doc.id, ...doc.data() }));
@@ -819,7 +845,19 @@
                     form.querySelector('input[name="appointmentDate"]').value = memberRecord.appointmentDate || '';
                     form.querySelector('input[name="appointmentExpiryDate"]').value = memberRecord.appointmentExpiryDate || '';
                     form.querySelector('textarea[name="notes"]').value = memberRecord.notes || '';
-                    form.setAttribute('data-edit-id', memberRecord.id);
+                    
+                    // [Fix] Only set edit-id if the record is ACTIVE. 
+                    // Expired records should be loaded for info but saved as NEW entries.
+                    const today = new Date().toISOString().split('T')[0];
+                    const isActive = !memberRecord.appointmentExpiryDate || memberRecord.appointmentExpiryDate >= today;
+                    
+                    if (isActive) {
+                        form.setAttribute('data-edit-id', memberRecord.id);
+                        console.log("📝 [현직 활동 중] 수정 모드 활성화 - ID:", memberRecord.id);
+                    } else {
+                        form.removeAttribute('data-edit-id');
+                        console.log("📜 [과거 기록 로드] 신규 임기 등록 모드 (만료된 기록 보존)");
+                    }
                 } else {
                     // No history for this specific combination
                     form.querySelector('input[name="appointmentDate"]').value = '';
@@ -882,9 +920,13 @@
                 if (isActiveA && !isActiveB) return -1;
                 if (!isActiveA && isActiveB) return 1;
 
-                const roleOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
-                const orderA = roleOrder[a.role] || 99;
-                const orderB = roleOrder[b.role] || 99;
+                const roleOrder = { 
+                    '단장': 1, '부단장': 2, '서기': 3, '회계': 4,
+                    'president': 1, 'vice_president': 2, 'secretary': 3, 'treasurer': 4,
+                    'vicePresident': 2
+                };
+                const orderA = roleOrder[(a.role || '').toLowerCase().trim()] || roleOrder[a.role] || 99;
+                const orderB = roleOrder[(b.role || '').toLowerCase().trim()] || roleOrder[b.role] || 99;
                 if (orderA !== orderB) return orderA - orderB;
 
                 return (b.appointmentDate || '').localeCompare(a.appointmentDate || '');
@@ -918,7 +960,17 @@
 
                 html += `
                     <tr style="cursor: pointer; transition: background 0.2s;" onclick="setFormFromTable('${o.id}')" onmouseover="this.style.background='#f1f1f1'" onmouseout="this.style.background='white'">
-                        <td style="font-weight:bold;">${o.role}</td>
+                        <td style="font-weight:bold;">${
+                            {
+                                'admin': '관리자',
+                                'president': '단장',
+                                'vice_president': '부단장',
+                                'vicePresident': '부단장',
+                                'secretary': '서기',
+                                'treasurer': '회계',
+                                'member': '단원'
+                            }[(o.role || '').toLowerCase().trim()] || o.role
+                        }</td>
                         <td>${o.name || '-'}</td>
                         <td>${o.baptismalName || '-'}</td>
                         <td>${o.phone || '-'}</td>
@@ -1051,7 +1103,7 @@
             const activeMembers = membersList.filter(m =>
                 (m.churchName === church || m.church === church) &&
                 (m.curiaName === curia || m.curia === curia) &&
-                (m.presidiumName === presidium || m.presidium === presidium) &&
+                m.presidiumName === presidium &&
                 m.status !== '퇴단' &&
                 m.status !== '전출' &&
                 m.status !== 'retire' &&
@@ -1164,9 +1216,9 @@
             try {
                 const q = query(
                     collection(db, 'officers_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', presidium),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium),
                     where('memberId', '==', memberId)
                 );
                 const querySnapshot = await getDocs(q);
@@ -1180,9 +1232,9 @@
                 // Skip if same record
                 if (editId && String(o.id) === String(editId)) return false;
 
-                const oChurch = String(o.church || o.churchName || '').trim();
-                const oCuria = String(o.curia || o.curiaName || '').trim();
-                const oPresidium = String(o.presidium || o.presidiumName || '').trim();
+                const oChurch = String(o.churchName || o.church || '').trim();
+                const oCuria = String(o.curiaName || o.curia || '').trim();
+                const oPresidium = String(o.presidiumName || o.presidium || '').trim();
                 const oRole = String(o.role || '').trim();
                 const oMemberId = String(o.memberId || o.memberUid || o.member || '').trim();
                 const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
@@ -1218,9 +1270,9 @@
             data.feastDate = (document.getElementById('feastDate').value || '').trim();
             data.phone = (document.getElementById('phone').value || '').trim();
 
-            data.church = (churchSelect.value || '').trim();
-            data.curia = (curiaSelect.value || '').trim();
-            data.presidium = (presidiumSelect.value || '').trim();
+            data.churchName = (churchSelect.value || '').trim();
+            data.curiaName = (curiaSelect.value || '').trim();
+            data.presidiumName = (presidiumSelect.value || '').trim();
             data.memberId = (memberSelect.value || '').trim();
 
             const expiryInput = form.querySelector('input[name="appointmentExpiryDate"]');
@@ -1250,10 +1302,10 @@
                 targetIdx = officersList.findIndex(o => {
                     const isSameMember = String(o.memberId || o.memberUid || o.member || '').trim() === data.memberId;
                     const isSameRole = String(o.role).trim() === String(data.role).trim();
-                    const oChurch = String(o.church || o.churchName || '').trim();
-                    const oCuria = String(o.curia || o.curiaName || '').trim();
-                    const oPresidium = String(o.presidium || o.presidiumName || '').trim();
-                    const isSameOrg = (oChurch === data.church && oCuria === data.curia && oPresidium === data.presidium);
+                    const oChurch = String(o.churchName || o.church || '').trim();
+                    const oCuria = String(o.curiaName || o.curia || '').trim();
+                    const oPresidium = String(o.presidiumName || o.presidium || '').trim();
+                    const isSameOrg = (oChurch === data.churchName && oCuria === data.curiaName && oPresidium === data.presidiumName);
                     const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
                     return isSameMember && isSameRole && isSameOrg && isActive;
                 });
@@ -1268,26 +1320,36 @@
             }
 
             try {
-                const docId = editId || ('off_' + Date.now());
-                await setDoc(doc(db, 'officers_list', docId), {
-                    ...data,
-                    updatedAt: serverTimestamp()
-                });
+                if (editId) {
+                    console.log("📝 현직 간부 정보 수정 시도 중... ID:", editId);
+                    await setDoc(doc(db, 'officers_list', editId), {
+                        ...data,
+                        updatedAt: serverTimestamp()
+                    });
+                } else {
+                    console.log("🆕 신규 임기(이력) 등록 시도 중...");
+                    const newId = 'off_' + Date.now();
+                    await setDoc(doc(db, 'officers_list', newId), {
+                        ...data,
+                        updatedAt: serverTimestamp()
+                    });
+                }
 
-                // [Sync] 유저 프로필 직책 동시 업데이트 (가입 정보 연동)
-                // Note: Users migration should be handled elsewhere, but keeping logic for relative sync
-                const q = query(collection(db, 'users'), where('name', '==', data.name), where('church', '==', data.church), where('presidiumName', '==', data.presidium));
+                // [Sync] 유저 프로필 직책 동시 업데이트
+                const q = query(collection(db, 'users'), where('name', '==', data.name), where('church', '==', data.churchName), where('presidiumName', '==', data.presidiumName));
                 const userSnap = await getDocs(q);
                 userSnap.forEach(async (uDoc) => {
                     await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
                     console.log(`User Profile Role Synced: ${data.name} -> ${data.role}`);
                 });
 
-                alert('간부 정보가 성공적으로 저장되었습니다.');
+                await window.showGlobalAlert('간부 정보가 성공적으로 저장되었습니다.');
+                
+                // If it was a new record, we should refresh and potentially switch to edit mode if needed
                 setTimeout(loadExistingOfficer, 100);
             } catch (error) {
                 console.error('Save failed:', error);
-                alert('저장 중 오류가 발생했습니다.');
+                await window.showGlobalAlert('🚨 저장 중 오류가 발생했습니다:\n' + error.message);
             }
         }
 

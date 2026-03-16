@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>데이터 정밀 진단 도구</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .record-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #f9f9f9; }
+        .record-id { font-weight: bold; color: #d32f2f; }
+        .counts { color: #1976d2; }
+        .ghost { border-left: 5px solid orange; }
+    </style>
+</head>
+<body>
+    <h1>📋 데이터 정밀 진단 도구</h1>
+    <p>전체 데이터를 뒤져서 '보이지 않는 유령'의 실체를 추적합니다.</p>
+    
+    <div style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <strong>수색 조건 설정:</strong><br>
+        쁘레시디움: <input type="text" id="targetPr" value="천사의 모후" style="padding: 5px;">
+        날짜: <input type="date" id="targetDate" value="2026-01-06" style="padding: 5px;">
+        <button id="btnSearch" style="padding: 5px 15px; cursor: pointer; background: #2e7d32; color: white; border: none; border-radius: 4px;">정밀 수색</button>
+        <button id="btnFullScan" style="padding: 5px 15px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px;">전수 조사 (모든 데이터)</button>
+    </div>
+
+    <div id="status">조건을 입력하고 [정밀 수색 시작]을 눌러주세요.</div>
+    <div id="result"></div>
+
+    <script type="module">
+        import { db, collection, getDocs, query, where } from "./firebase-config.js";
+        import { initAuthObserver } from "./auth.js";
+
+        document.getElementById('btnSearch').onclick = async () => {
+            const pr = document.getElementById('targetPr').value.trim();
+            const date = document.getElementById('targetDate').value;
+            
+            const statusEl = document.getElementById('status');
+            const resultEl = document.getElementById('result');
+            
+            statusEl.textContent = `[${date}] 날짜의 모든 데이터를 전수 조사 중입니다...`;
+            resultEl.innerHTML = "";
+
+            try {
+                // 1. 해당 날짜의 모든 활동 기록을 가져옵니다 (인덱스 없이 전수 조사)
+                const snap = await getDocs(collection(db, 'activity_records'));
+                let totalFound = 0;
+                let html = "";
+
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    
+                    // 날짜가 일치하는 모든 레코드를 검사
+                    if (data.date === date) {
+                        // 쁘레시디움 이름이 일부라도 포함되거나 일치하는지 확인 (대소문자/공백 무시)
+                        const searchPr = pr.toLowerCase().replace(/\s/g, '');
+                        const dbPr = (data.presidiumName || data.presidium || '').toLowerCase().replace(/\s/g, '');
+                        
+                        const isPrRelated = dbPr.includes(searchPr) || searchPr === "";
+
+                        if (isPrRelated) {
+                            totalFound++;
+                            const isLegacy = !data.presidiumName;
+                            html += `
+                                <div class="record-card ${isLegacy ? 'ghost' : ''}">
+                                    <div><strong>문서 ID:</strong> <span class="record-id">${doc.id}</span> ${isLegacy ? '(⚠️ 옛날 규격)' : '(✅ 최신 규격)'}</div>
+                                    <div><strong>소속:</strong> ${data.churchName || data.church} / ${data.presidiumName || data.presidium}</div>
+                                    <div><strong>단원명:</strong> ${data.memberName} (${data.memberId || 'ID 없음'})</div>
+                                    <div><strong>날짜/회차:</strong> ${data.date} / ${data.session}회</div>
+                                    <div class="counts"><strong>활동 수치:</strong> ${JSON.stringify(data.counts)}</div>
+                                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                                        전체 필드값: churchName:${data.churchName}, church:${data.church}, presidiumName:${data.presidiumName}, presidium:${data.presidium}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+
+                statusEl.textContent = `분석 완료! 총 ${totalFound}개의 관련 레코드를 찾았습니다.`;
+                resultEl.innerHTML = html || `<p style="color:red;">"${date}" 날짜에 "${pr}"와 관련된 데이터가 하나도 없습니다.</p>`;
+                
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = "오류 발생: " + error.message;
+            }
+        };
+
+        // [전수 조사] 버튼 로직 추가
+        document.getElementById('btnFullScan').onclick = async () => {
+            const statusEl = document.getElementById('status');
+            const resultEl = document.getElementById('result');
+            statusEl.textContent = `DB의 모든 활동 기록을 전수 조사 중입니다. 잠시만 기다려 주세요...`;
+            resultEl.innerHTML = "";
+            try {
+                const snap = await getDocs(collection(db, 'activity_records'));
+                let allRecords = [];
+                snap.forEach(doc => allRecords.push({ id: doc.id, ...doc.data() }));
+                
+                // 최신 날짜순으로 정렬
+                allRecords.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+                let html = "";
+                allRecords.forEach(data => {
+                    const isLegacy = !data.presidiumName;
+                    html += `
+                        <div class="record-card ${isLegacy ? 'ghost' : ''}">
+                            <div><strong>문서 ID:</strong> <span class="record-id">${data.id}</span> ${isLegacy ? '(⚠️ 옛날 규격)' : '(✅ 최신 규격)'}</div>
+                            <div><strong>소속:</strong> ${data.churchName || data.church} / ${data.presidiumName || data.presidium}</div>
+                            <div><strong>단원명:</strong> ${data.memberName} (${data.memberId || 'ID 없음'})</div>
+                            <div><strong>날짜/회차:</strong> ${data.date} / ${data.session}회</div>
+                            <div class="counts"><strong>활동 수치:</strong> ${JSON.stringify(data.counts)}</div>
+                        </div>
+                    `;
+                });
+                statusEl.textContent = `전수 조사 완료! 총 ${allRecords.length}개의 레코드를 찾았습니다.`;
+                resultEl.innerHTML = html || "<p>DB에 활동 기록이 하나도 없습니다.</p>";
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = "오류 발생: " + error.message;
+            }
+        };
+
+        initAuthObserver(async (user, profile) => {
+            if (!profile) {
+                document.getElementById('status').textContent = "로그인이 필요합니다.";
+                return;
+            }
+        });
+    </script>
+    <br>
+    <button onclick="location.href='dashboard.html'">대시보드로 돌아가기</button>
+</body>
+</html>
