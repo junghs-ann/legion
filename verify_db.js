@@ -25,11 +25,12 @@ https.get(URL, (res) => {
                     const fields = doc.fields;
                     const name = fields.name ? fields.name.stringValue : '이름없음';
                     const church = fields.churchName ? fields.churchName.stringValue : (fields.church ? fields.church.stringValue : '성당미정');
+                    const curia = fields.curiaName ? fields.curiaName.stringValue : (fields.curia ? fields.curia.stringValue : '꾸리아미정');
                     const pr = fields.presidiumName ? fields.presidiumName.stringValue : (fields.presidium ? fields.presidium.stringValue : 'Pr미정');
                     const createdAt = fields.createdAt ? fields.createdAt.timestampValue : 'N/A';
                     
                     console.log(`[${index + 1}] 성명: ${name}`);
-                    console.log(`    소속: ${church} / ${pr}`);
+                    console.log(`    소속: ${church} > ${curia} > ${pr}`);
                     console.log(`    등록일: ${createdAt}`);
                     console.log(`    문서ID: ${doc.name.split('/').pop()}`);
                     console.log(`--------------------------------------------------`);

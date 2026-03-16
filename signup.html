@@ -893,6 +893,12 @@
                 signature: finalSignature // 서명 이미지 보관
             };
 
+            // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
+            if (userData.role !== 'admin' && (!userData.churchName || !userData.curiaName || !userData.presidiumName)) {
+                await window.showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 가입이 차단됩니다.');
+                return;
+            }
+
             console.log("Attempting Signup with:", userData);
 
             try {

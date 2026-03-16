@@ -526,6 +526,7 @@
             padding-left: 2px;
             min-height: 1.2rem;
         }
+
         .guide-text b {
             color: #2e7d32;
         }
@@ -940,7 +941,7 @@
                 if (presidium) {
                     // 데이터가 아직 로드되지 않았거나 현재 선택된 Pr의 데이터가 아닌 경우 로드
                     await updateSessionList();
-                    
+
                     const existing = attendanceList.find(a => a.date === date);
                     if (existing) {
                         sessionInput.value = existing.session;
@@ -970,7 +971,7 @@
             const church = churchSelect.value;
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) { curiaSelect.disabled = true; return; }
-            
+
             // 쁘레시디움 기본 정보에서 해당 성당에 속한 꾸리아만 추출
             const curias = [...new Set(presidiaList
                 .filter(p => (p.churchName === church || p.church === church))
@@ -1003,7 +1004,7 @@
             if (!curia) return;
 
             // 쁘레시디움 기본 정보에서 해당 성당/꾸리아에 속한 쁘레시디움만 추출
-            const filtered = presidiaList.filter(p => 
+            const filtered = presidiaList.filter(p =>
                 (p.churchName === church || p.church === church) &&
                 (p.curiaName === curia || p.curia === curia) &&
                 (p.presidiumName || p.presidium || p.name || '').includes(filterText)
@@ -1084,7 +1085,7 @@
 
                 currentSessionCacheKey = cacheKey;
                 const sortedRecords = attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
-                
+
                 // [추가] 최종 회차 안내 업데이트 (목록 로딩 즉시 반영)
                 const guideEl = document.getElementById('sessionGuide');
                 if (guideEl) {
@@ -1240,7 +1241,7 @@
                 // 성당 정보가 일치하는지 한 번 더 JS에서 체크 (이중 필드 대응)
                 officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(o => (o.churchName === church || o.church === church));
-                
+
                 membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(m => (m.churchName === church || m.church === church));
 
@@ -1501,9 +1502,9 @@
                         memberAttendance: `${document.getElementById('memberAttendanceCount').textContent} / ${document.getElementById('totalMemberCount').textContent}`
                     },
                     updatedAt: serverTimestamp()
-            };
+                };
 
-            if (currentEditingId) {
+                if (currentEditingId) {
                     await updateDoc(doc(db, 'attendance_list', currentEditingId), newData);
                 } else {
                     const docRef = await addDoc(collection(db, 'attendance_list'), {

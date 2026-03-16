@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>성당 데이터 누락 진단기</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .status-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 15px; margin-bottom: 20px; }
+        .collection-section { margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; }
+        .collection-name { font-weight: bold; font-size: 1.2rem; color: #2980b9; margin-bottom: 10px; display: block; }
+        .error-list { list-style: none; padding: 0; }
+        .error-item { background: #fff5f5; border: 1px solid #feb2b2; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .error-id { font-family: monospace; color: #c53030; font-weight: bold; }
+        .error-details { font-size: 0.9rem; color: #4a5568; }
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .badge-missing { background: #fed7d7; color: #c53030; }
+        .success-msg { color: #27ae60; font-weight: bold; }
+        .btn-scan { background: #3498db; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 1rem; transition: background 0.2s; }
+        .btn-scan:hover { background: #2980b9; }
+        .btn-scan:disabled { background: #bdc3c7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 성당(Church) 데이터 실종 추적기</h1>
+        <p>시스템 내의 모든 데이터를 전수 조사하여 <strong>성당 정보(church, churchName)</strong>가 누락된 문서를 찾아냅/니다.</p>
+
+        <div class="status-box">
+            <span id="scanStatus">조사 시작 버튼을 눌러주세요.</span>
+        </div>
+
+        <button id="btnScan" class="btn-scan">실시간 전수 조사 시작</button>
+
+        <div id="resultsArea"></div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from "./firebase-config.js";
+        import { initAuthObserver } from "./auth.js";
+
+        const collectionsToScan = [
+            { id: 'presidia_list', name: '쁘레시디움 목록' },
+            { id: 'members_list', name: '단원 명부' },
+            { id: 'officers_list', name: '간부 명단' },
+            { id: 'attendance_list', name: '출석부' },
+            { id: 'activity_records', name: '활동 기록' },
+            { id: 'accounting_transactions', name: '회계 거래 내역' },
+            { id: 'events_list', name: '행사 목록' },
+            { id: 'praetorium_list', name: '쁘레또리움 관리' },
+            { id: 'auxiliary_members_list', name: '협조단원 명부' },
+            { id: 'adjutorium_members_list', name: '아듀또리움 관리' }
+        ];
+
+        const btnScan = document.getElementById('btnScan');
+        const scanStatus = document.getElementById('scanStatus');
+        const resultsArea = document.getElementById('resultsArea');
+
+        btnScan.onclick = async () => {
+            btnScan.disabled = true;
+            resultsArea.innerHTML = "";
+            let totalMissingCount = 0;
+
+            for (const coll of collectionsToScan) {
+                scanStatus.textContent = `${coll.name} (${coll.id}) 수색 중...`;
+                try {
+                    const snap = await getDocs(collection(db, coll.id));
+                    const missing = [];
+                    
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        const c = (data.churchName || data.church || '').toString().trim();
+                        const cr = (data.curiaName || data.curia || '').toString().trim();
+                        const pr = (data.presidiumName || data.presidium || '').toString().trim();
+                        
+                        // [🚨 강화된 검증] 성당, 꾸리아, 쁘레시디움 중 하나라도 없으면 '비정상'으로 간주 (v16.86)
+                        if (!c || !cr || !pr) {
+                            missing.push({ 
+                                id: doc.id, 
+                                data: data,
+                                missingInfo: [!c && '성당', !cr && '꾸리아', !pr && '쁘레시디움'].filter(Boolean).join(', ')
+                            });
+                        }
+                    });
+
+                    const section = document.createElement('div');
+                    section.className = 'collection-section';
+                    
+                    let html = `<span class="collection-name">${coll.name} <small>(${coll.id})</small></span>`;
+                    
+                    if (missing.length > 0) {
+                        totalMissingCount += missing.length;
+                        html += `<ul class="error-list">`;
+                        missing.forEach(m => {
+                            const nameInfo = m.data.name || m.data.memberName || m.data.presidium || m.data.presidiumName || '-';
+                            const dateInfo = m.data.date || m.data.appointmentDate || m.data.eventDate || m.data.admissionDate || '';
+                            html += `
+                                <li class="error-item">
+                                    <div class="error-details">
+                                        <span class="error-id">[ID: ${m.id}]</span> 
+                                        <strong>${nameInfo}</strong> ${dateInfo ? '(' + dateInfo + ')' : ''}
+                                    </div>
+                                    <span class="badge badge-missing">${m.missingInfo} 누락</span>
+                                </li>
+                            `;
+                        });
+                        html += `</ul>`;
+                    } else {
+                        html += `<p class="success-msg">✅ 조직 정보(성당/꾸리아/Pr)가 모두 완벽합니다.</p>`;
+                    }
+                    
+                    section.innerHTML = html;
+                    resultsArea.appendChild(section);
+
+                } catch (err) {
+                    console.error(err);
+                    const errSection = document.createElement('p');
+                    errSection.style.color = "red";
+                    errSection.textContent = `⚠️ ${coll.name} 로드 중 오류: ${err.message}`;
+                    resultsArea.appendChild(errSection);
+                }
+            }
+
+            scanStatus.textContent = `조사 완료! 총 ${totalMissingCount}개의 데이터 결함을 발견했습니다.`;
+            btnScan.disabled = false;
+        };
+
+        initAuthObserver((user, profile) => {
+            if (!profile) {
+                scanStatus.textContent = "로그인이 필요합니다.";
+                btnScan.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -292,8 +292,8 @@
                             <label>쁘레시디움 (Pr.)</label>
                             <div class="search-container" id="presidiumSearchContainer"
                                 style="position: relative; width: 100%;">
-                                <input type="text" id="presidiumInput" name="presidiumName" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
-                                    disabled class="nav-enter"
+                                <input type="text" id="presidiumInput" name="presidiumName" placeholder="쁘레시디움 입력 또는 선택"
+                                    autocomplete="off" disabled class="nav-enter"
                                     style="width: 100%; box-sizing: border-box; padding: 12px; border: 2px solid #d4a017 !important; border-radius: 6px !important; box-shadow: 0 0 5px rgba(212, 160, 23, 0.2) !important; background-color: #f9f9f9;">
                                 <div id="presidiumDropdown" class="custom-dropdown"
                                     style="display: none; position: absolute; width: 100%; top: 100%; left: 0; background: white; border: 1px solid #d4a017; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
@@ -303,10 +303,11 @@
                     </div>
                     <!-- Action Buttons for Unit Info -->
                     <div class="form-btn-group" style="margin-top: 15px; justify-content: flex-end; gap: 8px;">
-                        <button type="button" id="btnNewForm" class="btn-submit" 
-                            style="background-color: #007bff; color: white; border: none;"><i class="fas fa-plus"></i> 신규 입력</button>
+                        <button type="button" id="btnNewForm" class="btn-submit"
+                            style="background-color: #007bff; color: white; border: none;"><i class="fas fa-plus"></i>
+                            신규 입력</button>
                         <button type="button" id="btnInquiryMember" class="btn-submit btn-secondary">조 회</button>
-                        <button type="button" id="btnViewAllDB" class="btn-submit" 
+                        <button type="button" id="btnViewAllDB" class="btn-submit"
                             style="background-color: #007bff; color: white; border: none;">전체 목록 진단</button>
                     </div>
                 </div>
@@ -526,8 +527,8 @@
                     return;
                 }
 
-                const filtered = storedPresidia.filter(p => 
-                    (p.churchName || '').trim() === selectedChurch && 
+                const filtered = storedPresidia.filter(p =>
+                    (p.churchName || '').trim() === selectedChurch &&
                     (p.curiaName || '').trim() === selectedCuria
                 );
                 currentPresidia = [...new Set(filtered.map(p => (p.presidiumName || '').trim()).filter(Boolean))].sort();
@@ -570,7 +571,7 @@
                     if (!auth.currentUser) {
                         window.location.href = "index.html";
                     }
-                }, 2000); 
+                }, 2000);
                 return;
             }
             currentUserProfile = profile;
@@ -592,8 +593,8 @@
 
                 // 1. Set Church (Match trimmed)
                 if (profileChurch) {
-                    for(let i=0; i<churchSelect.options.length; i++) {
-                        if(churchSelect.options[i].value.trim() === profileChurch) {
+                    for (let i = 0; i < churchSelect.options.length; i++) {
+                        if (churchSelect.options[i].value.trim() === profileChurch) {
                             churchSelect.selectedIndex = i;
                             break;
                         }
@@ -606,8 +607,8 @@
                 // 2. Set Curia (Sequential wait for cascading churchSelect change)
                 setTimeout(() => {
                     if (profileCuria) {
-                        for(let i=0; i<curiaSelect.options.length; i++) {
-                            if(curiaSelect.options[i].value.trim() === profileCuria) {
+                        for (let i = 0; i < curiaSelect.options.length; i++) {
+                            if (curiaSelect.options[i].value.trim() === profileCuria) {
                                 curiaSelect.selectedIndex = i;
                                 break;
                             }
@@ -630,34 +631,34 @@
                 }, 200);
             }
 
-                            if (isMember) {
-                                document.getElementById('btnNewRegister').style.display = 'none';
-                                document.getElementById('btnInquiryMember').style.display = 'none';
+            if (isMember) {
+                document.getElementById('btnNewRegister').style.display = 'none';
+                document.getElementById('btnInquiryMember').style.display = 'none';
 
-                                // [Emergency Fix] Simplified query to avoid 400 Bad Request (Missing Index)
-                                try {
-                                    const qSnapshot = await getDocs(collection(db, "members_list"));
-                                    const myDoc = qSnapshot.docs.find(docSnap => {
-                                        const d = docSnap.data();
-                                        const dName = (d.name || '').trim();
-                                        const dPr = (d.presidiumName || d.presidium || '').trim();
-                                        const targetName = (profile.memberName || profile.name || user.displayName || "").trim();
-                                        const targetPr = (profile.presidiumName || profile.presidium || "").trim();
-                                        return dName === targetName && dPr === targetPr;
-                                    });
+                // [Emergency Fix] Simplified query to avoid 400 Bad Request (Missing Index)
+                try {
+                    const qSnapshot = await getDocs(collection(db, "members_list"));
+                    const myDoc = qSnapshot.docs.find(docSnap => {
+                        const d = docSnap.data();
+                        const dName = (d.name || '').trim();
+                        const dPr = (d.presidiumName || d.presidium || '').trim();
+                        const targetName = (profile.memberName || profile.name || user.displayName || "").trim();
+                        const targetPr = (profile.presidiumName || profile.presidium || "").trim();
+                        return dName === targetName && dPr === targetPr;
+                    });
 
-                                    if (myDoc) {
-                                        const myData = { id: myDoc.id, ...myDoc.data() };
-                                        loadMemberDataForEdit(myData);
-                                        document.querySelector('.form-title').textContent = '내 정보 관리';
-                                    } else {
-                                        // Silent fail or minimal notice for member view if not found
-                                        console.log("No matching member record found for this user account.");
-                                    }
-                                } catch (err) {
-                                    console.error("Self load error:", err);
-                                }
-                            }
+                    if (myDoc) {
+                        const myData = { id: myDoc.id, ...myDoc.data() };
+                        loadMemberDataForEdit(myData);
+                        document.querySelector('.form-title').textContent = '내 정보 관리';
+                    } else {
+                        // Silent fail or minimal notice for member view if not found
+                        console.log("No matching member record found for this user account.");
+                    }
+                } catch (err) {
+                    console.error("Self load error:", err);
+                }
+            }
 
 
             if (window.initCommonMenus) {
@@ -761,7 +762,7 @@
                     li.style.cursor = 'pointer';
                     li.style.display = 'flex';
                     li.style.justifyContent = 'space-between';
-                    
+
                     // [Compatibility] Display regardless of old (church) or new (churchName) tags
                     const displayChurch = (m.churchName || m.church || '성당미정').trim();
                     const displayPresidium = (m.presidiumName || m.presidium || m.name || 'Pr.미정').trim();
@@ -803,9 +804,9 @@
                     const dChurch = (d.churchName || d.church || '').toString().trim();
                     const dCuria = (d.curiaName || d.curia || '').toString().trim();
                     const dPr = (d.presidiumName || d.presidium || d.name || '').toString().trim();
-                    
+
                     const isMatch = dChurch === churchName && dCuria === curiaName && dPr === presidiumName;
-                    
+
                     if (!isMatch && d.name === "김지수") {
                         console.log("🔍 [김지수 단원 불일치 분석]:", {
                             DB성당: dChurch, 검색성당: churchName,
@@ -821,7 +822,7 @@
                     empty: filteredDocs.length === 0,
                     forEach: (callback) => filteredDocs.forEach(callback)
                 };
-                
+
                 await displaySearchResults(mockSnapshot);
             } catch (err) {
                 console.error("Inquiry error:", err);
@@ -835,17 +836,17 @@
 
             try {
                 console.log("--- [DB 정밀 진단 시작] ---");
-                
+
                 // 1. Members Check (Force Server)
                 console.log("1. 'members_list' 컬렉션 확인 중 (서버 직접 조회)...");
-                const memberSnap = await getDocs(collection(db, "members_list")); 
+                const memberSnap = await getDocs(collection(db, "members_list"));
                 // Note: Standard getDocs usually fetches from server, but let's be explicit in logs
                 console.log(`=> 'members_list' 결과: ${memberSnap.size}건 발견`);
-                
+
                 if (memberSnap.size > 0) {
                     console.log("첫 번째 문서 샘플:", memberSnap.docs[0].data());
                 }
-                
+
                 // 2. Users Check
                 console.log("2. 'users' 컬렉션 확인 중...");
                 const userSnap = await getDocs(query(collection(db, "users")));
@@ -868,7 +869,7 @@
                 }
 
                 await displaySearchResults(memberSnap);
-                
+
                 if (!memberSnap.empty) {
                     alert(`${memberSnap.size}명의 단원을 찾았습니다. 리스트를 확인해주세요.`);
                 } else {
@@ -905,7 +906,7 @@
         function loadMemberDataForEdit(member) {
             console.log("📝 [데이터 로드 시작] 선택된 단원:", member);
             const form = document.getElementById('memberRegisterForm');
-            
+
             // 1. Reset specific internal attributes
             form.setAttribute('data-edit-id', member.id);
             form.setAttribute('data-original-status', member.status || '');
@@ -945,7 +946,7 @@
             const presidiumVal = (member.presidiumName || member.presidium || member.name || '').trim();
 
             if (document.getElementById('churchSelect')) document.getElementById('churchSelect').value = churchVal;
-            
+
             // Manual trigger of chain reactions for dropdowns if needed
             // But for edit, we often just want them visible
             if (document.getElementById('curiaSelect')) {
@@ -963,7 +964,7 @@
             document.querySelector('.form-title').textContent = '단원정보 수정';
             const submitBtn = document.querySelector('.form-btn-group button[type="submit"]');
             if (submitBtn) submitBtn.textContent = '수 정';
-            
+
             updateLeaveDateState();
 
             const role = (currentUserProfile.role || '').toLowerCase();
@@ -974,7 +975,7 @@
         // Form Submission (Firestore)
         document.getElementById('memberRegisterForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const formData = new FormData(this);
             const rawData = Object.fromEntries(formData.entries());
 
@@ -1012,7 +1013,7 @@
             try {
                 console.log("🚀 [저장 프로세스 시작] 수집된 데이터:", memberData);
                 memberData.updatedAt = serverTimestamp();
-                
+
                 if (editId) {
                     console.log("📝 수정 시도 중... ID:", editId);
                     await updateDoc(doc(db, "members_list", editId), memberData);
@@ -1023,9 +1024,9 @@
                     console.log("🆕 신규 등록 시도 중 (members_list)...");
                     const docRef = await addDoc(collection(db, "members_list"), memberData);
                     console.log("✅ 신규 등록 성공! 서버 생성 ID:", docRef.id);
-                    
+
                     await syncUserAccountStatus(memberData);
-                    
+
                     // [Anti-Duplicate Fix] Switch to Edit mode immediately after first save
                     this.setAttribute('data-edit-id', docRef.id);
                     this.setAttribute('data-original-status', memberData.status || '');
@@ -1045,7 +1046,7 @@
         // [New Entry] Reset form for fresh registration (Keep Org Info)
         document.getElementById('btnNewForm').addEventListener('click', () => {
             const form = document.getElementById('memberRegisterForm');
-            
+
             // 1. Capture current Org Info to keep
             const curChurch = document.getElementById('churchSelect').value;
             const curCuria = document.getElementById('curiaSelect').value;
@@ -1083,7 +1084,7 @@
                 const qPr = memberData.presidiumName;
 
                 const querySnapshot = await getDocs(query(usersRef, where("name", "==", qName)));
-                
+
                 // Client-side filtering for better flexibility with field names (church vs churchName)
                 const userDoc = querySnapshot.docs.find(d => {
                     const data = d.data();
@@ -1102,7 +1103,7 @@
                         updateData.status = 'active';
                         updateData.leaveDate = null;
                     }
-                    
+
                     if (Object.keys(updateData).length > 0) {
                         await updateDoc(doc(db, "users", userDoc.id), updateData);
                         console.log("User account synced successfully.");

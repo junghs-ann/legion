@@ -1210,18 +1210,25 @@
                 curia: curiaSelect.value,
                 presidiumName: document.getElementById('presidiumHidden').value,
                 presidium: document.getElementById('presidiumHidden').value,
-                category: document.getElementById('category').value,
-                type: document.getElementById('type').value,
-                eventDate: document.getElementById('eventDate').value,
-                eventName: document.getElementById('eventNameHidden').value,
-                organizer: document.getElementById('organizer').value,
-                venue: document.getElementById('venue').value,
-                attendees: attendees,
-                totalCount: totalCount.value,
-                attendanceCount: attendanceCount.value,
-                attendeeNames: attendeeNames.value,
-                updatedAt: serverTimestamp()
             };
+
+            // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
+            if (!eventData.churchName || !eventData.curiaName || !eventData.presidiumName) {
+                await showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 저장이 차단되었습니다.');
+                return;
+            }
+
+            eventData.category = document.getElementById('category').value;
+            eventData.type = document.getElementById('type').value;
+            eventData.eventDate = document.getElementById('eventDate').value;
+            eventData.eventName = document.getElementById('eventNameHidden').value;
+            eventData.organizer = document.getElementById('organizer').value;
+            eventData.venue = document.getElementById('venue').value;
+            eventData.attendees = attendees;
+            eventData.totalCount = totalCount.value;
+            eventData.attendanceCount = attendanceCount.value;
+            eventData.attendeeNames = attendeeNames.value;
+            eventData.updatedAt = serverTimestamp();
 
             if (!eventData.eventName) {
                 await showGlobalAlert('행사명을 입력하거나 선택해 주세요.');

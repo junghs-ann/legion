@@ -834,6 +834,10 @@
         }, () => { window.close(); });
 
         async function generateReport(church, pr, start, end) {
+            if (!church || !pr || !start || !end) {
+                window.showCustomAlert('[데이터 무결성 오류]\n필수 매개변수(성당, Pr, 기간)가 누락되었습니다.').then(() => window.close());
+                return;
+            }
             const getField = (obj, fields) => {
                 if (!obj) return null;
                 for (let f of fields) if (obj[f] !== undefined && obj[f] !== null) return obj[f];
@@ -848,8 +852,10 @@
             const targetChurchClean = clean(church);
             const targetPrClean = clean(pr);
             const isOrgMatch = (churchVal, prVal) => {
-                if (clean(prVal) !== targetPrClean) return false;
-                return !churchVal || clean(churchVal) === '' || clean(churchVal) === targetChurchClean;
+                const cc = clean(churchVal), cp = clean(prVal);
+                // [🚨 철벽 보수] 성당, 쁘레시디움 정보 중 하나라도 비어있으면 매칭 실패 (v16.86)
+                if (!cc || !cp) return false;
+                return cp === targetPrClean && cc === targetChurchClean;
             };
 
             const targetChurch = t(church);
@@ -1144,9 +1150,10 @@
                 // 협조단원 집계
                 const targetActiveIds = new Set(targetMems.map(m => String(m.id)));
                 const isMatch = (a) => {
-                    if (isOrgMatch(a.church, a.presidium)) return true;
-                    if (targetActiveIds.has(String(a.activeMemberId))) return true;
-                    return clean(a.presidium) === targetPrClean; // 최후의 보루: Pr명만 같아도 포함
+                    // [🚨 철벽 보수] 꼼수(Pr명만 같으면 통과) 제거, 반드시 성당/쁘레시디움 3박자 일치해야 함 (v16.86)
+                    if (isOrgMatch(a.church || a.churchName, a.presidium || a.presidiumName)) return true;
+                    if (a.activeMemberId && targetActiveIds.has(String(a.activeMemberId))) return true;
+                    return false;
                 };
 
                 const getAuxStat = (date, isEnd = false, leaveRef = null) => ams.filter(a => {

@@ -1140,7 +1140,10 @@
                 await window.showGlobalAlert("권한이 없어 저장할 수 없습니다.");
                 return;
             }
-            if (!filters.church || !filters.curia || !filters.presidium) return;
+            if (!filters.church || !filters.curia || !filters.presidium) {
+                await window.showGlobalAlert("⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 저장이 차단되었습니다.");
+                return;
+            }
 
             try {
                 // 1. Save Initial Balance to accounting_summaries

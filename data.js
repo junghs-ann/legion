@@ -26,8 +26,8 @@ function getStoredPresidia() {
 // Helper to get Churches
 export function getChurches() {
     const data = getStoredPresidia();
-    // Unique Church Names (Handle both churchName and church fields, trim whitespace)
-    const churches = data.map(p => (p.churchName || p.church || '').toString().trim()).filter(Boolean);
+    // Unique Church Names (Strictly use churchName field)
+    const churches = data.map(p => (p.churchName || '').toString().trim()).filter(Boolean);
     // Remove placeholders and duplicates
     return [...new Set(churches.filter(c => c !== '성당 선택' && c !== ''))].sort();
 }
@@ -38,13 +38,13 @@ export function getCuriae(churchName) {
     const data = getStoredPresidia();
     const targetChurch = (churchName || '').toString().trim();
 
-    // Filter by Church, then get Unique Curia Names
+    // Filter by Church, then get Unique Curia Names (Strictly use curiaName)
     const curiae = data
         .filter(p => {
-            const cName = (p.churchName || p.church || '').toString().trim();
+            const cName = (p.churchName || '').toString().trim();
             return cName === targetChurch;
         })
-        .map(p => (p.curiaName || p.curia || '').toString().trim())
+        .map(p => (p.curiaName || '').toString().trim())
         .filter(Boolean);
     return [...new Set(curiae.filter(c => c !== '꾸리아 선택' && c !== ''))].sort();
 }
@@ -59,15 +59,15 @@ export function getPresidia(churchName, curiaName) {
 
     return data
         .filter(p => {
-            const cName = (p.churchName || p.church || '').toString().trim();
-            const cuName = (p.curiaName || p.curia || '').toString().trim();
+            const cName = (p.churchName || '').toString().trim();
+            const cuName = (p.curiaName || '').toString().trim();
             const isMatch = cName === targetChurch && cuName === targetCuria;
             const isNotDissolved = !p.dissolutionDate || p.dissolutionDate > today;
             return isMatch && isNotDissolved;
         })
         .map(p => ({
             id: p.id,
-            name: (p.presidiumName || p.name || p.presidium || '').toString().trim()
+            name: (p.presidiumName || '').toString().trim()
         }))
         .filter(p => p.name && p.name !== '쁘레시디움 선택')
         .sort((a, b) => a.name.localeCompare(b.name));

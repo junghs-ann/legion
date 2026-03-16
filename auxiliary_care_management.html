@@ -933,8 +933,11 @@
             const session = sessionInput.value;
             const date = dateInput.value;
 
-            if (!pr || !session || !date) {
-                await showGlobalAlert('회차 정보를 확인해 주세요.');
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+
+            if (!church || !curia || !pr || !session || !date) {
+                await showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움, 회차 정보를 모두 확인해 주세요.');
                 return;
             }
 

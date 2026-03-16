@@ -11,7 +11,8 @@
     <style>
         /* Form specific styles */
         .register-form-container {
-            background: rgba(255, 255, 248, 0.98); /* 배포 확인용: 아주 미세한 미색 적용 */
+            background: rgba(255, 255, 248, 0.98);
+            /* 배포 확인용: 아주 미세한 미색 적용 */
             padding: 35px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -78,7 +79,8 @@
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-wrap: wrap; /* 가로 가용 공간 부족 시 자동 줄바꿈 */
+            flex-wrap: wrap;
+            /* 가로 가용 공간 부족 시 자동 줄바꿈 */
         }
 
         .church-name-group select,
@@ -163,9 +165,17 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .btn-premium-save { background-color: var(--primary-color); }
-        .btn-premium-delete { background-color: #e53e3e; }
-        .btn-premium-close { background-color: #718096; }
+        .btn-premium-save {
+            background-color: var(--primary-color);
+        }
+
+        .btn-premium-delete {
+            background-color: #e53e3e;
+        }
+
+        .btn-premium-close {
+            background-color: #718096;
+        }
 
         @media (max-width: 768px) {
             .register-form-container {
@@ -175,13 +185,14 @@
             }
 
             .form-grid {
-                grid-template-columns: 1fr !important; /* 모바일에서 무조건 1열 */
+                grid-template-columns: 1fr !important;
+                /* 모바일에서 무조건 1열 */
                 gap: 15px;
             }
 
             /* 복합 입력 그룹 수직 스택 전환 */
-            .church-name-group, 
-            .presidium-name-group, 
+            .church-name-group,
+            .presidium-name-group,
             .spiritual-director-group {
                 flex-direction: column !important;
                 align-items: stretch !important;
@@ -253,7 +264,8 @@
         .input-group-relative {
             position: relative;
             flex: 1;
-            min-width: 200px; /* 입력창이 너무 작아지지 않도록 최소 너비 확보 */
+            min-width: 200px;
+            /* 입력창이 너무 작아지지 않도록 최소 너비 확보 */
         }
 
         .unique-number-group {
@@ -287,7 +299,7 @@
                 justify-content: flex-start;
             }
         }
-        
+
         /* 커스텀 모달 스타일 추가 */
         .custom-modal-overlay {
             position: fixed;
@@ -451,7 +463,8 @@
 
     <div class="main-content">
         <div class="register-form-container">
-            <button type="button" class="btn-close-x" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i></button>
+            <button type="button" class="btn-close-x" onclick="location.href='dashboard.html'"><i
+                    class="fas fa-times"></i></button>
             <h2 class="form-title">쁘레시디움 기본정보 관리</h2>
             <form id="presidiumForm" autocomplete="one-time-code">
                 <div class="form-grid">
@@ -482,7 +495,8 @@
                                     placeholder="Pr. 이름을 입력하세요" autocomplete="one-time-code">
                                 <ul id="presidiumCustomList" class="custom-dropdown"></ul>
                             </div>
-                            <button type="button" id="btnView" class="btn-toggle-church" style="background-color: var(--secondary-color);">조회</button>
+                            <button type="button" id="btnView" class="btn-toggle-church"
+                                style="background-color: var(--secondary-color);">조회</button>
                             <div class="unique-number-group">
                                 <label>고유번호:</label>
                                 <input type="text" name="uniqueNumber" placeholder="고유번호" class="input-unique-number"
@@ -563,8 +577,10 @@
 
                 <div class="btn-sticky-group">
                     <button type="submit" class="btn-premium btn-premium-save"><i class="fas fa-save"></i>저 장</button>
-                    <button type="button" id="btnDelete" class="btn-premium btn-premium-delete" style="display: none;"><i class="fas fa-trash"></i>삭 제</button>
-                    <button type="button" class="btn-premium btn-premium-close" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i>닫 기</button>
+                    <button type="button" id="btnDelete" class="btn-premium btn-premium-delete"
+                        style="display: none;"><i class="fas fa-trash"></i>삭 제</button>
+                    <button type="button" class="btn-premium btn-premium-close"
+                        onclick="location.href='dashboard.html'"><i class="fas fa-times"></i>닫 기</button>
                 </div>
             </form>
         </div>
@@ -895,11 +911,11 @@
                                 input.value = record[key];
                             }
                         });
-                        
+
                         // Ensure ID is set for update/delete
                         const recId = document.getElementById('recordId');
                         if (recId) recId.value = record.id;
-                        
+
                         if (btnDelete) btnDelete.style.display = 'inline-block';
                         form.dataset.currentId = record.id; // ✅ 폼 객체에 ID를 확실하게 저장
                         console.log("📍 조회 완료 - ID:", record.id);
@@ -1030,7 +1046,7 @@
                                     const currentId = document.getElementById('recordId').value;
                                     const datasetId = form.dataset.currentId;
                                     const currentUnique = document.querySelector('input[name="uniqueNumber"]').value.trim();
-                                    
+
                                     let targetId = currentId || datasetId;
 
                                     console.log("🕵️ 삭제 시도 - ID(hidden):", currentId, "ID(dataset):", datasetId, "Unique:", currentUnique);
