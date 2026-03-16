@@ -1043,7 +1043,7 @@
                     memSnapN, memSnapO,
                     offSnapN, offSnapO,
                     recSnapN, recSnapO,
-                    transSnapN, transSnapO,
+                    transSnapN,
                     eventSnapN, eventSnapO,
                     councilSnap,
                     adjSnapN, adjSnapO,
@@ -1063,7 +1063,6 @@
                     getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'activity_records'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'accounting_transactions'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'events_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'council_attendance_list'), where('church', '==', church))),
@@ -1090,12 +1089,12 @@
                 allMem = mergeDocs(memSnapN, memSnapO);
                 allOff = mergeDocs(offSnapN, offSnapO);
                 allRec = mergeDocs(recSnapN, recSnapO);
-                allTrans = mergeDocs(transSnapN, transSnapO);
                 allEv = mergeDocs(eventSnapN, eventSnapO);
                 councilAtt = councilSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 allAdj = mergeDocs(adjSnapN, adjSnapO);
                 allPret = mergeDocs(pretSnapN, pretSnapO);
                 allAux = mergeDocs(auxSnapN, auxSnapO);
+                allTrans = transSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 summarySnap.docs.forEach(d => {
                     allSummaries[d.id] = d.data();
