@@ -1022,6 +1022,10 @@
             const t = (val) => String(val || '').trim();
             const targetPr = t(pr);
 
+            // [변수 선언 추가] ReferenceError 방지를 위한 명시적 선언
+            let presList = [], allAtt = [], allMem = [], allOff = [], allRec = [], allTrans = [], allEv = [], councilAtt = [], allAdj = [], allPret = [], allAux = [];
+            let allSummaries = {}, allReportStatus = [];
+
             // --- Firestore 데이터 로딩 (병렬 쿼리로 신구 필드명 모두 지원) ---
             try {
                 const [
@@ -1036,7 +1040,8 @@
                     adjSnapN, adjSnapO,
                     pretSnapN, pretSnapO,
                     auxSnapN, auxSnapO,
-                    summarySnap
+                    summarySnap,
+                    statusSnap
                 ] = await Promise.all([
                     getDocs(query(collection(db, 'presidia_list'), where('name', '==', targetPr))),
                     getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
@@ -1058,7 +1063,8 @@
                     getDocs(query(collection(db, 'praetorium_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'auxiliary_members_list'), where('presidium', '==', targetPr))),
-                    getDocs(collection(db, 'accounting_summaries'))
+                    getDocs(collection(db, 'accounting_summaries')),
+                    getDocs(collection(db, 'business_report_status'))
                 ]);
 
                 // 데이터 병합 및 중복 제거 유틸리티
@@ -1084,6 +1090,7 @@
                 summarySnap.docs.forEach(d => {
                     allSummaries[d.id] = d.data();
                 });
+                allReportStatus = statusSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             } catch (err) {
                 console.error("Firestore loading error:", err);
             }
@@ -1419,16 +1426,14 @@
                     let outtakeCount = 0;
 
                     if (id === 'p') {
-                        const praeList = JSON.parse(localStorage.getItem('praetorium_list') || '[]');
-                        const targetP = praeList.filter(r => isMatch(r.church, r.presidiumName, r.curiaName || r.curia));
+                        const targetP = allPret.filter(r => isMatch(r.church, r.presidiumName, r.curiaName || r.curia));
                         intakeCount = targetP.filter(r => norm(r.joinDate) >= norm(start) && norm(r.joinDate) <= norm(end)).length;
                         outtakeCount = targetP.filter(r => {
                             const l = norm(r.leaveDate);
                             return l && (l > norm(prevDate)) && l <= norm(end);
                         }).length;
                     } else if (id === 'a') {
-                        const auxList = JSON.parse(localStorage.getItem('auxiliary_members_list') || '[]');
-                        const targetA = auxList.filter(r => isMatch(r.church, r.presidium, r.curia));
+                        const targetA = allAux.filter(r => isMatch(r.church, r.presidium, r.curia));
                         intakeCount = targetA.filter(r => norm(r.admissionDate) >= norm(start) && norm(r.admissionDate) <= norm(end)).length;
                         outtakeCount = targetA.filter(r => {
                             const l = norm(r.withdrawalDate);
@@ -1835,7 +1840,7 @@
                     if (footPrEl) footPrEl.textContent = pr;
                     const pres = targetOffs.find(o => o.role === '단장');
                     officialPresidentName = pres ? pres.name : '';
-                    if (footNameEl) footNameEl.textContent = officialPresidentName || (userProfile.name || '-');
+                    if (footNameEl) footNameEl.textContent = officialPresidentName || (data ? data.signer : '-') || '-';
                 } catch (error) {
                     console.error("보고서 렌더링 중 치명적 오류 회피 성공 (결재 버튼 렌더링 보장):", error);
 
