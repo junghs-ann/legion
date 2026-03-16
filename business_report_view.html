@@ -214,6 +214,12 @@
                 height: 297mm;
                 page-break-after: always;
             }
+
+            [contenteditable="true"] {
+                border: none !important;
+                background-color: transparent !important;
+                outline: none !important;
+            }
         }
 
         .digital-stamp {
@@ -444,7 +450,7 @@
                     <td id="offName_vice">-</td>
                     <td id="offName_sec">-</td>
                     <td id="offName_trea">-</td>
-                    <td id="memAttRate" rowspan="3" style="font-size:12pt; font-weight:bold;">- / -</td>
+                    <td id="memAttRate" rowspan="3" style="font-size:12pt;">- / -</td>
                 </tr>
                 <tr>
                     <th>Pr. 출석</th>
@@ -981,9 +987,10 @@
             </table>
 
             <div style="font-size: 11pt; font-weight: bold; margin: 5mm 0 1mm 0;">쁘레시디움 운영 상황</div>
-            <div id="managementStatus"
-                style="border: 1px solid #000; min-height: 65mm; padding: 7mm 4mm; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap;">
-                <!-- JS로 채움 -->
+            <div id="managementStatus" contenteditable="true"
+                style="border: 1px solid #000; min-height: 65mm; padding: 7mm 4mm; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap; background-color: #fff9c4;"
+                placeholder="여기에 쁘레시디움 운영 상황을 직접 입력하세요.">
+                <!-- 사용자가 직접 입력 -->
             </div>
 
         </div>
@@ -1038,62 +1045,45 @@
             // --- Firestore 데이터 로딩 (병렬 쿼리로 신구 필드명 모두 지원) ---
             try {
                 const [
-                    presSnapN, presSnapO,
-                    attSnapN, attSnapO,
-                    memSnapN, memSnapO,
-                    offSnapN, offSnapO,
-                    recSnapN, recSnapO,
+                    presSnapN,
+                    attSnapN,
+                    memSnapN,
+                    offSnapN,
+                    recSnapN,
                     transSnapN,
-                    eventSnapN, eventSnapO,
+                    eventSnapN,
                     councilSnap,
-                    adjSnapN, adjSnapO,
-                    pretSnapN, pretSnapO,
-                    auxSnapN, auxSnapO,
+                    adjSnapN,
+                    pretSnapN,
+                    auxSnapN,
                     summarySnap,
                     statusSnap
                 ] = await Promise.all([
                     getDocs(query(collection(db, 'presidia_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'presidia_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'attendance_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'members_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'officers_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'activity_records'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'events_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'council_attendance_list'), where('church', '==', church))),
                     getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'adjutorium_members_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'praetorium_list'), where('presidium', '==', targetPr))),
                     getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidium', '==', targetPr))),
                     getDocs(collection(db, 'accounting_summaries')),
                     getDocs(collection(db, 'business_report_status'))
                 ]);
 
-                // 데이터 병합 및 중복 제거 유틸리티 (N/O 모두 병합)
-                const mergeDocs = (snapN, snapO) => {
-                    const map = new Map();
-                    if (snapN && snapN.docs) snapN.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-                    if (snapO && snapO.docs) snapO.docs.forEach(d => map.set(d.id, { id: d.id, ...d.data() }));
-                    return Array.from(map.values());
-                };
-
-                presList = mergeDocs(presSnapN, presSnapO);
-                allAtt = mergeDocs(attSnapN, attSnapO);
-                allMem = mergeDocs(memSnapN, memSnapO);
-                allOff = mergeDocs(offSnapN, offSnapO);
-                allRec = mergeDocs(recSnapN, recSnapO);
-                allEv = mergeDocs(eventSnapN, eventSnapO);
+                presList = presSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAtt = attSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allMem = memSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allOff = offSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allRec = recSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allEv = eventSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
                 councilAtt = councilSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                allAdj = mergeDocs(adjSnapN, adjSnapO);
-                allPret = mergeDocs(pretSnapN, pretSnapO);
-                allAux = mergeDocs(auxSnapN, auxSnapO);
+                allAdj = adjSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allPret = pretSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAux = auxSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
                 allTrans = transSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 summarySnap.docs.forEach(d => {
@@ -1853,8 +1843,19 @@
                     }
                 };
 
-                renderStatus();
-                // [Data Logic End]
+                    // 7. 쁘레시디움 운영 상황 로드
+                    const mgmtStatusEl = document.getElementById('managementStatus');
+                    if (saved && saved.mgmtStatus) {
+                        mgmtStatusEl.textContent = saved.mgmtStatus;
+                    } else if (saved && saved.managementStatus) { // 하위 호환성
+                        mgmtStatusEl.textContent = saved.managementStatus;
+                    }
+
+                    // 승인된 상태라면 편집 비활성화
+                    if (saved && saved.status === 'approved') {
+                        mgmtStatusEl.contentEditable = "false";
+                        mgmtStatusEl.style.backgroundColor = "transparent";
+                    }
                 } catch (err) {
                     console.error("활동/행사 데이터 렌더링 중 오류:", err);
                 }
