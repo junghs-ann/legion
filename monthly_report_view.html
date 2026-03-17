@@ -129,11 +129,11 @@
         }
 
         .serial-value {
-            font-size: 14pt;
-            /* 16pt에서 14pt로 축소 */
+            font-size: 16pt;
+            /* 14pt에서 16pt로 한 단계 확대 */
             font-weight: bold;
-            margin-top: 3mm;
-            /* 5mm에서 3mm로 축소 */
+            margin-top: 5.5mm;
+            /* 8mm에서 5.5mm로 줄여 반 줄 정도 위로 이동 */
             text-align: center;
         }
 
@@ -853,7 +853,6 @@
             const targetPrClean = clean(pr);
             const isOrgMatch = (churchVal, prVal) => {
                 const cc = clean(churchVal), cp = clean(prVal);
-                // [🚨 철벽 보수] 성당, 쁘레시디움 정보 중 하나라도 비어있으면 매칭 실패 (v16.86)
                 if (!cc || !cp) return false;
                 return cp === targetPrClean && cc === targetChurchClean;
             };
@@ -862,73 +861,73 @@
             const targetPr = t(pr);
             let officialPresidentName = '';
 
-            // [수정] 표준 필드(presidiumName)만을 사용하여 데이터 로드
-            try {
-                const [
-                    presSnapN,
-                    attSnapN,
-                    memSnapN,
-                    offSnapN,
-                    recSnapN,
-                    transSnapN,
-                    eventSnapN,
-                    auxSnapN,
-                    pretSnapN,
-                    adjSnapN,
-                    schemaSnap
-                ] = await Promise.all([
-                    getDocs(query(collection(db, 'presidia_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
-                    getDoc(doc(db, 'activity_schemas', church))
-                ]);
+                // [수정] 표준 필드(presidiumName)만을 사용하여 데이터 로드 (병합 로직 제거)
+                try {
+                    const [
+                        presSnap,
+                        attSnap,
+                        memSnap,
+                        offSnap,
+                        recSnap1,
+                        recSnap2,
+                        transSnap,
+                        eventSnap,
+                        auxSnap,
+                        pretSnap,
+                        adjSnap,
+                        schemaSnap
+                    ] = await Promise.all([
+                        getDocs(query(collection(db, 'presidia_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
+                        // [강화] 활동 보고 조회: 신규(presidiumName) 및 레거시(presidium) 필드 모두 지원
+                        getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'activity_records'), where('presidium', '==', targetPr))),
+                        getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
+                        getDoc(doc(db, 'activity_schemas', church))
+                    ]);
 
-                // 데이터 병합 및 중복 제거 유틸리티
-                const mergeDocs = (snapN, snapO) => {
-                    const map = new Map();
-                    if (snapN && snapN.docs) snapN.docs.forEach(d => map.set(d.id, { ...d.data(), id: d.id }));
-                    if (snapO && snapO.docs) snapO.docs.forEach(d => map.set(d.id, { ...d.data(), id: d.id }));
-                    return Array.from(map.values());
-                };
+                    const info = presSnap.docs.map(d => ({ ...d.data(), id: d.id })).find(p => isOrgMatch(p.churchName, p.presidiumName)) || {};
+                    const attsAll = attSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const mms = memSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const offsAll = offSnap.docs.map(d => ({ ...d.data(), id: d.id }));
 
-                const info = presSnapN.docs.map(d => ({ ...d.data(), id: d.id })).find(p => isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'name']))) || {};
+                    // 활동 보고 데이터 병합 및 중복 제거
+                    const recSnap = [...recSnap1.docs, ...recSnap2.docs];
+                    const recsAll = recSnap.map(d => ({ ...d.data(), id: d.id })).filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 
-                const attsAll = attSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const atts = attsAll.filter(a => a.date >= start && a.date <= end).sort((a, b) => a.date.localeCompare(b.date));
+                    const transAll = transSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const evsAll = eventSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const ams = auxSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const pts = pretSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const adjs = adjSnap.docs.map(d => ({ ...d.data(), id: d.id }));
 
-                const mms = memSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const offsAll = offSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const offs = offsAll.filter(o => 
-                    (getField(o, ['appointmentDate']) || '') <= end && 
-                    (!(getField(o, ['appointmentExpiryDate'])) || getField(o, ['appointmentExpiryDate']) > end)
-                );
+                    const atts = attsAll.filter(a => a.date >= start && a.date <= end).sort((a, b) => a.date.localeCompare(b.date));
+                    const offs = offsAll.filter(o => 
+                        (o.appointmentDate || '') <= end && 
+                        (!(o.appointmentExpiryDate) || o.appointmentExpiryDate > end)
+                    );
 
-                const recsAll = recSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const recs = recsAll.filter(r => r.date >= start && r.date <= end);
+                    // [추가] 단장 성명 추출 (서명 매칭용)
+                    officialPresidentName = (offs.find(o => o.role === '단장') || {}).name || '';
 
-                const ledsAll = transSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const leds = ledsAll.filter(l => {
-                    const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
-                    return lDate >= start && lDate <= end;
-                });
+                    const recs = recsAll.filter(r => r.date >= start && r.date <= end);
 
-                const evsAll = eventSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const evs = evsAll.filter(e => e.eventDate >= start).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+                    const leds = transAll.filter(l => {
+                        const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
+                        return lDate >= start && lDate <= end;
+                    });
 
-                const ams = auxSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const pts = pretSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
-                const adjs = adjSnapN.docs.map(d => ({ ...d.data(), id: d.id }));
+                    const evs = evsAll.filter(e => e.eventDate >= start).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
 
-                // [Fix] 전월 기준일(prevDate) 계산 로직 추가
-                const prevAtts = attsAll.filter(a => a.date < start).sort((a, b) => b.date.localeCompare(a.date));
-                const prevDate = prevAtts.length > 0 ? prevAtts[0].date : null;
+                    // [Fix] 전월 기준일(prevDate) 계산 로직 추가
+                    const prevAtts = attsAll.filter(a => a.date < start).sort((a, b) => b.date.localeCompare(a.date));
+                    const prevDate = prevAtts.length > 0 ? prevAtts[0].date : null;
 
                 const pretHistory = pts;
                 const adjHistory = adjs;
@@ -943,21 +942,21 @@
                 document.getElementById('repMonth').textContent = endMonth;
                 document.getElementById('repStartSess').textContent = ssValue || (atts.length > 0 ? (atts[0].session || '-') : '-');
                 document.getElementById('repEndSess').textContent = esValue || (atts.length > 0 ? (atts[atts.length - 1].session || '-') : '-');
-                document.getElementById('serialNum').textContent = info.uniqueNumber || info.serialNumber || info.id || '-';
+                document.getElementById('serialNum').textContent = info.uniqueNumber || info.id || '-';
 
                 document.getElementById('repDay').textContent = info.meetingDay || '-';
                 const meetTime = info.meetingTime || '00:00';
                 document.getElementById('repHour').textContent = meetTime.split(':')[0] || '00';
                 document.getElementById('repMin').textContent = meetTime.split(':')[1] || '00';
-                document.getElementById('repPlace').textContent = info.meetingPlace || info.place || '-';
+                document.getElementById('repPlace').textContent = info.meetingPlace || '-';
                 document.getElementById('repPriest').textContent = info.spiritualDirector || '-';
-                if (document.getElementById('repProxy')) document.getElementById('repProxy').textContent = info.spiritualDirectorDeputy || info.proxy || '-';
+                if (document.getElementById('repProxy')) document.getElementById('repProxy').textContent = info.spiritualDirectorDeputy || '-';
 
                 // 2. 간부 명단
                 const roles = ['단장', '부단장', '서기', '회계'];
                 document.getElementById('offTableBody').innerHTML = roles.map(r => {
                     const o = offs.find(of => of.role === r) || {};
-                    const feast = (o.feastMonth && o.feastDay) ? `${String(o.feastMonth).padStart(2, '0')}.${String(o.feastDay).padStart(2, '0')}.` : (o.feastDate || '');
+                    const feast = (o.feastMonth && o.feastDay) ? `${String(o.feastMonth).padStart(2, '0')}.${String(o.feastDay).padStart(2, '0')}.` : '';
                     return `<tr><td>${r}</td><td>${o.name || ''}</td><td>${o.baptismalName || ''}</td><td>${feast}</td><td>${o.appointmentDate || ''}</td><td>-</td></tr>`;
                 }).join('');
 
@@ -1018,7 +1017,7 @@
 
                 // 해당 쁘레시디움 소속 단원만 먼저 필터링 (행동단원 전체)
                 const targetMems = mms.filter(m =>
-                    m && isOrgMatch(getField(m, ['churchName', 'church']), getField(m, ['presidiumName', 'presidium']))
+                    m && isOrgMatch(m.churchName, m.presidiumName)
                 );
 
                 // 행동단원(활동단원 포함), 쁘레또리움, 아듀또리움 구분
@@ -1032,7 +1031,7 @@
                     if (!m) return false;
                     const j = norm(m.probationaryDate), l = norm(m.leaveDate);
                     const d = norm(date);
-                    const lRef = leaveRef ? norm(leaveRef) : d; // 퇴단 기준일 (없으면 d 사용)
+                    const lRef = leaveRef ? norm(leaveRef) : d;
                     const joined = isEnd ? (j <= d) : (j < d);
                     const notLeft = !l || (l > lRef);
                     return joined && notLeft;
@@ -1150,15 +1149,14 @@
                 // 협조단원 집계
                 const targetActiveIds = new Set(targetMems.map(m => String(m.id)));
                 const isMatch = (a) => {
-                    // [🚨 철벽 보수] 꼼수(Pr명만 같으면 통과) 제거, 반드시 성당/쁘레시디움 3박자 일치해야 함 (v16.86)
-                    if (isOrgMatch(a.church || a.churchName, a.presidium || a.presidiumName)) return true;
+                    if (isOrgMatch(a.churchName, a.presidiumName)) return true;
                     if (a.activeMemberId && targetActiveIds.has(String(a.activeMemberId))) return true;
                     return false;
                 };
 
                 const getAuxStat = (date, isEnd = false, leaveRef = null) => ams.filter(a => {
                     if (!a || !isMatch(a)) return false;
-                    const j = norm(a.admissionDate), l = norm(a.withdrawalDate || a.leaveDate);
+                    const j = norm(a.admissionDate), l = norm(a.withdrawalDate);
                     const d = norm(date);
                     const lRef = leaveRef ? norm(leaveRef) : d;
                     const joined = isEnd ? (j <= d) : (j < d);
@@ -1170,13 +1168,13 @@
                 const aux_c = getAuxStat(end, true);
                 const aux_i = ams.filter(a => {
                     if (!a || !isMatch(a)) return false;
-                    const j = norm(a.admissionDate), l = norm(a.withdrawalDate || a.leaveDate);
+                    const j = norm(a.admissionDate), l = norm(a.withdrawalDate);
                     const dStart = norm(start), dEnd = norm(end);
                     return (j >= dStart && j <= dEnd) && (!l || l > dEnd);
                 });
                 const aux_o = ams.filter(a => {
                     if (!a || !isMatch(a)) return false;
-                    const l = norm(a.withdrawalDate || a.leaveDate);
+                    const l = norm(a.withdrawalDate);
                     const dStart = norm(start), dEnd = norm(end);
                     const lRef = prevDate ? norm(prevDate) : null;
                     const isAfterPrev = lRef ? (l > lRef) : (l >= dStart);
@@ -1199,14 +1197,14 @@
                 const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
                 const executedEvs = evsAll.filter(e => {
-                    const cat = t(e.category);
-                    const d = t(e.eventDate);
+                    const cat = e.category || '';
+                    const d = e.eventDate || '';
                     return cat === '실행' && d.startsWith(curPrefix);
                 });
 
                 const plannedEvs = evsAll.filter(e => {
-                    const cat = t(e.category);
-                    const d = t(e.eventDate);
+                    const cat = e.category || '';
+                    const d = e.eventDate || '';
                     return (cat === '계획' || cat === '예정') && d.startsWith(nextPrefix);
                 });
 
@@ -1235,20 +1233,20 @@
                 let totalIn = 0, totalOut = 0;
                 let expCont = 0, expFlow = 0;
 
-                // [추가] 당월 거래 내역 집계 로직
+                // 당월 거래 내역 집계 로직
                 leds.forEach(l => {
                     const amt = parseInt(l.amount) || 0;
                     const isDeposit = (l.type === 'deposit' || l.type === 'income');
                     
-                    // [필드 보강] item(신규)과 category(레거시), remarks(신규)와 remark(레거시) 모두 확인
-                    const item = String(l.item || l.category || '').trim();
-                    const remark = String(l.remarks || l.remark || '').trim();
+                    // 표준 필드(item, remarks)만 사용
+                    const item = String(l.item || '').trim();
+                    const remark = String(l.remarks || '').trim();
 
                     if (isDeposit) {
                         totalIn += amt;
                     } else {
                         totalOut += amt;
-                        // 중요 지출 내역 자동 분류 (이미지 규격에 맞춰 의연금, 꽃값 감지)
+                        // 중요 지출 내역 자동 분류 (의연금, 꽃값 감지)
                         if (item.includes('의연금') || remark.includes('의연금')) {
                             expCont += amt;
                         } else if (item.includes('꽃값') || item.includes('꽃비') || remark.includes('꽃값')) {
@@ -1266,9 +1264,9 @@
 
                 let carryOverIn = 0, carryOverOut = 0;
                 const startStr = t(start);
-                ledsAll.forEach(l => {
+                transAll.forEach(l => {
                     if (parseInt(l.year) !== endYear) return;
-                    if (!isOrgMatch(getField(l, ['churchName', 'church']), getField(l, ['presidiumName', 'presidium']))) return;
+                    if (!isOrgMatch(l.churchName, l.presidiumName)) return;
                     
                     const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
                     const amt = parseInt(l.amount) || 0;
@@ -1422,7 +1420,8 @@
                     group.items.forEach(it => {
                         const c = sumAct(it.name);
                         groupCount += c;
-                        const cStr = c > 0 ? c.toLocaleString() : '';
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
+                        const cStr = c.toLocaleString();
                         groupDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
 
@@ -1438,7 +1437,8 @@
                     grpSimple.items.forEach(it => {
                         const c = sumAct(it.name);
                         simpleCount += c;
-                        const cStr = c > 0 ? c.toLocaleString() : '';
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
+                        const cStr = c.toLocaleString();
                         simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
                 }
@@ -1452,7 +1452,8 @@
                     grpDetail.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
-                        const cStr = c > 0 ? c.toLocaleString() : '';
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
+                        const cStr = c.toLocaleString();
                         dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
                     if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
@@ -1463,7 +1464,8 @@
                     grpCharity.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
-                        const cStr = c > 0 ? c.toLocaleString() : '';
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
+                        const cStr = c.toLocaleString();
                         cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
                     if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
@@ -1498,7 +1500,7 @@
                 // const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]'); // Replaced by Firestore fetch
                 const today = new Date().toISOString().split('T')[0];
                 const president = offs.find(o =>
-                    isOrgMatch(getField(o, ['churchName', 'church']), getField(o, ['presidiumName', 'presidium'])) &&
+                    isOrgMatch(o.churchName, o.presidiumName) &&
                     ((String(o.role).includes('단장') && !String(o.role).includes('부단장')) || String(o.role).toLowerCase().includes('president') && !String(o.role).toLowerCase().includes('vice')) &&
                     (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
                 );
@@ -1611,7 +1613,8 @@
                         const targetName = officialPresidentName || data.signer;
                         const profileSnap = await getDocs(query(collection(db, 'users'), where('name', '==', targetName)));
                         const matchedProfile = profileSnap.docs.map(d => d.data()).find(p => 
-                            isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'presidium']))
+                            // 표준 필드(churchName)와 레거시 필드(church)를 모두 지원하여 안정적으로 매칭
+                            isOrgMatch(p.churchName || p.church, p.presidiumName || p.presidium)
                         );
                         if (matchedProfile) {
                             signatureImg = matchedProfile.signature || matchedProfile.signImage;
