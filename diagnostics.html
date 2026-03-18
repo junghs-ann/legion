@@ -53,7 +53,7 @@
                     if (data.date === date) {
                         // 쁘레시디움 이름이 일부라도 포함되거나 일치하는지 확인 (대소문자/공백 무시)
                         const searchPr = pr.toLowerCase().replace(/\s/g, '');
-                        const dbPr = (data.presidiumName || data.presidium || '').toLowerCase().replace(/\s/g, '');
+                        const dbPr = (data.presidiumName || '').toLowerCase().replace(/\s/g, '');
                         
                         const isPrRelated = dbPr.includes(searchPr) || searchPr === "";
 
@@ -63,7 +63,7 @@
                             html += `
                                 <div class="record-card ${isLegacy ? 'ghost' : ''}">
                                     <div><strong>문서 ID:</strong> <span class="record-id">${doc.id}</span> ${isLegacy ? '(⚠️ 옛날 규격)' : '(✅ 최신 규격)'}</div>
-                                    <div><strong>소속:</strong> ${data.churchName || data.church} / ${data.presidiumName || data.presidium}</div>
+                                    <div><strong>소속:</strong> ${data.churchName || '미정'} / ${data.presidiumName || '미정'}</div>
                                     <div><strong>단원명:</strong> ${data.memberName} (${data.memberId || 'ID 없음'})</div>
                                     <div><strong>날짜/회차:</strong> ${data.date} / ${data.session}회</div>
                                     <div class="counts"><strong>활동 수치:</strong> ${JSON.stringify(data.counts)}</div>
@@ -105,7 +105,7 @@
                     html += `
                         <div class="record-card ${isLegacy ? 'ghost' : ''}">
                             <div><strong>문서 ID:</strong> <span class="record-id">${data.id}</span> ${isLegacy ? '(⚠️ 옛날 규격)' : '(✅ 최신 규격)'}</div>
-                            <div><strong>소속:</strong> ${data.churchName || data.church} / ${data.presidiumName || data.presidium}</div>
+                            <div><strong>소속:</strong> ${data.churchName || '미정'} / ${data.presidiumName || '미정'}</div>
                             <div><strong>단원명:</strong> ${data.memberName} (${data.memberId || 'ID 없음'})</div>
                             <div><strong>날짜/회차:</strong> ${data.date} / ${data.session}회</div>
                             <div class="counts"><strong>활동 수치:</strong> ${JSON.stringify(data.counts)}</div>

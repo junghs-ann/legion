@@ -1002,15 +1002,36 @@
         import { initAuthObserver } from "./auth.js?v=20260304_1525";
 
         const urlParams = new URLSearchParams(window.location.search);
-        const church = urlParams.get('church');
-        const pr = urlParams.get('pr');
-        const start = urlParams.get('start');
-        const end = urlParams.get('end');
+        // [시니어 패치] 최신 규격(churchName/presidiumName) 단일 채널 고정. 과거와의 완전한 단절.
+        const n = (v) => String(v || '').replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+        let church = n(urlParams.get('churchName'));
+        let curia = n(urlParams.get('curiaName'));
+        let pr = n(urlParams.get('presidiumName'));
+        let start = n(urlParams.get('start'));
+        let end = n(urlParams.get('end'));
         const mode = urlParams.get('mode') || 'view';
 
         let userProfile = null;
 
         initAuthObserver(async (user, profile) => {
+            if (profile) {
+                // [시니어 패치] 데이터 정제 및 최신 규격으로의 매끄러운 이관을 위한 입구 표준화
+                // 멘토님의 고생을 헛되지 않게, 현재 데이터 상태가 'church'라도 'churchName'으로 즉석 변환합니다.
+                if (profile.church && !profile.churchName) profile.churchName = profile.church;
+                if (profile.presidium && !profile.presidiumName) profile.presidiumName = profile.presidium;
+                
+                // [보강] 프로필 내의 유령 공백 제거 (매칭 정확도 향상)
+                const normVal = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+                if (profile.churchName) profile.churchName = normVal(profile.churchName);
+                if (profile.presidiumName) profile.presidiumName = normVal(profile.presidiumName);
+                
+                console.log("[Auth Standardized]", { 
+                    originalChurch: profile.church, 
+                    stdChurchName: profile.churchName,
+                    originalPr: profile.presidium,
+                    stdPrName: profile.presidiumName
+                });
+            }
             userProfile = profile;
             if (church && pr && start && end) {
                 await generateReport();
@@ -1023,7 +1044,6 @@
         async function generateReport() {
             const ss = urlParams.get('ss');
             const es = urlParams.get('es');
-            const curia = urlParams.get('curia');
             const brSess = urlParams.get('brSess');
 
             const t = (val) => String(val || '').trim();
@@ -1033,10 +1053,16 @@
 
             // [🚨 철벽 보수] 필수 매개변수 누락 시 실행 중단 및 에러 출력 (v16.86)
             if (!targetChurch || !targetPr || !targetCuria) {
+                console.error("Missing Params:", { targetChurch, targetPr, targetCuria });
                 alert(`[데이터 무결성 오류]\n성당, 꾸리아, 쁘레시디움 정보가 URL에 누락되었습니다.\n조직 설정을 확인해 주세요.`);
                 window.close();
                 return;
             }
+
+            console.log("Generating Report for:", { targetChurch, targetPr, targetCuria, ss, es, start, end, mode });
+            
+            // [강제 알림] 데이터 로딩 시작 확인용
+            // alert(`보고서 생성 시작: ${targetPr} (${ss}~${es}회)`);
 
             // [변수 선언 추가] ReferenceError 방지를 위한 명시적 선언
             let presList = [], allAtt = [], allMem = [], allOff = [], allRec = [], allTrans = [], allEv = [], councilAtt = [], allAdj = [], allPret = [], allAux = [];
@@ -1045,17 +1071,17 @@
             // --- Firestore 데이터 로딩 (병렬 쿼리로 신구 필드명 모두 지원) ---
             try {
                 const [
-                    presSnapN,
-                    attSnapN,
-                    memSnapN,
-                    offSnapN,
-                    recSnapN,
-                    transSnapN,
-                    eventSnapN,
+                    presSnap,
+                    attSnap,
+                    memSnap,
+                    offSnap,
+                    recSnap,
+                    transSnap,
+                    eventSnap,
                     councilSnap,
-                    adjSnapN,
-                    pretSnapN,
-                    auxSnapN,
+                    adjSnap,
+                    pretSnap,
+                    auxSnap,
                     summarySnap,
                     statusSnap
                 ] = await Promise.all([
@@ -1066,7 +1092,7 @@
                     getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
-                    getDocs(query(collection(db, 'council_attendance_list'), where('church', '==', church))),
+                    getDocs(query(collection(db, 'council_attendance_list'), where('churchName', '==', church))),
                     getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
                     getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
@@ -1074,36 +1100,38 @@
                     getDocs(collection(db, 'business_report_status'))
                 ]);
 
-                presList = presSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allAtt = attSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allMem = memSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allOff = offSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allRec = recSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allEv = eventSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                presList = presSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAtt = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allMem = memSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allOff = offSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allRec = recSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allEv = eventSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAdj = adjSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allPret = pretSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allAux = auxSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                allTrans = transSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 councilAtt = councilSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                allAdj = adjSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allPret = pretSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allAux = auxSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
-                allTrans = transSnapN.docs.map(d => ({ id: d.id, ...d.data() }));
+                allReportStatus = statusSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                console.log("Data Loaded Counts:", {
+                    pres: presList.length, att: allAtt.length, mem: allMem.length, 
+                    off: allOff.length, rec: allRec.length, ev: allEv.length, 
+                    adj: allAdj.length, pret: allPret.length, aux: allAux.length,
+                    status: allReportStatus.length
+                });
 
                 summarySnap.docs.forEach(d => {
                     allSummaries[d.id] = d.data();
                 });
-                allReportStatus = statusSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             } catch (err) {
                 console.error("Firestore loading error:", err);
             }
 
-            const getField = (obj, keys) => { for (let k of keys) { if (obj && obj[k] !== undefined) return obj[k]; } return ''; };
-            const norm = (d) => {
-                if (!d) return '';
-                let s = String(d).trim();
-                if (/^\d{8}$/.test(s)) return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
-                return s;
-            };
+            // [정석화] 꼼수 함수(getField) 제거⚖️🌊
+            const norm = (d) => { if (!d) return ''; let s = String(d).trim(); if (/^\d{8}$/.test(s)) return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`; return s; };
             const getStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
                 if (!m) return false;
-                const j = norm(m.probationaryDate || m.joinDate || m.admissionDate), l = norm(m.withdrawalDate || m.leaveDate);
+                const j = norm(m.probationaryDate || m.admissionDate), l = norm(m.withdrawalDate || m.leaveDate);
                 const d = norm(date);
                 const joined = isEnd ? (j <= d) : (j < d);
                 // [개선] 퇴단 기준을 전달받은 leaveRef(전 회차 일자) 또는 시점(d) 기준으로 처리
@@ -1124,36 +1152,26 @@
 
             const extractNum = (v) => { if (!v) return 0; const m = String(v).match(/\d+/); return m ? parseInt(m[0]) : 0; };
             const clean = (s) => String(s || '').toLowerCase().replace(/천주교|교회|성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
-            const isMatch = (c, p, cr) => {
-                const cc = clean(c), cp = clean(p), ccr = clean(cr || '');
-                const tc = clean(targetChurch), tp = clean(targetPr), tcr = clean(targetCuria || '');
-                
-                // [🚨 철벽 보수] 성당, 쁘레시디움 정보 중 하나라도 비어있으면 매칭 실패 (v16.86)
-                if (!cc || !cp) return false;
-                
-                const prMatch = (cp === tp);
-                if (!prMatch) return false;
-
-                const churchMatch = (cc === tc);
-                
-                // 꾸리아 정보가 인자로 들어왔고, URL에도 꾸리아 정보가 있다면 대조 (v16.86)
-                if (cr !== undefined && tcr) {
-                    return churchMatch && (ccr === tcr);
-                }
-                return churchMatch;
+            const isMatch = (c, p) => {
+                const cc = clean(c), cp = clean(p);
+                const tc = clean(targetChurch), tp = clean(targetPr);
+                if (!cc || !cp || !tc || !tp) return false;
+                const res = (cc === tc && cp === tp);
+                if (!res) console.warn(`[Permission Mismatch] Profile(${cc}/${cp}) != Target(${tc}/${tp})`);
+                return res;
             };
+            const isMatchSimple = (c, p) => isMatch(c, p);
 
-            // [New] 날짜 기준 직책 조회 보조 함수
             function getRoleAtDate(memberId, date) {
                 const mId = String(memberId);
                 const officerTerm = allOff.find(o => {
-                    const oid = String(o.memberId || o.memberUid || o.member || '');
+                    const oid = String(o.memberId || '');
                     if (oid !== mId) return false;
                     const ost = o.appointmentDate || '';
                     const oed = o.appointmentExpiryDate || '';
                     return ost <= date && (!oed || oed >= date);
                 });
-                if (officerTerm) return officerTerm.role || officerTerm.position || '단원';
+                if (officerTerm) return officerTerm.role || '단원';
                 return '단원';
             }
 
@@ -1162,7 +1180,7 @@
             // [추가] 전 회차 일자 계산 (월례보고서와 동일 조건)
             let prevDate = start;
             if (ss) {
-                const prAtts = allAtt.filter(a => clean(getField(a, ['presidiumName', 'presidium'])) === clean(pr))
+                const prAtts = allAtt.filter(a => clean(a.presidiumName) === clean(pr))
                     .sort((a, b) => extractNum(a.session) - extractNum(b.session));
                 const currIdx = prAtts.findIndex(a => String(extractNum(a.session)) === String(extractNum(ss)));
                 if (currIdx > 0) {
@@ -1170,7 +1188,7 @@
                 }
             }
 
-            const info = presList.find(p => isMatch(p.churchName || p.church, p.presidiumName || p.presidium)) || {};
+            const info = presList.find(p => isMatch(p.churchName, p.presidiumName)) || {};
 
             // 헤더 반영
             const reportNum = brSess || info.businessReportCount || '-';
@@ -1215,10 +1233,10 @@
                 const startSessNum = extractNum(ss);
                 const endSessNum = extractNum(es);
 
-                // 전체 회차 대상 필터링 (필드명 호환성 적용)
-                const periodAtts = allAtt.filter(a => clean(getField(a, ['presidiumName', 'presidium'])) === clean(pr) && a.date >= start && a.date <= end);
+                // 전체 회차 대상 필터링 (표준 필드 사용)⚖️🌊
+                const periodAtts = allAtt.filter(a => clean(a.presidiumName) === clean(pr) && a.date >= start && a.date <= end);
                 const totalSessValue = (startSessNum && endSessNum) ? (endSessNum - startSessNum + 1) : periodAtts.length;
-                const targetOffs = allOff.filter(o => isMatch(o.church || o.churchName, o.presidium || o.presidiumName, o.curia || o.curiaName) &&
+                const targetOffs = allOff.filter(o => isMatch(o.churchName, o.presidiumName, o.curiaName) &&
                     (o.appointmentDate <= end) && (!o.appointmentExpiryDate || o.appointmentExpiryDate > end)
                 );
 
@@ -1234,9 +1252,9 @@
                 let sumMemberAttendance = 0;
                 let totalMemberPossible = 0;
 
-                // 필터링: 기준 회차 범위(ss~es) 및 프레시디움 명칭 (필드명 호환성 적용)
+                // 필터링: 기준 회차 범위(ss~es) 및 프레시디움 명칭 (표준 필드 사용)⚖️🌊
                 const rangeAtts = allAtt.filter(a =>
-                    clean(getField(a, ['presidiumName', 'presidium'])) === clean(pr) &&
+                    clean(a.presidiumName) === clean(pr) &&
                     extractNum(a.session) >= startSessNum &&
                     extractNum(a.session) <= endSessNum
                 ).sort((a, b) => extractNum(a.session) - extractNum(b.session));
@@ -1283,8 +1301,8 @@
                         const targetCuria = curia || info.curiaName || '-';
                         const cAtts = councilAtt.filter(ca => {
                             const caYM = ca.date.substring(0, 7);
-                            return clean(ca.church) === clean(church) &&
-                                clean(ca.curia) === clean(targetCuria) &&
+                            return clean(ca.churchName) === clean(church) &&
+                                clean(ca.curiaName) === clean(targetCuria) &&
                                 caYM >= startYM && caYM <= endYM;
                         });
                         cAtts.forEach(ca => {
@@ -1323,7 +1341,7 @@
                 const movementList = [];
                 const rolesForMove = ['단장', '부단장', '서기', '회계'];
                 rolesForMove.forEach(roleName => {
-                    const roleHistory = allOff.filter(o => isMatch(o.church || o.churchName || '', o.presidium || o.presidiumName || '', o.curia || o.curiaName || '') && o.role === roleName).sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+                    const roleHistory = allOff.filter(o => isMatch(o.churchName, o.presidiumName, o.curiaName) && o.role === roleName).sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
                     const startOff = roleHistory.find(o => o.appointmentDate <= start && (!o.appointmentExpiryDate || o.appointmentExpiryDate >= start));
                     const endOff = roleHistory.find(o => o.appointmentDate <= end && (!o.appointmentExpiryDate || o.appointmentExpiryDate > end));
 
@@ -1347,24 +1365,24 @@
                 document.getElementById('offPrAtt_proxy').textContent = '-';
                 document.getElementById('offCuAtt_proxy').textContent = '-';
 
-                const tMems = allMem.filter(m => isMatch(m.churchName || m.church, m.presidiumName || m.presidium, m.curiaName || m.curia));
+                const tMems = allMem.filter(m => isMatch(m.churchName, m.presidiumName, m.curiaName));
 
                 // 활동 보고 데이터 필터링 (주회합 회차 범위 기준)
                 const pRecs = allRec.filter(r =>
-                    isMatch(r.church || r.churchName, r.presidium || r.presidiumName, r.curia || r.curiaName) &&
+                    isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                     extractNum(r.session) >= startSessNum &&
                     extractNum(r.session) <= endSessNum
                 );
 
                 // 저장된 기록 불러오기 (이미 Firestore에서 로드됨)
                 const reportHistory = allReportStatus;
-                const saved = reportHistory.find(r => r.church === church && r.presidium === pr && String(r.startSess) === String(ss) && String(r.endSess) === String(es));
+                const saved = reportHistory.find(r => r.churchName === church && r.presidiumName === pr && String(r.startSess) === String(ss) && String(r.endSess) === String(es));
 
                 // 전차 보고서 찾기
                 let prevReport = null;
                 if (brSess) {
                     const prevSessNum = parseInt(brSess) - 1;
-                    prevReport = reportHistory.find(r => r.church === church && r.presidium === pr && parseInt(r.reportSess) === prevSessNum);
+                    prevReport = reportHistory.find(r => r.churchName === church && r.presidiumName === pr && parseInt(r.reportSess) === prevSessNum);
                 }
 
                 // 단원 수 변동 (월례보고서 정밀 로직 이식)
@@ -1385,7 +1403,7 @@
                     if (id === 'p') {
                         // [New] 쁘레또리움 단원은 전용 관리 대장(praetorium_list) 기준으로 집계
                         const filteredPrae = allPret.filter(r =>
-                            isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.joinDate) <= norm(end) && // 당월(현재): 입단일 <= 종료일
                             (!r.leaveDate || norm(r.leaveDate) > norm(end)) // 퇴단일 없음 OR 퇴단일 > 종료일
                         );
@@ -1400,13 +1418,13 @@
                     } else if (id === 'a') {
                         // [New] 협조단원은 전용 관리 대장(auxiliary_members_list) 기준으로 집계
                         const filteredAux = allAux.filter(r =>
-                            isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.admissionDate) <= norm(end) && // 당월(현재): 입단일 <= 종료일
                             (!r.withdrawalDate || norm(r.withdrawalDate) > norm(end)) // 퇴단일 없음 OR 퇴단일 > 종료일
                         );
 
                         filteredAux.forEach(r => {
-                            const gender = getField(r, ['gender', 'sex']);
+                            const gender = r.gender || r.sex;
                             if (gender === '남') c_m++;
                             else if (gender === '여') c_f++;
                             c_t++;
@@ -1414,13 +1432,13 @@
                     } else if (id === 'aj') {
                         // [New] 아듀또리움 단원은 전용 관리 대장(adjutorium_members_list) 기준으로 집계
                         const filteredAdj = allAdj.filter(r =>
-                            isMatch(getField(r, ['churchName', 'church']), getField(r, ['presidiumName', 'presidium']), getField(r, ['curiaName', 'curia'])) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.admissionDate) <= norm(end) && // 현재: 입단일 <= 종료일
                             (!r.withdrawalDate || norm(r.withdrawalDate) > norm(end)) // 퇴단일 없음 OR 퇴단일 > 종료일
                         );
 
                         filteredAdj.forEach(r => {
-                            const gender = getField(r, ['gender', 'sex']);
+                            const gender = r.gender || r.sex;
                             if (gender === '남') c_m++;
                             else if (gender === '여') c_f++;
                             c_t++;
@@ -1441,21 +1459,21 @@
                     let outtakeCount = 0;
 
                     if (id === 'p') {
-                        const targetP = allPret.filter(r => isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia));
+                        const targetP = allPret.filter(r => isMatch(r.churchName, r.presidiumName, r.curiaName));
                         intakeCount = targetP.filter(r => norm(r.joinDate) >= norm(start) && norm(r.joinDate) <= norm(end)).length;
                         outtakeCount = targetP.filter(r => {
                             const l = norm(r.leaveDate);
                             return l && (l > norm(prevDate)) && l <= norm(end);
                         }).length;
                     } else if (id === 'a') {
-                        const targetA = allAux.filter(r => isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia));
+                        const targetA = allAux.filter(r => isMatch(r.churchName, r.presidiumName, r.curiaName));
                         intakeCount = targetA.filter(r => norm(r.admissionDate) >= norm(start) && norm(r.admissionDate) <= norm(end)).length;
                         outtakeCount = targetA.filter(r => {
                             const l = norm(r.withdrawalDate);
                             return l && (l > norm(prevDate)) && l <= norm(end);
                         }).length;
                     } else if (id === 'aj') {
-                        const targetAj = allAdj.filter(r => isMatch(getField(r, ['churchName', 'church']), getField(r, ['presidiumName', 'presidium']), getField(r, ['curiaName', 'curia'])));
+                        const targetAj = allAdj.filter(r => isMatch(r.churchName, r.presidiumName, r.curiaName));
                         intakeCount = targetAj.filter(r => norm(r.admissionDate) >= norm(start) && norm(r.admissionDate) <= norm(end)).length;
                         outtakeCount = targetAj.filter(r => {
                             const l = norm(r.withdrawalDate);
@@ -1482,22 +1500,22 @@
                     let prev_list = [];
                     if (id === 'p') {
                         prev_list = allPret.filter(r =>
-                            isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.joinDate) < norm(start) &&
                             (!r.leaveDate || norm(r.leaveDate) > norm(prevDate))
                         ).map(r => {
                             const m = allMem.find(mem => String(mem.id) === String(r.memberId));
-                            return m || { gender: (getField(r, ['gender', 'sex']) || '-'), sex: (getField(r, ['gender', 'sex']) || '-') };
+                            return m || { gender: (r.gender || r.sex || '-'), sex: (r.gender || r.sex || '-') };
                         });
                     } else if (id === 'a') {
                         prev_list = allAux.filter(r =>
-                            isMatch(r.church || r.churchName, r.presidiumName || r.presidium, r.curiaName || r.curia) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.admissionDate) < norm(start) &&
                             (!r.withdrawalDate || norm(r.withdrawalDate) > norm(prevDate))
                         );
                     } else if (id === 'aj') {
                         prev_list = allAdj.filter(r =>
-                            isMatch(getField(r, ['churchName', 'church']), getField(r, ['presidiumName', 'presidium']), getField(r, ['curiaName', 'curia'])) &&
+                            isMatch(r.churchName, r.presidiumName, r.curiaName) &&
                             norm(r.admissionDate) < norm(start) &&
                             (!r.withdrawalDate || norm(r.withdrawalDate) > norm(prevDate))
                         );
@@ -1567,8 +1585,8 @@
                 let contE = 0, flower = 0, mass = 0, print = 0, candle = 0, expExtra = 0;
 
                 allTrans.forEach(tr => {
-                    // 대상 조직(Pr) 거래 필터링 (필드명 호환성 적용)
-                    if (!isMatch(tr.church || tr.churchName, tr.presidium || tr.presidiumName, tr.curia || tr.curiaName)) return;
+                    // 대상 조직(Pr) 거래 필터링 (표준 필드 사용)⚖️🌊
+                    if (!isMatch(tr.churchName, tr.presidiumName, tr.curiaName)) return;
                     if (parseInt(tr.year) !== parseInt(reportYear)) return;
 
                     const trDate = `${tr.year}-${String(tr.month).padStart(2, '0')}-${String(tr.day).padStart(2, '0')}`;
@@ -1615,8 +1633,8 @@
                 safeSetText('accBal', (prevB + incTotal - expTotal).toLocaleString() + ' 원');
 
                 try {
-                    // 행사 (필드명 호환성 적용)
-                    const pEvs = allEv.filter(e => isMatch(e.church || e.churchName, e.presidium || e.presidiumName, e.curia || e.curiaName) && e.eventDate >= start && e.eventDate <= end);
+                    // 행사 (표준 필드 사용)⚖️🌊
+                    const pEvs = allEv.filter(e => isMatch(e.churchName, e.presidiumName, e.curiaName) && e.eventDate >= start && e.eventDate <= end);
                     const evMap = {
                         '아치에스': 'acies', '야외행사': 'outdoor', '야외 행사': 'outdoor',
                         '쁘레시디움 친목회': 'pr_social', '연차 총 친목회': 'annual_social', '토론대회': 'debate'
@@ -1696,40 +1714,110 @@
                     safeSetText('footChurch', church);
                     safeSetText('footPr', pr);
 
-                    const reportKey = { church, presidium: pr, startSess: urlParams.get('ss'), endSess: urlParams.get('es') };
-                    const getStatusData = () => allReportStatus.find(h => h.church === reportKey.church && h.presidium === reportKey.presidium && String(h.startSess) === String(reportKey.startSess) && String(h.endSess) === String(reportKey.endSess));
+                    const reportKey = {
+                        churchName: urlParams.get('churchName'),
+                        presidiumName: urlParams.get('presidiumName'),
+                        startSess: urlParams.get('ss'),
+                        endSess: urlParams.get('es')
+                    };
+                    // [정규화] 호환성 로직 삭제 및 표준 필드 매칭으로 단순화
+                    const getStatusData = () => allReportStatus.find(h => 
+                        h.churchName === reportKey.churchName && 
+                        h.presidiumName === reportKey.presidiumName && 
+                        String(h.startSess) === String(reportKey.startSess) && 
+                        String(h.endSess) === String(reportKey.endSess)
+                    );
 
                     // --- 보고러 결재 및 워크플로우 로직 ---
                     const renderStatus = () => {
                         const workflowData = getStatusData();
                         const status = workflowData ? workflowData.status : 'Draft';
-                        const isPresident = userProfile && userProfile.role === '단장';
-                        const isOfficer = userProfile && ['단장', '부단장', '서기', '회계'].includes(userProfile.role);
+                        
+                        // [시니어 패치] 권한 체크 로직 고도화 (공통 함수 사용)
+                        const currentUserName = userProfile ? userProfile.name : '';
+                        
+                        // [보강] 필드명 표준화 적용 (churchName, presidiumName)
+                        const userChurch = userProfile ? (userProfile.churchName || '') : '';
+                        const userPr = userProfile ? (userProfile.presidiumName || '') : '';
+                        const isOrgMatched = userProfile && isMatch(userChurch, userPr);
+
+                        const stdRole = convertToStdRole(userProfile ? userProfile.role : '');
+                        
+                        const isPresident = isOrgMatched && (
+                            stdRole === '단장' || 
+                            (currentUserName && (allOff.find(o => convertToStdRole(o.role) === '단장')?.name === currentUserName))
+                        );
+
+                        const isOfficer = isOrgMatched && (
+                            ['단장', '부단장', '서기', '회계', '관리자'].includes(stdRole) || isPresident
+                        );
+                        
                         const hasData = !!workflowData;
-                        const isCreateMode = urlParams.get('mode') === 'create';
-                        const isViewingCreated = !!workflowData;
+                        const isApproved = (status === 'approved' || status === 'Approved');
+                        const isFinalized = (status === 'finalized' || status === 'Finalized');
+                        const isDraft = (status === 'Draft' || !hasData);
+
+                        const diag = {
+                            userId: userProfile ? (userProfile.userId || userProfile.uid) : 'Guest',
+                            role,
+                            profileChurch: userProfile ? userProfile.churchName : 'N/A',
+                            profilePr: userProfile ? userProfile.presidiumName : 'N/A',
+                            targetChurch,
+                            targetPr,
+                            isOrgMatched,
+                            isOfficer,
+                            status
+                        };
+                        console.table? console.table([diag]) : console.log("[Status Diagnostic]", diag);
 
                         const btnFin = document.getElementById('btnFinalize');
                         const btnApp = document.getElementById('btnApprove');
                         const btnCan = document.getElementById('btnCancelApprove');
+                        const statusBadge = document.getElementById('reportStatusBadge');
 
                         if (!btnFin || !btnApp || !btnCan) return;
 
-                        // [최후의 해결책] 생성 모드(create)이거나 미작성 상태라면 권한 데이터와 상관없이 '확정/저장' 버튼을 강제로 보여줍니다.
-                        if ((isCreateMode || status === 'Draft') && status !== 'approved') {
-                            btnFin.style.display = 'flex';
-                        } else {
-                            btnFin.style.display = (isOfficer && isViewingCreated && status !== 'approved') ? 'flex' : 'none';
+                        // 상단 상태 뱃지 업데이트
+                        if (statusBadge) {
+                            if (isApproved) {
+                                statusBadge.textContent = '상태: 최종 승인 완료';
+                                statusBadge.style.background = '#27ae60';
+                                statusBadge.style.color = 'white';
+                            } else if (isFinalized) {
+                                statusBadge.textContent = '상태: 검토 중 (미승인)';
+                                statusBadge.style.background = '#e67e22';
+                                statusBadge.style.color = 'white';
+                            } else if (hasData) {
+                                statusBadge.textContent = '상태: 작성 중 (임시저장)';
+                                statusBadge.style.background = '#3498db';
+                                statusBadge.style.color = 'white';
+                            } else {
+                                statusBadge.textContent = '상태: 미작성';
+                                statusBadge.style.background = '#eee';
+                                statusBadge.style.color = '#666';
+                            }
                         }
 
-                        // 승인 버튼은 무조건 데이터(확정된 원본)가 존재할 때만 활성화
-                        btnApp.style.display = (isPresident && hasData && status !== 'approved') ? 'flex' : 'none';
+                        // 1. 확정/저장 버튼: 
+                        // - 미작성이거나 Draft(작성 중) 상태일 때 노출
+                        // [보강] 데이터가 없더라도(hasData=false) 간부라면 저장 버튼이 보여야 함
+                        const canFinalize = isOfficer && !isApproved && !isFinalized;
+                        btnFin.style.display = canFinalize ? 'flex' : 'none';
 
-                        // 취소 버튼
-                        btnCan.style.display = (isPresident && (status === 'approved' || (hasData && status === 'finalized'))) ? 'flex' : 'none';
+                        // 2. 승인 버튼: 
+                        // - 단장 권한이 있고, '검토 중(Finalized)' 상태일 때 노출
+                        const canApprove = isPresident && isFinalized;
+                        btnApp.style.display = canApprove ? 'flex' : 'none';
 
-                        if (btnCan.style.display === 'flex') {
-                            btnCan.textContent = (status === 'approved') ? '승인 취소' : '확정 취소';
+                        // 3. 확정 취소 / 승인 취소 버튼
+                        if (isApproved) {
+                            btnCan.style.display = isPresident ? 'flex' : 'none';
+                            btnCan.textContent = '승인 취소';
+                        } else if (isFinalized) {
+                            btnCan.style.display = isOfficer ? 'flex' : 'none';
+                            btnCan.textContent = '확정 취소';
+                        } else {
+                            btnCan.style.display = 'none';
                         }
                     };
                     window.renderStatus = renderStatus;
@@ -1799,6 +1887,7 @@
 
                     const newData = {
                         ...reportKey,
+                        curiaName: urlParams.get('curiaName'),
                         reportSess: urlParams.get('brSess'),
                         status: status,
                         signer: signer || (getStatusData() ? getStatusData().signer : null),
@@ -1807,7 +1896,7 @@
                         updatedAt: new Date().toISOString()
                     };
 
-                    const docId = `${reportKey.church}_${reportKey.presidium}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                    const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
                     await setDoc(doc(db, 'business_report_status', docId), newData);
                     renderStatus();
 
@@ -1836,7 +1925,7 @@
                         : '확정을 취소하고 다시 수정하시겠습니까?';
 
                     if (await window.showCustomConfirm(msg)) {
-                        const docId = `${reportKey.church}_${reportKey.presidium}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                        const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
                         await deleteDoc(doc(db, 'business_report_status', docId));
                         await window.showCustomAlert('취소되었습니다.');
                         location.reload();
@@ -1856,6 +1945,10 @@
                         mgmtStatusEl.contentEditable = "false";
                         mgmtStatusEl.style.backgroundColor = "transparent";
                     }
+                    
+                    // [버튼 표시 상태 갱신] 모든 데이터 로드 및 렌더링 완료 후 호출 (v16.90)
+                    if (window.renderStatus) window.renderStatus();
+
                 } catch (err) {
                     console.error("활동/행사 데이터 렌더링 중 오류:", err);
                 }

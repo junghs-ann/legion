@@ -348,6 +348,14 @@ window.handleLogout = async () => {
 
 // === End of Global Initialization ===
 
+
+// [시니어 패치] 데이터 입력 정화 함수 (줄바꿈/유령 공백 원천 차단)
+window.sanitizeInput = (val) => {
+    if (typeof val !== 'string') return val;
+    // 줄바꿈, 탭을 공백으로 바꾸고 연속된 공백을 하나로 합친 뒤 앞뒤 공백 제거
+    return val.replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
 window.initCommonMenus = (profile, logoutUser) => {
     // Firebase 로그아웃 함수를 전역 핸들러에서 쓸 수 있게 등록
     if (typeof logoutUser === 'function') {

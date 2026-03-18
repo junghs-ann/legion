@@ -426,7 +426,7 @@
 
     <script src="script.js"></script>
     <script type="module">
-        import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy } from './firebase-config.js';
+        import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy, deleteField } from './firebase-config.js';
         import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from './data.js';
         import { initAuthObserver, logoutUser } from "./auth.js";
 
@@ -587,9 +587,9 @@
             const isMember = !isAdmin && !isOfficer;
 
             if (!isAdmin) {
-                const profileChurch = (profile.churchName || profile.church || "").trim();
-                const profileCuria = (profile.curiaName || profile.curia || "").trim();
-                const profilePresidium = (profile.presidiumName || profile.presidium || "").trim();
+                const profileChurch = (profile.churchName || "").trim();
+                const profileCuria = (profile.curiaName || "").trim();
+                const profilePresidium = (profile.presidiumName || "").trim();
 
                 // 1. Set Church (Match trimmed)
                 if (profileChurch) {
@@ -641,9 +641,9 @@
                     const myDoc = qSnapshot.docs.find(docSnap => {
                         const d = docSnap.data();
                         const dName = (d.name || '').trim();
-                        const dPr = (d.presidiumName || d.presidium || '').trim();
+                        const dPr = (d.presidiumName || '').trim();
                         const targetName = (profile.memberName || profile.name || user.displayName || "").trim();
-                        const targetPr = (profile.presidiumName || profile.presidium || "").trim();
+                        const targetPr = (profile.presidiumName || "").trim();
                         return dName === targetName && dPr === targetPr;
                     });
 
@@ -763,9 +763,9 @@
                     li.style.display = 'flex';
                     li.style.justifyContent = 'space-between';
 
-                    // [Compatibility] Display regardless of old (church) or new (churchName) tags
-                    const displayChurch = (m.churchName || m.church || '성당미정').trim();
-                    const displayPresidium = (m.presidiumName || m.presidium || m.name || 'Pr.미정').trim();
+                    // [정석화] 오직 표준 필드(`churchName` 등)만 사용
+                    const displayChurch = (m.churchName || '성당미정').trim();
+                    const displayPresidium = (m.presidiumName || 'Pr.미정').trim();
                     const orgInfo = `[${displayChurch} / ${displayPresidium}]`;
                     li.innerHTML = `
                         <div>
@@ -799,28 +799,25 @@
                 console.log("Inquiry matching for compatibility:", { churchName, curiaName, presidiumName });
                 // [Compatibility Fix] Fetch all and filter client-side to handle both church/churchName fields
                 const qSnapshot = await getDocs(collection(db, "members_list"));
-                const filteredDocs = qSnapshot.docs.filter(docSnap => {
+                let results = [];
+                for (const docSnap of qSnapshot.docs) {
                     const d = docSnap.data();
-                    const dChurch = (d.churchName || d.church || '').toString().trim();
-                    const dCuria = (d.curiaName || d.curia || '').toString().trim();
-                    const dPr = (d.presidiumName || d.presidium || d.name || '').toString().trim();
+                    
+                    // [데이터 정화] 구식 필드 실시간 이전 로직은 표준화 정책에 따라 제거되었습니다. (v16.90)
 
-                    const isMatch = dChurch === churchName && dCuria === curiaName && dPr === presidiumName;
+                    const dChurch = (d.churchName || '').toString().trim();
+                    const dCuria = (d.curiaName || '').toString().trim();
+                    const dPr = (d.presidiumName || '').toString().trim();
 
-                    if (!isMatch && d.name === "김지수") {
-                        console.log("🔍 [김지수 단원 불일치 분석]:", {
-                            DB성당: dChurch, 검색성당: churchName,
-                            DB꾸리아: dCuria, 검색꾸리아: curiaName,
-                            DB쁘레: dPr, 검색쁘레: presidiumName
-                        });
+                    if (dChurch === churchName && dCuria === curiaName && dPr === presidiumName) {
+                        results.push({ id: docSnap.id, ...d });
                     }
-                    return isMatch;
-                });
+                }
 
                 // Mock a QuerySnapshot-like object for displaySearchResults
                 const mockSnapshot = {
-                    empty: filteredDocs.length === 0,
-                    forEach: (callback) => filteredDocs.forEach(callback)
+                    empty: results.length === 0,
+                    forEach: (callback) => results.forEach(callback)
                 };
 
                 await displaySearchResults(mockSnapshot);
@@ -941,9 +938,9 @@
             });
 
             // 3. Organization Info (Special UI sync)
-            const churchVal = (member.churchName || member.church || '').trim();
-            const curiaVal = (member.curiaName || member.curia || '').trim();
-            const presidiumVal = (member.presidiumName || member.presidium || member.name || '').trim();
+            const churchVal = (member.churchName || '').trim();
+            const curiaVal = (member.curiaName || '').trim();
+            const presidiumVal = (member.presidiumName || '').trim();
 
             if (document.getElementById('churchSelect')) document.getElementById('churchSelect').value = churchVal;
 
@@ -982,19 +979,17 @@
             // [원칙 준수] 화면에 보이는 성당, 꾸리아, 쁘레시디움 값을 그대로 사용
             const memberData = {};
             Object.keys(rawData).forEach(key => {
-                memberData[key] = (typeof rawData[key] === 'string') ? rawData[key].trim() : rawData[key];
+                // [시니어 패치] 저장 시점에 줄바꿈/유령 공백 원천 차단🧼
+                memberData[key] = (typeof rawData[key] === 'string') ? window.sanitizeInput(rawData[key]) : rawData[key];
             });
 
-            // [Dual Schema Normalization] Save BOTH old and new field names for maximum compatibility
+            // [정석화] 오직 신규 표준 필드만 저장합니다. (구버전 이름표 꼼수 제거)
             const screenChurch = document.getElementById('churchSelect').value.trim();
             const screenCuria = document.getElementById('curiaSelect').value.trim();
             const screenPresidium = document.getElementById('presidiumInput').value.trim();
 
-            memberData.church = screenChurch;
             memberData.churchName = screenChurch;
-            memberData.curia = screenCuria;
             memberData.curiaName = screenCuria;
-            memberData.presidium = screenPresidium; // For some files using m.presidium
             memberData.presidiumName = screenPresidium;
             if (!memberData.name) {
                 memberData.name = rawData.name; // Fallback
@@ -1085,11 +1080,11 @@
 
                 const querySnapshot = await getDocs(query(usersRef, where("name", "==", qName)));
 
-                // Client-side filtering for better flexibility with field names (church vs churchName)
+                // [정석화] 오직 표준 필드만 사용 (꼼수 제거)
                 const userDoc = querySnapshot.docs.find(d => {
                     const data = d.data();
-                    const dChurch = (data.church || data.churchName || '').toString().trim();
-                    const dPr = (data.presidiumName || data.presidium || '').toString().trim();
+                    const dChurch = (data.churchName || '').toString().trim();
+                    const dPr = (data.presidiumName || '').toString().trim();
                     return dChurch === qChurch && dPr === qPr;
                 });
 

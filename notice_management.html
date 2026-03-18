@@ -893,7 +893,7 @@
         let notices = [];
         let filter = '전체';
         let search = '';
-        let orgFilter = { church: '', curia: '', presidium: '' };
+        let orgFilter = { churchName: '', curiaName: '', presidiumName: '' };
 
         // 조직 필터 관련 요소
         const filterChurch = document.getElementById('filterChurch');
@@ -949,7 +949,7 @@
             const isAdmin = profile.role === 'admin';
 
             // 성당 목록 로드 (공통)
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName || ''))].sort();
             [filterChurch, postChurch].forEach(select => {
                 churches.forEach(c => {
                     const opt = document.createElement('option');
@@ -961,43 +961,43 @@
 
             if (!isAdmin) {
                 // 일반 사용자는 소속 고정하되, 하위 조직은 선택 가능하도록 변경하여 상위 공지 확인 지원
-                orgFilter.church = profile.church || '';
-                orgFilter.curia = profile.curia || '';
-                orgFilter.presidium = profile.presidiumName || '';
+                orgFilter.churchName = profile.churchName || '';
+                orgFilter.curiaName = profile.curiaName || '';
+                orgFilter.presidiumName = profile.presidiumName || '';
 
                 // 필터바 설정
-                filterChurch.value = orgFilter.church;
+                filterChurch.value = orgFilter.churchName;
                 filterChurch.disabled = true;
 
-                loadSelectOptions(filterCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
+                loadSelectOptions(filterCuria, [...new Set(presidiaList.filter(p => p.churchName === orgFilter.churchName).map(p => p.curiaName || ''))].sort(), orgFilter.curiaName);
                 filterCuria.disabled = true;
 
-                loadSelectOptions(filterPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
+                loadSelectOptions(filterPresidium, presidiaList.filter(p => p.churchName === orgFilter.churchName && p.curiaName === orgFilter.curiaName).map(p => p.presidiumName || '').sort(), orgFilter.presidiumName);
 
                 // [New] 커스텀 선택창 초기화
-                currentPresidia = presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort();
-                presidiumInput.value = orgFilter.presidium || '';
-                filterPresidium.value = orgFilter.presidium || '';
+                currentPresidia = presidiaList.filter(p => p.churchName === orgFilter.churchName && p.curiaName === orgFilter.curiaName).map(p => p.presidiumName || '').sort();
+                presidiumInput.value = orgFilter.presidiumName || '';
+                filterPresidium.value = orgFilter.presidiumName || '';
                 presidiumInput.disabled = false;
 
                 // [추가] 이벤트 바인딩: 일반 사용자도 쁘레시디움 필터 변경 시 렌더링 반영
                 filterPresidium.addEventListener('change', () => {
-                    orgFilter.presidium = filterPresidium.value;
+                    orgFilter.presidiumName = filterPresidium.value;
                     render();
                 });
 
                 // 등록 모달은 본인 소속으로 엄격 고정
-                postChurch.value = orgFilter.church;
+                postChurch.value = orgFilter.churchName;
                 postChurch.disabled = true;
-                loadSelectOptions(postCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
+                loadSelectOptions(postCuria, [...new Set(presidiaList.filter(p => p.churchName === orgFilter.churchName).map(p => p.curiaName || ''))].sort(), orgFilter.curiaName);
                 postCuria.disabled = true;
-                loadSelectOptions(postPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
+                loadSelectOptions(postPresidium, presidiaList.filter(p => p.churchName === orgFilter.churchName && p.curiaName === orgFilter.curiaName).map(p => p.presidiumName || '').sort(), orgFilter.presidiumName);
                 postPresidium.disabled = true;
 
             } else {
                 // 관리자용 이벤트 바인딩 (필터바)
-                setupAdminSelect(filterChurch, filterCuria, filterPresidium, (church, curia, presidium) => {
-                    orgFilter = { church, curia, presidium };
+                setupAdminSelect(filterChurch, filterCuria, filterPresidium, (churchName, curiaName, presidiumName) => {
+                    orgFilter = { churchName, curiaName, presidiumName };
                     render();
                 });
 
@@ -1022,7 +1022,7 @@
         function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
             churchEl.addEventListener('change', () => {
                 const church = churchEl.value;
-                const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+                const curiae = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
                 loadSelectOptions(curiaEl, curiae);
                 curiaEl.disabled = !church;
 
@@ -1043,7 +1043,7 @@
             curiaEl.addEventListener('change', () => {
                 const church = churchEl.value;
                 const curia = curiaEl.value;
-                const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+                const presidiaNames = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
 
                 if (curiaEl.id === 'filterCuria') {
                     currentPresidia = presidiaNames;
@@ -1105,7 +1105,7 @@
                         }
 
                         if (changed) {
-                            orgFilter.presidium = filterPresidium.value;
+                            orgFilter.presidiumName = filterPresidium.value;
                             render();
                         }
                     }
@@ -1128,7 +1128,7 @@
                     const val = item.dataset.value;
                     presidiumInput.value = val;
                     filterPresidium.value = val;
-                    orgFilter.presidium = val;
+                    orgFilter.presidiumName = val;
                     presidiumDropdown.style.display = 'none';
                     render();
                 });
@@ -1153,10 +1153,10 @@
 
                 // [Case 1] 성당이 선택되지 않은 경우 (관리자 초기 진입 등) -> 전체 노출
                 // [Case 2] 특정 조직 선택 시, 해당 조직 공지 + 상위 조직 공지(공통 공지) 노출
-                const matchesOrg = !orgFilter.church || (
-                    n.church === orgFilter.church &&
-                    (orgFilter.curia === "" || n.curia === "" || n.curia === orgFilter.curia) &&
-                    (orgFilter.presidium === "" || n.presidiumName === "" || n.presidiumName === orgFilter.presidium)
+                const matchesOrg = !orgFilter.churchName || (
+                    n.churchName === orgFilter.churchName &&
+                    (orgFilter.curiaName === "" || n.curiaName === "" || n.curiaName === orgFilter.curiaName) &&
+                    (orgFilter.presidiumName === "" || n.presidiumName === "" || n.presidiumName === orgFilter.presidiumName)
                 );
 
                 return matchesFilter && matchesSearch && matchesOrg;
@@ -1265,11 +1265,11 @@
 
             // 수정 시 조직 정보 로드 (관리자용)
             if (currentUser.role === 'admin') {
-                postChurch.value = n.church || '';
-                const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === n.church).map(p => p.curiaName || p.curia))].sort();
-                loadSelectOptions(postCuria, curiae, n.curia);
+                postChurch.value = n.churchName || '';
+                const curiae = [...new Set(presidiaList.filter(p => p.churchName === n.churchName).map(p => p.curiaName))].sort();
+                loadSelectOptions(postCuria, curiae, n.curiaName);
                 postCuria.disabled = false;
-                const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === n.church && (p.curiaName || p.curia) === n.curia).map(p => p.presidiumName || p.presidium).sort();
+                const presidiaNames = presidiaList.filter(p => p.churchName === n.churchName && p.curiaName === n.curiaName).map(p => p.presidiumName).sort();
                 loadSelectOptions(postPresidium, presidiaNames, n.presidiumName);
                 postPresidium.disabled = false;
             }
@@ -1287,12 +1287,18 @@
                 content: document.getElementById('noticeContent').value,
                 isPinned: document.getElementById('noticeIsPinned').checked,
                 author: currentUser.name || currentUser.username,
-                church: postChurch.value,
-                curia: postCuria.value,
+                churchName: postChurch.value,
+                curiaName: postCuria.value,
                 presidiumName: postPresidium.value,
                 date: new Date().toISOString().split('T')[0],
                 updatedAt: serverTimestamp()
             };
+
+            // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.90)
+            if (!data.churchName) {
+                alert('⚠️ 공지를 등록할 성당을 전용 필터 또는 작성창에서 먼저 선택해주세요.');
+                return;
+            }
 
             try {
                 if (id) {
@@ -1322,8 +1328,8 @@
 
             // 소속 자동 세팅
             if (currentUser.role !== 'admin') {
-                postChurch.value = currentUser.church || '';
-                postCuria.value = currentUser.curia || '';
+                postChurch.value = currentUser.churchName || '';
+                postCuria.value = currentUser.curiaName || '';
                 postPresidium.value = currentUser.presidiumName || '';
             }
 

@@ -565,14 +565,12 @@
             } else {
                 churchFilter.style.display = 'none';
                 ci.style.display = 'block';
-                ci.value = profile.churchName || profile.church || '';
-
+                ci.value = profile.churchName || '';
                 curiaFilter.style.display = 'none';
                 cui.style.display = 'block';
-                cui.value = profile.curiaName || profile.curia || '';
-
-                presidiumSearch.value = profile.presidiumName || profile.presidium || '';
-                presidiumFilter.value = profile.presidiumName || profile.presidium || '';
+                cui.value = profile.curiaName || '';
+                presidiumSearch.value = profile.presidiumName || '';
+                presidiumFilter.value = profile.presidiumName || '';
                 presidiumSearch.disabled = true;
 
                 pi.style.display = 'none';
@@ -611,9 +609,9 @@
                 curia = curiaFilter.value;
                 presidium = presidiumFilter.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = currentUser.presidiumName || currentUser.presidium || '';
+                church = currentUser.churchName || '';
+                curia = currentUser.curiaName || '';
+                presidium = currentUser.presidiumName || '';
             }
 
             const type = typeFilter.value;
@@ -639,9 +637,9 @@
 
             // 쁘레또리움 필터링 (praetorium_list 사용)
             let fPrae = praeList.filter(r => {
-                const matchC = !church || (r.churchName || r.church) === church;
-                const matchCu = !curia || (r.curiaName || r.curia) === curia;
-                const matchP = !presidium || (r.presidiumName || r.presidium) === presidium;
+                const matchC = !church || r.churchName === church;
+                const matchCu = !curia || r.curiaName === curia;
+                const matchP = !presidium || r.presidiumName === presidium;
                 const matchN = !name || (r.memberName || '').includes(name);
                 const s = r.status === 'active' ? '활동' : '퇴단';
                 const matchS = status === '전체' || s === status;
@@ -651,9 +649,9 @@
 
             // 아듀또리움 필터링 (adjutorium_members_list 사용)
             let fAdj = adjList.filter(r => {
-                const matchC = !church || (r.church || r.churchName) === church;
-                const matchCu = !curia || (r.curia || r.curiaName) === curia;
-                const matchP = !presidium || (r.presidium || r.presidiumName) === presidium;
+                const matchC = !church || r.churchName === church;
+                const matchCu = !curia || r.curiaName === curia;
+                const matchP = !presidium || r.presidiumName === presidium;
                 const matchN = !name || (r.name || '').includes(name);
                 const s = r.withdrawalDate ? '퇴단' : '활동';
                 const matchS = status === '전체' || s === status;
@@ -712,7 +710,7 @@
                             <td>${r.name}</td>
                             <td>${r.baptismalName || '-'}</td>
                             <td>${r.gender || '-'}</td>
-                            <td>${r.presidium || r.presidiumName || '-'}</td>
+                            <td>${r.presidiumName || '-'}</td>
                             <td>${r.admissionDate || '-'}</td>
                             <td>${r.withdrawalDate || '-'}</td>
                             <td class="text-left">${r.notes || '-'}</td>

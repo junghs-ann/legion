@@ -13,6 +13,19 @@ import {
     updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// --- Role Standardization (New) ---
+export function convertToStdRole(role) {
+    if (!role) return '단원';
+    const r = String(role).toLowerCase().trim();
+    if (r.includes('단장') && !r.includes('부단장')) return '단장';
+    if (r.includes('president') && !r.includes('vice')) return '단장';
+    if (r.includes('부단장') || r.includes('vice')) return '부단장';
+    if (r.includes('서기') || r.includes('secretary')) return '서기';
+    if (r.includes('회계') || r.includes('treasurer')) return '회계';
+    if (r.includes('관리자') || r.includes('admin')) return '관리자';
+    return '단원';
+}
+
 // --- Register User (Firebase) ---
 export async function registerUser(email, password, userData) {
     console.log("Firebase Register:", email);
@@ -103,8 +116,21 @@ export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
             // Get most recent profile from Firestore
             const profile = await getUserProfile(user.uid);
             if (profile) {
-                localStorage.setItem('currentUser', JSON.stringify(profile));
-                onUserAuthenticated(user, profile);
+                // 표준 필드명만 사용 (구 필드명 제거)
+                const standardizedProfile = {
+                    ...profile,
+                    churchName: profile.churchName || '',
+                    presidiumName: profile.presidiumName || '',
+                    curiaName: profile.curiaName || '',
+                    role: profile.role || 'member'
+                };
+                // Assuming onAuthChanged is a new callback or a typo for onUserAuthenticated
+                // If onAuthChanged is not defined elsewhere, this line might cause an error.
+                // For now, I'm adding it as per the instruction.
+                // onAuthChanged(user, standardizedProfile); 
+                
+                localStorage.setItem('currentUser', JSON.stringify(standardizedProfile));
+                onUserAuthenticated(user, standardizedProfile);
             } else {
                 if (onUserNotAuthenticated) onUserNotAuthenticated();
             }

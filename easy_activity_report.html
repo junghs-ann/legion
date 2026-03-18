@@ -831,18 +831,12 @@
 
             // [수정] Firestore에서 초기 데이터 로드 (스키마 & 프리셋)
             try {
-                // 1. 모든 성당 스키마 로드 (churchName 필드 우선, 없으면 doc.id 사용)
-                const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
-                schemaSnap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const categories = data.categories || [];
-                    const cName = (data.churchName || docSnap.id).trim();
-                    activitySchemaMap[cName] = categories;
-                });
+                    const cName = (data.churchName || '').trim();
+                    if (cName) activitySchemaMap[cName] = categories;
 
                 // 2. 프리셋 로드 (본인 또는 관리권한인 경우 전체 로드 고려)
-                // 여기서는 일단 본인 것 우선 로드하고, 필요 시 실시간으로 더 가져옴
-                const uid = profile.id || profile.uid;
+                // [정석화] 표준 필드만 사용⚖️🌊
+                const uid = profile.id; // profile.uid는 사용하지 않음
                 if (uid) {
                     const presetDoc = await getDoc(doc(db, 'user_activity_presets', uid));
                     if (presetDoc.exists()) {
@@ -952,9 +946,9 @@
                 await selChurch.onchange();
             } else {
                 // Officer/Member: Fixed Org
-                const churchVal = (currentUser.churchName || currentUser.church || "").trim();
-                const curiaVal = (currentUser.curiaName || currentUser.curia || "").trim();
-                const prName = (currentUser.presidiumName || currentUser.presidium || "").trim();
+                const churchVal = (currentUser.churchName || "").trim();
+                const curiaVal = (currentUser.curiaName || "").trim();
+                const prName = (currentUser.presidiumName || "").trim();
 
                 // [강화] 만약 데이터가 모두 비어있다면 에러 메시지 표시 고려
                 if (!churchVal && !prName) {
@@ -997,46 +991,37 @@
             const curia = document.getElementById('selCuria').value;
             
             try {
-                // [수정] 병렬 쿼리: 새로운 필드명(churchName, presidiumName)과 기존 필드명(church, presidium) 모두 지원
-                const qNew = query(collection(db, 'attendance_list'),
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const q = query(collection(db, 'attendance_list'),
                     where('churchName', '==', church),
                     where('curiaName', '==', curia),
                     where('presidiumName', '==', prName)
                 );
-                const qOld = query(collection(db, 'attendance_list'),
-                    where('church', '==', church),
-                    where('curia', '==', curia),
-                    where('presidium', '==', prName)
-                );
 
-                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
-                const combinedDocs = [...snapNew.docs, ...snapOld.docs];
+                const snap = await getDocs(q);
+                const combinedDocs = snap.docs;
 
-                // 중복 제거 및 데이터 정리 (날짜 데이터 타입 보정 포함)
-                const seenIds = new Set();
+                // 데이터 정리 (날짜 데이터 타입 보정 포함)
                 let myAttendance = [];
 
                 combinedDocs.forEach(docSnap => {
-                    if (!seenIds.has(docSnap.id)) {
-                        seenIds.add(docSnap.id);
-                        const data = docSnap.data();
-                        if (!data) return;
+                    const data = docSnap.data();
+                    if (!data) return;
 
-                        // 날짜 타입 보정 (Timestamp 객체인 경우 문자열로 변환)
-                        let dateStr = data.date;
-                        if (dateStr && typeof dateStr === 'object' && dateStr.toDate) {
-                            dateStr = dateStr.toDate().toISOString().split('T')[0];
-                        } else if (dateStr && typeof dateStr === 'object' && dateStr.seconds) {
-                            dateStr = new Date(dateStr.seconds * 1000).toISOString().split('T')[0];
-                        }
+                    // 날짜 타입 보정 (Timestamp 객체인 경우 문자열로 변환)
+                    let dateStr = data.date;
+                    if (dateStr && typeof dateStr === 'object' && dateStr.toDate) {
+                        dateStr = dateStr.toDate().toISOString().split('T')[0];
+                    } else if (dateStr && typeof dateStr === 'object' && dateStr.seconds) {
+                        dateStr = new Date(dateStr.seconds * 1000).toISOString().split('T')[0];
+                    }
 
-                        if (dateStr && data.session) {
-                            myAttendance.push({
-                                id: docSnap.id,
-                                ...data,
-                                date: dateStr // 보정된 날짜 사용
-                            });
-                        }
+                    if (dateStr && data.session) {
+                        myAttendance.push({
+                            id: docSnap.id,
+                            ...data,
+                            date: dateStr // 보정된 날짜 사용
+                        });
                     }
                 });
 
@@ -1071,12 +1056,12 @@
                     getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', prName)))
                 ]);
 
-                // 성당 정보 일치 체크 (이중 필드 대응)
+                // 성당 정보 일치 체크
                 const officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(o => (o.churchName === church || o.church === church));
+                    .filter(o => o.churchName === church);
                 
                 const membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(m => (m.churchName === church || m.church === church));
+                    .filter(m => m.churchName === church);
 
                 const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
                 const filterDate = selDateValue || new Date().toISOString().split('T')[0];
@@ -1302,16 +1287,16 @@
                     curiaVal = document.getElementById('selCuria').value;
                     prVal = document.getElementById('selPr').value;
                 } else {
-                    churchVal = currentUser.churchName || currentUser.church;
-                    curiaVal = currentUser.curiaName || currentUser.curia;
-                    prVal = currentUser.presidiumName || currentUser.presidium;
+                    churchVal = currentUser.churchName;
+                    curiaVal = currentUser.curiaName;
+                    prVal = currentUser.presidiumName;
                 }
             } else {
                 targetName = (currentUser.memberName || currentUser.name);
                 uid = currentUser.id || currentUser.uid;
-                churchVal = currentUser.churchName || currentUser.church;
-                curiaVal = currentUser.curiaName || currentUser.curia;
-                prVal = currentUser.presidiumName || currentUser.presidium;
+                churchVal = currentUser.churchName;
+                curiaVal = currentUser.curiaName;
+                prVal = currentUser.presidiumName;
             }
 
             const grid = document.getElementById('activityGrid');
@@ -1692,16 +1677,18 @@
                     curiaVal = document.getElementById('selCuria').value;
                     prVal = document.getElementById('selPr').value;
                 } else {
-                    churchVal = currentUser.churchName || currentUser.church;
-                    curiaVal = currentUser.curiaName || currentUser.curia;
-                    prVal = currentUser.presidiumName || currentUser.presidium;
+                    // [원칙 준수] 화면에 자동 세팅된 값을 그대로 읽어옵니다.
+                    churchVal = document.getElementById('selChurch').value;
+                    curiaVal = document.getElementById('selCuria').value;
+                    prVal = document.getElementById('selPr').value;
                 }
             } else {
                 targetName = (currentUser.memberName || currentUser.name);
                 uid = currentUser.id || currentUser.uid;
-                churchVal = currentUser.churchName || currentUser.church;
-                curiaVal = currentUser.curiaName || currentUser.curia;
-                prVal = currentUser.presidiumName || currentUser.presidium;
+                // [원칙 준수] 화면에 자동 세팅된 값을 그대로 읽어옵니다.
+                churchVal = document.getElementById('selChurch').value;
+                curiaVal = document.getElementById('selCuria').value;
+                prVal = document.getElementById('selPr').value;
             }
 
             if (!targetName || !prVal) {
@@ -1760,7 +1747,6 @@
                     churchName: churchVal,
                     curiaName: curiaVal,
                     presidiumName: prVal,
-                    // [표준화] 레거시 필드(church, curia, presidium) 완전 제거
                     memberName: targetName,
                     memberId: uid || '',
                     session: currentPrAttendance.session,

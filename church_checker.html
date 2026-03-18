@@ -70,9 +70,9 @@
                     
                     snap.forEach(doc => {
                         const data = doc.data();
-                        const c = (data.churchName || data.church || '').toString().trim();
-                        const cr = (data.curiaName || data.curia || '').toString().trim();
-                        const pr = (data.presidiumName || data.presidium || '').toString().trim();
+                        const c = (data.churchName || '').toString().trim();
+                        const cr = (data.curiaName || '').toString().trim();
+                        const pr = (data.presidiumName || '').toString().trim();
                         
                         // [🚨 강화된 검증] 성당, 꾸리아, 쁘레시디움 중 하나라도 없으면 '비정상'으로 간주 (v16.86)
                         if (!c || !cr || !pr) {

@@ -335,12 +335,14 @@ body {
     padding-left: 30px;
 }
 
-.nav-item:hover .sub-menu {
-    display: block;
-    max-height: 800px;
-    opacity: 1;
-    visibility: visible;
-    margin-top: 5px;
+@media (min-width: 1025px) {
+    .nav-item:hover .sub-menu {
+        display: block;
+        max-height: 800px;
+        opacity: 1;
+        visibility: visible;
+        margin-top: 5px;
+    }
 }
 
 /* Mobile Toggle */
@@ -471,8 +473,9 @@ body {
         font-size: 1.1rem;
     }
 
+    /* Mobile Arrow Visibility */
     .nav-link::after {
-        display: none;
+        display: inline-block;
     }
 
     .nav-link:hover {

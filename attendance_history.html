@@ -634,29 +634,29 @@
                 churchFilter.style.display = 'block'; ci.style.display = 'none'; churchFilter.disabled = false; loadChurches();
             } else {
                 churchFilter.style.display = 'none'; ci.style.display = 'block';
-                ci.value = profile.churchName || profile.church || '';
+                ci.value = profile.churchName || '';
                 curiaFilter.style.display = 'none'; cui.style.display = 'block';
-                cui.value = profile.curiaName || profile.curia || '';
+                cui.value = profile.curiaName || '';
 
-                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                presidiumInput.value = profile.presidiumName || '';
                 presidiumInput.disabled = true;
 
                 // Ensure internal profile values are set for queries
-                currentUser.churchName = ci.value;
-                currentUser.curiaName = cui.value;
-                currentUser.presidiumName = presidiumInput.value;
+                currentUser.churchName = profile.churchName || '';
+                currentUser.curiaName = profile.curiaName || '';
+                currentUser.presidiumName = presidiumInput.value || profile.presidiumName || '';
             }
         }
 
         async function loadChurches() {
             const presidia = allPresidia;
-            const churches = [...new Set(presidia.map(p => p.churchName))].sort();
+            const churches = [...new Set(presidia.map(p => p.churchName))].filter(c => c).sort();
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => churchFilter.add(new Option(c, c)));
             churchFilter.onchange = async () => {
                 const selected = churchFilter.value;
                 if (!selected) { curiaFilter.disabled = true; return; }
-                const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].sort();
+                const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].filter(c => c).sort();
                 curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
                 curiae.forEach(c => curiaFilter.add(new Option(c, c)));
                 curiaFilter.disabled = false;
@@ -667,7 +667,7 @@
                 presidiumInput.value = '';
                 if (!selectedCuria) { presidiumInput.disabled = true; return; }
 
-                currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).sort();
+                currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).filter(c => c).sort();
                 presidiumInput.disabled = false;
                 renderDropdown('');
                 await updateSessionSelects();
@@ -723,9 +723,9 @@
                 presidium = presidiumInput.value;
             } else {
                 const p = currentUser || {};
-                church = p.churchName || p.church || '';
-                curia = p.curiaName || p.curia || '';
-                presidium = presidiumInput.value || p.presidiumName || p.presidium || '';
+                church = p.churchName || '';
+                curia = p.curiaName || '';
+                presidium = presidiumInput.value || p.presidiumName || '';
             }
 
             if (!church || !curia || !presidium) {
@@ -735,26 +735,11 @@
             }
 
             try {
-                // Fetch attendance_list using both old and new field names for robustness
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('churchName', '==', church),
-                        where('presidiumName', '==', presidium))),
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('church', '==', church),
-                        where('presidium', '==', presidium)))
-                ]);
+                const qSnap = await getDocs(query(collection(db, 'attendance_list'), 
+                    where('presidiumName', '==', presidium)));
 
-                const sessions = [];
-                const seenIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenIds.has(docSnap.id)) {
-                            seenIds.add(docSnap.id);
-                            sessions.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                const sessions = qSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+                    .filter(s => s.churchName === church);
 
                 sessions.sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
@@ -777,9 +762,9 @@
                 curia = curiaFilter.value;
                 presidium = presidiumInput.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = presidiumInput.value || currentUser.presidiumName || currentUser.presidium || '';
+                church = currentUser.churchName || '';
+                curia = currentUser.curiaName || '';
+                presidium = presidiumInput.value || currentUser.presidiumName || '';
             }
 
             if (!church || !curia || !presidium) {
@@ -788,23 +773,11 @@
             }
 
             try {
-                // Fetch attendance_list from Firestore using both field names
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('churchName', '==', church),
-                        where('presidiumName', '==', presidium))),
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('church', '==', church),
-                        where('presidium', '==', presidium)))
-                ]);
+                const qSnap = await getDocs(query(collection(db, 'attendance_list'), 
+                    where('presidiumName', '==', presidium)));
                 
-                let attendanceList = [];
-                const seenAttIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(d => {
-                        if (!seenAttIds.has(d.id)) { seenAttIds.add(d.id); attendanceList.push({ id: d.id, ...d.data() }); }
-                    });
-                });
+                let attendanceList = qSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .filter(s => s.churchName === church);
 
                 // Fetch members and officers for mapping (Wide search by church to catch transfers)
                 const memQuery = query(collection(db, 'members_list'), where('churchName', '==', church));

@@ -797,7 +797,7 @@
 
             // 성당 목록 만들기 (기본 정보에서 추출)
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(Boolean).sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].filter(Boolean).sort();
             churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = c;
@@ -806,9 +806,9 @@
 
             if (!isAdmin) {
                 // [일반 사용자] 로그인 정보로 고정
-                const userChurch = currentUser.churchName || currentUser.church || '';
-                const userCuria = currentUser.curiaName || currentUser.curia || '';
-                const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
+                const userChurch = currentUser.churchName || '';
+                const userCuria = currentUser.curiaName || '';
+                const userPresidium = currentUser.presidiumName || '';
 
                 if (userChurch) {
                     churchSelect.value = userChurch;
@@ -972,10 +972,10 @@
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) { curiaSelect.disabled = true; return; }
 
-            // 쁘레시디움 기본 정보에서 해당 성당에 속한 꾸리아만 추출
+            // [정석화] 표준 필드만 사용⚖️🌊
             const curias = [...new Set(presidiaList
-                .filter(p => (p.churchName === church || p.church === church))
-                .map(p => p.curiaName || p.curia)
+                .filter(p => p.churchName === church)
+                .map(p => p.curiaName)
             )].filter(Boolean).sort();
 
             curias.forEach(cu => {
@@ -1003,12 +1003,12 @@
             const curia = curiaSelect.value;
             if (!curia) return;
 
-            // 쁘레시디움 기본 정보에서 해당 성당/꾸리아에 속한 쁘레시디움만 추출
+            // [정석화] 표준 필드만 사용⚖️🌊
             const filtered = presidiaList.filter(p =>
-                (p.churchName === church || p.church === church) &&
-                (p.curiaName === curia || p.curia === curia) &&
-                (p.presidiumName || p.presidium || p.name || '').includes(filterText)
-            ).sort((a, b) => (a.presidiumName || a.presidium || '').localeCompare(b.presidiumName || b.presidium || ''));
+                p.churchName === church &&
+                p.curiaName === curia &&
+                (p.presidiumName || '').includes(filterText)
+            ).sort((a, b) => (a.presidiumName || '').localeCompare(b.presidiumName || ''));
 
             presidiumDropdown.innerHTML = '';
             if (filtered.length === 0) {
@@ -1045,34 +1045,17 @@
             const cacheKey = `${church}-${curia}-${presidium}`;
 
             try {
-                // [Robust Parallel Query] 필드명 차이(churchName vs church)를 극복하기 위해 병렬 조회
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'attendance_list'),
-                        where('churchName', '==', church),
-                        where('curiaName', '==', curia))),
-                    getDocs(query(collection(db, 'attendance_list'),
-                        where('church', '==', church),
-                        where('curia', '==', curia)))
-                ]);
+                // [정석화] 이중 쿼리(꼼수) 제거 및 표준 쿼리 사용⚖️🌊
+                const qSnap = await getDocs(query(collection(db, 'attendance_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)));
 
-                const seenIds = new Set();
-                const rawDocs = [];
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(d => {
-                        if (!seenIds.has(d.id)) {
-                            seenIds.add(d.id);
-                            rawDocs.push({ id: d.id, ...d.data() });
-                        }
-                    });
-                });
+                const rawDocs = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // JS 단계에서 presidiumName 또는 presidium(레거시) 필드 모두 체크 (공백 등 불일치 방지 트리밍)
+                // [정석화] 표준 필드 직접 참조⚖️🌊
                 attendanceList = rawDocs
-                    .filter(doc => {
-                        const prName = (doc.presidiumName || doc.presidium || '').toString().trim();
-                        const targetPr = (presidium || '').toString().trim();
-                        return prName === targetPr;
-                    })
+                    .filter(doc => (doc.presidiumName || '').toString().trim() === (presidium || '').toString().trim())
                     .map(doc => {
                         // [보정] date 필드가 Timestamp 객체인 경우 문자열로 변환
                         let finalDate = doc.date;
@@ -1153,7 +1136,7 @@
             if (isNaN(numericSession)) return;
 
             const prRecords = attendanceList.filter(a => {
-                const prName = (a.presidiumName || a.presidium || '').toString().trim();
+                const prName = (a.presidiumName || '').toString().trim();
                 const targetPr = (presidium || '').toString().trim();
                 return prName === targetPr;
             });
@@ -1238,12 +1221,12 @@
                     getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', presidium)))
                 ]);
 
-                // 성당 정보가 일치하는지 한 번 더 JS에서 체크 (이중 필드 대응)
+                // 성당 정보가 일치하는지 한 번 더 JS에서 체크
                 officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(o => (o.churchName === church || o.church === church));
+                    .filter(o => o.churchName === church);
 
                 membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(m => (m.churchName === church || m.church === church));
+                    .filter(m => m.churchName === church);
 
                 const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
                 const filterDate = meetingDate || new Date().toISOString().split('T')[0];
@@ -1360,7 +1343,7 @@
             }
 
             const existing = attendanceList.find(a => {
-                const prMatch = (a.presidiumName || a.presidium || '').toString().trim() === (presidium || '').toString().trim();
+                const prMatch = (a.presidiumName || '').toString().trim() === (presidium || '').toString().trim();
                 return a.date === date && prMatch;
             });
 
@@ -1392,7 +1375,6 @@
                 Object.entries(existing.attendanceData).forEach(([mid, data]) => {
                     const row = tableBody.querySelector(`.present[data-id="${mid}"]`)?.closest('tr');
                     if (row) {
-                        // Handle both old string format ('P'/'A') and new object format ({status: 'P', role: '...'})
                         const status = (typeof data === 'object') ? data.status : data;
                         row.querySelector('.present').checked = (status === 'P');
                         row.querySelector('.absent').checked = (status === 'A');

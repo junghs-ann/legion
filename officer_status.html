@@ -531,15 +531,12 @@
             } else {
                 churchFilter.style.display = 'none';
                 ci.style.display = 'block';
-                ci.value = profile.churchName || profile.church || '';
-
+                ci.value = profile.churchName || '';
                 curiaFilter.style.display = 'none';
                 cui.style.display = 'block';
-                cui.value = profile.curiaName || profile.curia || '';
-
-                presidiumSearch.value = profile.presidiumName || profile.presidium || '';
-                presidiumFilter.value = profile.presidiumName || profile.presidium || '';
-                presidiumSearch.disabled = true;
+                cui.value = profile.curiaName || '';
+                presidiumSearch.value = profile.presidiumName || '';
+                presidiumFilter.value = profile.presidiumName || '';
 
                 pi.style.display = 'none';
             }
@@ -552,10 +549,10 @@
             if (!selectedChurch || !selectedCuria) return;
 
             const filtered = presidiaList.filter(p =>
-                (p.churchName || p.church) === selectedChurch &&
-                (p.curiaName || p.curia) === selectedCuria &&
-                (p.presidiumName || p.presidium || '').includes(filterText)
-            ).map(p => p.presidiumName || p.presidium).sort();
+                p.churchName === selectedChurch &&
+                p.curiaName === selectedCuria &&
+                (p.presidiumName || '').includes(filterText)
+            ).map(p => p.presidiumName || '').filter(name => name).sort();
 
             presidiumDropdown.innerHTML = '';
             if (filtered.length > 0) {
@@ -576,7 +573,7 @@
         }
 
         function loadChurches() {
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName || ''))].filter(c => c).sort();
             churchFilter.innerHTML = '<option value="">전체</option>';
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -590,7 +587,7 @@
                 presidiumFilter.value = '';
                 presidiumSearch.value = '';
                 if (selected) {
-                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === selected).map(p => p.curiaName || p.curia))].sort();
+                const curiae = [...new Set(presidiaList.filter(p => p.churchName === selected).map(p => p.curiaName || ''))].filter(c => c).sort();
                     curiae.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = opt.textContent = c;
@@ -646,9 +643,9 @@
                 curia = curiaFilter.value;
                 presidium = presidiumFilter.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = presidiumFilter.value || currentUser.presidiumName || currentUser.presidium || '';
+                church = currentUser.churchName || '';
+                curia = currentUser.curiaName || '';
+                presidium = presidiumFilter.value || currentUser.presidiumName || '';
             }
 
             const rank = rankFilter.value;
@@ -679,9 +676,9 @@
             };
 
             let filtered = officersList.filter(o => {
-                const isChurchMatch = !church || (o.church || o.churchName) === church;
-                const isCuriaMatch = !curia || (o.curia || o.curiaName) === curia;
-                const isPresidiumMatch = !presidium || (o.presidium || o.presidiumName) === presidium;
+                const isChurchMatch = !church || o.churchName === church;
+                const isCuriaMatch = !curia || o.curiaName === curia;
+                const isPresidiumMatch = !presidium || o.presidiumName === presidium;
                 
                 // 직책 필터링 보강: DB 값이 영어여도 한글 필터와 매칭되도록 함
                 const oRoleKey = (o.role || '').toLowerCase().trim();

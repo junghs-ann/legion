@@ -464,13 +464,13 @@
                     <div class="form-row-3">
                         <div class="form-group">
                             <label>성당</label>
-                            <select name="church" id="churchSelect" required>
+                            <select name="churchName" id="churchSelect" required>
                                 <option value="">성당 선택</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>꾸리아(Cu.)</label>
-                            <select name="curia" id="curiaSelect" required disabled>
+                            <select name="curiaName" id="curiaSelect" required disabled>
                                 <option value="">꾸리아 선택</option>
                             </select>
                         </div>
@@ -480,7 +480,7 @@
                                 <input type="text" id="presidiumInput" placeholder="쁘레시디움 입력 또는 선택" autocomplete="off"
                                     disabled>
                                 <div id="presidiumDropdown" class="custom-dropdown"></div>
-                                <input type="hidden" name="presidium" id="presidiumHidden">
+                                <input type="hidden" name="presidiumName" id="presidiumHidden">
                             </div>
                         </div>
                     </div>
@@ -651,9 +651,9 @@
                 });
                 churchSelect.disabled = false;
             } else {
-                const userChurch = currentUser.church || currentUser.churchName;
-                const userCuria = currentUser.curia || currentUser.curiaName;
-                const userPresidium = currentUser.presidium || currentUser.presidiumName;
+                const userChurch = currentUser.churchName || '';
+                const userCuria = currentUser.curiaName || '';
+                const userPresidium = currentUser.presidiumName || '';
 
                 setSelectValue(churchSelect, userChurch);
                 setSelectValue(curiaSelect, userCuria);
@@ -983,26 +983,15 @@
             }
 
             try {
-                // Robust Query for members_list
-                const [qSnapM1, qSnapM2] = await Promise.all([
-                    getDocs(query(collection(db, 'members_list'),
-                        where('churchName', '==', church),
-                        where('presidiumName', '==', presidium))),
-                    getDocs(query(collection(db, 'members_list'),
-                        where('church', '==', church),
-                        where('presidium', '==', presidium)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qMembers = query(collection(db, 'members_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
+                );
 
-                membersList = [];
-                const seenMemberIds = new Set();
-                [qSnapM1, qSnapM2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenMemberIds.has(docSnap.id)) {
-                            seenMemberIds.add(docSnap.id);
-                            membersList.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                const snap = await getDocs(qMembers);
+                membersList = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
             } catch (error) {
                 console.error("Error fetching members for event:", error);
                 membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
@@ -1068,26 +1057,15 @@
             if (!church || !curia || !presidium) return;
 
             try {
-                // Robust Query for events_list
-                const [qSnapE1, qSnapE2] = await Promise.all([
-                    getDocs(query(collection(db, 'events_list'),
-                        where('churchName', '==', church),
-                        where('presidiumName', '==', presidium))),
-                    getDocs(query(collection(db, 'events_list'),
-                        where('church', '==', church),
-                        where('presidium', '==', presidium)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qEvents = query(collection(db, 'events_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
+                );
 
-                eventsList = [];
-                const seenEventIds = new Set();
-                [qSnapE1, qSnapE2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenEventIds.has(docSnap.id)) {
-                            seenEventIds.add(docSnap.id);
-                            eventsList.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                const snap = await getDocs(qEvents);
+                eventsList = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
                 // 메모리에서 날짜 내림차순 정렬 (인덱스 에러 방지)
                 eventsList.sort((a, b) => (b.eventDate || "").localeCompare(a.eventDate || ""));
@@ -1122,20 +1100,24 @@
             // [개선] 날짜 정보를 가장 먼저 설정하여 이후 트리거되는 단원 목록 필터링 시 활용되도록 함
             document.getElementById('eventDate').value = event.eventDate;
 
+            churchNameVal = event.churchName || '';
+            curiaNameVal = event.curiaName || '';
+            prNameVal = event.presidiumName || '';
+
             // 조직 정보 설정 및 단계적 트리거
-            churchSelect.value = event.church || event.churchName;
+            churchSelect.value = churchNameVal;
 
             // Trigger church change manually
             const curiae = getCuriae(churchSelect.value);
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>' + curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
             curiaSelect.disabled = false;
 
-            curiaSelect.value = event.curia || event.curiaName;
+            curiaSelect.value = curiaNameVal;
             const prs = getPresidia(churchSelect.value, curiaSelect.value).map(p => p.name).sort();
             currentPresidia = prs;
             presidiumInput.disabled = false;
-            presidiumInput.value = event.presidium || event.presidiumName;
-            presidiumHidden.value = event.presidium || event.presidiumName;
+            presidiumInput.value = prNameVal;
+            presidiumHidden.value = prNameVal;
 
             await loadMemberList();
             await renderEventList();
@@ -1205,11 +1187,8 @@
 
             const eventData = {
                 churchName: churchSelect.value,
-                church: churchSelect.value,
                 curiaName: curiaSelect.value,
-                curia: curiaSelect.value,
                 presidiumName: document.getElementById('presidiumHidden').value,
-                presidium: document.getElementById('presidiumHidden').value,
             };
 
             // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)

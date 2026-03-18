@@ -535,10 +535,10 @@
                 }
             } else {
                 console.log("일반 사용자 로그인: 소속 정보 고정");
-                // profile의 다양한 필드명 대응 (churchName, church 등)
-                const userChurch = (profile.churchName || profile.church || '').toString().trim();
-                const userCuria = (profile.curiaName || profile.curia || '').toString().trim();
-                const userPresidium = (profile.presidiumName || profile.presidium || '').toString().trim();
+                // profile의 표준 필드명 사용
+                const userChurch = (profile.churchName || '').toString().trim();
+                const userCuria = (profile.curiaName || '').toString().trim();
+                const userPresidium = (profile.presidiumName || '').toString().trim();
 
                 // 성당 설정 (목록에 없으면 강제 추가하여 안전하게 표시)
                 if (userChurch) {
@@ -677,7 +677,7 @@
             let churchList = getChurches();
 
             // 사용자 프로필의 성당 정보를 목록에 포함 (혹시 데이터베이스에 아직 없을 경우 대비)
-            const userChurch = (profile.churchName || profile.church || '').toString().trim();
+            const userChurch = (profile.churchName || '').toString().trim();
             if (userChurch && !churchList.includes(userChurch)) {
                 churchList.push(userChurch);
             }
@@ -777,28 +777,21 @@
             }
 
             try {
-                // Robust Query for council_attendance_list (Management Load)
-                const [qSnapL1, qSnapL2] = await Promise.all([
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('churchName', '==', church),
-                        where('curiaName', '==', curia),
-                        where('session', '==', session),
-                        where('date', '==', baseDate))),
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('church', '==', church),
-                        where('curia', '==', curia),
-                        where('session', '==', session),
-                        where('date', '==', baseDate)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qAttendance = query(collection(db, 'council_attendance_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('session', '==', session),
+                    where('date', '==', baseDate)
+                );
 
+                const snap = await getDocs(qAttendance);
                 let existing = null;
-                [qSnapL1, qSnapL2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (presidium === "" || (data.presidiumName || data.presidium) === presidium) {
-                            existing = data;
-                        }
-                    });
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (presidium === "" || data.presidiumName === presidium) {
+                        existing = data;
+                    }
                 });
 
                 if (existing) {
@@ -807,9 +800,9 @@
                 } else {
                     console.log("🆕 기존 기록 없음 - 간부 명부에서 신규 명단을 생성합니다.");
                     let scopeOfficers = officersList.filter(o => {
-                        const oChurch = (o.churchName || o.church || '').toString().trim();
-                        const oCuria = (o.curiaName || o.curia || '').toString().trim();
-                        const oPresidium = (o.presidiumName || o.presidium || '').toString().trim();
+                        const oChurch = (o.churchName || '').toString().trim();
+                        const oCuria = (o.curiaName || '').toString().trim();
+                        const oPresidium = (o.presidiumName || '').toString().trim();
                         
                         const targetChurch = (church || '').toString().trim();
                         const targetCuria = (curia || '').toString().trim();
@@ -838,7 +831,7 @@
                     const grouped = {};
                     scopeOfficers.forEach(o => {
                         const role = (o.role || '').toLowerCase().trim();
-                        const key = `${(o.presidiumName || o.presidium || '').trim()}|${role}`;
+                        const key = `${(o.presidiumName || '').trim()}|${role}`;
                         if (!grouped[key]) grouped[key] = [];
                         grouped[key].push(o);
                     });
@@ -857,8 +850,8 @@
                     finalOfficers.sort((a, b) => {
                         const roleA = (a.role || '').toLowerCase().trim();
                         const roleB = (b.role || '').toLowerCase().trim();
-                        const prA = (a.presidiumName || a.presidium || '').trim();
-                        const prB = (b.presidiumName || b.presidium || '').trim();
+                        const prA = (a.presidiumName || '').trim();
+                        const prB = (b.presidiumName || '').trim();
                         if (prA !== prB) return prA.localeCompare(prB);
                         return (roleOrder[roleA] || 99) - (roleOrder[roleB] || 99);
                     });
@@ -866,7 +859,7 @@
                     const initialData = finalOfficers.map(o => {
                         const rawRole = (o.role || '').toLowerCase().trim();
                         return {
-                            presidiumName: (o.presidiumName || o.presidium || '').trim(),
+                            presidiumName: (o.presidiumName || '').trim(),
                             role: roleMap[rawRole] || o.role,
                             memberName: o.name,
                             baptismalName: o.baptismalName,
@@ -972,11 +965,8 @@
 
                 const record = {
                     churchName: church,
-                    church,
                     curiaName: curia,
-                    curia,
                     presidiumName: presidium,
-                    presidium,
                     session,
                     date,
                     attendanceData,

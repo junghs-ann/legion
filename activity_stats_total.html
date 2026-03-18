@@ -89,9 +89,8 @@
 
         /* 날짜 범위 그룹은 더 넓게 차지하도록 설정 */
         .filter-group.date-range-group {
-            flex: 2;
-            min-width: 300px;
-            /* Reduced from 380px for better mobile fit */
+            flex: 3;
+            min-width: 450px;
         }
 
         .filter-group label {
@@ -123,13 +122,13 @@
         .range-wrapper {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 10px;
             background: white;
             padding: 5px;
             border-radius: 8px;
             border: 1px solid #ced4da;
             position: relative;
-            /* [Fix] 팝업 고정을 위해 relative 추가 */
         }
 
         .range-wrapper input {
@@ -745,7 +744,7 @@
     <script src="script.js?v=20260307_2325"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
-        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+        import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260303_1210";
         import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
@@ -778,13 +777,12 @@
                 });
             }
 
-            // [New] Diagnostics button visibility
+            // [New] Diagnostics button visibility (Admin only)
             const btnDiag = document.getElementById('btnDiagnostics');
             if (btnDiag) {
-                const role = currentUser.role?.toLowerCase();
-                const isAdmin = ['admin', '관리자'].includes(role);
-                const isOfficer = ['president', '단장', 'vice_president', '부단장', 'secretary', '서기', 'treasurer', '회계'].includes(role);
-                if (isAdmin || isOfficer) {
+                const stdRole = convertToStdRole(currentUser.role);
+                const isAdmin = (stdRole === '관리자');
+                if (isAdmin) {
                     btnDiag.style.display = 'flex';
                     btnDiag.onclick = () => location.href = 'diagnostics.html';
                 }

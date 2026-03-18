@@ -225,13 +225,6 @@
                 const memberSnap = await getDoc(doc(db, 'members_list', memberId));
                 if (memberSnap.exists()) {
                     member = { id: memberSnap.id, ...memberSnap.data() };
-                } else {
-                    // Try searching by name if ID fails (for backward compatibility if needed)
-                    const qName = query(collection(db, 'members_list'), where('name', '==', memberId));
-                    const qSnap = await getDocs(qName);
-                    if (!qSnap.empty) {
-                        member = { id: qSnap.docs[0].id, ...qSnap.docs[0].data() };
-                    }
                 }
             } catch (error) {
                 console.error("Error fetching member:", error);
@@ -253,13 +246,17 @@
             // Fetch Education/Event Data from Firestore
             const allEvents = [];
             try {
-                // attendeeNames is stored as comma-separated string, so we fetch all and filter in JS
                 const qEvents = query(collection(db, 'events_list'), orderBy('eventDate', 'asc'));
                 const qSnapEvents = await getDocs(qEvents);
                 qSnapEvents.forEach(d => {
                     const data = d.data();
-                    const attendees = (data.attendeeNames || "").split(',').map(n => n.trim());
-                    if (attendees.includes(member.name)) {
+                    const attendeeList = data.attendees || [];
+                    // Check if attendee
+                    const isAttendee = attendeeList.some(a => (a.uid === member.id || a.id === member.id));
+                    // Filter only 'Education' (교육) and 'Retreat' (피정) as requested
+                    const isValidType = data.type === '교육' || data.type === '피정';
+                    
+                    if (isAttendee && isValidType) {
                         allEvents.push(data);
                     }
                 });
@@ -268,7 +265,12 @@
             }
 
             // Calculate Pages
-            const moveData = [{ pr: member.presidiumName || member.presidium, curia: member.curiaName || member.curia, church: member.churchName || member.church, period: `${member.probationaryDate || ''} ~` }];
+            const moveData = [{ 
+                pr: member.presidiumName || '-', 
+                curia: member.curiaName || '-', 
+                church: member.churchName || '-', 
+                period: `${member.probationaryDate || ''} ~` 
+            }];
             const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;
             const totalEduPages = Math.ceil(allEvents.length / PAGE_LIMITS.education) || 1;
             const totalPages = Math.max(totalCareerPages, totalEduPages, 1);
@@ -296,7 +298,7 @@
                                     <tr><td class="label-bg">생년월일</td><td>${member.birthDate || ''}</td><td class="label-bg">축 일</td><td>${member.feastDate || ''}</td><td class="label-bg" style="width:40px;">성별</td><td style="width:40px;">${member.gender || '여'}</td></tr>
                                     <tr><td class="label-bg">입 단 일</td><td>${member.probationaryDate || ''}</td><td class="label-bg">선 서 일</td><td colspan="3">${member.promiseDate || ''}</td></tr>
                                     <tr><td class="label-bg">연 락 처</td><td colspan="5">${member.phone || ''}</td></tr>
-                                    <tr><td class="label-bg">퇴 단 일</td><td colspan="5">${member.retiredDate || member.leaveDate || ''}</td></tr>
+                                    <tr><td class="label-bg">퇴 단 일</td><td colspan="5">${member.retiredDate || member.extinctionDate || ''}</td></tr>
                                 </table>
                             </div>
                             <div class="move-history">
@@ -339,8 +341,8 @@
         function renderMoveRows(data) {
             let html = '';
             for (let i = 0; i < PAGE_LIMITS.move; i++) {
-                const item = data[i] || { pr: '&nbsp;', curia: '&nbsp;', church: '&nbsp;', period: '~' };
-                html += `<tr><td>${item.pr}</td><td>${item.curia || '-'}</td><td>${item.church}</td><td>${item.period}</td></tr>`;
+                const item = data[i] || { presidiumName: '&nbsp;', curiaName: '&nbsp;', churchName: '&nbsp;', period: '~' };
+                html += `<tr><td>${item.presidiumName || item.pr || '&nbsp;'}</td><td>${item.curiaName || '-'}</td><td>${item.churchName || '-'}</td><td>${item.period}</td></tr>`;
             }
             return html;
         }
@@ -350,8 +352,8 @@
             for (let i = 0; i < PAGE_LIMITS.career; i++) {
                 const o = data[i];
                 if (o) {
-                    const prName = o.presidiumName || o.presidium || member.presidiumName || '-';
-                    const churchName = o.churchName || o.church || member.churchName || '-';
+                    const prName = o.presidiumName || '-';
+                    const churchName = o.churchName || '-';
                     html += `<tr><td>${prName}</td><td>${o.role}</td><td>${churchName}</td><td>${o.appointmentDate} ~ ${o.appointmentExpiryDate || ''}</td></tr>`;
                 }
                 else html += '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>~</td></tr>';
@@ -364,7 +366,7 @@
             for (let i = 0; i < PAGE_LIMITS.education; i++) {
                 const e = data[i];
                 if (e) {
-                    const prName = e.presidiumName || e.presidium || member.presidiumName || '';
+                    const prName = e.presidiumName || '';
                     html += `<tr><td>${prName}</td><td>${e.eventDate}</td><td style="text-align:left;">${e.eventName}</td><td>${e.organizer || '-'}</td></tr>`;
                 }
                 else html += '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';

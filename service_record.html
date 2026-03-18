@@ -378,7 +378,7 @@
 
     <script src="script.js?v=20260307_2325"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { initAuthObserver, logoutUser, convertToStdRole } from "./auth.js?v=20260303_1210";
         import { fetchPresidiaList } from "./data.js?v=20260303_1210";
         import { db, collection, getDocs, query, where } from "./firebase-config.js?v=20260307_2342";
 
@@ -405,10 +405,10 @@
                 window.initCommonMenus(profile, logoutUser);
             }
 
-            // 권한 체크 강화 (대소문자 및 공백 허용)
-            const role = String(profile.role || '').replace(/\s/g, '').toLowerCase();
-            isAdmin = (role === 'admin' || role === '관리자');
-            setupFilterData(profile);
+            // 권한 체크 강화 (표준 역할 명칭 사용)
+            const stdRole = convertToStdRole(profile.role);
+            isAdmin = (stdRole === '관리자');
+            setupFilterData(profile, stdRole);
 
             btnCreate.onclick = () => {
                 const memberId = memberFilter.value;
@@ -425,19 +425,30 @@
             };
         }, () => { location.href = 'index.html'; });
 
-        async function setupFilterData(profile) {
+        async function setupFilterData(profile, stdRole) {
             const presidia = await fetchPresidiaList();
 
             // Initial load
-            const churches = [...new Set(presidia.map(p => p.churchName))].sort();
+            const churches = [...new Set(presidia.map(p => (p.churchName || '').trim()).filter(Boolean))].sort();
             churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = c;
                 churchFilter.appendChild(opt);
             });
 
+            // Initial setting from profile (Strictly use churchName)
+            const profileChurch = (profile.churchName || '').trim();
+            console.log('[Debug] Profile Profile Data:', profile);
+            console.log('[Debug] Churches List:', churches);
+            console.log('[Debug] Trying to match Church:', profileChurch);
+
+            if (profileChurch && churches.includes(profileChurch)) {
+                churchFilter.value = profileChurch;
+                console.log('[Debug] Church matched and set:', profileChurch);
+            } else {
+                console.warn('[Debug] Church match failed. Profile has:', profile.churchName, 'Available:', churches);
+            }
             if (!isAdmin) {
-                churchFilter.value = profile.churchName || profile.church;
                 churchFilter.disabled = true;
             }
 
@@ -446,13 +457,30 @@
                 const church = churchFilter.value;
                 curiaFilter.innerHTML = '<option value="">전체</option>';
                 if (church) {
-                    const curiae = [...new Set(presidia.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+                    const filteredPr = presidia.filter(p => p.churchName === church);
+                    const curiae = [...new Set(filteredPr.map(p => p.curiaName))].sort();
                     curiae.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = opt.textContent = c;
                         curiaFilter.appendChild(opt);
                     });
-                    if (!isAdmin) { curiaFilter.value = profile.curiaName || profile.curia; curiaFilter.disabled = true; }
+                    
+                    // Auto set from profile (Strictly use curiaName)
+                    const profileCuria = (profile.curiaName || '').trim();
+                    const availableCuriae = [...curiaFilter.options].map(o => o.value);
+                    console.log('[Debug] Available Curiae:', availableCuriae);
+                    console.log('[Debug] Profile CuriaName:', profile.curiaName);
+
+                    if (profileCuria && availableCuriae.includes(profileCuria)) {
+                        curiaFilter.value = profileCuria;
+                        console.log('[Debug] Curia matched and set:', profileCuria);
+                    } else {
+                        console.warn('[Debug] Curia match failed.');
+                    }
+
+                    if (!isAdmin) {
+                        curiaFilter.disabled = true;
+                    }
                 }
                 updatePresidium();
             };
@@ -463,13 +491,23 @@
 
                 currentPresidia = [];
                 if (church && curia) {
-                    currentPresidia = presidia.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+                    const filteredPr = presidia.filter(p => p.churchName === church && p.curiaName === curia);
+                    currentPresidia = filteredPr.map(p => p.presidiumName).sort();
+
+                    // Auto set from profile (Strictly use presidiumName)
+                    const profilePr = (profile.presidiumName || '').trim();
+                    console.log('[Debug] Available Presidia:', currentPresidia);
+                    console.log('[Debug] Profile PresidiumName:', profile.presidiumName);
+
+                    if (profilePr && currentPresidia.includes(profilePr)) {
+                        presidiumInput.value = profilePr;
+                        console.log('[Debug] Presidium matched and set:', profilePr);
+                    } else {
+                        console.warn('[Debug] Presidium match failed.');
+                    }
 
                     if (!isAdmin) {
-                        presidiumInput.value = profile.presidiumName || profile.presidium;
                         presidiumInput.disabled = true;
-                    } else {
-                        presidiumInput.value = '';
                     }
                 }
                 renderDropdown('');
@@ -500,10 +538,13 @@
 
             const renderMemberDropdown = (searchText) => {
                 const filter = searchText.toLowerCase();
-                const filtered = currentMembers.filter(m =>
-                    (m.name || '').toLowerCase().includes(filter) ||
-                    (m.baptismalName || '').toLowerCase().includes(filter)
-                );
+                // "이름 (본명)" 형식으로 검색하거나, 이름/본명 포함 여부 확인
+                const filtered = currentMembers.filter(m => {
+                    const fullName = `${m.name} (${m.baptismalName || '-'})`;
+                    return (m.name || '').toLowerCase().includes(filter) ||
+                           (m.baptismalName || '').toLowerCase().includes(filter) ||
+                           fullName.toLowerCase().includes(filter);
+                });
 
                 memberDropdown.innerHTML = '';
                 if (filtered.length > 0) {
@@ -531,7 +572,7 @@
             // Dropdown Event Listeners
             presidiumInput.onfocus = () => {
                 if (!presidiumInput.disabled && currentPresidia.length > 0) {
-                    renderDropdown(presidiumInput.value);
+                    renderDropdown(''); // Show all on focus for easier re-selection
                     presidiumDropdown.style.display = 'block';
                 }
             };
@@ -544,7 +585,7 @@
 
             memberSearch.onfocus = () => {
                 if (!memberSearch.disabled && currentMembers.length > 0) {
-                    renderMemberDropdown(memberSearch.value);
+                    renderMemberDropdown(''); // Show all on focus for easier re-selection
                     memberDropdown.style.display = 'block';
                 }
             };
@@ -578,12 +619,12 @@
                 }
 
                 try {
-                    // Firestore에서 단원 및 간부 목록 가져오기
                     const mQuery = query(collection(db, 'members_list'),
                         where('churchName', '==', church),
                         where('curiaName', '==', curia),
                         where('presidiumName', '==', presidium)
                     );
+
                     const oQuery = query(collection(db, 'officers_list'),
                         where('churchName', '==', church),
                         where('curiaName', '==', curia),
@@ -593,12 +634,20 @@
                     const [mSnap, oSnap] = await Promise.all([getDocs(mQuery), getDocs(oQuery)]);
 
                     let prMembers = [];
-                    mSnap.forEach(docSnap => prMembers.push({ id: docSnap.id, ...docSnap.data() }));
+                    const seenIds = new Set();
+
+                    mSnap.forEach(docSnap => {
+                        seenIds.add(docSnap.id);
+                        prMembers.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
                     oSnap.forEach(docSnap => {
                         const data = docSnap.data();
-                        // 중복 방지 (members_list에 이미 있다면 skip)
-                        if (!prMembers.find(m => (m.id === docSnap.id) || (m.name === data.name))) {
-                            prMembers.push({ id: docSnap.id, ...data });
+                        if (!seenIds.has(docSnap.id)) {
+                            if (!prMembers.find(m => (m.name === data.name && m.baptismalName === data.baptismalName))) {
+                                seenIds.add(docSnap.id);
+                                prMembers.push({ id: docSnap.id, ...data });
+                            }
                         }
                     });
 
@@ -619,8 +668,9 @@
                     memberSearch.value = '';
                     renderMemberDropdown('');
 
-                    // 본인 자동 선택 로직 (관리자가 아닌 경우)
-                    if (!isAdmin && !['단장', '부단장', '서기', '회계'].includes(profile.role)) {
+                    // 본인 자동 선택 로직 (관리자나 간부가 아닌 경우)
+                    const isOfficer = ['단장', '부단장', '서기', '회계'].includes(stdRole);
+                    if (!isAdmin && !isOfficer) {
                         const myId = profile.id || profile.uid;
                         const me = currentMembers.find(m => (m.id || m.uid) === myId);
                         if (me) {

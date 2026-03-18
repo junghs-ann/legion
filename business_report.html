@@ -508,11 +508,11 @@
                 churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
 
                 if (userProfile.role !== '관리자' && userProfile.role !== 'admin') {
-                    churchSelect.value = userProfile.church || ''; churchSelect.disabled = true;
-                    updateCuriaList(userProfile.church);
-                    curiaSelect.value = userProfile.curia || userProfile.curiaName || ''; curiaSelect.disabled = true;
-                    updatePresidiumList(userProfile.church, curiaSelect.value);
-                    presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
+                    churchSelect.value = userProfile.churchName || ''; churchSelect.disabled = true;
+                    updateCuriaList(userProfile.churchName);
+                    curiaSelect.value = userProfile.curiaName || ''; curiaSelect.disabled = true;
+                    updatePresidiumList(userProfile.churchName, curiaSelect.value);
+                    presidiumSelect.value = userProfile.presidiumName || ''; presidiumSelect.disabled = true;
                     updateSessionLists();
                 } else {
                     churchSelect.addEventListener('change', () => { updateCuriaList(churchSelect.value); updatePresidiumList('', ''); });
@@ -598,13 +598,13 @@
                 if (parseInt(ss) > parseInt(es)) { window.showCustomAlert('회차 범위를 확인해주세요.'); return; }
 
                 if (mode === 'view') {
-                    // [Firestore Migration] business_report_status 컬렉션에서 상태 조회
+                    // [정규화] 호환성 코드 삭제 및 표준 필드(churchName) 단일 쿼리로 복구
                     getDocs(query(
                         collection(db, 'business_report_status'),
-                        where('church', '==', c),
-                        where('presidium', '==', p),
-                        where('startSess', '==', ss),
-                        where('endSess', '==', es)
+                        where('churchName', '==', c),
+                        where('presidiumName', '==', p),
+                        where('startSess', '==', String(ss)),
+                        where('endSess', '==', String(es))
                     )).then(snap => {
                         if (snap.empty) {
                             window.showCustomAlert('해당 기간의 사업보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
@@ -626,8 +626,14 @@
                 const top = (window.screen.height / 2) - (height / 2);
 
                 const brSess = document.getElementById('brSession').value;
+                
+                // [시니어 패치] URL 생성 시 파라미터 사전 정문화 (깨끗한 URL 보장)
+                const cleanStr = (str) => String(str || '').replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+                const cleanC = cleanStr(c);
+                const cleanCuria = cleanStr(curia);
+                const cleanP = cleanStr(p);
 
-                let url = `business_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curia)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+                let url = `business_report_view.html?churchName=${encodeURIComponent(cleanC)}&curiaName=${encodeURIComponent(cleanCuria)}&presidiumName=${encodeURIComponent(cleanP)}&start=${s}&end=${e}&mode=${mode}`;
                 if (ss) url += `&ss=${ss}`;
                 if (es) url += `&es=${es}`;
                 if (brSess) url += `&brSess=${brSess}`;

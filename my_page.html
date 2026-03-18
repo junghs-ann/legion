@@ -357,17 +357,17 @@
 
     <script src="script.js?v=20260313_1650"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser, updatePassword } from "./auth.js?v=20260313_1650";
+        import { initAuthObserver, logoutUser, updatePassword, convertToStdRole } from "./auth.js?v=20260313_1650";
 
         let currentUser = null;
         const signaturePad = document.getElementById('signature-pad');
         const ctx = signaturePad.getContext('2d');
-        const signatureFile = document.getElementById('signature-file');
-        const fileNameDisp = document.getElementById('file-name');
+        let painting = false;
+        let newSignatureData = null; // Base64 string of the new signature
         const currentImg = document.getElementById('current-signature-img');
         const noMsg = document.getElementById('no-signature-msg');
-        let painting = false;
-        let newSignatureData = null;
+        const signatureFile = document.getElementById('signature-file');
+        const fileNameDisp = document.getElementById('file-name');
 
         initAuthObserver((user, profile) => {
             currentUser = profile;
@@ -382,28 +382,16 @@
             location.href = 'index.html';
         });
 
-        // document.getElementById('logout-btn').remove(); // Handled by dynamic nav
-
         function loadProfile() {
             if (!currentUser) return;
 
-            // [New] 직책 한글 변환 로직 (v16.33)
-            const roleMap = {
-                'admin': '관리자',
-                'president': '단장',
-                'vice_president': '부단장',
-                'secretary': '서기',
-                'treasurer': '회계',
-                'member': '단원'
-            };
-            const roleKey = (currentUser.role || '').toLowerCase().trim();
-            const roleDisp = roleMap[roleKey] || currentUser.role || '-';
-
+            const roleDisp = convertToStdRole(currentUser.role);
+            
             document.getElementById('disp-name').textContent = currentUser.name || '-';
             document.getElementById('disp-baptismal').textContent = currentUser.baptismalName || '-';
             document.getElementById('disp-username').textContent = currentUser.username || '-';
             document.getElementById('disp-role').textContent = roleDisp;
-            document.getElementById('disp-church').textContent = currentUser.church || '-';
+            document.getElementById('disp-church').textContent = currentUser.churchName || '-';
             document.getElementById('disp-presidium').textContent = currentUser.presidiumName || '-';
 
             if (currentUser.signature) {
@@ -519,9 +507,9 @@
 
         // --- Password Change Logic (New) ---
         document.getElementById('btn-change-password').addEventListener('click', async () => {
-            const curPwd = document.getElementById('current-password').value;
-            const newPwd = document.getElementById('new-password').value;
-            const confirmPwd = document.getElementById('confirm-password').value;
+            const curPwd = window.sanitizeInput(document.getElementById('current-password').value);
+            const newPwd = window.sanitizeInput(document.getElementById('new-password').value);
+            const confirmPwd = window.sanitizeInput(document.getElementById('confirm-password').value);
 
             // 1. Validation
             if (!curPwd || !newPwd || !confirmPwd) {

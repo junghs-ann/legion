@@ -271,14 +271,14 @@
 
                     <div class="form-group">
                         <label>성당</label>
-                        <select name="church" id="churchSelect" required>
+                        <select id="churchSelect" name="churchName" required>
                             <option value="">성당 선택</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label>꾸리아(Cu.)</label>
-                        <select name="curia" id="curiaSelect" required disabled>
+                        <select id="curiaSelect" name="curiaName" required disabled>
                             <option value="">꾸리아 선택</option>
                         </select>
                     </div>
@@ -306,7 +306,7 @@
 
                     <div class="form-group">
                         <label>단원명 (검색/선택)</label>
-                        <select name="memberUid" id="memberSelect" required disabled>
+                        <select name="memberId" id="memberSelect" required disabled>
                             <option value="">단원 선택</option>
                         </select>
                     </div>
@@ -407,7 +407,7 @@
 
     <script src="script.js?v=20260303_1255_fix"></script>
     <script type="module">
-        import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, serverTimestamp } from "./firebase-config.js?v=20260307_2342";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
         import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
@@ -479,7 +479,7 @@
             if (isAdmin) {
                 // Admin: Load all churches from registered presidia
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
-                const uniqueChurches = [...new Set(presidiaList.map(p => p.churchName || p.church).filter(c => c))].sort();
+                const uniqueChurches = [...new Set(presidiaList.map(p => p.churchName || '').filter(c => c))].sort();
 
                 if (uniqueChurches.length === 0) {
                     console.warn('No presidia data found to populate church list.');
@@ -497,9 +497,9 @@
                 if (pInput) pInput.disabled = false;
             } else {
                 // Officer: Lock to their own org from login profile
-                const userChurch = currentUser.churchName || currentUser.church;
-                const userCuria = currentUser.curiaName || currentUser.curia;
-                const userPresidium = currentUser.presidiumName || currentUser.presidium;
+                const userChurch = currentUser.churchName || '';
+                const userCuria = currentUser.curiaName || '';
+                const userPresidium = currentUser.presidiumName || '';
 
                 // Fixed Church
                 churchSelect.innerHTML = '';
@@ -585,9 +585,9 @@
 
                     if (church) {
                         const curiae = [...new Set(presidiaList
-                            .filter(p => (p.churchName || p.church) === church)
-                            .map(p => p.curiaName || p.curia)
-                        )].sort();
+                            .filter(p => p.churchName === church)
+                            .map(p => p.curiaName || '')
+                        )].filter(c => c).sort();
 
                         curiae.forEach(cu => {
                             const opt = document.createElement('option');
@@ -653,8 +653,8 @@
                     }
 
                     const prs = presidiaList
-                        .filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia)
-                        .map(p => p.presidiumName || p.name || p.presidium)
+                        .filter(p => p.churchName === church && p.curiaName === curia)
+                        .map(p => p.presidiumName || '')
                         .sort();
 
                     currentPresidia = [...new Set(prs.filter(Boolean))];
@@ -809,6 +809,8 @@
 
             if (!church || !curia || !presidium) return;
 
+            // [데이터 정화 완료] 이제 표준 필드만 사용합니다.
+
             let officersList = [];
             try {
                 const q = query(
@@ -826,9 +828,9 @@
 
             // 1. Position-based records (for the whole organization)
             const orgRecords = officersList.filter(o => {
-                const oChurch = String(o.church || o.churchName || '').trim();
-                const oCuria = String(o.curia || o.curiaName || '').trim();
-                const oPresidium = String(o.presidium || o.presidiumName || '').trim();
+                const oChurch = String(o.churchName || '').trim();
+                const oCuria = String(o.curiaName || '').trim();
+                const oPresidium = String(o.presidiumName || '').trim();
                 return oChurch === church && oCuria === curia && oPresidium === presidium;
             });
 
@@ -1101,13 +1103,11 @@
 
             // Filter: Same Org + Active (Not retired/transferred)
             const activeMembers = membersList.filter(m =>
-                (m.churchName === church || m.church === church) &&
-                (m.curiaName === curia || m.curia === curia) &&
+                m.churchName === church &&
+                m.curiaName === curia &&
                 m.presidiumName === presidium &&
                 m.status !== '퇴단' &&
-                m.status !== '전출' &&
-                m.status !== 'retire' &&
-                m.status !== 'transfer'
+                m.status !== '전출'
             );
 
             if (activeMembers.length > 0) {
@@ -1232,11 +1232,11 @@
                 // Skip if same record
                 if (editId && String(o.id) === String(editId)) return false;
 
-                const oChurch = String(o.churchName || o.church || '').trim();
-                const oCuria = String(o.curiaName || o.curia || '').trim();
-                const oPresidium = String(o.presidiumName || o.presidium || '').trim();
+                const oChurch = String(o.churchName || '').trim();
+                const oCuria = String(o.curiaName || '').trim();
+                const oPresidium = String(o.presidiumName || '').trim();
                 const oRole = String(o.role || '').trim();
-                const oMemberId = String(o.memberId || o.memberUid || o.member || '').trim();
+                const oMemberId = String(o.memberId || '').trim();
                 const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
 
                 const isSameOrg = (oChurch === church && oCuria === curia && oPresidium === presidium);
@@ -1264,16 +1264,20 @@
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
-            // Manual Overwrite for Absolute Integrity
-            data.name = (document.getElementById('memberName').value || '').trim();
-            data.baptismalName = (document.getElementById('baptismalName').value || '').trim();
-            data.feastDate = (document.getElementById('feastDate').value || '').trim();
-            data.phone = (document.getElementById('phone').value || '').trim();
+            // Manual Overwrite for Absolute Integrity (시니어 패치: 저장 시점에 정제 적용 🧼)
+            data.name = window.sanitizeInput(document.getElementById('memberName').value);
+            data.baptismalName = window.sanitizeInput(document.getElementById('baptismalName').value);
+            data.feastDate = window.sanitizeInput(document.getElementById('feastDate').value);
+            data.phone = window.sanitizeInput(document.getElementById('phone').value);
 
-            data.churchName = (churchSelect.value || '').trim();
-            data.curiaName = (curiaSelect.value || '').trim();
-            data.presidiumName = (presidiumSelect.value || '').trim();
-            data.memberId = (memberSelect.value || '').trim();
+            data.churchName = window.sanitizeInput(churchSelect.value);
+            data.curiaName = window.sanitizeInput(curiaSelect.value);
+            data.presidiumName = window.sanitizeInput(presidiumSelect.value);
+            data.memberId = window.sanitizeInput(memberSelect.value);
+
+            // [정석화] 구버전 필드 및 불필요한 필드 완전 소거 (꼼수 원천 차단)
+            const legacyFields = ['church', 'curia', 'presidium', 'memberUid', 'member'];
+            legacyFields.forEach(f => delete data[f]);
 
             // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
             if (!data.churchName || !data.curiaName || !data.presidiumName || !data.memberId) {
@@ -1282,10 +1286,10 @@
             }
 
             const expiryInput = form.querySelector('input[name="appointmentExpiryDate"]');
-            data.appointmentExpiryDate = (expiryInput ? expiryInput.value : (data.appointmentExpiryDate || '')).trim();
+            data.appointmentExpiryDate = window.sanitizeInput(expiryInput ? expiryInput.value : (data.appointmentExpiryDate || ''));
 
             const apptInput = form.querySelector('input[name="appointmentDate"]');
-            data.appointmentDate = (apptInput ? apptInput.value : (data.appointmentDate || '')).trim();
+            data.appointmentDate = window.sanitizeInput(apptInput ? apptInput.value : (data.appointmentDate || ''));
 
             const today = new Date().toISOString().split('T')[0];
             const editId = form.getAttribute('data-edit-id');
@@ -1306,11 +1310,11 @@
             } else {
                 // Try to find by MemberId + Role + Org (Auto-Update case)
                 targetIdx = officersList.findIndex(o => {
-                    const isSameMember = String(o.memberId || o.memberUid || o.member || '').trim() === data.memberId;
+                    const isSameMember = String(o.memberId || '').trim() === data.memberId;
                     const isSameRole = String(o.role).trim() === String(data.role).trim();
-                    const oChurch = String(o.churchName || o.church || '').trim();
-                    const oCuria = String(o.curiaName || o.curia || '').trim();
-                    const oPresidium = String(o.presidiumName || o.presidium || '').trim();
+                    const oChurch = String(o.churchName || '').trim();
+                    const oCuria = String(o.curiaName || '').trim();
+                    const oPresidium = String(o.presidiumName || '').trim();
                     const isSameOrg = (oChurch === data.churchName && oCuria === data.curiaName && oPresidium === data.presidiumName);
                     const isActive = (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today);
                     return isSameMember && isSameRole && isSameOrg && isActive;
@@ -1341,12 +1345,17 @@
                     });
                 }
 
-                // [Sync] 유저 프로필 직책 동시 업데이트
-                const q = query(collection(db, 'users'), where('name', '==', data.name), where('church', '==', data.churchName), where('presidiumName', '==', data.presidiumName));
+                // [Sync] 유저 프로필 직책 동기화 (고유 ID 사용으로 동명이인 문제 원천 차단)
+                const q = query(collection(db, 'users'), where('memberId', '==', data.memberId));
                 const userSnap = await getDocs(q);
+                
+                if (userSnap.empty) {
+                    console.log(`ℹ️ 해당 단원(${data.name})으로 가입된 사용자 계정이 없어 직책 동기화를 건너뜁니다.`);
+                }
+
                 userSnap.forEach(async (uDoc) => {
                     await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
-                    console.log(`User Profile Role Synced: ${data.name} -> ${data.role}`);
+                    console.log(`✅ User Profile Role Synced (ID): ${data.name} -> ${data.role}`);
                 });
 
                 await window.showGlobalAlert('간부 정보가 성공적으로 저장되었습니다.');

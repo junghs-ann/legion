@@ -671,15 +671,15 @@
                 await loadChurches();
             } else {
                 // 비관리자의 경우 자신의 소속으로 고정 (커스텀 검색창에도 반영)
-                churchFilter.innerHTML = `<option value="${profile.churchName || profile.church}">${profile.churchName || profile.church}</option>`;
-                churchFilter.value = profile.churchName || profile.church;
+                churchFilter.innerHTML = `<option value="${profile.churchName || ''}">${profile.churchName || ''}</option>`;
+                churchFilter.value = profile.churchName || '';
                 churchFilter.disabled = true;
 
-                curiaFilter.innerHTML = `<option value="${profile.curiaName || profile.curia}">${profile.curiaName || profile.curia}</option>`;
-                curiaFilter.value = profile.curiaName || profile.curia;
+                curiaFilter.innerHTML = `<option value="${profile.curiaName || ''}">${profile.curiaName || ''}</option>`;
+                curiaFilter.value = profile.curiaName || '';
                 curiaFilter.disabled = true;
 
-                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                presidiumInput.value = profile.presidiumName || '';
                 presidiumInput.disabled = true;
             }
         }
@@ -781,9 +781,9 @@
                 }
             } else {
                 const p = currentUser || {};
-                church = p.churchName || p.church || '';
-                curia = p.curiaName || p.curia || '';
-                presidium = p.presidiumName || p.presidium || '';
+                church = p.churchName || '';
+                curia = p.curiaName || '';
+                presidium = p.presidiumName || '';
             }
 
             const start = startDateFilter.value;
@@ -791,26 +791,15 @@
 
             let filtered = [];
             try {
-                // Robust Query for events_list
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'events_list'),
-                        where('churchName', '==', church),
-                        where('presidiumName', '==', presidium))),
-                    getDocs(query(collection(db, 'events_list'),
-                        where('church', '==', church),
-                        where('presidium', '==', presidium)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qEvents = query(collection(db, 'events_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia),
+                    where('presidiumName', '==', presidium)
+                );
 
-                const results = [];
-                const seenIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenIds.has(docSnap.id)) {
-                            seenIds.add(docSnap.id);
-                            results.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                const snap = await getDocs(qEvents);
+                const results = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
                 // Firestore multiple where with range needs index, so keep simple and filter manually for date if needed
                 // or just sort and filter by date here.

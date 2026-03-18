@@ -436,13 +436,13 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>성당</label>
-                            <select id="churchSelect" name="church" required>
+                            <select id="churchSelect" name="churchName" required>
                                 <option value="">성당 선택</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>꾸리아 (Cu.)</label>
-                            <select id="curiaSelect" name="curia" required disabled>
+                            <select id="curiaSelect" name="curiaName" required disabled>
                                 <option value="">꾸리아 선택</option>
                             </select>
                         </div>
@@ -604,7 +604,7 @@
         let currentPresidiaList = [];
 
         function initOrgSelectors(profile, isAdmin) {
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
             churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c;
@@ -613,9 +613,9 @@
             });
 
             if (!isAdmin) {
-                const userChurch = profile.churchName || profile.church || '';
-                const userCuria = profile.curiaName || profile.curia || '';
-                const userPresidium = profile.presidiumName || profile.presidium || '';
+                const userChurch = profile.churchName || '';
+                const userCuria = profile.curiaName || '';
+                const userPresidium = profile.presidiumName || '';
 
                 if (userChurch) {
                     churchSelect.value = userChurch;
@@ -789,7 +789,7 @@
         }
 
         function loadCuriae(church, preselect = null) {
-            const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+            const curiae = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
             curiae.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c;
@@ -801,7 +801,7 @@
         }
 
         function loadPresidia(church, curia, preselect = null) {
-            const presidia = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            const presidia = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
             currentPresidiaList = [...new Set(presidia.filter(Boolean))];
 
             // If preselected, load members
@@ -1006,7 +1006,7 @@
         async function renderPraetoriumHistoryList(church, presidium) {
             try {
                 const q = query(collection(db, 'praetorium_list'),
-                    where('church', '==', church),
+                    where('churchName', '==', church),
                     where('presidiumName', '==', presidium)
                 );
                 const snapshot = await getDocs(q);
@@ -1094,8 +1094,8 @@
                     // 2. 재입단 (새 레코드 생성)
                     await addDoc(collection(db, 'praetorium_list'), {
                         memberId: selectedMember.id,
-                        church: church,
-                        curia: curia,
+                        churchName: church,
+                        curiaName: curia,
                         presidiumName: presidium,
                         memberName: selectedMember.name,
                         baptismalName: selectedMember.baptismalName || '',
@@ -1119,8 +1119,8 @@
                     // 4. 최초 입단
                     await addDoc(collection(db, 'praetorium_list'), {
                         memberId: selectedMember.id,
-                        church: church,
-                        curia: curia,
+                        churchName: church,
+                        curiaName: curia,
                         presidiumName: presidium,
                         memberName: selectedMember.name,
                         baptismalName: selectedMember.baptismalName || '',

@@ -16,7 +16,7 @@ async function findTheTruth() {
         snap.forEach(doc => {
             const data = doc.data();
             // 쁘레시디움 이름(신/구)과 날짜가 일치하는 것만 추출
-            const isPrMatch = (data.presidiumName === pr || data.presidium === pr);
+            const isPrMatch = (data.presidiumName === pr);
             const isDateMatch = (data.date === date);
 
             if (isPrMatch && isDateMatch) {

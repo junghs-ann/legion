@@ -943,7 +943,7 @@
         let categories = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
         let currentUser = null;
         let schedules = [];
-        let orgFilter = { church: '', curia: '', presidium: '' };
+        let orgFilter = { churchName: '', curiaName: '', presidiumName: '' };
         let currentDate = new Date(); // 달력 표시용
         let selectedDate = new Date(); // 리스트 표시용 (오늘 날짜 기본값)
         let currentPresidia = []; // [추가] 현재 선택된 꾸리아의 쁘레시디움 목록
@@ -1005,7 +1005,7 @@
             const filterChurch = document.getElementById('filterChurch');
             const filterCuria = document.getElementById('filterCuria');
 
-            const churchList = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churchList = [...new Set(presidiaList.map(p => p.churchName))].sort();
             churchList.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
@@ -1014,9 +1014,9 @@
 
             const isAdmin = currentUser.role === 'admin' || (currentUser.role || '').includes('관리자');
 
-            const userChurch = currentUser.churchName || currentUser.church || '';
-            const userCuria = currentUser.curiaName || currentUser.curia || '';
-            const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
+            const userChurch = currentUser.churchName || '';
+            const userCuria = currentUser.curiaName || '';
+            const userPresidium = currentUser.presidiumName || '';
 
             if (!isAdmin) {
                 if (userChurch) {
@@ -1044,9 +1044,9 @@
                 }
 
                 orgFilter = {
-                    church: filterChurch.value,
-                    curia: filterCuria.value,
-                    presidium: filterPresidium.value
+                    churchName: filterChurch.value,
+                    curiaName: filterCuria.value,
+                    presidiumName: filterPresidium.value
                 };
 
                 refreshData();
@@ -1068,10 +1068,10 @@
                     }
                 }
                 
-                orgFilter = {
-                    church: filterChurch.value,
-                    curia: filterCuria.value,
-                    presidium: filterPresidium.value
+                    orgFilter = {
+                    churchName: filterChurch.value,
+                    curiaName: filterCuria.value,
+                    presidiumName: filterPresidium.value
                 };
 
                 filterChurch.addEventListener('change', (e) => {
@@ -1084,7 +1084,7 @@
                     presidiumInput.disabled = true;
                     currentPresidia = [];
 
-                    orgFilter = { church: church, curia: '', presidium: '' };
+                    orgFilter = { churchName: church, curiaName: '', presidiumName: '' };
                     refreshData();
                 });
 
@@ -1092,8 +1092,8 @@
                     const curia = e.target.value;
                     updatePresidiumList(filterChurch.value, curia); // [변경]
                     presidiumInput.disabled = !curia;
-                    orgFilter.curia = curia;
-                    orgFilter.presidium = '';
+                    orgFilter.curiaName = curia;
+                    orgFilter.presidiumName = '';
                     refreshData();
                 });
 
@@ -1105,7 +1105,7 @@
             const filterCuria = document.getElementById('filterCuria');
             filterCuria.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) return;
-            const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+            const curiae = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
             curiae.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
@@ -1122,7 +1122,7 @@
 
             if (!church || !curia) return;
 
-            const prs = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            const prs = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
             currentPresidia = prs;
             presidiumInput.disabled = false;
             console.log(`[Debug] 쁘레시디움 목록 로드: ${currentPresidia.length}개`);
@@ -1146,7 +1146,7 @@
                     presidiumInput.value = name;
                     filterPresidium.value = name;
                     presidiumDropdown.style.display = 'none';
-                    orgFilter.presidium = name;
+                    orgFilter.presidiumName = name;
                     refreshData();
                 };
             });
@@ -1174,16 +1174,16 @@
 
         function applySchedulesFilter() {
             // Filter by Org
-            const targetChurch = (orgFilter.church || '').trim();
-            const targetCuria = (orgFilter.curia || '').trim();
-            const targetPresidium = (orgFilter.presidium || '').trim();
+            const targetChurch = (orgFilter.churchName || '').trim();
+            const targetCuria = (orgFilter.curiaName || '').trim();
+            const targetPresidium = (orgFilter.presidiumName || '').trim();
 
             console.log(`[Debug] Filtering for: Church="${targetChurch}", Curia="${targetCuria}", Presidium="${targetPresidium}"`);
 
             schedules = allSchedules.filter(s => {
-                const sChurch = (s.churchName || s.church || '').trim();
-                const sCuria = (s.curiaName || s.curia || '').trim();
-                const sPresidium = (s.presidiumName || s.presidium || '').trim();
+                const sChurch = (s.churchName || '').trim();
+                const sCuria = (s.curiaName || '').trim();
+                const sPresidium = (s.presidiumName || '').trim();
 
                 // 1. 성당 매칭 (가장 기본)
                 if (targetChurch && sChurch !== targetChurch) return false;

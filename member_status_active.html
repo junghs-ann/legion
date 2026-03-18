@@ -545,14 +545,12 @@
             } else {
                 churchFilter.style.display = 'none';
                 ci.style.display = 'block';
-                ci.value = profile.churchName || profile.church || '';
-
+                ci.value = profile.churchName || '';
                 curiaFilter.style.display = 'none';
                 cui.style.display = 'block';
-                cui.value = profile.curiaName || profile.curia || '';
-
-                presidiumSearch.value = profile.presidiumName || profile.presidium || '';
-                presidiumFilter.value = profile.presidiumName || profile.presidium || '';
+                cui.value = profile.curiaName || '';
+                presidiumSearch.value = profile.presidiumName || '';
+                presidiumFilter.value = profile.presidiumName || '';
                 presidiumSearch.disabled = true;
 
                 pi.style.display = 'none';
@@ -566,10 +564,10 @@
             if (!selectedChurch || !selectedCuria) return;
 
             const filtered = presidiaList.filter(p =>
-                (p.churchName || p.church) === selectedChurch &&
-                (p.curiaName || p.curia) === selectedCuria &&
-                (p.presidiumName || p.presidium || '').includes(filterText)
-            ).map(p => p.presidiumName || p.presidium).sort();
+                p.churchName === selectedChurch &&
+                p.curiaName === selectedCuria &&
+                (p.presidiumName || '').includes(filterText)
+            ).map(p => p.presidiumName).sort();
 
             presidiumDropdown.innerHTML = '';
             if (filtered.length > 0) {
@@ -596,9 +594,9 @@
                 curia = curiaFilter.value;
                 presidium = presidiumFilter.value;
             } else {
-                church = currentUser.churchName || currentUser.church || '';
-                curia = currentUser.curiaName || currentUser.curia || '';
-                presidium = presidiumFilter.value || currentUser.presidiumName || currentUser.presidium || '';
+                church = currentUser.churchName || '';
+                curia = currentUser.curiaName || '';
+                presidium = presidiumFilter.value || currentUser.presidiumName || '';
             }
 
             const status = statusFilter.value;
@@ -624,9 +622,9 @@
             const dateLabel = isWithdrawalStatus ? '퇴단일' : '입단일';
 
             let filtered = membersList.filter(m => {
-                const isChurchMatch = !church || (m.churchName || m.church) === church;
-                const isCuriaMatch = !curia || (m.curiaName || m.curia) === curia;
-                const isPresidiumMatch = !presidium || (m.presidiumName || m.presidium) === presidium;
+                const isChurchMatch = !church || m.churchName === church;
+                const isCuriaMatch = !curia || m.curiaName === curia;
+                const isPresidiumMatch = !presidium || m.presidiumName === presidium;
 
                 let isStatusMatch = false;
                 if (status === '전체') {

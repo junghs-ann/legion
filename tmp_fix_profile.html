@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>사용자 프로필 복구 도구</title>
+</head>
+<body>
+    <h1>사용자 프로필 복구 중...</h1>
+    <div id="log" style="white-space: pre-wrap; font-family: monospace; padding: 20px; background: #eee;"></div>
+
+    <script type="module">
+        import { db, doc, setDoc, getDoc } from "./firebase-config.js";
+        
+        async function runFix() {
+            const logEl = document.getElementById('log');
+            const log = (msg) => {
+                console.log(msg);
+                logEl.textContent += msg + '\n';
+            };
+
+            try {
+                log("1. jhs0121 프로필 데이터 준비...");
+                const data = {
+                    name: "정혜숙",
+                    churchName: "관평동 성당",
+                    presidiumName: "천사의 모후", // 표준 필드
+                    presidium: "천사의 모후",     // 레거시 지원
+                    role: "단장",
+                    updatedAt: new Date().toISOString()
+                };
+
+                log("2. Firestore 업데이트 실행...");
+                await setDoc(doc(db, "users", "jhs0121"), data, { merge: true });
+                
+                log("3. 업데이트 확인 중...");
+                const check = await getDoc(doc(db, "users", "jhs0121"));
+                log("결과: " + JSON.stringify(check.data(), null, 2));
+                
+                log("\n=== 복구 성공! ===");
+                log("이제 이 창을 닫고 사업보고서 화면을 새로고침해 주세요.");
+                
+            } catch (err) {
+                log("오류 발생: " + err.message);
+            }
+        }
+
+        runFix();
+    </script>
+</body>
+</html>

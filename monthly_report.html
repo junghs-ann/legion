@@ -483,8 +483,8 @@
             const currentMode = document.querySelector('input[name="reportMode"]:checked').value;
             btnText.textContent = currentMode === 'create' ? '월례보고서 생성' : '월례보고서 조회(열람)';
 
-            // [추가] 단장 등 간부 로그인 시 조직이 고정되므로, 즉시 회차 목록을 로드함
-            if (userProfile.presidiumName || userProfile.presidium) {
+            // [정석화] 표준 필드만 사용⚖️🌊
+            if (userProfile.presidiumName) {
                 await updateSessionLists();
             }
         }, () => { location.href = "index.html"; });
@@ -502,11 +502,11 @@
             churches.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; churchSelect.appendChild(opt); });
 
             if (userProfile.role !== '관리자' && userProfile.role !== 'admin') {
-                churchSelect.value = userProfile.church || ''; churchSelect.disabled = true;
-                updateCuriaList(userProfile.church);
-                curiaSelect.value = userProfile.curia || userProfile.curiaName || ''; curiaSelect.disabled = true;
-                updatePresidiumList(userProfile.church, curiaSelect.value);
-                presidiumSelect.value = userProfile.presidium || userProfile.presidiumName || ''; presidiumSelect.disabled = true;
+                churchSelect.value = userProfile.churchName || ''; churchSelect.disabled = true;
+                updateCuriaList(userProfile.churchName);
+                curiaSelect.value = userProfile.curiaName || ''; curiaSelect.disabled = true;
+                updatePresidiumList(userProfile.churchName, curiaSelect.value);
+                presidiumSelect.value = userProfile.presidiumName || ''; presidiumSelect.disabled = true;
 
                 // [Fix] 단장 등 간부 로그인 시 조직이 고정되므로, 즉시 회차 목록을 로드함
                 // updateSessionLists() is now called in initAuthObserver after it finishes
@@ -627,7 +627,7 @@
             const left = (window.screen.width / 2) - (width / 2);
             const top = (window.screen.height / 2) - (height / 2);
 
-            let url = `monthly_report_view.html?church=${encodeURIComponent(c)}&curia=${encodeURIComponent(curiaSelect.value)}&pr=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+            let url = `monthly_report_view.html?churchName=${encodeURIComponent(c)}&curiaName=${encodeURIComponent(curiaSelect.value)}&presidiumName=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
             if (ss) url += `&ss=${ss}`;
             if (es) url += `&es=${es}`;
 

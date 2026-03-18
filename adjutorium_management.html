@@ -586,14 +586,14 @@
             const isOfficer = officerRoles.some(r => role.includes(r.toLowerCase()));
 
             if (isAdmin) {
-                const churches = [...new Set(presidiaGeneralList.map(p => p.churchName || p.church))].sort();
+                const churches = [...new Set(presidiaGeneralList.map(p => p.churchName))].sort();
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
                 churches.forEach(c => churchSelect.add(new Option(c, c)));
                 churchSelect.disabled = false;
             } else if (isOfficer) {
-                const uc = currentUser.churchName || currentUser.church;
-                const ucu = currentUser.curiaName || currentUser.curia;
-                const upr = currentUser.presidiumName || currentUser.presidium;
+                const uc = currentUser.churchName;
+                const ucu = currentUser.curiaName;
+                const upr = currentUser.presidiumName;
 
                 if (!uc || !ucu || !upr) {
                     showGlobalAlert('로그인 정보에 소속 정보가 부족합니다. 관리자에게 문의해 주세요.').then(() => {
@@ -656,7 +656,7 @@
 
                 curiaSelect.disabled = !c;
                 if (c) {
-                    const curiae = [...new Set(presidiaGeneralList.filter(p => (p.churchName || p.church) === c).map(p => p.curiaName || p.curia))].sort();
+                    const curiae = [...new Set(presidiaGeneralList.filter(p => p.churchName === c).map(p => p.curiaName))].sort();
                     curiae.forEach(cu => curiaSelect.add(new Option(cu, cu)));
                 }
             });
@@ -676,7 +676,7 @@
             });
 
             async function loadPresidiaListDropdown(church, curia) {
-                const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+                const presidia = presidiaGeneralList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
                 currentPresidiaList = [...new Set(presidia.filter(Boolean))];
             }
 
@@ -751,8 +751,8 @@
             nameInput.addEventListener('input', () => {
                 const val = nameInput.value;
                 const matched = adjutoriumList.find(a =>
-                    (a.churchName === churchSelect.value || a.church === churchSelect.value) &&
-                    (a.presidiumName === presidiumSelect.value || a.presidium === presidiumSelect.value) &&
+                    a.churchName === churchSelect.value &&
+                    a.presidiumName === presidiumSelect.value &&
                     a.name === val
                 );
                 if (matched) {
@@ -771,7 +771,7 @@
         }
 
         async function loadPresidiaList(church, curia) {
-            const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            const presidia = presidiaGeneralList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
             currentPresidiaList = [...new Set(presidia.filter(Boolean))];
         }
 
@@ -781,7 +781,7 @@
             if (!church || !presidium) return;
 
             const names = [...new Set(adjutoriumList
-                .filter(a => (a.churchName === church || a.church === church) && (a.presidiumName === presidium || a.presidium === presidium))
+                .filter(a => a.churchName === church && a.presidiumName === presidium)
                 .map(a => a.name))
             ].sort();
 
@@ -906,8 +906,8 @@
             }
 
             const filtered = adjutoriumList.filter(a => 
-                (a.churchName === church || a.church === church) && 
-                (a.presidiumName === presidium || a.presidium === presidium)
+                a.churchName === church && 
+                a.presidiumName === presidium
             )
                 .sort((a, b) => b.admissionDate.localeCompare(a.admissionDate));
 

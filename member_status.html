@@ -405,13 +405,13 @@
 
                     <div class="form-group">
                         <label>성당</label>
-                        <select id="churchSelect" name="church" required>
+                        <select id="churchSelect" name="churchName" required>
                             <option value="">성당 선택</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>꾸리아(Cu.)</label>
-                        <select id="curiaSelect" name="curia" required disabled>
+                        <select id="curiaSelect" name="curiaName" required disabled>
                             <option value="">꾸리아 선택</option>
                         </select>
                     </div>
@@ -618,9 +618,9 @@
                 btnDelete.style.display = 'none';
             } else {
                 // Officer or Regular Member: Fix to Org
-                const userChurch = currentUser.churchName || currentUser.church || '';
-                const userCuria = currentUser.curiaName || currentUser.curia || '';
-                const userPresidium = currentUser.presidiumName || currentUser.presidium || '';
+                const userChurch = currentUser.churchName || '';
+                const userCuria = currentUser.curiaName || '';
+                const userPresidium = currentUser.presidiumName || '';
 
                 setFixedOption(churchSelect, userChurch);
                 setFixedOption(curiaSelect, userCuria);
@@ -640,7 +640,7 @@
                     updateAuxDatalist();
                 } else {
                     const userName = currentUser.name;
-                    const myMember = membersList.find(m => m.name === userName && (m.presidiumName === userPresidium || m.presidium === userPresidium) && m.status !== '퇴단' && m.status !== '전출');
+                    const myMember = membersList.find(m => m.name === userName && m.presidiumName === userPresidium && m.status !== '퇴단' && m.status !== '전출');
                     if (myMember) {
                         setFixedOption(activeMemberSelect, myMember.id, `${myMember.name} (본인)`);
                         renderTable();
@@ -838,11 +838,11 @@
                 const curia = curiaSelect.value;
                 const presidium = presidiumSelect.value;
 
-                // [Fix] Search for match within the entire Presidium (Global)
+                // [정석화] 오직 표준 필드만 사용 (꼼수 제거)
                 const found = auxiliaryList.find(a =>
-                    (a.churchName === church || a.church === church) &&
-                    (a.curiaName === curia || a.curia === curia) &&
-                    (a.presidiumName === presidium || a.presidium === presidium) &&
+                    a.churchName === church &&
+                    a.curiaName === curia &&
+                    a.presidiumName === presidium &&
                     a.name === val
                 );
 
@@ -883,9 +883,9 @@
 
                 const seenNames = new Set();
                 const filtered = auxiliaryList.filter(a => {
-                    const orgMatch = (a.churchName === church || a.church === church) && 
-                                   (a.curiaName === curia || a.curia === curia) && 
-                                   (a.presidiumName === presidium || a.presidium === presidium);
+                    const orgMatch = a.churchName === church && 
+                                   a.curiaName === curia && 
+                                   a.presidiumName === presidium;
                     if (!orgMatch) return false;
                     // Filter out already withdrawn members from the quick list for better UX
                     return !a.withdrawalDate || a.withdrawalDate === '';
@@ -986,8 +986,8 @@
             const registeredActiveMemberIds = new Set(auxiliaryList.map(a => a.activeMemberId));
 
             const filtered = membersList.filter(m => {
-                const mChurch = (m.churchName || m.church || '').toString().trim();
-                const mPresidium = (m.presidiumName || m.presidium || '').toString().trim();
+                const mChurch = (m.churchName || '').toString().trim();
+                const mPresidium = (m.presidiumName || '').toString().trim();
                 const fChurch = (church || '').toString().trim();
                 const fPresidium = (presidium || '').toString().trim();
                 
@@ -1029,17 +1029,12 @@
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
-            // [Fix] Manually add organizational info as disabled fields are excluded from FormData
-            data.churchName = churchSelect.value;
-            data.curiaName = curiaSelect.value;
-            data.presidiumName = presidiumSelect.value;
-
             // Check for duplicates (same name and no withdrawal date)
             if (!editId) {
                 const duplicate = auxiliaryList.find(a =>
-                    (a.churchName === data.churchName || a.church === data.churchName) &&
-                    (a.curiaName === data.curiaName || a.curia === data.curiaName) &&
-                    (a.presidiumName === data.presidiumName || a.presidium === data.presidiumName) &&
+                    a.churchName === data.churchName &&
+                    a.curiaName === data.curiaName &&
+                    a.presidiumName === data.presidiumName &&
                     a.activeMemberId === data.activeMemberId &&
                     a.name === data.name &&
                     (!a.withdrawalDate || a.withdrawalDate.trim() === '')
@@ -1110,9 +1105,9 @@
 
         function resetForm() {
             const preserved = {
-                church: churchSelect.value,
-                curia: curiaSelect.value,
-                presidium: presidiumSelect.value,
+                churchName: churchSelect.value,
+                curiaName: curiaSelect.value,
+                presidiumName: presidiumSelect.value,
                 activeMemberId: activeMemberSelect.value
             };
 
@@ -1121,14 +1116,14 @@
             btnDelete.style.display = 'none';
 
             // Restore Org/Member Selection
-            churchSelect.value = preserved.church;
-            curiaSelect.value = preserved.curia;
+            churchSelect.value = preserved.churchName;
+            curiaSelect.value = preserved.curiaName;
             if (curiaSelect.disabled === false) curiaSelect.dispatchEvent(new Event('change'));
 
             if (document.getElementById('presidiumSelect')) {
-                document.getElementById('presidiumSelect').value = preserved.presidium;
+                document.getElementById('presidiumSelect').value = preserved.presidiumName;
                 if (document.getElementById('presidiumInput')) {
-                    document.getElementById('presidiumInput').value = preserved.presidium;
+                    document.getElementById('presidiumInput').value = preserved.presidiumName;
                     // Trigger custom search event if needed or simply let dispatch take over if attached 
                 }
             }
@@ -1157,9 +1152,9 @@
             }
 
             let filtered = auxiliaryList.filter(a =>
-                (a.churchName === church || a.church === church) && 
-                (a.curiaName === curia || a.curia === curia) && 
-                (a.presidiumName === presidium || a.presidium === presidium)
+                a.churchName === church && 
+                a.curiaName === curia && 
+                a.presidiumName === presidium
             );
 
             // Admin/Officer: All in Org, Member: Only Self
@@ -1206,19 +1201,16 @@
             editId = data.id;
 
             // Fill Form
-            churchSelect.value = data.churchName || data.church;
+            churchSelect.value = data.churchName || '';
             if (churchSelect.disabled === false) churchSelect.dispatchEvent(new Event('change'));
 
-            // Cascading selects are a bit tricky when async-ish or triggered by dispatch. 
-            // In this specific implementation, they are sync.
-
-            curiaSelect.value = data.curiaName || data.curia;
+            curiaSelect.value = data.curiaName || '';
             if (curiaSelect.disabled === false) curiaSelect.dispatchEvent(new Event('change'));
 
             if (document.getElementById('presidiumSelect')) {
-                document.getElementById('presidiumSelect').value = data.presidiumName || data.presidium;
+                document.getElementById('presidiumSelect').value = data.presidiumName || '';
                 if (document.getElementById('presidiumInput')) {
-                    document.getElementById('presidiumInput').value = data.presidiumName || data.presidium;
+                    document.getElementById('presidiumInput').value = data.presidiumName || '';
                 }
             }
 
@@ -1245,9 +1237,9 @@
 
             const names = [...new Set(auxiliaryList
                 .filter(a =>
-                    (a.churchName === church || a.church === church) &&
-                    (a.curiaName === curia || a.curia === curia) &&
-                    (a.presidiumName === presidium || a.presidium === presidium)
+                    a.churchName === church &&
+                    a.curiaName === curia &&
+                    a.presidiumName === presidium
                 )
                 .map(a => a.name)
             )].sort();

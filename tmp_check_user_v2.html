@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>사용자 데이터 정밀 진단 [v2]</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.5; background: #f0f2f5; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto; font-size: 14px; }
+        .btn { display: inline-block; padding: 10px 25px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .label { font-weight: bold; color: #555; }
+        .error { color: #d93025; font-weight: bold; }
+        .success { color: #1e8e3e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>사용자 프로필 실데이터 진단</h2>
+        <p>현재 로그인된 사용자의 Firestore 원본 데이터를 확인합니다.<br>(신구 규격 필드를 명확히 식별합니다.)</p>
+        <button id="btn-check" class="btn">데이터 확인하기</button>
+        <div id="result" style="margin-top:20px;"></div>
+    </div>
+
+    <script type="module">
+        import { db, doc, getDoc } from "./firebase-config.js";
+        import { initAuthObserver } from "./auth.js";
+
+        document.getElementById('btn-check').addEventListener('click', () => {
+            initAuthObserver(async (user, profile) => {
+                if (!user) {
+                    document.getElementById('result').innerHTML = '<p class="error">로그인이 필요합니다.</p>';
+                    return;
+                }
+
+                try {
+                    const snap = await getDoc(doc(db, "users", user.uid || user.username));
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        let html = '<h3>Firestore Raw Data (users/' + snap.id + ')</h3>';
+                        html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                        
+                        html += '<h4>필드명 분석 결과:</h4>';
+                        html += '<ul>';
+                        html += '<li><span class="label">churchName (최신):</span> ' + (data.churchName ? '<span class="success">있음 (' + data.churchName + ')</span>' : '<span class="error">없음</span>') + '</li>';
+                        html += '<li><span class="label">church (레거시):</span> ' + (data.church ? '<span class="success">있음 (' + data.church + ')</span>' : '<span class="error">없음</span>') + '</li>';
+                        html += '<li><span class="label">presidiumName (최신):</span> ' + (data.presidiumName ? '<span class="success">있음 (' + data.presidiumName + ')</span>' : '<span class="error">없음</span>') + '</li>';
+                        html += '<li><span class="label">presidium (레거시):</span> ' + (data.presidium ? '<span class="success">있음 (' + data.presidium + ')</span>' : '<span class="error">없음</span>') + '</li>';
+                        html += '</ul>';
+                        
+                        document.getElementById('result').innerHTML = html;
+                    } else {
+                        document.getElementById('result').innerHTML = '<p class="error">사용자 데이터가 Firestore에 존재하지 않습니다.</p>';
+                    }
+                } catch (e) {
+                    document.getElementById('result').innerHTML = '<p class="error">오류: ' + e.message + '</p>';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

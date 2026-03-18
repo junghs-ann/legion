@@ -616,7 +616,7 @@
         }
 
         async function setupFilters(profile) {
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName || ''))].filter(c => c).sort();
 
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => {
@@ -626,15 +626,15 @@
             });
 
             if (!isAdmin) {
-                churchFilter.value = profile.churchName || profile.church || '';
+                churchFilter.value = profile.churchName || '';
                 churchFilter.disabled = true;
-                await updateCuriaFilter(profile.churchName || profile.church);
-                curiaFilter.value = profile.curiaName || profile.curia || '';
+                await updateCuriaFilter(profile.churchName || '');
+                curiaFilter.value = profile.curiaName || '';
                 curiaFilter.disabled = true;
 
                 // 검색형 업그레이드 대응
-                presidiumSearch.value = profile.presidiumName || profile.presidium || '';
-                presidiumFilter.value = profile.presidiumName || profile.presidium || '';
+                presidiumSearch.value = profile.presidiumName || '';
+                presidiumFilter.value = profile.presidiumName || '';
                 presidiumSearch.disabled = true;
 
                 // 소속 설정 후 즉시 회차 목록 업데이트
@@ -648,7 +648,7 @@
         }
 
         async function updateCuriaFilter(churchName) {
-            const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === churchName).map(p => p.curiaName || p.curia))].sort();
+            const curiae = [...new Set(presidiaList.filter(p => p.churchName === churchName).map(p => p.curiaName || ''))].filter(c => c).sort();
 
             curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
             curiae.forEach(c => {
@@ -680,10 +680,10 @@
             if (!selectedChurch || !selectedCuria) return;
 
             const filtered = presidiaList.filter(p =>
-                (p.churchName || p.church) === selectedChurch &&
-                (p.curiaName || p.curia) === selectedCuria &&
-                (p.presidiumName || p.presidium || '').includes(filterText)
-            ).map(p => p.presidiumName || p.presidium).sort();
+                p.churchName === selectedChurch &&
+                p.curiaName === selectedCuria &&
+                (p.presidiumName || '').includes(filterText)
+            ).map(p => p.presidiumName || '').filter(name => name).sort();
 
             presidiumDropdown.innerHTML = '';
             if (filtered.length > 0) {
@@ -713,26 +713,14 @@
             if (!church || !curia) return;
 
             try {
-                // Robust Query for council_attendance_list (Sessions)
-                const [qSnapS1, qSnapS2] = await Promise.all([
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('churchName', '==', church),
-                        where('curiaName', '==', curia))),
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('church', '==', church),
-                        where('curia', '==', curia)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qSessions = query(collection(db, 'council_attendance_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia)
+                );
 
-                const allData = [];
-                const seenDocIds = new Set();
-                [qSnapS1, qSnapS2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenDocIds.has(docSnap.id)) {
-                            seenDocIds.add(docSnap.id);
-                            allData.push(docSnap.data());
-                        }
-                    });
-                });
+                const snap = await getDocs(qSessions);
+                const allData = snap.docs.map(docSnap => docSnap.data());
 
                 // [추가] 복합 인덱스 오류 방지를 위해 메모리 정렬 수행
                 allData.sort((a, b) => {
@@ -818,30 +806,15 @@
             }
 
             try {
-                // Robust Query for council_attendance_list (Report Data)
-                const [qSnapR1, qSnapR2] = await Promise.all([
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('churchName', '==', church),
-                        where('curiaName', '==', curia))),
-                    getDocs(query(collection(db, 'council_attendance_list'),
-                        where('church', '==', church),
-                        where('curia', '==', curia)))
-                ]);
+                // [정석화] 오직 표준 필드명으로만 쿼리
+                const qReport = query(collection(db, 'council_attendance_list'),
+                    where('churchName', '==', church),
+                    where('curiaName', '==', curia)
+                );
 
-                const allData = [];
-                const seenRDocIds = new Set();
-                [qSnapR1, qSnapR2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenRDocIds.has(docSnap.id)) {
-                            seenRDocIds.add(docSnap.id);
-                            const data = docSnap.data();
-                            // [추가] 쿼리에서 연도 필터링을 할 수 없으므로 메모리에서 수행
-                            if (new Date(data.date).getFullYear() === year) {
-                                allData.push(data);
-                            }
-                        }
-                    });
-                });
+                const snap = await getDocs(qReport);
+                const allData = snap.docs.map(docSnap => docSnap.data())
+                    .filter(data => new Date(data.date).getFullYear() === year);
 
                 let filtered = allData;
 
@@ -865,7 +838,7 @@
                 if (presidium) {
                     finalData = filtered.map(r => ({
                         ...r,
-                        attendanceData: (r.attendanceData || []).filter(a => (a.presidiumName || a.presidium) === presidium)
+                        attendanceData: (r.attendanceData || []).filter(a => a.presidiumName === presidium)
                     })).filter(r => r.attendanceData.length > 0);
                 }
 
@@ -925,7 +898,7 @@
                     tr.innerHTML = `
                         <td class="group-cell">${firstRow ? record.session + '차' : ''}</td>
                         <td class="group-cell">${firstRow ? record.date : ''}</td>
-                        <td>${row.presidiumName || row.presidium || '-'}</td>
+                        <td>${row.presidiumName || '-'}</td>
                         <td>${row.role}</td>
                         <td>${row.memberName}</td>
                         <td>${row.baptismalName}</td>

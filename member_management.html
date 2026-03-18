@@ -364,9 +364,9 @@
 
     <script src="script.js?v=20260313_1515"></script>
     <script type="module">
-        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc } from "./firebase-config.js?v=20260313_1515";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
         import { fetchPresidiaList } from "./data.js?v=20260313_1515";
-        import { initAuthObserver } from "./auth.js?v=20260313_1515";
+        import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260313_1515";
 
         // DOM Elements
         const searchChurch = document.getElementById('search-church');
@@ -388,8 +388,9 @@
             currentUserProfile = profile;
             await loadPresidiaList();
 
-            // Permission Check
-            if (profile.role !== 'admin' && profile.role !== 'president') {
+            // [보강] 권한 체크 표준화 (convertToStdRole 사용)
+            const stdRole = convertToStdRole(profile.role);
+            if (stdRole !== '관리자' && stdRole !== '단장') {
                 alert("접근 권한이 없습니다.");
                 window.location.href = 'dashboard.html';
                 return;
@@ -427,7 +428,7 @@
 
         function setupFilters(profile) {
             // Populate Churches (Common)
-            const churches = [...new Set(presidiaGeneralList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaGeneralList.map(p => p.churchName))].sort();
 
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -438,14 +439,14 @@
 
             if (profile.role === 'president') {
                 // Lock filters for President
-                searchChurch.value = profile.churchName || profile.church || '';
+                searchChurch.value = profile.churchName || '';
                 searchChurch.disabled = true;
 
                 // Load Curiae for this church
-                loadCuriae(profile.churchName || profile.church, profile.curiaName || profile.curia);
+                loadCuriae(profile.churchName, profile.curiaName);
 
                 // Load Presidia
-                loadPresidia(profile.churchName || profile.church, profile.curiaName || profile.curia, profile.presidiumName || profile.presidium);
+                loadPresidia(profile.churchName, profile.curiaName, profile.presidiumName);
 
                 searchCuria.disabled = true;
                 searchPresidium.disabled = true;
@@ -491,7 +492,7 @@
         }
 
         function loadCuriae(church, preselectVal = null) {
-            const curiaList = [...new Set(presidiaGeneralList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+            const curiaList = [...new Set(presidiaGeneralList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
 
             curiaList.forEach(c => {
                 const opt = document.createElement('option');
@@ -504,7 +505,7 @@
         }
 
         function loadPresidia(church, curia, preselectVal = null) {
-            const presidia = presidiaGeneralList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            const presidia = presidiaGeneralList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
             const mergedPresidia = [...new Set(presidia.filter(Boolean))];
 
             mergedPresidia.forEach(p => {
@@ -532,24 +533,27 @@
             try {
                 // [강화] 모든 사용자를 가져와서 클라이언트 사이드에서 유연하게 필터링 (가장 확실한 방법)
                 const snapshot = await getDocs(collection(db, 'users'));
-                let results = snapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() }));
+                let results = [];
+                for (const docSnap of snapshot.docs) {
+                    results.push({ uid: docSnap.id, ...docSnap.data() });
+                }
 
-                // 1. 성당 필터링 (churchName 또는 church)
+                // 1. 성당 필터링 (오직 churchName)
                 if (sChurch) {
                     const targetChurchNorm = norm(sChurch);
-                    results = results.filter(u => norm(u.churchName || u.church) === targetChurchNorm);
+                    results = results.filter(u => norm(u.churchName) === targetChurchNorm);
                 }
 
-                // 2. 꾸리아 필터링 (curiaName 또는 curia)
+                // 2. 꾸리아 필터링 (오직 curiaName)
                 if (sCuria) {
                     const targetCuriaNorm = norm(sCuria);
-                    results = results.filter(u => norm(u.curiaName || u.curia) === targetCuriaNorm);
+                    results = results.filter(u => norm(u.curiaName) === targetCuriaNorm);
                 }
 
-                // 3. 쁘레시디움 필터링 (presidiumName 또는 presidium)
+                // 3. 쁘레시디움 필터링 (오직 presidiumName)
                 if (sPresidiumId) {
                     const targetPrNorm = norm(sPresidiumId);
-                    results = results.filter(u => norm(u.presidiumName || u.presidium) === targetPrNorm);
+                    results = results.filter(u => norm(u.presidiumName) === targetPrNorm);
                 }
 
                 // 4. 이름 필터링 (부분 일치)
@@ -591,7 +595,7 @@
                 tr.innerHTML = `
                     <td style="padding: 10px;">${u.name}</td>
                     <td style="padding: 10px;">${u.baptismalName}</td>
-                    <td style="padding: 10px;">${u.church || '-'}</td>
+                    <td style="padding: 10px;">${u.churchName || '-'}</td>
                     <td style="padding: 10px;">${u.presidiumName || '-'}</td>
                     <td style="padding: 10px;">${rankInfo.text}</td>
                     <td style="padding: 10px;">
@@ -648,11 +652,17 @@
                 };
 
                 // 1순위: 간부 명단에서 활동 중인 직책 확인
-                const offQuery = query(collection(db, 'officers_list'),
-                    where('name', '==', u.name),
-                    where('churchName', '==', u.churchName || u.church),
-                    where('presidiumName', '==', u.presidiumName)
-                );
+                // 1순위: 고유 ID(memberId)로 간부 명단 확인 (동명이인 방지)
+                let offQuery;
+                if (u.memberId) {
+                    offQuery = query(collection(db, 'officers_list'), where('memberId', '==', u.memberId));
+                } else {
+                    offQuery = query(collection(db, 'officers_list'),
+                        where('name', '==', u.name),
+                        where('churchName', '==', u.churchName),
+                        where('presidiumName', '==', u.presidiumName)
+                    );
+                }
                 const offSnapshot = await getDocs(offQuery);
                 const officialOfficer = offSnapshot.docs.map(d => d.data()).find(o =>
                     (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
@@ -666,11 +676,16 @@
                 }
 
                 // 2순위: 단원 명단에서 활동 중인지 확인
-                const memQuery = query(collection(db, 'members_list'),
-                    where('name', '==', u.name),
-                    where('churchName', '==', u.churchName || u.church),
-                    where('presidiumName', '==', u.presidiumName)
-                );
+                let memQuery;
+                if (u.memberId) {
+                    memQuery = query(collection(db, 'members_list'), where('__name__', '==', u.memberId)); // Firestore ID 매칭
+                } else {
+                    memQuery = query(collection(db, 'members_list'),
+                        where('name', '==', u.name),
+                        where('churchName', '==', u.churchName),
+                        where('presidiumName', '==', u.presidiumName)
+                    );
+                }
                 const memSnapshot = await getDocs(memQuery);
                 const activeMember = memSnapshot.docs.map(d => d.data()).find(m =>
                     (m.status !== '퇴단' && m.status !== '전출')
@@ -680,9 +695,19 @@
                     return { text: '단원', code: 'member' };
                 }
 
+                // 3순위: 기본 프로필 직책 반환 (공통 함수 사용)
+                const roleText = convertToStdRole(u.role);
+                const roleMapForReverse = {
+                    '단장': 'president',
+                    '부단장': 'vice_president',
+                    '서기': 'secretary',
+                    '회계': 'treasurer',
+                    '단원': 'member',
+                    '관리자': 'admin'
+                };
                 return {
-                    text: roleMap[u.role] || u.role || '단원',
-                    code: u.role || 'member'
+                    text: roleText,
+                    code: roleMapForReverse[roleText] || 'member'
                 };
             } catch (error) {
                 console.error("Error getting latest rank:", error);
@@ -726,7 +751,7 @@
 
                 document.getElementById('edit-email').value = user.email;
                 document.getElementById('edit-uid').value = user.uid;
-                document.getElementById('edit-church').value = user.church || '';
+                document.getElementById('edit-church').value = user.churchName || '';
                 document.getElementById('edit-presidium').value = user.presidiumName || '';
                 document.getElementById('edit-name').value = user.name;
                 document.getElementById('edit-baptismal').value = user.baptismalName;
@@ -794,7 +819,6 @@
 
                     const newUid = 'user_' + Math.random().toString(36).substr(2, 9);
                     const newRecord = {
-                        ...currentUserData,
                         uid: newUid,
                         name: newName,
                         baptismalName: newBaptismal,
@@ -804,6 +828,10 @@
                         username: newUsername,
                         email: `${newUsername}@legion.app`,
                         password: newPassword,
+                        churchName: currentUserData.churchName,
+                        curiaName: currentUserData.curiaName,
+                        presidiumName: currentUserData.presidiumName,
+                        presidiumId: currentUserData.presidiumId,
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     };

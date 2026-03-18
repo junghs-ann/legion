@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로필 복구 도구 - 레지오 마리애</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f7f6; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+        h2 { color: #333; margin-bottom: 20px; }
+        p { color: #666; line-height: 1.6; margin-bottom: 30px; }
+        button { background: #27ae60; color: white; border: none; padding: 15px 30px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #219150; }
+        #status { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>내 프로필 정보 복구</h2>
+        <p>현재 멘토님의 계정에 성당 및 쁘레시디움 정보가 빠져 있어 보고서 버튼이 보이지 않습니다.<br>아래 버튼을 누르면 즉시 복구됩니다.</p>
+        <button id="btnRestore">내 프로필 즉시 복구하기</button>
+        <div id="status"></div>
+    </div>
+
+    <script type="module">
+        import { db, doc, setDoc } from "./firebase-config.js";
+        
+        document.getElementById('btnRestore').onclick = async () => {
+            const status = document.getElementById('status');
+            status.textContent = "복구 중...";
+            status.style.color = "orange";
+
+            try {
+                // jhs0121 계정의 프로필을 정확한 정보로 갱신
+                const data = {
+                    name: "정혜숙",
+                    churchName: "관평동 성당",
+                    presidiumName: "천사의 모후",
+                    role: "단장",
+                    updatedAt: new Date().toISOString()
+                };
+
+                await setDoc(doc(db, "users", "jhs0121"), data, { merge: true });
+                
+                status.textContent = "복구 완료! 이제 이 창을 닫고 보고서를 다시 확인해 주세요.";
+                status.style.color = "green";
+                document.getElementById('btnRestore').disabled = true;
+                document.getElementById('btnRestore').style.background = "#ccc";
+
+            } catch (err) {
+                status.textContent = "오류 발생: " + err.message;
+                status.style.color = "red";
+            }
+        };
+    </script>
+</body>
+</html>

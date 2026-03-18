@@ -671,8 +671,8 @@
                     // but most authoritative is presidia_list now.
                     // Also check users for any churches not yet in presidia_list
                     const userSnapshot = await getDocs(collection(db, 'users'));
-                    const userChurches = userSnapshot.docs.map(u => u.data().church).filter(c => c);
-                    const presidiumChurches = presidia_list.map(p => p.churchName || p.church).filter(c => c);
+                    const userChurches = userSnapshot.docs.map(u => u.data().churchName).filter(c => c);
+                    const presidiumChurches = presidia_list.map(p => p.churchName).filter(c => c);
                     const uniqueChurches = [...new Set([...presidiumChurches, ...userChurches])].sort();
 
                     const currentVal = churchSelect.value;
@@ -743,13 +743,13 @@
                     let filtered = presidia_list;
 
                     if (selectedChurch) {
-                        filtered = filtered.filter(p => (p.churchName || p.church || '').trim() === selectedChurch);
+                        filtered = filtered.filter(p => (p.churchName || '').trim() === selectedChurch);
                     }
                     if (selectedCuria) {
-                        filtered = filtered.filter(p => (p.curiaName || p.curia || '').trim() === selectedCuria);
+                        filtered = filtered.filter(p => (p.curiaName || '').trim() === selectedCuria);
                     }
 
-                    let presidiumNames = filtered.map(p => p.presidiumName || p.presidium);
+                    let presidiumNames = filtered.map(p => p.presidiumName);
                     presidiumNames = [...new Set(presidiumNames)];
 
                     if (filterText) {
@@ -780,10 +780,10 @@
 
                     let filtered = presidia_list;
                     if (selectedChurch) {
-                        filtered = filtered.filter(p => (p.churchName || p.church || '').trim() === selectedChurch);
+                        filtered = filtered.filter(p => (p.churchName || '').trim() === selectedChurch);
                     }
 
-                    let curiaNames = filtered.map(p => p.curiaName || p.curia);
+                    let curiaNames = filtered.map(p => p.curiaName);
                     curiaNames = [...new Set(curiaNames)].filter(n => n);
 
                     if (filterText) {
@@ -839,10 +839,10 @@
 
                         if (filterByChurch) {
                             const selectedChurch = churchNameInput.value.trim();
-                            const churchPresidia = presidia_list.filter(p => (p.churchName || p.church || '').trim() === selectedChurch);
-                            filteredData = churchPresidia.map(p => p[dataKey] || p[dataKey.replace('Name', '')]);
+                            const churchPresidia = presidia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
+                            filteredData = churchPresidia.map(p => p[dataKey]);
                         } else {
-                            filteredData = presidia_list.map(p => p[dataKey] || p[dataKey.replace('Name', '')]);
+                            filteredData = presidia_list.map(p => p[dataKey]);
                         }
                         filteredData = [...new Set(filteredData)].filter(item => item);
 
@@ -891,8 +891,8 @@
                     }
 
                     const record = presidia_list.find(p =>
-                        (p.churchName || p.church || '').trim() === selectedChurch &&
-                        (p.presidiumName || p.presidium || '').trim() === selectedPresidium
+                        (p.churchName || '').trim() === selectedChurch &&
+                        (p.presidiumName || '').trim() === selectedPresidium
                     );
 
                     if (record) {
@@ -928,7 +928,7 @@
                 // Auto-fill Logic
                 const autoFillHigherCouncils = () => {
                     const selectedChurch = churchNameInput.value.trim();
-                    const churchPresidia = presidia_list.filter(p => (p.churchName || p.church || '').trim() === selectedChurch);
+                    const churchPresidia = presidia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
 
                     if (churchPresidia.length > 0) {
                         const firstRecord = churchPresidia[0];
@@ -998,8 +998,8 @@
                         // ID가 없으면 이름으로 매칭 시도 (기존 방식 유지하되 후순위)
                         if (!targetId) {
                             const existing = presidia_list.find(p => {
-                                const pChurch = (p.churchName || p.church || '').toString().trim();
-                                const pPr = (p.presidiumName || p.presidium || '').toString().trim();
+                                const pChurch = (p.churchName || '').toString().trim();
+                                const pPr = (p.presidiumName || '').toString().trim();
                                 return pChurch === (data.churchName || '').trim() && pPr === (data.presidiumName || '').trim();
                             });
                             if (existing) targetId = existing.id;
@@ -1014,6 +1014,20 @@
                         } else {
                             data.createdAt = serverTimestamp();
                             data.updatedAt = serverTimestamp();
+                            // Check for existing record by churchName/church and presidiumName/presidium before adding
+                            const churchName = (data.churchName || '').trim();
+                            const presidiumName = (data.presidiumName || '').trim();
+
+                            const existingRecord = presidia_list.find(p =>
+                                (p.churchName || '').trim() === churchName &&
+                                (p.presidiumName || '').trim() === presidiumName
+                            );
+
+                            if (existingRecord) {
+                                window.showCustomAlert('이미 동일한 성당 명과 쁘레시디움 명을 가진 기록이 존재합니다. 수정하려면 먼저 조회해 주세요.');
+                                return;
+                            }
+
                             await addDoc(collection(db, 'presidia_list'), data);
                             window.showCustomAlert('성공적으로 등록되었습니다.');
                             form.reset();
@@ -1060,8 +1074,8 @@
                                     // 2. 성당/Pr 이름으로 찾기
                                     if (!targetId) {
                                         const targetByName = presidia_list.find(p => {
-                                            const pChurch = (p.churchName || p.church || '').toString().trim();
-                                            const pPr = (p.presidiumName || p.presidium || '').toString().trim();
+                                            const pChurch = (p.churchName || '').toString().trim();
+                                            const pPr = (p.presidiumName || '').toString().trim();
                                             return pChurch === selectedChurch && pPr === selectedPresidium;
                                         });
                                         if (targetByName) targetId = targetByName.id;
