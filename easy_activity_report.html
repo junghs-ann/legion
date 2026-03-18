@@ -1090,10 +1090,10 @@
                     let html = '<option value="">-- 단원 선택 --</option>';
                     // [UI 단순화] 간부/단원 그룹 제목(optgroup)을 제거하고 한 줄로 구성합니다.
                     if (officers.length > 0) {
-                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId || m.id}">${m.name} (${m.role})</option>`).join('');
+                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId || m.id}">${m.name} (${m.baptismalName || m.role})</option>`).join('');
                     }
                     if (members.length > 0) {
-                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || ''})</option>`).join('');
+                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || '-'})</option>`).join('');
                     }
                     selMemberObj.innerHTML = html;
 

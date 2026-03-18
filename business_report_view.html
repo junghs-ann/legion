@@ -999,7 +999,7 @@
     <script src="script.js?v=20260304_1525"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
-        import { initAuthObserver } from "./auth.js?v=20260304_1525";
+        import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
 
         const urlParams = new URLSearchParams(window.location.search);
         // [시니어 패치] 최신 규격(churchName/presidiumName) 단일 채널 고정. 과거와의 완전한 단절.
@@ -1216,6 +1216,19 @@
             safeSetText('endMonth', eD[1] || '');
             safeSetText('startSess', ss || '-');
             safeSetText('endSess', es || '-');
+
+            // [추가] 집계 범위 확장: 시작 세션의 월 1일부터 종료 세션의 월 말일까지 (사용자 요청 v1.6.95)
+            // 타임존 이슈 방지를 위해 문자열 기반으로 직접 계산
+            let reportMonthStart = start;
+            let reportMonthEnd = end;
+            const sParts = (start || '').split('-');
+            const eParts = (end || '').split('-');
+            if (sParts.length >= 2 && eParts.length >= 2) {
+                reportMonthStart = `${sParts[0]}-${sParts[1].padStart(2, '0')}-01`;
+                const lastDayObj = new Date(parseInt(eParts[0]), parseInt(eParts[1]), 0);
+                reportMonthEnd = `${lastDayObj.getFullYear()}-${String(lastDayObj.getMonth() + 1).padStart(2, '0')}-${String(lastDayObj.getDate()).padStart(2, '0')}`;
+            }
+            console.log("Reporting Boundaries (Monthly Fixed):", { reportMonthStart, reportMonthEnd });
 
             let officialPresidentName = '';
 
@@ -1594,12 +1607,12 @@
                     const item = tr.item || '';
                     const isDeposit = (tr.type === 'deposit' || tr.type === 'income');
 
-                    if (trDate < startStr) {
-                        // [이월금 합산] 보고 기간 이전 내역
+                    if (trDate < reportMonthStart) {
+                        // [이월금 합산] 보고 기간 이전(해당 월 1일 이전) 내역
                         if (isDeposit) carryOverIn += amt;
                         else carryOverOut += amt;
-                    } else if (trDate <= endStr) {
-                        // [보고 기간 내 집계]
+                    } else if (trDate <= reportMonthEnd) {
+                        // [보고 월 전체 범위 내 집계]
                         if (isDeposit) {
                             incTotal += amt;
                             if (item === '비밀헌금') secret += amt;
@@ -1633,8 +1646,12 @@
                 safeSetText('accBal', (prevB + incTotal - expTotal).toLocaleString() + ' 원');
 
                 try {
-                    // 행사 (표준 필드 사용)⚖️🌊
-                    const pEvs = allEv.filter(e => isMatch(e.churchName, e.presidiumName, e.curiaName) && e.eventDate >= start && e.eventDate <= end);
+                    // 행사 (사용자 요청: 세션 범위 내 월 기준 전체 집계)
+                    const pEvs = allEv.filter(e => 
+                        isMatch(e.churchName, e.presidiumName, e.curiaName) && 
+                        e.eventDate >= reportMonthStart && 
+                        e.eventDate <= reportMonthEnd
+                    );
                     const evMap = {
                         '아치에스': 'acies', '야외행사': 'outdoor', '야외 행사': 'outdoor',
                         '쁘레시디움 친목회': 'pr_social', '연차 총 친목회': 'annual_social', '토론대회': 'debate'
@@ -1733,42 +1750,33 @@
                         const workflowData = getStatusData();
                         const status = workflowData ? workflowData.status : 'Draft';
                         
-                        // [시니어 패치] 권한 체크 로직 고도화 (공통 함수 사용)
-                        const currentUserName = userProfile ? userProfile.name : '';
-                        
-                        // [보강] 필드명 표준화 적용 (churchName, presidiumName)
-                        const userChurch = userProfile ? (userProfile.churchName || '') : '';
-                        const userPr = userProfile ? (userProfile.presidiumName || '') : '';
-                        const isOrgMatched = userProfile && isMatch(userChurch, userPr);
+                        if (!userProfile) return;
 
-                        const stdRole = convertToStdRole(userProfile ? userProfile.role : '');
+                        // [보강] 최신 필드명(churchName, presidiumName)만 사용
+                        const userChurch = userProfile.churchName || '';
+                        const userPr = userProfile.presidiumName || '';
                         
-                        const isPresident = isOrgMatched && (
+                        // [시니어 패치] 관리자(Admin)는 조직 매칭과 상관없이 모든 권한 부여
+                        const stdRole = convertToStdRole(userProfile.role);
+                        const isAdmin = (stdRole === '관리자');
+                        
+                        // 조직 매칭 확인 (관리자는 자동 패스)
+                        const isOrgMatched = isAdmin || isMatch(userChurch, userPr);
+
+                        // 단장 권한 확인: 조직이 맞고 (단장 직책이거나 실명이 일치할 때)
+                        const isPresident = isAdmin || (isOrgMatched && (
                             stdRole === '단장' || 
-                            (currentUserName && (allOff.find(o => convertToStdRole(o.role) === '단장')?.name === currentUserName))
-                        );
+                            (userProfile.name && (allOff.find(o => convertToStdRole(o.role) === '단장')?.name === userProfile.name))
+                        ));
 
-                        const isOfficer = isOrgMatched && (
-                            ['단장', '부단장', '서기', '회계', '관리자'].includes(stdRole) || isPresident
-                        );
+                        // 간부 권한 확인: 관리자, 단장, 또는 4대 간부 그룹
+                        const isOfficer = isAdmin || (isOrgMatched && (
+                            ['단장', '부단장', '서기', '회계'].includes(stdRole) || isPresident
+                        ));
                         
                         const hasData = !!workflowData;
                         const isApproved = (status === 'approved' || status === 'Approved');
                         const isFinalized = (status === 'finalized' || status === 'Finalized');
-                        const isDraft = (status === 'Draft' || !hasData);
-
-                        const diag = {
-                            userId: userProfile ? (userProfile.userId || userProfile.uid) : 'Guest',
-                            role,
-                            profileChurch: userProfile ? userProfile.churchName : 'N/A',
-                            profilePr: userProfile ? userProfile.presidiumName : 'N/A',
-                            targetChurch,
-                            targetPr,
-                            isOrgMatched,
-                            isOfficer,
-                            status
-                        };
-                        console.table? console.table([diag]) : console.log("[Status Diagnostic]", diag);
 
                         const btnFin = document.getElementById('btnFinalize');
                         const btnApp = document.getElementById('btnApprove');
@@ -1798,14 +1806,11 @@
                             }
                         }
 
-                        // 1. 확정/저장 버튼: 
-                        // - 미작성이거나 Draft(작성 중) 상태일 때 노출
-                        // [보강] 데이터가 없더라도(hasData=false) 간부라면 저장 버튼이 보여야 함
+                        // 1. 확정/저장 버튼: 미작성이거나 Draft 상태이고 간부일 때 노출
                         const canFinalize = isOfficer && !isApproved && !isFinalized;
                         btnFin.style.display = canFinalize ? 'flex' : 'none';
 
-                        // 2. 승인 버튼: 
-                        // - 단장 권한이 있고, '검토 중(Finalized)' 상태일 때 노출
+                        // 2. 승인 버튼: 단장 권한이 있고, 검토 중(Finalized) 상태일 때 노출
                         const canApprove = isPresident && isFinalized;
                         btnApp.style.display = canApprove ? 'flex' : 'none';
 

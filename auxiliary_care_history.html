@@ -76,9 +76,9 @@
 
         .filter-container {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #eee;
             margin-bottom: 25px;
             display: flex;
             flex-direction: column;
@@ -88,21 +88,41 @@
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 8px;
+            flex: 1 1 100%;
+            max-width: 500px;
         }
 
         .form-group label {
-            font-weight: 600;
+            font-weight: bold;
             font-size: 0.9rem;
-            color: #444;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .form-group select,
         .form-group input {
-            padding: 8px 12px;
+            padding: 10px;
             border: 1px solid #ced4da;
-            border-radius: 4px;
+            border-radius: 8px;
             width: 100%;
+            font-size: 1rem;
+        }
+
+        /* Landscape or wider screens: 2 columns */
+        @media (min-width: 600px) {
+            .filter-row {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 15px !important;
+            }
+            .form-group {
+                flex: 1 1 calc(50% - 15px) !important;
+            }
         }
 
         .history-table {
@@ -688,44 +708,45 @@
             </div>
 
             <div class="filter-container">
-                <div class="filter-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div class="form-group" style="width: 180px;">
-                        <label>성당</label>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-church"></i> 성당</label>
                         <select id="churchSelect" disabled>
                             <option value="">성당 선택</option>
                         </select>
                     </div>
-                    <div class="form-group" style="width: 180px;">
-                        <label>꾸리아(Cu.)</label>
+                    <div class="form-group">
+                        <label><i class="fas fa-users"></i> 꾸리아(Cu.)</label>
                         <select id="curiaSelect" disabled>
                             <option value="">꾸리아 선택</option>
                         </select>
                     </div>
-                    <div class="form-group" style="width: 250px;">
-                        <label>쁘레시디움(Pr.) (검색 기능)</label>
+                    <div class="form-group">
+                        <label><i class="fas fa-list-alt"></i> 쁘레시디움(Pr.) (검색 기능)</label>
                         <div class="search-container">
                             <input type="text" id="presidiumInput" placeholder="쁘레시디움 검색 (예: 천사)">
                             <div id="presidiumDropdown" class="custom-dropdown"></div>
                         </div>
                         <select id="presidiumSelect" style="display: none;"></select>
                     </div>
-                    <div class="form-group" style="width: 120px;">
-                        <label>해당년도</label>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> 단원명</label>
+                        <select id="memberSelect">
+                            <option value="">전체 (Pr. 선택 필요)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar-alt"></i> 해당년도</label>
                         <select id="yearSelect">
                             <!-- Dynamic years -->
                         </select>
                     </div>
-                </div>
-
-                <div class="filter-row"
-                    style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px;">
-                    <!-- 기준회차 범위 삭제됨 (사용자 요청) -->
-                    <div class="form-group date-range-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
-                        <label>기준일 범위 (조회 기간)</label>
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <input type="date" id="startDateInput" style="flex: 1; min-height: 38px; padding: 8px;">
-                            <span>~</span>
-                            <input type="date" id="endDateInput" style="flex: 1; min-height: 38px; padding: 8px;">
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar-check"></i> 기준일 범위 (조회 기간)</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="date" id="startDateInput">
+                            <span style="color: #888;">~</span>
+                            <input type="date" id="endDateInput">
                         </div>
                     </div>
                 </div>
@@ -788,6 +809,7 @@
         const presidiumInput = document.getElementById('presidiumInput');
         const presidiumDropdown = document.getElementById('presidiumDropdown');
         const presidiumSelect = document.getElementById('presidiumSelect');
+        const memberSelect = document.getElementById('memberSelect');
         const yearSelect = document.getElementById('yearSelect');
         const startDateInput = document.getElementById('startDateInput');
         const endDateInput = document.getElementById('endDateInput');
@@ -806,7 +828,10 @@
 
         initAuthObserver(async (user, profile) => {
             currentUser = profile;
-            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
+            const role = (profile.role || '').toLowerCase();
+            isAdmin = role === 'admin' || role === '관리자';
+            const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].some(r => role.includes(r.toLowerCase()));
+            window.isPowerUser = isAdmin || isOfficer;
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
@@ -838,8 +863,8 @@
         }
 
         async function setupOrgSelectors() {
-            // Fix: Check both churchName and church property
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].filter(c => c).sort();
+            // [Senior Fix] Use only standard churchName
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].filter(c => c).sort();
             churchSelect.innerHTML = '<option value="">성당 선택</option>';
             churches.forEach(c => {
                 const opt = document.createElement('option');
@@ -848,14 +873,15 @@
             });
 
             if (!isAdmin) {
-                churchSelect.value = currentUser.churchName || currentUser.church || '';
+                churchSelect.value = currentUser.churchName || '';
                 churchSelect.disabled = true;
                 updateCuriaList();
-                curiaSelect.value = currentUser.curiaName || currentUser.curia || '';
+                curiaSelect.value = currentUser.curiaName || '';
                 curiaSelect.disabled = true;
                 updatePresidiumList();
-                presidiumInput.value = currentUser.presidiumName || currentUser.presidium || '';
+                presidiumInput.value = currentUser.presidiumName || '';
                 presidiumInput.disabled = true;
+                await updateMemberList();
                 // updateSessionLists() is no longer needed for filters
             } else {
                 churchSelect.disabled = false;
@@ -866,7 +892,7 @@
             const church = churchSelect.value;
             curiaSelect.innerHTML = '<option value="">꾸리아 선택</option>';
             if (!church) { curiaSelect.disabled = true; return; }
-            const curias = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].filter(cu => cu).sort();
+            const curias = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].filter(cu => cu).sort();
             curias.forEach(cu => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = cu;
@@ -880,8 +906,91 @@
             const curia = curiaSelect.value;
             presidiumInput.value = '';
             currentPrList = [];
-            if (!curia) return;
-            currentPrList = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+            if (!curia) {
+                updateMemberList();
+                return;
+            }
+            currentPrList = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+            updateMemberList();
+        }
+
+        async function updateMemberList() {
+            const pr = (presidiumInput.value || '').trim();
+            memberSelect.innerHTML = '<option value="">전체</option>';
+            if (!pr) {
+                memberSelect.innerHTML = '<option value="">전체 (Pr. 선택 필요)</option>';
+                return;
+            }
+
+            try {
+                // [Clean Fix] Fetch auxiliary members using only presidiumName query (strictly standardized)
+                const q1 = query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', pr));
+                const snap1 = await getDocs(q1);
+                
+                let activeMemberMap = new Map();
+                const today = new Date().toISOString().split('T')[0];
+
+                snap1.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // [Clean Fix] Check if auxiliary member is still active
+                    const isRetired = data.withdrawalDate && data.withdrawalDate.trim() !== '' && data.withdrawalDate <= today;
+                    if (isRetired) return;
+
+                    // [Standard Sync] Using activeMemberId as the primary key from auxiliary management
+                    const activeId = data.activeMemberId || data.activeMemberUid; 
+                    if (activeId && !activeMemberMap.has(activeId)) {
+                        activeMemberMap.set(activeId, {
+                            id: activeId,
+                            name: data.activeMemberName || '알수없음',
+                            baptismalName: data.activeMemberBaptismalName || ''
+                        });
+                    }
+                });
+
+                let activeMembers = Array.from(activeMemberMap.values());
+                // Sort by name
+                activeMembers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                if (window.isPowerUser) {
+                    // Admin & Officers: Full access
+                    memberSelect.disabled = false;
+                    if (activeMembers.length === 0) {
+                        memberSelect.innerHTML = '<option value="">전체 (담당 단원 없음)</option>';
+                    } else {
+                        memberSelect.innerHTML = '<option value="">전체</option>';
+                        activeMembers.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.id;
+                            opt.textContent = `${m.name}${m.baptismalName ? ' (' + m.baptismalName + ')' : ''}`;
+                            memberSelect.appendChild(opt);
+                        });
+                    }
+                } else {
+                    // Regular Members: Restricted to self
+                    const myId = String(currentUser.id || currentUser.uid || '');
+                    const myName = currentUser.name || currentUser.memberName || '';
+                    const myBaptismal = currentUser.baptismalName || '';
+                    
+                    memberSelect.innerHTML = '';
+                    const opt = document.createElement('option');
+                    
+                    // Try to find self in active members list
+                    const foundSelf = activeMembers.find(m => String(m.id) === myId);
+                    if (foundSelf) {
+                        opt.value = foundSelf.id;
+                        opt.textContent = `${foundSelf.name}${foundSelf.baptismalName ? ' (' + foundSelf.baptismalName + ')' : ''}`;
+                    } else {
+                        // Not found (might not have assignments but requested by user to show name)
+                        opt.value = myId;
+                        opt.textContent = `${myName}${myBaptismal ? ' (' + myBaptismal + ')' : ''} (담당 협조단원 없음)`;
+                    }
+                    memberSelect.appendChild(opt);
+                    memberSelect.value = opt.value;
+                    memberSelect.disabled = true;
+                }
+            } catch (error) {
+                console.error("Error fetching members from auxiliary_members_list:", error);
+            }
         }
 
         // [New] 커스텀 검색 드롭다운 렌더링
@@ -895,6 +1004,7 @@
                     div.onclick = () => {
                         presidiumInput.value = p;
                         presidiumDropdown.style.display = 'none';
+                        updateMemberList(); // Pr 선택 시 단원 목록 업데이트
                     };
                     presidiumDropdown.appendChild(div);
                 });
@@ -949,7 +1059,7 @@
         }
 
         async function renderReport(isManualSearch = false) {
-            const pr = presidiumInput.value;
+            const pr = (presidiumInput.value || '').trim();
             const startD = startDateInput.value;
             const endD = endDateInput.value;
 
@@ -964,8 +1074,9 @@
 
             try {
                 // 1. Get relevant care records based on DATE range from Firestore
+                // [Clean Fix] Use presidiumName instead of presidium
                 const q = query(collection(db, 'auxiliary_care_list'),
-                    where('presidium', '==', pr));
+                    where('presidiumName', '==', pr));
                 const querySnapshot = await getDocs(q);
                 careHistory = [];
                 querySnapshot.forEach(docSnap => careHistory.push({ id: docSnap.id, ...docSnap.data() }));
@@ -982,12 +1093,20 @@
                     return;
                 }
 
-                // Fetch members if needed for legacy support auxiliaryList
-                const mSnap = await getDocs(query(collection(db, 'members_list'),
-                    where('presidium', '==', pr),
-                    where('role', '==', '협조단원')));
+                // [Senior Fix] Use only auxiliary_members_list for members info
+                const mSnap = await getDocs(query(collection(db, 'auxiliary_members_list'),
+                    where('presidiumName', '==', pr)));
                 auxiliaryList = [];
                 mSnap.forEach(docSnap => auxiliaryList.push({ id: docSnap.id, ...docSnap.data() }));
+
+                // [Role Fix] Filter by selected member if applicable
+                const selectedMemberId = memberSelect.value;
+                if (selectedMemberId && selectedMemberId !== '') {
+                    auxiliaryList = auxiliaryList.filter(a => 
+                        String(a.activeMemberId) === String(selectedMemberId) || 
+                        String(a.activeMemberUid) === String(selectedMemberId)
+                    );
+                }
 
                 // 2. Build Columns (Monthly grouping)
                 const tableHead = document.getElementById('tableHead');
@@ -1084,6 +1203,10 @@
                 const grouped = {};
                 mergedAuxiliaries.forEach(aux => {
                     const key = aux.activeMemberId || 'unknown';
+                    // [Filter by selected member]
+                    const selectedMemberId = memberSelect.value;
+                    if (selectedMemberId && String(key) !== String(selectedMemberId)) return;
+
                     if (!grouped[key]) grouped[key] = { name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
                     grouped[key].list.push(aux);
                 });

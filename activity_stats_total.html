@@ -90,7 +90,7 @@
         /* 날짜 범위 그룹은 더 넓게 차지하도록 설정 */
         .filter-group.date-range-group {
             flex: 3;
-            min-width: 450px;
+            min-width: 480px; /* Increased from 450px to ensure enough space for the button */
         }
 
         .filter-group label {
@@ -125,10 +125,11 @@
             flex-wrap: wrap;
             gap: 10px;
             background: white;
-            padding: 5px;
+            padding: 5px 10px; /* Reduced vertical padding, added horizontal */
             border-radius: 8px;
             border: 1px solid #ced4da;
             position: relative;
+            min-height: 44px; /* Ensure consistent height */
         }
 
         .range-wrapper input {
@@ -998,7 +999,7 @@
                         renderedNames.add(m.name);
                         const opt = document.createElement('option');
                         opt.value = m.name;
-                        opt.textContent = m.name;
+                        opt.textContent = `${m.name} (${m.baptismalName || '-'})`;
                         memberSelect.appendChild(opt);
                     }
                 });
@@ -1175,6 +1176,7 @@
 
             // 해당 쁘레시디움의 모든 인원에 대해 정렬 가중치 생성
             const memberSortMap = {};
+            const memberBaptismalLookup = {}; // 세례명 조회를 위한 맵 추가
 
             // 1. 간부 가중치 (10~49)
             allOfficers.forEach(o => {
@@ -1183,6 +1185,7 @@
                 if (!memberSortMap[o.name] || memberSortMap[o.name] > priority) {
                     memberSortMap[o.name] = priority;
                 }
+                memberBaptismalLookup[o.name] = o.baptismalName || '';
             });
 
             // 2. 일반 단원 가중치 (수련일 기준, 100부터 시작)
@@ -1191,6 +1194,9 @@
             sortedMembers.forEach((m, idx) => {
                 if (!memberSortMap[m.name]) {
                     memberSortMap[m.name] = 100 + idx;
+                }
+                if (!memberBaptismalLookup[m.name]) {
+                    memberBaptismalLookup[m.name] = m.baptismalName || '';
                 }
             });
 
@@ -1333,7 +1339,7 @@
                         <td class="sticky-col col-year">${displayYear}</td>
                         <td class="sticky-col col-month">${displayMonth}</td>
                         <td class="sticky-col col-session">${displaySession}</td>
-                        <td class="sticky-col col-member">${r.memberName}</td>`;
+                        <td class="sticky-col col-member">${r.memberName} (${memberBaptismalLookup[r.memberName] || r.baptismalName || '-'})</td>`;
 
                     filteredSchema.forEach(group => {
                         group.items.forEach(item => {

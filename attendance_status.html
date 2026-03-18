@@ -1296,7 +1296,7 @@
 
             tr.innerHTML = `
                 <td>${role}</td>
-                <td>${name}</td>
+                <td>${name} (${baptismal || '-'})</td>
                 <td>${baptismal || '-'}</td>
                 <td><input type="checkbox" class="attendance-checkbox present" data-id="${id}" data-role="${role}" data-name="${name}" data-baptismal="${baptismal || ''}" data-officer="${isOfficer}"></td>
                 <td><input type="checkbox" class="attendance-checkbox absent" data-id="${id}" data-role="${role}" data-name="${name}" data-baptismal="${baptismal || ''}"></td>

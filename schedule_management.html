@@ -385,9 +385,13 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 2100;
+            z-index: 20000;          /* 헤더(10005)보다 높게 설정하여 제목 가림 방지 */
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* 가로보기/작은 화면에서 상단부터 표시하여 스크롤 가능하게 함 */
+            overflow-y: auto;        /* 모달 자체 스크롤 허용 */
+            overscroll-behavior: contain; /* 스크롤이 배경으로 전달되지 않도록 방지 */
+            padding: 20px;           /* 여백 추가 */
+            -webkit-overflow-scrolling: touch;
         }
 
         .modal-content {
@@ -397,6 +401,8 @@
             width: 90%;
             max-width: 500px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            margin: 60px auto 40px auto; /* 상단 여백을 늘려 헤더 가림을 확실히 방지하고 하단 여백 추가 */
+            position: relative;
         }
 
         .modal-header {
@@ -836,18 +842,18 @@
                             <!-- JS로 채움 -->
                         </div>
                     </div>
-                <!-- Right: Event List Area (복구된 영역) -->
+                </div> <!-- calendar-card END -->
+
+                <!-- Right: Event List Area -->
                 <div class="event-list-card">
                     <div class="list-title" id="selectedDateTitle">일정 목록</div>
                     <div id="eventListContainer" class="event-list-content">
                         <!-- JS로 채움 -->
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
+            </div> <!-- schedule-layout END -->
+        </div> <!-- schedule-container END -->
+    </div> <!-- main-content END -->
 
     <!-- Add/Edit Modal -->
     <div id="scheduleModal" class="modal">
@@ -937,7 +943,7 @@
     <script src="script.js?v=20260313_1720"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260313_1720";
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1720";
+        import { initAuthObserver, logoutUser, convertToStdRole } from "./auth.js?v=20260313_1720";
         import { fetchPresidiaList } from "./data.js?v=20260313_1720";
 
         let categories = ['주회합', '월례회의', '행사/교육/피정', '축일', '기념일', '기타'];
@@ -972,23 +978,21 @@
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
-                window.initCommonMenus(profile, () => {
-                    if (confirm("로그아웃 하시겠습니까?")) {
-                        window.location.href = "index.html";
-                    }
-                });
+                window.initCommonMenus(profile, logoutUser);
             }
 
-            // [Role-based Access Control] All officers and members can add schedules
-            const role = (profile.role || '').toLowerCase();
-            const canManage = ['admin', '관리자', '단장', '부단장', '서기', '회계', '단원'].some(r => role.includes(r.toLowerCase()));
+            // [Role-based Access Control] Use convertToStdRole for robust checks
+            const profileRole = convertToStdRole(profile.role);
+            const isAdmin = profileRole === '관리자';
+            const isOfficer = ['단장', '부단장', '서기', '회계'].includes(profileRole);
+            const canManage = isAdmin || isOfficer || profileRole === '단원';
 
             if (canManage) {
-                btnOpenAdd.style.display = 'flex'; // Use flex for better alignment
+                btnOpenAdd.style.display = 'flex';
                 const btnCategory = document.getElementById('btnManageCategories');
                 if (btnCategory) btnCategory.style.display = 'inline-block';
             } else {
-                btnOpenAdd.style.display = 'none'; // Hide only if not allowed
+                btnOpenAdd.style.display = 'none';
             }
 
             renderCalendar();
@@ -1012,35 +1016,34 @@
                 filterChurch.appendChild(opt);
             });
 
-            const isAdmin = currentUser.role === 'admin' || (currentUser.role || '').includes('관리자');
-
-            const userChurch = currentUser.churchName || '';
-            const userCuria = currentUser.curiaName || '';
-            const userPresidium = currentUser.presidiumName || '';
+            const profileRole = convertToStdRole(currentUser.role);
+            const isAdmin = profileRole === '관리자';
 
             if (!isAdmin) {
+                const userChurch = currentUser.churchName || '';
+                const userCuria = currentUser.curiaName || '';
+                const userPresidium = currentUser.presidiumName || '';
+
                 if (userChurch) {
                     filterChurch.value = userChurch;
-                    if (filterChurch.value === userChurch) filterChurch.disabled = true;
+                    filterChurch.disabled = true;
                     updateCuriaSelect(userChurch, userCuria);
 
                     if (userCuria) {
                         filterCuria.value = userCuria;
-                        if (filterCuria.value === userCuria) filterCuria.disabled = true;
-                        updatePresidiumList(userChurch, userCuria); // [변경] 검색 목록 업데이트
+                        filterCuria.disabled = true;
+                        updatePresidiumList(userChurch, userCuria);
 
                         if (userPresidium) {
                             presidiumInput.value = userPresidium;
                             filterPresidium.value = userPresidium;
-                            presidiumInput.disabled = false;
+                            presidiumInput.disabled = true; // [Senior] Locked for specific members
                         } else {
                             presidiumInput.disabled = false;
                         }
                     } else {
                         filterCuria.disabled = false;
                     }
-                } else {
-                    filterChurch.disabled = false;
                 }
 
                 orgFilter = {
@@ -1048,32 +1051,8 @@
                     curiaName: filterCuria.value,
                     presidiumName: filterPresidium.value
                 };
-
-                refreshData();
-                refreshData();
             } else {
-                // Admin Cascading
-                if (userChurch) {
-                    filterChurch.value = userChurch;
-                    updateCuriaSelect(userChurch, userCuria);
-                    if (userCuria) {
-                        filterCuria.value = userCuria;
-                        filterCuria.disabled = false;
-                        updatePresidiumList(userChurch, userCuria); // [변경]
-                        if (userPresidium) {
-                            presidiumInput.value = userPresidium;
-                            filterPresidium.value = userPresidium;
-                            presidiumInput.disabled = false;
-                        }
-                    }
-                }
-                
-                    orgFilter = {
-                    churchName: filterChurch.value,
-                    curiaName: filterCuria.value,
-                    presidiumName: filterPresidium.value
-                };
-
+                // Admin Cascading logic
                 filterChurch.addEventListener('change', (e) => {
                     const church = e.target.value;
                     updateCuriaSelect(church);
@@ -1090,15 +1069,14 @@
 
                 filterCuria.addEventListener('change', (e) => {
                     const curia = e.target.value;
-                    updatePresidiumList(filterChurch.value, curia); // [변경]
+                    updatePresidiumList(filterChurch.value, curia);
                     presidiumInput.disabled = !curia;
                     orgFilter.curiaName = curia;
                     orgFilter.presidiumName = '';
                     refreshData();
                 });
-
-                refreshData();
             }
+            refreshData();
         }
 
         function updateCuriaSelect(church, preselect = '') {
@@ -1153,10 +1131,7 @@
         }
 
         function refreshData() {
-            // [수정] 필터 변경 시 즉시 반영되도록 필터 적용 함수 호출
-            applySchedulesFilter(); 
-            renderCalendar();
-            // renderEventList() 호출 삭제 (applySchedulesFilter 내부에서 처리됨)
+            applySchedulesFilter();
         }
 
         // --- Data Logic ---
@@ -1229,7 +1204,7 @@
                 refreshData();
             } catch (error) {
                 console.error("Error saving schedule:", error);
-                alert("일정을 저장하는 중 오류가 발생했습니다.");
+                showGlobalAlert("일정을 저장하는 중 오류가 발생했습니다.");
             }
         }
 
@@ -1239,7 +1214,7 @@
                 refreshData();
             } catch (error) {
                 console.error("Error deleting schedule:", error);
-                alert("일정을 삭제하는 중 오류가 발생했습니다.");
+                showGlobalAlert("일정을 삭제하는 중 오류가 발생했습니다.");
             }
         }
 
@@ -1301,8 +1276,9 @@
                     // 직접 클릭 기능 추가
                     dot.addEventListener('click', (ev) => {
                         ev.stopPropagation(); // 날짜 칸 클릭 이벤트 전파 방지
-                        const canEdit = currentUser.role === 'admin' ||
-                            ['단장', '부단장', '서기', '회계', '단원'].some(r => (currentUser.role || '').includes(r));
+                        const profileRole = convertToStdRole(currentUser.role);
+                        const canEdit = profileRole === '관리자' || 
+                            ['단장', '부단장', '서기', '회계', '단원'].includes(profileRole);
                         if (canEdit) {
                             openEditModal(e);
                         }
@@ -1319,13 +1295,18 @@
                 }
                 div.appendChild(dotContainer);
 
-                div.addEventListener('click', () => {
+                div.addEventListener('click', (ev) => {
+                    // [Important] Check if an event was clicked directly
+                    if (ev.target.classList.contains('event-mini')) return;
+
                     selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), num);
                     renderEventList();
                     
-                    // 권한 확인 후 등록 모달 열기
-                    const role = (currentUser.role || '').toLowerCase();
-                    const canManage = ['admin', '관리자', '단장', '부단장', '서기', '회계', '단원'].some(r => role.includes(r.toLowerCase()));
+                    // Role-based logic for opening the modal (Standardized)
+                    const profileRole = convertToStdRole(currentUser.role);
+                    const canManage = profileRole === '관리자' || 
+                        ['단장', '부단장', '서기', '회계', '단원'].includes(profileRole);
+                    
                     if (canManage) {
                         openAddModalForDate(selectedDate);
                     }
@@ -1357,12 +1338,13 @@
                     <span class="cat-badge" style="background: ${catStyle.bg}; color: ${catStyle.color};">${e.category}</span>
                     <div class="item-time">${e.time || '시간 미지정'}</div>
                     <div class="item-title">${e.title}</div>
-                    ${e.notes ? `<div style="font-size:0.8rem; color:#666; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">${e.notes}</div>` : ''}
+                    ${e.notes ? `<div style="font-size:0.8rem; color:#666; margin-top:5px; border-top:1px dashed #eee; padding-top:5px; white-space: pre-wrap; word-break: break-all;">${e.notes}</div>` : ''}
                 `;
 
                 item.addEventListener('click', () => {
-                    const canEdit = currentUser.role === 'admin' ||
-                        ['단장', '부단장', '서기', '회계', '단원'].some(r => (currentUser.role || '').includes(r));
+                    const profileRole = convertToStdRole(currentUser.role);
+                    const canEdit = profileRole === '관리자' || 
+                        ['단장', '부단장', '서기', '회계', '단원'].includes(profileRole);
                     if (canEdit) {
                         openEditModal(e);
                     }
@@ -1384,21 +1366,18 @@
         });
 
         btnOpenAdd.addEventListener('click', () => {
-            document.getElementById('modalTitle').textContent = '일정 등록';
-            scheduleForm.reset();
-            document.getElementById('scheduleId').value = '';
-            document.getElementById('schedDate').value = selectedDate.toISOString().split('T')[0];
-            document.getElementById('btnDelete').style.display = 'none';
-            scheduleModal.style.display = 'flex';
+            openAddModalForDate(selectedDate);
         });
 
         document.getElementById('btnCloseModal').addEventListener('click', () => {
             scheduleModal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
         });
 
         // 우측 상단 X 버튼 이벤트 복구
         document.getElementById('btnCloseModalX').addEventListener('click', () => {
             scheduleModal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
         });
 
         function openAddModalForDate(date) {
@@ -1414,6 +1393,7 @@
             
             document.getElementById('btnDelete').style.display = 'none';
             scheduleModal.style.display = 'flex';
+            document.body.classList.add('no-scroll');
         }
 
         function openEditModal(e) {
@@ -1426,25 +1406,28 @@
             document.getElementById('schedNotes').value = e.notes || '';
             document.getElementById('btnDelete').style.display = 'block';
             scheduleModal.style.display = 'flex';
+            document.body.classList.add('no-scroll');
         }
 
-        document.getElementById('btnDelete').addEventListener('click', () => {
+        document.getElementById('btnDelete').addEventListener('click', async () => {
             const id = document.getElementById('scheduleId').value;
-            if (confirm('정말로 이 일정을 삭제하시겠습니까?')) {
+            if (await showGlobalConfirm('정말로 이 일정을 삭제하시겠습니까?')) {
                 deleteSchedule(id);
                 scheduleModal.style.display = 'none';
+                document.body.classList.remove('no-scroll');
             }
         });
 
         scheduleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Use values directly from filter or hidden fields if locked
             const church = document.getElementById('filterChurch').value;
             const curia = document.getElementById('filterCuria').value;
             const presidium = document.getElementById('filterPresidium').value;
 
             if (!church) {
-                alert('일정을 등록할 성당을 전역 필터에서 먼저 선택해주세요.');
+                showGlobalAlert('⚠️ 일정을 등록할 성당을 선택해주세요.');
                 return;
             }
 
@@ -1455,17 +1438,16 @@
                 time: document.getElementById('schedTime').value,
                 category: document.getElementById('schedCategory').value,
                 notes: document.getElementById('schedNotes').value,
-                church: church,
-                curia: curia,
+                churchName: church,
+                curiaName: curia,
                 presidiumName: presidium,
-                churchName: church, // For compatibility
-                curiaName: curia,   // For compatibility
-                author: currentUser.name || '알 수 없음'
+                author: currentUser.name || currentUser.username || '관리자'
             };
 
             await saveSchedule(item);
             scheduleModal.style.display = 'none';
-            alert('저장되었습니다.');
+            document.body.classList.remove('no-scroll');
+            showGlobalAlert('✅ 저장되었습니다.');
         });
 
         // --- Category Dynamic Logic ---
@@ -1513,12 +1495,18 @@
 
         btnManageCategories.addEventListener('click', () => {
             renderCategoryList();
-            if (categoryModal) categoryModal.style.display = 'flex';
+            if (categoryModal) {
+                categoryModal.style.display = 'flex';
+                document.body.classList.add('no-scroll');
+            }
         });
 
         if (document.getElementById('btnCloseCategoryModal')) {
             document.getElementById('btnCloseCategoryModal').addEventListener('click', () => {
-                if (categoryModal) categoryModal.style.display = 'none';
+                if (categoryModal) {
+                    categoryModal.style.display = 'none';
+                    document.body.classList.remove('no-scroll');
+                }
                 renderCategoryOptions(); // Refresh options in schedule modal
             });
         }
@@ -1538,7 +1526,7 @@
         }
 
         window.removeCategory = async (catName) => {
-            if (confirm(`'${catName}' 분류를 삭제하시겠습니까?`)) {
+            if (await showGlobalConfirm(`'${catName}' 분류를 삭제하시겠습니까?`)) {
                 try {
                     const q = query(collection(db, 'schedule_categories'), where('name', '==', catName));
                     const snapshot = await getDocs(q);
@@ -1559,7 +1547,7 @@
             if (!val) return;
 
             if (categories.includes(val)) {
-                alert('이미 존재하는 분류입니다.');
+                showGlobalAlert('이미 존재하는 분류입니다.');
                 return;
             }
 
@@ -1597,7 +1585,7 @@
                 const val = presidiumInput.value.trim();
                 if (val === '') {
                     filterPresidium.value = '';
-                    orgFilter.presidium = '';
+                    orgFilter.presidiumName = '';
                     refreshData();
                 } else if (!currentPresidia.includes(val)) {
                     presidiumInput.value = filterPresidium.value || '';

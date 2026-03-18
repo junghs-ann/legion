@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>복무 기록부 출력 - 레지오 마리애</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* A4 가로 규격 강제 및 최적화 */
         @page {
@@ -161,13 +162,18 @@
             z-index: 1000;
         }
 
-        .btn {
+        .btn-action {
             padding: 10px 25px;
-            border-radius: 5px;
+            border-radius: 50px;
             border: none;
-            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
         }
 
         .btn-print {
@@ -176,7 +182,7 @@
         }
 
         .btn-close {
-            background-color: #5f6368;
+            background-color: #333;
             color: white;
         }
 
@@ -202,8 +208,8 @@
 
 <body>
     <div class="print-btn-overlay">
-        <button class="btn btn-print" onclick="window.print()">인쇄하기</button>
-        <button class="btn btn-close" onclick="window.close()">닫기</button>
+        <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄하기</button>
+        <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 닫기</button>
     </div>
 
     <div id="pageContainer"></div>
@@ -266,9 +272,9 @@
 
             // Calculate Pages
             const moveData = [{ 
-                pr: member.presidiumName || '-', 
-                curia: member.curiaName || '-', 
-                church: member.churchName || '-', 
+                presidiumName: member.presidiumName || '-', 
+                curiaName: member.curiaName || '-', 
+                churchName: member.churchName || '-', 
                 period: `${member.probationaryDate || ''} ~` 
             }];
             const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;

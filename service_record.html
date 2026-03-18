@@ -587,6 +587,7 @@
                 if (!memberSearch.disabled && currentMembers.length > 0) {
                     renderMemberDropdown(''); // Show all on focus for easier re-selection
                     memberDropdown.style.display = 'block';
+                    memberSearch.select(); // Select existing text for easy replacement
                 }
             };
 

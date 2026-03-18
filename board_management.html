@@ -249,6 +249,101 @@
             box-sizing: border-box;
         }
 
+        /* [NEW] Preview Modal Styles */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 5000;
+            flex-direction: column;
+        }
+
+        .preview-content {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #fff;
+        }
+
+        /* [NEW] Preview Header */
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            color: #333;
+            z-index: 5010;
+        }
+
+        .preview-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+
+        .preview-header .close-icon {
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .preview-header .close-icon:hover {
+            color: #333;
+        }
+
+        /* [NEW] Floating Close Button */
+        .btn-floating-close {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 5100;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-floating-close:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: #1b5e20;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-floating-close i {
+            transition: transform 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .btn-floating-close {
+                bottom: 20px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -714,6 +809,18 @@
         </div>
     </div>
 
+    <!-- [NEW] File Preview Modal -->
+    <div id="previewModal" class="preview-modal">
+        <div class="preview-header">
+            <h3 id="previewTitle">파일 미리보기</h3>
+            <i class="fas fa-times close-icon" onclick="closePreviewModal()"></i>
+        </div>
+        <iframe id="previewFrame" class="preview-content" src=""></iframe>
+        <div class="btn-floating-close" onclick="closePreviewModal()" title="게시판으로 돌아가기">
+            <i class="fas fa-times"></i>
+        </div>
+    </div>
+
     <!-- [NEW] Custom Status Modal (Success/Alert) -->
     <div id="statusModal" class="custom-modal-overlay">
         <div class="custom-modal">
@@ -747,6 +854,41 @@
         };
         window.closeStatusModal = () => {
             document.getElementById('statusModal').style.display = 'none';
+        };
+
+        // --- File Preview Modal Helper ---
+        window.openPreview = (url, title = '파일 미리보기') => {
+            let previewUrl = url;
+            
+            // Google Drive URL transformation (sharing link to preview mode)
+            if (url.includes('drive.google.com')) {
+                if (url.includes('/view')) {
+                    previewUrl = url.replace('/view', '/preview');
+                } else if (url.includes('id=')) {
+                    const id = url.split('id=')[1].split('&')[0];
+                    previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+                }
+            }
+            
+            const modal = document.getElementById('previewModal');
+            const frame = document.getElementById('previewFrame');
+            const titleEl = document.getElementById('previewTitle');
+            
+            titleEl.textContent = title;
+            frame.src = previewUrl;
+            modal.style.display = 'flex';
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closePreviewModal = () => {
+            const modal = document.getElementById('previewModal');
+            const frame = document.getElementById('previewFrame');
+            
+            frame.src = '';
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
         };
 
         const categoryTabs = document.getElementById('categoryTabs');
@@ -915,7 +1057,7 @@
                     <td class="title">${p.title}</td>
                     <td>${p.author || '관리자'}</td>
                     <td>${dateStr}</td>
-                    <td><a href="${p.fileUrl}" target="_blank" class="link-icon" title="파일 열기"><i class="fas fa-external-link-alt"></i></a></td>
+                    <td><a href="javascript:void(0)" onclick="window.openPreview('${p.fileUrl}', '${p.title}')" class="link-icon" title="파일 열기"><i class="fas fa-external-link-alt"></i></a></td>
                     ${manageBtn}
                 `;
                 boardBody.appendChild(tr);

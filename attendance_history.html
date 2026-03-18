@@ -490,6 +490,12 @@
                         </div>
                     </div>
                     <div class="filter-group">
+                        <label>단원명</label>
+                        <select id="memberFilter" style="width: 180px;">
+                            <option value="">전체 (Pr. 선택 필요)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label>해당년도</label>
                         <input type="number" id="yearFilter" min="2000" max="2100" style="text-align: center;">
                     </div>
@@ -545,7 +551,7 @@
                         <div class="summary-item"><span>단원</span><span id="sumMemberStat">-</span></div>
                         <div class="summary-item"><span>평균 출석률</span><span id="sumAvgRate">0%</span></div>
                     </div>
-                    <div class="summary-card">
+                    <div class="summary-card" id="officerStatsCard">
                         <h4>간부 출석 현황</h4>
                         <div class="summary-item"><span>단장</span><span id="ratePresident">-</span></div>
                         <div class="summary-item"><span>부단장</span><span id="rateVicePresident">-</span></div>
@@ -589,6 +595,7 @@
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
         const presidiumInput = document.getElementById('presidiumInput');
+        const memberFilter = document.getElementById('memberFilter');
         const presidiumDropdown = document.getElementById('presidiumDropdown');
         const yearFilter = document.getElementById('yearFilter');
         const startSessionFilter = document.getElementById('startSessionFilter');
@@ -604,9 +611,13 @@
 
         initAuthObserver(async (user, profile) => {
             currentUser = profile;
-            if (window.initCommonMenus) window.initCommonMenus(profile, logoutUser);
-            isAdmin = (profile.role === 'admin' || profile.role === '관리자');
+            const role = (profile.role || '').toLowerCase();
+            isAdmin = role === 'admin' || role === '관리자';
+            const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].some(r => role.includes(r.toLowerCase()));
+            window.isPowerUser = isAdmin || isOfficer;
 
+            if (window.initCommonMenus) window.initCommonMenus(profile, logoutUser);
+            
             await loadBaseData();
             setupControls(profile);
             
@@ -615,6 +626,8 @@
             if (cleanupBtn) cleanupBtn.style.display = isAdmin ? 'block' : 'none';
 
             if (!isAdmin) {
+                // Wait for setupControls to finish basically, but we can call directly now
+                await updateMemberList();
                 await updateSessionSelects();
             }
         }, () => {
@@ -655,9 +668,11 @@
             churches.forEach(c => churchFilter.add(new Option(c, c)));
             churchFilter.onchange = async () => {
                 const selected = churchFilter.value;
+                curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
+                presidiumInput.value = '';
+                await updateMemberList();
                 if (!selected) { curiaFilter.disabled = true; return; }
                 const curiae = [...new Set(presidia.filter(p => p.churchName === selected).map(p => p.curiaName))].filter(c => c).sort();
-                curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
                 curiae.forEach(c => curiaFilter.add(new Option(c, c)));
                 curiaFilter.disabled = false;
             };
@@ -665,6 +680,7 @@
                 const selectedChurch = churchFilter.value; const selectedCuria = curiaFilter.value;
                 currentPresidia = [];
                 presidiumInput.value = '';
+                await updateMemberList();
                 if (!selectedCuria) { presidiumInput.disabled = true; return; }
 
                 currentPresidia = presidia.filter(p => p.churchName === selectedChurch && p.curiaName === selectedCuria).map(p => p.presidiumName).filter(c => c).sort();
@@ -686,6 +702,7 @@
                         div.onclick = async () => {
                             presidiumInput.value = p;
                             presidiumDropdown.style.display = 'none';
+                            await updateMemberList();
                             await updateSessionSelects();
                         };
                         presidiumDropdown.appendChild(div);
@@ -705,6 +722,7 @@
             presidiumInput.oninput = async (e) => {
                 renderDropdown(e.target.value);
                 presidiumDropdown.style.display = 'block';
+                await updateMemberList();
                 await updateSessionSelects();
             };
 
@@ -713,6 +731,80 @@
                     presidiumDropdown.style.display = 'none';
                 }
             });
+        }
+
+        async function updateMemberList() {
+            const pr = (presidiumInput.value || '').trim();
+            memberFilter.innerHTML = '<option value="">전체 (Pr. 선택 필요)</option>';
+            if (!pr) return;
+
+            try {
+                // [Senior Fix] Collect all members: Current + Past (from attendance records)
+                const memberMap = new Map();
+
+                // 1. Current members from members_list
+                const qMembers = query(collection(db, 'members_list'), where('presidiumName', '==', pr));
+                const snapMembers = await getDocs(qMembers);
+                snapMembers.forEach(d => {
+                    const data = d.data();
+                    memberMap.set(d.id, {
+                        id: d.id,
+                        name: data.name || '알수없음',
+                        baptismalName: data.baptismalName || ''
+                    });
+                });
+
+                // 2. Former members from attendance_list records (Snapshot lookup)
+                const qAttendance = query(collection(db, 'attendance_list'), where('presidiumName', '==', pr));
+                const snapAttendance = await getDocs(qAttendance);
+                snapAttendance.forEach(docSnap => {
+                    const data = docSnap.data().attendanceData || {};
+                    Object.keys(data).forEach(id => {
+                        if (!memberMap.has(id)) {
+                            const rowData = data[id];
+                            const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : '알수없음';
+                            const baptismalName = (typeof rowData === 'object' && rowData.baptismalName) ? rowData.baptismalName : '';
+                            if (name !== '알수없음') {
+                                memberMap.set(id, { id, name, baptismalName });
+                            }
+                        }
+                    });
+                });
+
+                let list = Array.from(memberMap.values());
+                list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                if (window.isPowerUser) {
+                    memberFilter.disabled = false;
+                    memberFilter.innerHTML = '<option value="">전체</option>';
+                    list.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = `${m.name}${m.baptismalName ? ' (' + m.baptismalName + ')' : ''}`;
+                        memberFilter.appendChild(opt);
+                    });
+                } else {
+                    const myId = String(currentUser.id || currentUser.uid || '');
+                    const myName = currentUser.name || currentUser.memberName || '';
+                    const myBaptismal = currentUser.baptismalName || '';
+                    
+                    memberFilter.innerHTML = '';
+                    const opt = document.createElement('option');
+                    const foundSelf = list.find(m => String(m.id) === myId);
+                    if (foundSelf) {
+                        opt.value = foundSelf.id;
+                        opt.textContent = `${foundSelf.name}${foundSelf.baptismalName ? ' (' + foundSelf.baptismalName + ')' : ''}`;
+                    } else {
+                        opt.value = myId;
+                        opt.textContent = `${myName}${myBaptismal ? ' (' + myBaptismal + ')' : ''}`;
+                    }
+                    memberFilter.appendChild(opt);
+                    memberFilter.value = opt.value;
+                    memberFilter.disabled = true;
+                }
+            } catch (err) {
+                console.error("Error updateMemberList:", err);
+            }
         }
 
         async function updateSessionSelects() {
@@ -806,7 +898,7 @@
                 let filtered = attendanceList.filter(a => new Date(a.date).getFullYear() === year);
                 if (startSess) filtered = filtered.filter(a => parseInt(a.session) >= startSess);
                 if (endSess) filtered = filtered.filter(a => parseInt(a.session) <= endSess);
-                filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+                filtered.sort((a, b) => parseInt(b.session) - parseInt(a.session));
 
                 if (filtered.length === 0) { reportContent.style.display = 'none'; noDataMsg.style.display = 'block'; return; }
                 noDataMsg.style.display = 'none'; reportContent.style.display = 'block';
@@ -821,6 +913,13 @@
                 let totalP = 0, totalA = 0, offD = 0, offA = 0, memD = 0, memA = 0;
                 const roleOrder = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4, '단원': 5 };
                 const offStats = { '단장': { p: filtered.length, a: 0 }, '부단장': { p: filtered.length, a: 0 }, '서기': { p: filtered.length, a: 0 }, '회계': { p: filtered.length, a: 0 } };
+                const officerStatsCard = document.getElementById('officerStatsCard');
+
+                const selectedMid = memberFilter.value;
+                // [UI Fix] Hide officer stats card when a specific member is selected
+                if (officerStatsCard) {
+                    officerStatsCard.style.display = (selectedMid && selectedMid !== '') ? 'none' : 'block';
+                }
 
                 reportBody.innerHTML = '';
                 filtered.forEach(record => {
@@ -840,17 +939,22 @@
                         return { id, status, name, baptismalName, role, probationaryDate };
                     });
 
+                    // [Role/Member Filter] 선택된 단원이 있는 경우 해당 단원만 필터링
+                    let finalRowItems = rowItems;
+                    if (selectedMid && selectedMid !== '') {
+                        finalRowItems = rowItems.filter(item => String(item.id) === String(selectedMid));
+                    }
+
                     // 정렬: 1순위 직책(roleOrder), 2순위 입단일(admissionDate)
-                    rowItems.sort((a, b) => {
+                    finalRowItems.sort((a, b) => {
                         const weightA = roleOrder[a.role] || 99;
                         const weightB = roleOrder[b.role] || 99;
                         if (weightA !== weightB) return weightA - weightB;
-                        // 입단일 비교 (문자열 오름차순 - 오래된 날짜가 위로)
                         return (a.probationaryDate || '').localeCompare(b.probationaryDate || '');
                     });
 
                     let firstRow = true;
-                    rowItems.forEach(item => {
+                    finalRowItems.forEach(item => {
                         const { id, status, name, baptismalName, role } = item;
 
                         if (role !== 'admin') {

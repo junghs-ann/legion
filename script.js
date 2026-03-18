@@ -14,9 +14,11 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
             background-color: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
-            z-index: 10010;
+            z-index: 20000; /* 헤더(10005)보다 높게 설정 */
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* 가로보기/작은 화면 대응: 상단부터 표시 */
+            overflow-y: auto;        /* 스크롤 허용 */
+            padding: 40px 20px;     /* 상하 여백 확보 */
             font-family: 'Noto Sans KR', sans-serif;
             animation: modalFadeIn 0.3s ease;
         }
@@ -36,6 +38,11 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
             line-height: 1.6;
             overflow: hidden;
             animation: modalSlideUp 0.3s ease;
+            margin: 40px auto; /* 상하 여백 확보하여 제목 가림 방지 */
+        }
+        /* [시니어 팁] 모달이 화면보다 클 경우 margin-top: 0으로 강제 조정 */
+        @media (max-height: 500px) {
+            .global-custom-modal-content { margin-top: 20px; }
         }
         @keyframes modalSlideUp {
             from { transform: translateY(20px); }
@@ -196,11 +203,13 @@ window.showGlobalPrompt = function (message, defaultValue = '') {
             const result = inputEl.value;
             inputEl.removeEventListener('keydown', handleEnter);
             modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
             resolve(result);
         };
         cancelBtn.onclick = () => {
             inputEl.removeEventListener('keydown', handleEnter);
             modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
             resolve(null);
         };
     });
@@ -287,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const isOpen = item.classList.contains('active-menu');
+                    console.log(`[Menu] Toggle -> ${link.innerText.trim()}, Current Status: ${isOpen ? 'Open' : 'Closed'}`);
 
                     // 1. Close ALL other menus (Auto-close logic)
                     navItems.forEach(otherItem => {
@@ -301,6 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         item.classList.add('active-menu');
                     }
+                    
+                    // Stop propagation to prevent document click from immediately closing it
+                    e.stopPropagation();
                 });
             }
         });

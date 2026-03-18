@@ -918,12 +918,20 @@
 
                     const recs = recsAll.filter(r => r.date >= start && r.date <= end);
 
+                    const reportYear = new Date(end).getFullYear();
+                    const reportMonth = new Date(end).getMonth() + 1;
+                    const reportMonthStart = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
+                    // 해당 월의 마지막 날짜 구하기
+                    const reportMonthEnd = new Date(reportYear, reportMonth, 0).toISOString().split('T')[0];
+
                     const leds = transAll.filter(l => {
                         const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
-                        return lDate >= start && lDate <= end;
+                        // [수정] 세션 날짜 기준이 아닌 해당 월 전체 기준(1일~말일)으로 필터링
+                        return lDate >= reportMonthStart && lDate <= reportMonthEnd;
                     });
 
-                    const evs = evsAll.filter(e => e.eventDate >= start).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+                    // [수정] 행사 내역도 해당 월 1일 기준으로 필터링 (executedEvs에서 다시 정교하게 처리됨)
+                    const evs = evsAll.filter(e => e.eventDate >= reportMonthStart).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
 
                     // [Fix] 전월 기준일(prevDate) 계산 로직 추가
                     const prevAtts = attsAll.filter(a => a.date < start).sort((a, b) => b.date.localeCompare(a.date));
@@ -1262,7 +1270,9 @@
                 } catch (e) { }
 
                 let carryOverIn = 0, carryOverOut = 0;
-                const startStr = t(start);
+                // [수정] 이월금 계산 기준을 '세션 시작일(start)'이 아닌 '해당 월 1일(reportMonthStart)'로 변경
+                const monthStartStr = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
+                
                 transAll.forEach(l => {
                     if (parseInt(l.year) !== endYear) return;
                     if (!isOrgMatch(l.churchName, l.presidiumName)) return;
@@ -1270,7 +1280,7 @@
                     const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
                     const amt = parseInt(l.amount) || 0;
                     const isDeposit = (l.type === 'deposit' || l.type === 'income');
-                    if (lDate < startStr) {
+                    if (lDate < monthStartStr) {
                         if (isDeposit) carryOverIn += amt; else carryOverOut += amt;
                     }
                 });
