@@ -25,7 +25,7 @@
 <body>
     <div class="container">
         <h1>🔍 성당(Church) 데이터 실종 추적기</h1>
-        <p>시스템 내의 모든 데이터를 전수 조사하여 <strong>성당 정보(church, churchName)</strong>가 누락된 문서를 찾아냅/니다.</p>
+        <p>시스템 내의 모든 데이터를 전수 조사하여 <strong>성당 정보(churchName)</strong>가 누락된 문서를 찾아냅니다.</p>
 
         <div class="status-box">
             <span id="scanStatus">조사 시작 버튼을 눌러주세요.</span>
@@ -93,7 +93,7 @@
                         totalMissingCount += missing.length;
                         html += `<ul class="error-list">`;
                         missing.forEach(m => {
-                            const nameInfo = m.data.name || m.data.memberName || m.data.presidium || m.data.presidiumName || '-';
+                            const nameInfo = m.data.name || m.data.memberName || m.data.presidiumName || '-';
                             const dateInfo = m.data.date || m.data.appointmentDate || m.data.eventDate || m.data.admissionDate || '';
                             html += `
                                 <li class="error-item">

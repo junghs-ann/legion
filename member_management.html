@@ -531,32 +531,20 @@
             const norm = (s) => (s || '').toString().replace(/\s/g, '');
 
             try {
-                // [강화] 모든 사용자를 가져와서 클라이언트 사이드에서 유연하게 필터링 (가장 확실한 방법)
-                const snapshot = await getDocs(collection(db, 'users'));
-                let results = [];
-                for (const docSnap of snapshot.docs) {
-                    results.push({ uid: docSnap.id, ...docSnap.data() });
-                }
+                // [정석] 서버측 쿼리를 사용하여 필요한 데이터만 효율적으로 조회 (전체 조회 후 필터링 방식 폐기)
+                let q = collection(db, 'users');
+                const constraints = [];
 
-                // 1. 성당 필터링 (오직 churchName)
-                if (sChurch) {
-                    const targetChurchNorm = norm(sChurch);
-                    results = results.filter(u => norm(u.churchName) === targetChurchNorm);
-                }
+                if (sChurch) constraints.push(where("churchName", "==", sChurch));
+                if (sCuria) constraints.push(where("curiaName", "==", sCuria));
+                if (sPresidiumId) constraints.push(where("presidiumName", "==", sPresidiumId));
 
-                // 2. 꾸리아 필터링 (오직 curiaName)
-                if (sCuria) {
-                    const targetCuriaNorm = norm(sCuria);
-                    results = results.filter(u => norm(u.curiaName) === targetCuriaNorm);
-                }
+                const finalQuery = (constraints.length > 0) ? query(q, ...constraints) : q;
+                const snapshot = await getDocs(finalQuery);
+                
+                let results = snapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() }));
 
-                // 3. 쁘레시디움 필터링 (오직 presidiumName)
-                if (sPresidiumId) {
-                    const targetPrNorm = norm(sPresidiumId);
-                    results = results.filter(u => norm(u.presidiumName) === targetPrNorm);
-                }
-
-                // 4. 이름 필터링 (부분 일치)
+                // 이름은 Firestore에서 부분 일치(Like) 쿼리가 제한적이므로 가져온 후 필터링 유지 (단, 데이터 범위가 이미 좁혀져 있음)
                 if (sName) {
                     results = results.filter(u => (u.name || '').toLowerCase().includes(sName));
                 }

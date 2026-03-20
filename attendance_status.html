@@ -779,15 +779,68 @@
 
         window.loadData = async function () {
             try {
+                // [V16.33] 로컬 데이터 우선 로드 (속도 최적화)
                 const stored = localStorage.getItem('presidia_list');
                 if (stored) {
                     presidiaList = typeof stored === 'string' && stored.startsWith('[') ? JSON.parse(stored) : (stored || []);
                     if (typeof presidiaList === 'string') presidiaList = JSON.parse(presidiaList);
                 }
+
+                // [V16.33] 관리자이거나 로컬 데이터가 없는 경우 Firestore에서 실시간 보강
+                const role = (currentUser?.role || '').trim();
+                const isAdmin = ['관리자', 'admin', 'Admin'].includes(role);
+
+                if (isAdmin || presidiaList.length === 0) {
+                    console.log(`[Data] Admin or Empty Cache. Fetching from Firestore...`);
+                    const qSnap = await getDocs(collection(db, 'presidia_list'));
+                    presidiaList = qSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    // 필드 표준화 보정 (구 필드명 대응)
+                    presidiaList = presidiaList.map(p => ({
+                        ...p,
+                        churchName: p.churchName || '',
+                        curiaName: p.curiaName || '',
+                        presidiumName: p.presidiumName || ''
+                    }));
+
+                    localStorage.setItem('presidia_list', JSON.stringify(presidiaList));
+                }
                 console.log(`[Data] Loaded ${presidiaList.length} presidia.`);
             } catch (e) {
-                console.error("Data parse error", e);
+                console.error("Data load error", e);
                 presidiaList = [];
+            }
+        };
+
+        // [V16.33] 데이터 강제 갱신 함수 구현
+        window.forceDataRefresh = async function () {
+            const overlay = document.getElementById('dataSyncOverlay');
+            if (overlay) overlay.style.display = 'flex';
+
+            try {
+                console.log("[Sync] Force refreshing presidia_list from Firestore...");
+                const qSnap = await getDocs(collection(db, 'presidia_list'));
+                presidiaList = qSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // 필드 표준화 보정
+                presidiaList = presidiaList.map(p => ({
+                    ...p,
+                    churchName: p.churchName || '',
+                    curiaName: p.curiaName || '',
+                    presidiumName: p.presidiumName || ''
+                }));
+
+                localStorage.setItem('presidia_list', JSON.stringify(presidiaList));
+                
+                // 선택창 다시 설정
+                await window.setupOrgSelectors();
+                
+                await window.showGlobalAlert('✅ 성당 및 쁘레시디움 목록이 최신 상태로 갱신되었습니다.');
+            } catch (error) {
+                console.error("[Sync] Refresh failed:", error);
+                await window.showGlobalAlert('❌ 데이터 갱신 중 오류가 발생했습니다.');
+            } finally {
+                if (overlay) overlay.style.display = 'none';
             }
         };
 
@@ -806,17 +859,33 @@
 
             if (!isAdmin) {
                 // [일반 사용자] 로그인 정보로 고정
-                const userChurch = currentUser.churchName || '';
-                const userCuria = currentUser.curiaName || '';
-                const userPresidium = currentUser.presidiumName || '';
+                // 보강: currentUser에 정보가 없는 경우 Firestore users 컬렉션에서 재확인
+                let userChurch = currentUser.churchName || '';
+                let userCuria = currentUser.curiaName || '';
+                let userPresidium = currentUser.presidiumName || '';
+
+                console.log(`[Setup] User Org: ${userChurch} / ${userCuria} / ${userPresidium}`);
 
                 if (userChurch) {
                     churchSelect.value = userChurch;
+                    // 만약 가입 직후 등 목록에 본인 성당이 없는 경우 강제로 옵션 추가
+                    if (!churchSelect.value && userChurch) {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = userChurch;
+                        churchSelect.appendChild(opt);
+                        churchSelect.value = userChurch;
+                    }
                     churchSelect.disabled = true;
                     updateCuriaList();
                 }
                 if (userCuria) {
                     curiaSelect.value = userCuria;
+                    if (!curiaSelect.value && userCuria) {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = userCuria;
+                        curiaSelect.appendChild(opt);
+                        curiaSelect.value = userCuria;
+                    }
                     curiaSelect.disabled = true;
                     updatePresidiumList();
                 }
@@ -825,13 +894,20 @@
                     presidiumSelect.value = userPresidium;
                     presidiumInput.disabled = true;
                 }
-                loadAttendanceList();
-                updateSessionList();
+                
+                if (userChurch && userCuria && userPresidium) {
+                    loadAttendanceList();
+                    updateSessionList();
+                }
             } else {
                 // [관리자] 모든 선택창 활성화
                 churchSelect.disabled = false;
                 curiaSelect.disabled = false;
                 presidiumInput.disabled = false;
+                
+                // 관리자의 경우 이전에 세션에 남아있는 값이 있다면 불러오기 (편의성)
+                if (churchSelect.value) updateCuriaList();
+                if (curiaSelect.value) updatePresidiumList();
             }
         };
 
@@ -1015,7 +1091,7 @@
                 presidiumDropdown.innerHTML = '<div class="no-result">일치하는 쁘레시디움이 없습니다.</div>';
             } else {
                 filtered.forEach(p => {
-                    const name = p.presidiumName || p.presidium || p.name;
+                    const name = p.presidiumName || p.name;
                     const div = document.createElement('div');
                     div.className = 'dropdown-item';
                     div.textContent = name;

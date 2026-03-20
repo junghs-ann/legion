@@ -772,8 +772,7 @@
                         </thead>
                         <tbody id="tableBody">
                             <tr>
-                                <td colspan="5" style="padding: 100px; color: #999; text-align: center;">회차 범위를 선택하고 조회
-                                    버튼을 눌러주세요.</td>
+                                <td colspan="5" style="padding: 100px; color: #999; text-align: center;">조직을 선택하고 [조회] 버튼을 눌러주세요.<br>(기간 미입력 시 전체 내역이 조회됩니다.)</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1060,14 +1059,17 @@
 
         async function renderReport(isManualSearch = false) {
             const pr = (presidiumInput.value || '').trim();
-            const startD = startDateInput.value;
-            const endD = endDateInput.value;
+            const startDRaw = startDateInput.value;
+            const endDRaw = endDateInput.value;
 
-            if (!pr || !startD || !endD) {
-                // 수동 검색일 때만 필수 입력 알림 표시
-                if (isManualSearch) showCustomAlert('조직과 기준일 범위를 정확히 선택해 주세요.');
+            // [Senior Fix] Only Presidium is strictly required now. Dates are optional for "View All".
+            if (!pr) {
+                if (isManualSearch) showCustomAlert('조직(쁘레시디움)을 선택해 주세요.');
                 return;
             }
+
+            const startD = startDRaw || "0000-00-00";
+            const endD = endDRaw || "9999-99-99";
 
             const minD = startD < endD ? startD : endD;
             const maxD = startD < endD ? endD : startD;

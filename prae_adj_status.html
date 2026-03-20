@@ -356,6 +356,11 @@
             <!-- 상단 우측 X 버튼 추가 -->
             <div class="btn-top-close" onclick="location.href='dashboard.html'">&times;</div>
 
+            <!-- 최신 버전 확인용 배너 (캐시 문제 진단용) - 사용자 요청으로 숨김 처리 -->
+            <div id="debugBanner" style="display: none; background: #ff4757; color: white; padding: 5px 15px; border-radius: 4px; font-weight: bold; margin-bottom: 20px; font-size: 0.9rem; text-align: center; align-items: center; justify-content: center; gap: 10px;">
+                <span><i class="fas fa-sync-alt"></i> 최신 버전 로드됨 (2026-03-20 08:35)</span>
+            </div>
+
             <div class="filter-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3
@@ -494,11 +499,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260307_2342"></script>
+    <script src="script.js?v=20260320_0835"></script>
     <script type="module">
-        import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2342";
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-        import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { db, collection, query, where, getDocs, orderBy, updateDoc, doc } from "./firebase-config.js?v=20260320_0835";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260320_0835";
+        import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from "./data.js?v=20260320_0835";
 
         let currentUser = null;
         let isAdmin = false;
@@ -531,6 +536,9 @@
             await fetchPresidiaList();
             setupControls(profile);
             setupEventListeners();
+            
+            // 페이지 진입 시 자동 조회 수행
+            await loadReport();
         }, () => {
             location.href = 'index.html';
         });
@@ -615,15 +623,18 @@
         }
 
         async function loadReport() {
+            // [진단용] 시작 알림
+            console.warn("[CHECK] loadReport 호출됨");
+            
             let church, curia, presidium;
             if (isAdmin) {
-                church = churchFilter.value;
-                curia = curiaFilter.value;
-                presidium = presidiumFilter.value;
+                church = (churchFilter.value || '').trim();
+                curia = (curiaFilter.value || '').trim();
+                presidium = (presidiumSearch.value || '').trim();
             } else {
-                church = currentUser.churchName || '';
-                curia = currentUser.curiaName || '';
-                presidium = currentUser.presidiumName || '';
+                church = (currentUser.churchName || '').trim();
+                curia = (currentUser.curiaName || '').trim();
+                presidium = (currentUser.presidiumName || '').trim();
             }
 
             const type = typeFilter.value;
@@ -632,103 +643,153 @@
             const end = endDateFilter.value;
             const name = nameFilter.value.trim();
 
-            let praeList = [];
-            let adjList = [];
-            let memberList = [];
+            console.log(`[QUERY PARAMS] Church: "${church}", Curia: "${curia}", Pr: "${presidium}"`);
 
-            const [praeSnap, adjSnap, memSnap] = await Promise.all([
-                getDocs(collection(db, 'praetorium_list')),
-                getDocs(collection(db, 'adjutorium_members_list')),
-                getDocs(collection(db, 'members_list'))
-            ]);
-            praeSnap.forEach(doc => praeList.push(doc.data()));
-            adjSnap.forEach(doc => adjList.push(doc.data()));
-            memSnap.forEach(doc => memberList.push(doc.data()));
+            // UI 초기화 및 로딩 표시
+            // 소제목 영역을 먼저 표시하여 사용자님의 의구심 해결
+            statusContent.style.display = 'block'; 
+            statusContent.style.opacity = '0.5'; // 로딩 중에는 흐리게
+            noDataMsg.style.display = 'block';
+            noDataMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 데이터를 불러오는 중입니다...';
 
-            const membersMap = {}; memberList.forEach(m => membersMap[String(m.id)] = m);
-
-            // 쁘레또리움 필터링 (praetorium_list 사용)
-            let fPrae = praeList.filter(r => {
-                const matchC = !church || r.churchName === church;
-                const matchCu = !curia || r.curiaName === curia;
-                const matchP = !presidium || r.presidiumName === presidium;
-                const matchN = !name || (r.memberName || '').includes(name);
-                const s = r.status === 'active' ? '활동' : '퇴단';
-                const matchS = status === '전체' || s === status;
-                const matchD = (!start || r.joinDate >= start) && (!end || r.joinDate <= end);
-                return matchC && matchCu && matchP && matchN && matchS && matchD;
-            });
-
-            // 아듀또리움 필터링 (adjutorium_members_list 사용)
-            let fAdj = adjList.filter(r => {
-                const matchC = !church || r.churchName === church;
-                const matchCu = !curia || r.curiaName === curia;
-                const matchP = !presidium || r.presidiumName === presidium;
-                const matchN = !name || (r.name || '').includes(name);
-                const s = r.withdrawalDate ? '퇴단' : '활동';
-                const matchS = status === '전체' || s === status;
-                const matchD = (!start || r.admissionDate >= start) && (!end || r.admissionDate <= end);
-                return matchC && matchCu && matchP && matchN && matchS && matchD;
-            });
-
-            // 구분 필터에 따른 섹션 표시 제어
+            // showPrae, showAdj 정의 (누락 복구)
             const showPrae = (type === '전체' || type === '쁘레또리움');
             const showAdj = (type === '전체' || type === '아듀또리움');
 
-            praeSection.style.display = showPrae ? 'block' : 'none';
-            adjSection.style.display = showAdj ? 'block' : 'none';
+            try {
+                let praeList = [];
+                let adjList = [];
+                let memberList = [];
 
-            // 결과 영역 표시
-            statusContent.style.display = 'block';
-            noDataMsg.style.display = 'none';
+                // 1. 데이터 조회 쿼리 구성
+                // members_list는 성당 필터링에서 제외 (성당 필드가 없을 수 있음)
+                const [praeSnap, adjSnap, memSnap] = await Promise.all([
+                    getDocs(church ? query(collection(db, 'praetorium_list'), where('churchName', '==', church)) : collection(db, 'praetorium_list')),
+                    getDocs(church ? query(collection(db, 'adjutorium_members_list'), where('churchName', '==', church)) : collection(db, 'adjutorium_members_list')),
+                    getDocs(collection(db, 'members_list'))
+                ]);
 
-            document.getElementById('reportDateRange').textContent = (start || end) ? `( ${start || '초기'} ~ ${end || '현재'} 입단일 기준 )` : '( 전 기간 )';
+                praeSnap.forEach(doc => praeList.push({ id: doc.id, ...doc.data() }));
+                adjSnap.forEach(doc => adjList.push({ id: doc.id, ...doc.data() }));
+                memSnap.forEach(doc => memberList.push({ id: doc.id, ...doc.data() }));
 
-            // 렌더링 쁘레
-            if (showPrae) {
-                praeBody.innerHTML = '';
-                if (fPrae.length === 0) {
-                    praeBody.innerHTML = '<tr><td colspan="7" style="padding:40px; color:#999; font-size:1.1rem;">해당 자료가 없습니다.</td></tr>';
-                } else {
-                    fPrae.sort((a, b) => b.joinDate.localeCompare(a.joinDate)).forEach(r => {
-                        const m = membersMap[String(r.memberId)] || {};
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><span class="badge-${r.status === 'active' ? 'active' : 'retire'}">${r.status === 'active' ? '활동' : '퇴단'}</span></td>
-                            <td>${r.memberName}</td>
-                            <td>${m.baptismalName || '-'}</td>
-                            <td>${r.presidiumName}</td>
-                            <td>${r.joinDate}</td>
-                            <td>${r.leaveDate || '-'}</td>
-                            <td class="text-left">${m.notes || '-'}</td>
-                        `;
-                        praeBody.appendChild(tr);
-                    });
+                console.error(`[DATA DIAGNOSIS] Fetched counts -> Prae: ${praeList.length}, Adj: ${adjList.length}, Members: ${memberList.length}`);
+                
+                // 과거 필드명(church) 때문에 누락되는 경우 대조 진단
+                if (church && praeList.length === 0) {
+                    const legacySnap = await getDocs(query(collection(db, 'praetorium_list'), where('church', '==', church)));
+                    if (legacySnap.size > 0) {
+                        const msg = `[경고] '${church}' 성당 데이터 ${legacySnap.size}건이 구버전 필드명(church)을 사용 중이라 누락되었습니다.`;
+                        console.error(msg);
+                        alert(msg + "\n\n표준 필드명(churchName)으로 데이터 정제가 필요합니다.");
+                    }
                 }
-            }
 
-            // 렌더링 아듀
-            if (showAdj) {
-                adjBody.innerHTML = '';
-                if (fAdj.length === 0) {
-                    adjBody.innerHTML = '<tr><td colspan="8" style="padding:40px; color:#999; font-size:1.1rem;">해당 자료가 없습니다.</td></tr>';
-                } else {
-                    fAdj.sort((a, b) => (a.admissionDate || '').localeCompare(b.admissionDate || '')).forEach(r => {
-                        const tr = document.createElement('tr');
-                        const sClass = r.withdrawalDate ? 'retire' : 'active';
-                        const sText = r.withdrawalDate ? '퇴단' : '활동';
-                        tr.innerHTML = `
-                            <td><span class="badge-${sClass}">${sText}</span></td>
-                            <td>${r.name}</td>
-                            <td>${r.baptismalName || '-'}</td>
-                            <td>${r.gender || '-'}</td>
-                            <td>${r.presidiumName || '-'}</td>
-                            <td>${r.admissionDate || '-'}</td>
-                            <td>${r.withdrawalDate || '-'}</td>
-                            <td class="text-left">${r.notes || '-'}</td>
-                        `;
-                        adjBody.appendChild(tr);
-                    });
+                const membersMap = {}; 
+                memberList.forEach(m => membersMap[String(m.id)] = m);
+
+                // 2. 필터링
+                let fPrae = praeList.filter(r => {
+                    const rChurch = (r.churchName || '').trim();
+                    const rCuria = (r.curiaName || '').trim();
+                    const rPresidium = (r.presidiumName || '').trim();
+                    const rName = (r.memberName || '').trim();
+                    const matchC = !church || rChurch === church;
+                    const matchCu = !curia || rCuria === curia;
+                    const matchP = !presidium || rPresidium === presidium;
+                    const matchN = !name || rName.includes(name);
+                    const s = r.status === 'active' ? '활동' : '퇴단';
+                    const matchS = status === '전체' || s === status;
+                    const matchD = (!start || r.joinDate >= start) && (!end || r.joinDate <= end);
+                    return matchC && matchCu && matchP && matchN && matchS && matchD;
+                });
+
+                let fAdj = adjList.filter(r => {
+                    const rChurch = (r.churchName || '').trim();
+                    const rCuria = (r.curiaName || '').trim();
+                    const rPresidium = (r.presidiumName || '').trim();
+                    const rName = (r.name || '').trim();
+                    const matchC = !church || rChurch === church;
+                    const matchCu = !curia || rCuria === curia;
+                    const matchP = !presidium || rPresidium === presidium;
+                    const matchN = !name || rName.includes(name);
+                    const s = r.withdrawalDate ? '퇴단' : '활동';
+                    const matchS = status === '전체' || s === status;
+                    const matchD = (!start || r.admissionDate >= start) && (!end || r.admissionDate <= end);
+                    return matchC && matchCu && matchP && matchN && matchS && matchD;
+                });
+
+                console.error(`[DATA DIAGNOSIS] After Filtering -> Prae: ${fPrae.length}, Adj: ${fAdj.length}`);
+
+                if (fPrae.length === 0 && fAdj.length === 0) {
+                    statusContent.style.opacity = '1';
+                    noDataMsg.style.display = 'block';
+                    noDataMsg.textContent = '해당 조건의 현황 데이터가 없습니다.';
+                    praeSection.style.display = 'none';
+                    adjSection.style.display = 'none';
+                    return;
+                }
+
+                statusContent.style.display = 'block';
+                statusContent.style.opacity = '1';
+                noDataMsg.style.display = 'none';
+
+                document.getElementById('reportDateRange').textContent = (start || end) ? `( ${start || '초기'} ~ ${end || '현재'} 입단일 기준 )` : '( 전 기간 )';
+
+                // 렌더링 쁘레
+                if (showPrae) {
+                    praeBody.innerHTML = '';
+                    if (fPrae.length === 0) {
+                        praeBody.innerHTML = '<tr><td colspan="7" style="padding:40px; color:#999; font-size:1.1rem;">해당 데이터가 없습니다.</td></tr>';
+                    } else {
+                        fPrae.sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || '')).forEach(r => {
+                            const m = membersMap[String(r.memberId)] || {};
+                            const baptismalName = r.baptismalName || m.baptismalName || '-';
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="badge-${r.status === 'active' ? 'active' : 'retire'}">${r.status === 'active' ? '활동' : '퇴단'}</span></td>
+                                <td>${r.memberName || '-'}</td>
+                                <td>${baptismalName}</td>
+                                <td>${r.presidiumName || '-'}</td>
+                                <td>${r.joinDate || '-'}</td>
+                                <td>${r.leaveDate || '-'}</td>
+                                <td class="text-left">${m.notes || '-'}</td>
+                            `;
+                            praeBody.appendChild(tr);
+                        });
+                    }
+                }
+
+                // 렌더링 아듀
+                if (showAdj) {
+                    adjBody.innerHTML = '';
+                    if (fAdj.length === 0) {
+                        adjBody.innerHTML = '<tr><td colspan="8" style="padding:40px; color:#999; font-size:1.1rem;">해당 데이터가 없습니다.</td></tr>';
+                    } else {
+                        fAdj.sort((a, b) => (a.admissionDate || '').localeCompare(b.admissionDate || '')).forEach(r => {
+                            const tr = document.createElement('tr');
+                            const sClass = r.withdrawalDate ? 'retire' : 'active';
+                            const sText = r.withdrawalDate ? '퇴단' : '활동';
+                            tr.innerHTML = `
+                                <td><span class="badge-${sClass}">${sText}</span></td>
+                                <td>${r.name || '-'}</td>
+                                <td>${r.baptismalName || '-'}</td>
+                                <td>${r.gender || '-'}</td>
+                                <td>${r.presidiumName || '-'}</td>
+                                <td>${r.admissionDate || '-'}</td>
+                                <td>${r.withdrawalDate || '-'}</td>
+                                <td class="text-left">${r.notes || '-'}</td>
+                            `;
+                            adjBody.appendChild(tr);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading status report:", error);
+                noDataMsg.style.display = 'block';
+                noDataMsg.innerHTML = `<span style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> 데이터를 불러오는 중 오류가 발생했습니다.</span><br><small>${error.message}</small>`;
+                if (error.code === 'permission-denied') {
+                    noDataMsg.innerHTML += '<br><small>권한이 부족합니다. 관리자에게 문의하세요.</small>';
                 }
             }
         }

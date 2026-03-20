@@ -467,7 +467,7 @@
             },
             {
                 id: 'cat_others_simple', title: '기타활동(1)', items: [
-                    { name: '출판물 보급', unit: '회', isActive: true }, { name: '자연보호 활동', unit: '회', isActive: true }
+                    { name: '출판물 보급', unit: '회', isActive: true }, { name: '탄소중립 실천하기', unit: '회', isActive: true }
                 ]
             },
             {
@@ -530,7 +530,7 @@
                 });
 
                 // Default to user's church or first one
-                const userChurch = profile?.churchName || profile?.church || churches[0];
+                const userChurch = profile?.churchName || churches[0];
                 select.value = churches.includes(userChurch) ? userChurch : churches[0];
                 currentChurch = select.value;
             }

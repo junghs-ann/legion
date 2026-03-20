@@ -357,7 +357,7 @@
 
     <script src="script.js?v=20260313_1650"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser, updatePassword, convertToStdRole } from "./auth.js?v=20260313_1650";
+        import { initAuthObserver, logoutUser, updatePassword, convertToStdRole, updateUserProfile } from "./auth.js?v=20260313_1650";
 
         let currentUser = null;
         const signaturePad = document.getElementById('signature-pad');
@@ -471,36 +471,24 @@
         });
 
         // --- Save Logic ---
-        document.getElementById('btn-save-profile').addEventListener('click', () => {
+        document.getElementById('btn-save-profile').addEventListener('click', async () => {
             if (!newSignatureData) {
                 alert('변경할 서명을 그리거나 파일을 선택해 주세요.');
                 return;
             }
 
             if (confirm('서명을 업데이트하시겠습니까?')) {
-                const users = JSON.parse(localStorage.getItem('users') || '{}');
-                const uid = currentUser.uid || currentUser.username; // UID check
+                try {
+                    const uid = currentUser.uid;
+                    if (!uid) throw new Error("사용자 고유 ID가 없습니다. 다시 로그인해 주세요.");
 
-                // Find user in storage (some might be indexed by UID, some by username)
-                let storedUser = users[uid];
-                if (!storedUser) {
-                    // Fallback: search by values
-                    const foundId = Object.keys(users).find(key => users[key].username === currentUser.username);
-                    if (foundId) storedUser = users[foundId];
-                }
-
-                if (storedUser) {
-                    storedUser.signature = newSignatureData;
-                    localStorage.setItem('users', JSON.stringify(users));
-
-                    // Session Sync
-                    currentUser.signature = newSignatureData;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
+                    await updateUserProfile(uid, { signature: newSignatureData });
+                    
                     alert('서명이 성공적으로 업데이트되었습니다.');
                     location.reload();
-                } else {
-                    alert('사용자 정보를 찾을 수 없습니다.');
+                } catch (e) {
+                    console.error("Profile Update Error:", e);
+                    alert('오류 발생: ' + e.message);
                 }
             }
         });

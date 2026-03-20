@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Check User Profile</title></head>
+<body>
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        initAuthObserver(async (user, profile) => {
+            console.log("CURRENT_USER_PROFILE:" + JSON.stringify(profile));
+            document.body.innerHTML = "<h1>Profile:</h1><pre>" + JSON.stringify(profile, null, 2) + "</pre>";
+        });
+    </script>
+</body>
+</html>

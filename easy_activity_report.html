@@ -20,32 +20,48 @@
         }
 
         .user-info-bar {
-            background: #f8faff;
-            padding: 20px 25px;
-            border-radius: 12px;
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
             margin-bottom: 30px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 20px;
             border: 1px solid #e2e8f0;
-            border-left: 5px solid var(--secondary-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            position: relative;
+        }
+
+        .user-info-bar::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20px;
+            bottom: 20px;
+            width: 4px;
+            background: var(--secondary-color);
+            border-radius: 0 4px 4px 0;
         }
 
         .info-labels {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            width: 100%;
         }
 
         .info-item {
             display: flex;
             flex-direction: column;
+            gap: 8px;
         }
 
         .info-item .label {
             font-size: 0.8rem;
-            color: #777;
-            margin-bottom: 2px;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
         }
 
         .info-item .value {
@@ -55,15 +71,35 @@
 
         /* Admin style selects in info bar */
         .info-select {
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            font-weight: bold;
-            font-size: 0.9rem;
-            color: var(--primary-color);
-            background: #fdfdfd;
-            height: 38px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #2d3748;
+            background: #ffffff;
+            height: 44px;
+            width: 100% !important; /* 고정 너비 제거 */
             box-sizing: border-box;
+            transition: all 0.2s;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234a5568'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='C19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .info-select:hover {
+            border-color: var(--secondary-color);
+            background-color: #fffdf9;
+        }
+
+        .info-select:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
         }
 
         .entry-card {
@@ -686,31 +722,26 @@
             <!-- User Info Area (Select for Admin, Fixed for Member) -->
             <!-- User Info Area (Select for Admin/Officer, Label-like for Member) -->
             <div class="user-info-bar">
-                <div class="info-labels" id="adminSelectors" style="width: 100%;">
+                <div class="info-labels" id="adminSelectors">
                     <div class="info-item">
                         <div class="label">성당</div>
-                        <select id="selChurch" class="info-select" style="width: 180px;"></select>
+                        <select id="selChurch" class="info-select"></select>
                     </div>
                     <div class="info-item" id="curiaItem">
                         <div class="label">꾸리아</div>
-                        <select id="selCuria" class="info-select" style="width: 180px;"></select>
+                        <select id="selCuria" class="info-select"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">쁘레시디움</div>
-                        <div class="search-container" id="prSearchContainer" style="width: 180px;">
-                            <input type="text" id="prInput" class="info-select" placeholder="입력/선택" autocomplete="off"
-                                style="border: 1.5px solid #d4a017 !important; width: 100%;">
-                            <input type="hidden" id="selPr">
-                            <div id="prDropdown" class="custom-dropdown"></div>
-                        </div>
+                        <select id="selPr" class="info-select"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">단원 성명</div>
-                        <select id="selMember" class="info-select" style="width: 180px;"></select>
+                        <select id="selMember" class="info-select"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">보고 주회합 회차</div>
-                        <select id="selDate" class="info-select" style="width: 180px;"></select>
+                        <select id="selDate" class="info-select"></select>
                     </div>
                 </div>
             </div>
@@ -796,12 +827,104 @@
         let tempInputData = {}; // [추가] 항목 설정 시 입력 데이터 임시 보관용
         let lastLoadId = 0; // [추가] Race Condition 방지용
 
+        // --- 이미지 기반 고도화된 기본 데이터 세트 ---
+        const DEFAULT_SCHEMA = [
+            {
+                id: 'cat_senatus', title: '교구 또는 레지오 세나뚜스 지시 사항', items: [
+                    { name: '밤9시 주모경 바치기', unit: '회' }, { name: '월간 성모님의 군단 읽기', unit: '회' },
+                    { name: '새 가족 찾기', unit: '회' }, { name: '쉬는 교우(5년이내) 돌봄', unit: '회' },
+                    { name: '사목자를 위한 기도', unit: '회' }, { name: '협조단원 행동단원 입단', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_pastor', title: '본당 사목자 지시 사항', items: [
+                    { name: '거룩한 독서', unit: '회' }, { name: '냉담 교우 회두', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_mission', title: '입교 권면', items: [
+                    { name: '외인 입교 권면', unit: '회' }, { name: '교리 중단자 재권면', unit: '회' },
+                    { name: '개종 권면', unit: '회' }, { name: '가두 선교', unit: '회' }, { name: '방문 선교', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_nonbeliever', title: '예비신자 돌봄', items: [
+                    { name: '교리반 인도 예비신자 돌봄', unit: '회' }, { name: '통신교리자 돌봄', unit: '회' }, { name: '교리반 봉사 또는 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_care', title: '교우 돌봄', items: [
+                    { name: '새영세자돌봄', unit: '회' }, { name: '전입교우 돌봄', unit: '회' }, { name: '쉬는교우 돌봄', unit: '회' },
+                    { name: '조당(혼인장애)자 안내', unit: '회' }, { name: '성사 권면', unit: '회' }, { name: '유아 세례 권면', unit: '회' },
+                    { name: '첫 영성체', unit: '회' }, { name: '교우 가정 방문', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_suffering', title: '어려움 겪는 분 돌봄', items: [
+                    { name: '교우 환자 방문', unit: '회' }, { name: '외인 환자 방문', unit: '회' }, { name: '다문화 가정 돌봄', unit: '회' },
+                    { name: '외인 상가 돌봄', unit: '회' }, { name: '교우 상가 돌봄', unit: '회' }, { name: '위령기도[연도]', unit: '회' },
+                    { name: '장례미사', unit: '회' }, { name: '추모미사', unit: '회' }, { name: '입관', unit: '회' }, { name: '장지 수행', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_expansion', title: '레지오 확장', items: [
+                    { name: '행동단원 모집', unit: '회' }, { name: '협조단원 모집 및 돌봄', unit: '회' }, { name: '소년 레지오 지도', unit: '회' }, { name: '입단권면', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_special', title: '특별 활동', items: [
+                    { name: '호구조사(호별방문)', unit: '회' }, { name: '재해 및 사고 피해자 돌봄', unit: '회' },
+                    { name: '복지시설 노력 봉사', unit: '회' }, { name: '병원방문 활동', unit: '회' }, { name: '기타 특별활동', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_parish_service', title: '본당 협조', items: [
+                    { name: '행사 준비 및 협조', unit: '회' }, { name: '주일학교 돌봄', unit: '회' },
+                    { name: '청소 미화', unit: '회' }, { name: '미사안내 봉사', unit: '회' }, { name: '기타 본당 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_community', title: '소공동체 활동', items: [
+                    { name: '소공동체 모임 참석', unit: '회' }, { name: '구역.반장교육 참석', unit: '회' }, { name: '반모임 참석', unit: '회' }, { name: '기타 소공동체', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_family', title: '가정성화 활동', items: [
+                    { name: '가족이 함께 모여 기도하기', unit: '회' }, { name: '외짝교우 부부 성경 봉독 및 기도', unit: '회' },
+                    { name: '자녀와 함께 미사 참례 및 기도', unit: '회' }, { name: '가족 복지시설 봉사', unit: '회' },
+                    { name: '출가한 자녀 함께 기도 및 미사 참례', unit: '회' }, { name: '영유아와 함께 미사 참례', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_others_simple', title: '기타활동(1)', items: [
+                    { name: '출판물 보급', unit: '회', isActive: true }, { name: '탄소중립 실천하기', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_others_detail', title: '기타활동(2)', items: [
+                    { name: '묵주기도', unit: '단', isActive: true }, { name: '평일미사참례', unit: '회', isActive: true },
+                    { name: '성경읽기', unit: '장', isActive: true }, { name: '성경쓰기', unit: '장', isActive: true },
+                    { name: '매일미사읽고묵상', unit: '회', isActive: true }, { name: '십자가의 길', unit: '회', isActive: true },
+                    { name: '성체조배', unit: '회', isActive: true }, { name: '성시간 참석', unit: '회', isActive: true },
+                    { name: '교본읽기', unit: '쪽', isActive: true }, { name: '신심영상 시청', unit: '회', isActive: true },
+                    { name: '신심서적', unit: '쪽', isActive: true }, { name: '희생', unit: '회', isActive: true },
+                    { name: '피정', unit: '회', isActive: true }, { name: '성지순례', unit: '회', isActive: true },
+                    { name: '화살기도', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_charity', title: '기타활동(사랑의 증언)', items: [
+                    { name: '복지시설', unit: '회', isActive: true }, { name: '병원.요양원', unit: '회', isActive: true }, { name: '기타 사랑봉사', unit: '회', isActive: true }
+                ]
+            }
+        ];
+
         // --- Auth & Init ---
         initAuthObserver(async (user, profile) => {
+            // [ID 보정] 성격상 memberId가 있는 경우 이를 우선적으로 식별자로 사용합니다. (출석부/활동기록 규격)
             currentUser = profile;
-            // [ID 보정] 간부로 로그인한 경우, 출석부 규격(memberId)과 맞추기 위해 ID를 보정합니다.
             if (currentUser && currentUser.memberId) {
-                currentUser.originalId = currentUser.id; // 기존 ID 백업
+                currentUser.originalId = currentUser.id; // 원본 ID 보관
                 currentUser.id = currentUser.memberId;
             }
             
@@ -831,12 +954,22 @@
 
             // [수정] Firestore에서 초기 데이터 로드 (스키마 & 프리셋)
             try {
-                    const cName = (data.churchName || '').trim();
-                    if (cName) activitySchemaMap[cName] = categories;
+                // 1. 전체 성당의 활동 스키마 로드
+                const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
+                schemaSnap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const categories = data.categories;
+                    // [표준화] 오직 표준 필드(churchName)만 사용하여 매칭
+                    const cName = data.churchName.toString().trim();
+                    if (cName && categories) {
+                        activitySchemaMap[cName] = categories;
+                        // [추가] 공백 제거 버전으로도 저장 (매칭용)
+                        activitySchemaMap[cName.replace(/\s+/g, '')] = categories;
+                    }
+                });
 
                 // 2. 프리셋 로드 (본인 또는 관리권한인 경우 전체 로드 고려)
-                // [정석화] 표준 필드만 사용⚖️🌊
-                const uid = profile.id; // profile.uid는 사용하지 않음
+                const uid = profile.id;
                 if (uid) {
                     const presetDoc = await getDoc(doc(db, 'user_activity_presets', uid));
                     if (presetDoc.exists()) {
@@ -855,42 +988,16 @@
         async function setupUnifiedSelectors(isAdmin, isOfficer) {
             const selChurch = document.getElementById('selChurch');
             const selCuria = document.getElementById('selCuria');
-            const prInput = document.getElementById('prInput');
-            const prDropdown = document.getElementById('prDropdown');
-            const selPr = document.getElementById('selPr'); // Hidden
+            const selPr = document.getElementById('selPr'); 
             const selMember = document.getElementById('selMember');
             const selDate = document.getElementById('selDate');
-            const btnSearch = document.getElementById('btnSearch');
 
-            // --- Search Listeners ---
-            prInput.onfocus = () => { if (!prInput.disabled) showPrDropdown(); };
-            prInput.oninput = () => { showPrDropdown(prInput.value); };
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#prSearchContainer')) prDropdown.style.display = 'none';
-            });
-
-            window.showPrDropdown = (filter = '') => {
-                const c = selChurch.value;
-                const cu = selCuria.value;
-                if (!cu) return;
-                const list = getPresidia(c, cu).map(p => p.name).sort();
-                const filtered = filter ? list.filter(n => n.includes(filter)) : list;
-                if (filtered.length === 0) {
-                    prDropdown.innerHTML = '<div class="no-result">일치하는 쁘레시디움 없음</div>';
-                } else {
-                    prDropdown.innerHTML = filtered.map(n => `<div class="dropdown-item" data-name="${n}">${n}</div>`).join('');
-                    prDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                        item.onclick = async () => {
-                            const name = item.dataset.name;
-                            prInput.value = name;
-                            selPr.value = name;
-                            prDropdown.style.display = 'none';
-                            await syncDates(name);
-                            await syncMembers(name);
-                        };
-                    });
-                }
-                prDropdown.style.display = 'block';
+            // --- Search Listeners (Admin dropdown mode) ---
+            selPr.onchange = async () => {
+                const name = selPr.value;
+                if (!name) return;
+                await syncDates(name);
+                await syncMembers(name);
             };
 
             // --- Shared Listeners ---
@@ -920,32 +1027,67 @@
 
             // --- Population Logic by Role ---
             if (isAdmin) {
-                // Admin: Full control
+                // Admin: Full control but default to user's org
                 const churches = getChurches();
                 selChurch.innerHTML = churches.map(c => `<option value="${c}">${c}</option>`).join('');
+                
+                // [정예화] 오직 표준 필드만 사용하여 초기값 설정
+                const defaultChurch = (currentUser.churchName || churches[0] || "").trim();
+                if (churches.includes(defaultChurch)) {
+                    selChurch.value = defaultChurch;
+                }
 
                 selChurch.onchange = async () => {
                     const c = selChurch.value;
+                    if (!c) return;
+                    
                     updateSchema(c);
                     const curiae = getCuriae(c);
                     selCuria.innerHTML = curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
+                    
+                    // [정예화] 오직 표준 필드만 사용하여 초기값 설정
+                    const defaultCuria = (currentUser.curiaName || curiae[0] || "").trim();
+                    if (curiae.includes(defaultCuria)) {
+                        selCuria.value = defaultCuria;
+                    }
+                    
                     await selCuria.onchange();
                 };
 
                 selCuria.onchange = async () => {
-                    // Curia 변경 시 쁘레시디움 입력값 초기화
-                    prInput.value = '';
-                    selPr.value = '';
-                    prDropdown.style.display = 'none';
-                    // 회차 및 단원 목록 비움
-                    selDate.innerHTML = '';
-                    selMember.innerHTML = '';
-                    renderEntryForm(); // 빈 폼 렌더링
+                    const c = selChurch.value;
+                    const cu = selCuria.value;
+                    if (!cu) {
+                        selPr.innerHTML = '<option value="">-- 꾸리아 선택 필요 --</option>';
+                        return;
+                    }
+                    const presidia = getPresidia(c, cu).map(p => p.name).sort();
+                    selPr.innerHTML = '<option value="">-- 쁘레시디움 선택 --</option>' + 
+                        presidia.map(p => `<option value="${p}">${p}</option>`).join('');
+                    
+                    // [정예화] 오직 표준 필드만 사용하여 초기값 설정
+                    const defaultPr = (currentUser.presidiumName || "").trim();
+                    const matchedPr = presidia.find(p => p === defaultPr);
+                    if (matchedPr) {
+                        selPr.value = matchedPr;
+                    }
+                    
+                    // 쁘레시디움이 선택되었을 때만 후속 데이터 로드
+                    if (selPr.value) {
+                        const prName = selPr.value;
+                        await syncDates(prName);
+                        await syncMembers(prName);
+                    } else {
+                        selDate.innerHTML = '';
+                        selMember.innerHTML = '';
+                        renderEntryForm();
+                    }
                 };
 
+                // 초기 실행
                 await selChurch.onchange();
             } else {
-                // Officer/Member: Fixed Org
+                // Officer/Member: Fixed Org (Strictly use standard field names)
                 const churchVal = (currentUser.churchName || "").trim();
                 const curiaVal = (currentUser.curiaName || "").trim();
                 const prName = (currentUser.presidiumName || "").trim();
@@ -955,24 +1097,23 @@
                     console.warn("User profile is missing organization info.");
                 }
 
+                // [강화] 비관리자라도 화면에 소속 정보가 보여야 하므로 select에 옵션 추가 후 값 설정
                 selChurch.innerHTML = `<option value="${churchVal}">${churchVal}</option>`;
+                selChurch.value = churchVal;
                 selCuria.innerHTML = `<option value="${curiaVal}">${curiaVal}</option>`;
-                
-                // 가시적인 prInput과 실제 값을 가지는 selPr(hidden) 대응
-                prInput.value = prName;
+                selCuria.value = curiaVal;
+                selPr.innerHTML = `<option value="${prName}">${prName}</option>`;
                 selPr.value = prName;
 
                 // [강화] 확실한 비활성화 및 시각적 고정
                 selChurch.disabled = true;
                 selCuria.disabled = true;
-                prInput.disabled = true;
-                prInput.readOnly = true;
-                prInput.style.cssText = "background: #f5f5f5 !important; color: #777 !important; border: 1px solid #ccc !important; pointer-events: none !important;";
-                selChurch.style.cssText = "background: #f5f5f5 !important; color: #777 !important; border: 1px solid #ccc !important;";
-                selCuria.style.cssText = "background: #f5f5f5 !important; color: #777 !important; border: 1px solid #ccc !important;";
+                selPr.disabled = true;
                 
-                // 검색 컨테이너 클릭 방지
-                document.getElementById('prSearchContainer').style.pointerEvents = 'none';
+                const disabledStyle = "background: #f8f9fa !important; color: #718096 !important; border: 1.5px solid #e2e8f0 !important; cursor: not-allowed !important; opacity: 1 !important;";
+                selChurch.style.cssText = disabledStyle;
+                selCuria.style.cssText = disabledStyle;
+                selPr.style.cssText = disabledStyle;
 
                 updateSchema(churchVal);
                 await syncDates(prName);
@@ -1026,7 +1167,7 @@
                 });
 
                 // 메모리에서 날짜 내림차순 정렬
-                myAttendance.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+                myAttendance.sort((a, b) => b.date.localeCompare(a.date));
 
                 if (myAttendance.length > 0) {
                     selDate.innerHTML = myAttendance.map(a => `<option value="${a.date}" data-session="${a.session}">${a.date} (${a.session}회)</option>`).join('');
@@ -1063,7 +1204,12 @@
                 const membersList = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(m => m.churchName === church);
 
-                const rolePriority = { '단장': 1, '부단장': 2, '서기': 3, '회계': 4 };
+                const rolePriority = { 
+                    '단장': 1, 'president': 1,
+                    '부단장': 2, 'vice_president': 2,
+                    '서기': 3, 'secretary': 3,
+                    '회계': 4, 'treasurer': 4 
+                };
                 const filterDate = selDateValue || new Date().toISOString().split('T')[0];
 
                 // 1. 임기 기간을 고려한 정교한 간부 필터링
@@ -1075,12 +1221,10 @@
 
                 const currentOfficerIds = new Set(officers.map(o => o.memberId));
 
-                // 2. 퇴단/전출 및 간부 여부를 고려한 단원 필터링
                 const members = membersList.filter(m => {
-                    const isRetired = m.status === '퇴단' || m.status === '전출' || m.status === 'retire' || m.status === 'transfer';
-                    const hasLeftBefore = m.leaveDate && m.leaveDate <= filterDate;
-                    const joinedAfter = m.joinDate && m.joinDate > filterDate;
-                    return !isRetired && !hasLeftBefore && !joinedAfter && !currentOfficerIds.has(m.id);
+                    const hasLeftBefore = m.leaveDate && m.leaveDate <= filterDate; // 퇴단일이 주회합 날짜보다 이전이거나 같은지 확인
+                    const joinedAfter = m.joinDate && m.joinDate > filterDate;       // 입단일이 주회합 날짜보다 이후인지 확인
+                    return !hasLeftBefore && !joinedAfter && !currentOfficerIds.has(m.id);
                 }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                 if (officers.length > 0 || members.length > 0) {
@@ -1090,15 +1234,15 @@
                     let html = '<option value="">-- 단원 선택 --</option>';
                     // [UI 단순화] 간부/단원 그룹 제목(optgroup)을 제거하고 한 줄로 구성합니다.
                     if (officers.length > 0) {
-                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId || m.id}">${m.name} (${m.baptismalName || m.role})</option>`).join('');
+                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId}">${m.name} (${m.baptismalName})</option>`).join('');
                     }
                     if (members.length > 0) {
-                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName || '-'})</option>`).join('');
+                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName})</option>`).join('');
                     }
                     selMemberObj.innerHTML = html;
 
                     // 본인 선택 및 선택 유지 로직
-                    const myId = currentUser ? (currentUser.id || currentUser.uid) : null;
+                    const myId = currentUser.id;
                     let targetIndex = 0;
                     for (let i = 1; i < selMemberObj.options.length; i++) {
                         const opt = selMemberObj.options[i];
@@ -1122,7 +1266,7 @@
         }
 
         function updateSchema(churchName) {
-            const rawName = (churchName || "").trim();
+            const rawName = churchName.trim();
             const normalizedTarget = rawName.replace(/\s+/g, '');
             
             let matchedSchema = [];
@@ -1135,8 +1279,15 @@
                 }
             }
             
+            // 2단계: 매칭되는 스키마가 없는 경우 시스템 표준(DEFAULT_SCHEMA)을 사용합니다.
+            if (matchedSchema.length === 0) {
+                console.log(`[Schema] Using standard activity list for [${rawName}].`);
+                matchedSchema = DEFAULT_SCHEMA;
+            } else {
+                console.log(`[Schema] Loaded custom activity list for [${rawName}].`);
+            }
+            
             activitySchema = matchedSchema;
-            console.log(`Schema Match for [${rawName}]:`, activitySchema.length > 0 ? "Success" : "Failed");
         }
 
         async function updatePresets(uid) {
@@ -1202,17 +1353,7 @@
                 }
             } catch (error) {
                 console.error("Error loadLatestAttendance from Firestore:", error);
-                const allAttendance = JSON.parse(localStorage.getItem('attendance_list') || '[]');
-                const myAttendance = allAttendance.filter(a =>
-                    a.presidiumName === presidium
-                ).sort((a, b) => b.date.localeCompare(a.date));
-
-                if (myAttendance.length > 0) {
-                    currentPrAttendance = myAttendance[0];
-                    document.getElementById('displayDate').textContent = `${currentPrAttendance.date} (${currentPrAttendance.session}회)`;
-                } else {
-                    document.getElementById('displayDate').textContent = '등록된 주회합 정보 없음';
-                }
+                document.getElementById('displayDate').textContent = '정보 로드 오류';
             }
         }
 
@@ -1221,6 +1362,23 @@
             const empty = document.getElementById('emptyState');
             grid.innerHTML = '';
 
+            if (myPresets.length === 0) {
+                if (!activitySchema || activitySchema.length === 0) {
+                    console.error("[EasyReport] No activity schema available. Cannot render form.");
+                    grid.innerHTML = '<div style="color:red; padding:20px; text-align:center;">활동 항목(스키마)이 등록되지 않았습니다.<br>성당 관리자가 [활동 항목 관리]에서 먼저 설정해야 합니다.</div>';
+                    return;
+                }
+                console.log("[EasyReport] No presets found. Initializing with church schema.");
+                const schema = activitySchema;
+                schema.forEach(group => {
+                    group.items.forEach(item => {
+                        if (item.isActive !== false) {
+                            myPresets.push(item.name);
+                        }
+                    });
+                });
+            }
+            
             if (myPresets.length === 0) {
                 empty.style.display = 'block';
                 return;
@@ -1283,20 +1441,21 @@
                 if (opt) uid = opt.dataset.uid;
 
                 if (isAdmin) {
-                    churchVal = document.getElementById('selChurch').value;
-                    curiaVal = document.getElementById('selCuria').value;
-                    prVal = document.getElementById('selPr').value;
+                    churchVal = document.getElementById('selChurch').value.replace(/\s+/g, ' ');
+                    curiaVal = document.getElementById('selCuria').value.replace(/\s+/g, ' ');
+                    prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
                 } else {
-                    churchVal = currentUser.churchName;
-                    curiaVal = currentUser.curiaName;
-                    prVal = currentUser.presidiumName;
+                    churchVal = (currentUser.churchName || '').replace(/\s+/g, ' ');
+                    curiaVal = (currentUser.curiaName || '').replace(/\s+/g, ' ');
+                    prVal = (currentUser.presidiumName || '').replace(/\s+/g, ' ');
                 }
             } else {
-                targetName = (currentUser.memberName || currentUser.name);
-                uid = currentUser.id || currentUser.uid;
-                churchVal = currentUser.churchName;
-                curiaVal = currentUser.curiaName;
-                prVal = currentUser.presidiumName;
+                targetName = currentUser.memberName;
+                uid = currentUser.id;
+                // [공백 정규화] 중복 공백으로 인한 매칭 실패 방지
+                churchVal = currentUser.churchName.replace(/\s+/g, ' ');
+                curiaVal = currentUser.curiaName.replace(/\s+/g, ' ');
+                prVal = currentUser.presidiumName.replace(/\s+/g, ' ');
             }
 
             const grid = document.getElementById('activityGrid');
@@ -1316,20 +1475,23 @@
 
             // --- 1. 출석 여부 화면단 사전 검증 (타입 혼용 및 정규화 대응) ---
             let isAttended = false;
-            try {
-                const sessNum = parseInt(currentPrAttendance.session);
-                const sessStr = currentPrAttendance.session.toString();
-                
-                const targetChurch = (churchVal || "").trim();
-                const targetPr = (prVal || prInput.value || "").trim();
+            let sessNum = 0;
+            let sessStr = "";
 
+            try {
+                sessNum = parseInt(currentPrAttendance.session);
+                sessStr = currentPrAttendance.session.toString();
+                
+                const targetChurch = churchVal.trim();
+                const targetPr = prVal.trim();
+                
                 console.log(`[Attendance] Querying for -> Church: ${targetChurch}, Pr: ${targetPr}, Session: ${sessStr}`);
 
-                // [근본적 해결] 오직 신규 표준 필드로만 정확히 1개 문서 조회
+                // [정예화] 오직 신규 표준 필드로만 정확히 1개 문서 조회
                 const qAtt = query(collection(db, 'attendance_list'),
                     where('churchName', '==', targetChurch),
                     where('presidiumName', '==', targetPr),
-                    where('session', '==', sessStr)
+                    where('session', 'in', [sessStr, sessNum])
                 );
 
                 const snapAtt = await getDocs(qAtt);
@@ -1371,15 +1533,11 @@
             renderEntryForm();
             // --- 2. 기존 데이터 로딩 (필드 기반 병렬 쿼리로 전환) ---
             try {
-                // [근본적 해결] 오직 신규 표준 필드와 UID로만 정확히 활동 기록 조회
-                const sessStr = currentPrAttendance.session.toString();
-                const mId = uid || '';
-
                 const qExisting = query(collection(db, 'activity_records'),
                     where('churchName', '==', churchVal),
                     where('presidiumName', '==', prVal),
-                    where('session', '==', sessStr),
-                    where('memberId', '==', mId)
+                    where('session', 'in', [sessStr, parseInt(sessStr) || 0]),
+                    where('memberId', '==', uid)
                 );
 
                 const snapShots = await getDocs(qExisting);
@@ -1397,8 +1555,9 @@
                         const name = input.dataset.name;
                         if (tempInputData[name] !== undefined) {
                             input.value = tempInputData[name];
-                        } else if (record && record.counts && record.counts[name] !== undefined) {
-                            input.value = record.counts[name];
+                        } else if (record && record.counts) {
+                            let val = record.counts[name];
+                            if (val !== undefined) input.value = val;
                         }
                     });
 
@@ -1634,10 +1793,7 @@
                 userPresetsMap[targetId] = myPresets;
             } catch (error) {
                 console.error("Error saving presets:", error);
-                // Fallback: localStorage
-                const allPresets = JSON.parse(localStorage.getItem('user_activity_presets') || '{}');
-                allPresets[targetId] = myPresets;
-                localStorage.setItem('user_activity_presets', JSON.stringify(allPresets));
+                await showGlobalAlert('설정 저장 중 오류가 발생했습니다.');
             }
 
             renderEntryForm();
@@ -1673,26 +1829,26 @@
                 if (opt) uid = opt.dataset.uid;
 
                 if (isAdmin) {
-                    churchVal = document.getElementById('selChurch').value;
-                    curiaVal = document.getElementById('selCuria').value;
-                    prVal = document.getElementById('selPr').value;
+                    churchVal = document.getElementById('selChurch').value.replace(/\s+/g, ' ');
+                    curiaVal = document.getElementById('selCuria').value.replace(/\s+/g, ' ');
+                    prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
                 } else {
-                    // [원칙 준수] 화면에 자동 세팅된 값을 그대로 읽어옵니다.
-                    churchVal = document.getElementById('selChurch').value;
-                    curiaVal = document.getElementById('selCuria').value;
-                    prVal = document.getElementById('selPr').value;
+                    // [원칙 준수] 화면에 자동 세팅된 값을 그대로 읽어오되 공백 정규화 적용
+                    churchVal = document.getElementById('selChurch').value.replace(/\s+/g, ' ');
+                    curiaVal = document.getElementById('selCuria').value.replace(/\s+/g, ' ');
+                    prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
                 }
             } else {
-                targetName = (currentUser.memberName || currentUser.name);
-                uid = currentUser.id || currentUser.uid;
-                // [원칙 준수] 화면에 자동 세팅된 값을 그대로 읽어옵니다.
-                churchVal = document.getElementById('selChurch').value;
-                curiaVal = document.getElementById('selCuria').value;
-                prVal = document.getElementById('selPr').value;
+                targetName = currentUser.memberName;
+                uid = currentUser.id;
+                // [공백 정규화] 중복 공백으로 인한 매칭 실패 방지
+                churchVal = document.getElementById('selChurch').value.replace(/\s+/g, ' ');
+                curiaVal = document.getElementById('selCuria').value.replace(/\s+/g, ' ');
+                prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
             }
 
-            if (!targetName || !prVal) {
-                await showGlobalAlert('단원 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+            if (!targetName || !prVal || !uid) {
+                await showGlobalAlert('단원 정보(계정)가 올바르지 않거나 선택되지 않았습니다. 다시 선택해 주세요.');
                 return;
             }
 
@@ -1709,7 +1865,7 @@
                 const snapAtt = await getDocs(qAtt);
                 if (!snapAtt.empty) {
                     const attRecord = snapAtt.docs[0].data();
-                    const data = uid ? attRecord.attendanceData[uid] : null;
+                    const data = attRecord.attendanceData[uid];
                     if (data) {
                         const status = (typeof data === 'object') ? data.status : data;
                         if (status === 'P' || status === 'L') isAttended = true;
@@ -1724,7 +1880,8 @@
                 return;
             }
 
-            const docId = `${churchVal}_${prVal}_${currentPrAttendance.session}_${uid || targetName}`;
+            // [표준] 문서 ID 생성 방식: 성당_쁘레_세션_UID
+            const docId = `${churchVal}_${prVal}_${currentPrAttendance.session}_${uid}`;
 
             try {
                 const activityRef = doc(db, 'activity_records', docId);
@@ -1748,8 +1905,8 @@
                     curiaName: curiaVal,
                     presidiumName: prVal,
                     memberName: targetName,
-                    memberId: uid || '',
-                    session: currentPrAttendance.session,
+                    memberId: uid, // UID 필수 저장
+                    session: parseInt(currentPrAttendance.session) || currentPrAttendance.session, // 숫자형 일원화 시도
                     date: currentPrAttendance.date,
                     counts: finalCounts,
                     updatedAt: serverTimestamp()

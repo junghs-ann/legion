@@ -957,7 +957,7 @@
                         <td id="act_count_12"></td>
                         <td style="text-align:left; padding-left:2mm;">
                             <span style="white-space:nowrap;">출판물 보급 ( <span id="act_12_1"></span> )</span>,
-                            <span style="white-space:nowrap;">자연보호 활동 ( <span id="act_12_2"></span> )</span>
+                            <span style="white-space:nowrap;">탄소중립 실천하기 ( <span id="act_12_2"></span> )</span>
                         </td>
                     </tr>
                     <tr>
@@ -1015,21 +1015,16 @@
 
         initAuthObserver(async (user, profile) => {
             if (profile) {
-                // [시니어 패치] 데이터 정제 및 최신 규격으로의 매끄러운 이관을 위한 입구 표준화
-                // 멘토님의 고생을 헛되지 않게, 현재 데이터 상태가 'church'라도 'churchName'으로 즉석 변환합니다.
-                if (profile.church && !profile.churchName) profile.churchName = profile.church;
-                if (profile.presidium && !profile.presidiumName) profile.presidiumName = profile.presidium;
-                
-                // [보강] 프로필 내의 유령 공백 제거 (매칭 정확도 향상)
+                // [표준화] 프로필 내의 유령 공백 제거 (매칭 정확도 향상)
                 const normVal = (v) => String(v || '').replace(/\s+/g, ' ').trim();
                 if (profile.churchName) profile.churchName = normVal(profile.churchName);
                 if (profile.presidiumName) profile.presidiumName = normVal(profile.presidiumName);
+                if (profile.curiaName) profile.curiaName = normVal(profile.curiaName);
                 
                 console.log("[Auth Standardized]", { 
-                    originalChurch: profile.church, 
-                    stdChurchName: profile.churchName,
-                    originalPr: profile.presidium,
-                    stdPrName: profile.presidiumName
+                    churchName: profile.churchName,
+                    curiaName: profile.curiaName,
+                    presidiumName: profile.presidiumName
                 });
             }
             userProfile = profile;
@@ -1688,6 +1683,7 @@
 
                     // 6. 활동 사항 (2페이지) - 동적 스키마 및 기타 활동 병합 (월례보고서 스타일)
                     // [핵심 해결] activity_records의 실제 데이터 필드인 'counts'를 참조하도록 집계 함수 정의
+                    // [정예화] 오직 표준 명칭으로만 합계 산출
                     const sumAct = (name) => {
                         let total = 0;
                         pRecs.forEach(r => {

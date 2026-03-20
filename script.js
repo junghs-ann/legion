@@ -393,11 +393,17 @@ window.initCommonMenus = (profile, logoutUser) => {
             if (item.textContent.includes('관리자')) {
                 item.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
                 
-                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 일괄 정리' 링크 동적 주입
+                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 표준화 진단' 링크 동적 주입
                 const subMenu = item.querySelector('.sub-menu');
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_data"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="diagnose_data.html" style="color: #2e7d32; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">🔍 데이터 표준화 진단</a>';
+                    subMenu.appendChild(li);
+                }
+                // 기존 데이터 일괄 정리가 있다면 유지하되 아래에 배치 (필요시)
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="data_cleanup"]')) {
                     const li = document.createElement('li');
-                    li.innerHTML = '<a href="data_cleanup.html" style="color: #ef4444; font-weight: bold;">⚠️ 데이터 일괄 정리</a>';
+                    li.innerHTML = '<a href="data_cleanup.html" style="color: #ef4444; font-size: 0.85rem;">⚠️ 데이터 일괄 정리(구)</a>';
                     subMenu.appendChild(li);
                 }
             }

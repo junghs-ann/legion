@@ -628,7 +628,7 @@
                     <!-- 1행: 묵주기도 (좌) / 새 가족 (우 1) -->
                     <tr>
                         <td rowspan="2" style="white-space:nowrap;">1</td>
-                        <td rowspan="2" colspan="2" style="text-align:left; padding-left:10px;">목 주 기 도</td>
+                        <td rowspan="2" colspan="2" style="text-align:left; padding-left:10px;">묵 주 기 도</td>
                         <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_rosary">-</span> 단
                         </td>
                         <td rowspan="2" style="white-space:nowrap;">1</td>
@@ -1298,8 +1298,13 @@
                 setVal('exp_flow', expFlow.toLocaleString());
                 setVal('exp_etc', expEtc.toLocaleString());
 
-                // 7. 활동 요약
-                const sumAct = (name) => recs.reduce((a, c) => a + (parseInt(c.counts && c.counts[name]) || 0), 0);
+                // [정예화] 오직 표준 명칭으로만 합계 산출
+                const sumAct = (name) => {
+                    return recs.reduce((a, c) => {
+                        let val = (parseInt(c.counts && c.counts[name]) || 0);
+                        return a + val;
+                    }, 0);
+                };
                 setVal('sum_rosary', sumAct('묵주기도').toLocaleString());
                 setVal('sum_mass', sumAct('평일미사참례').toLocaleString());
                 setVal('sum_bible', (sumAct('성경읽기') + sumAct('성경쓰기')).toLocaleString()); // 성경읽기 + 성경쓰기 합산

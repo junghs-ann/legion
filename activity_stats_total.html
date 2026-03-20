@@ -752,7 +752,99 @@
         let members = [];
         let activityRecords = [];
         let activitySchemaMap = {};
-        let currentPresidia = []; // [Fix] 전역 스코프에서 사용하도록 위치 이동
+        let currentPresidia = [];
+
+        // --- 활동 항목 기본 스키마 (이미지 표준 기반) ---
+        const DEFAULT_SCHEMA = [
+            {
+                id: 'cat_senatus', title: '교구 또는 레지오 세나뚜스 지시 사항', items: [
+                    { name: '밤9시 주모경 바치기', unit: '회' }, { name: '월간 성모님의 군단 읽기', unit: '회' },
+                    { name: '새 가족 찾기', unit: '회' }, { name: '쉬는 교우(5년이내) 돌봄', unit: '회' },
+                    { name: '사목자를 위한 기도', unit: '회' }, { name: '협조단원 행동단원 입단', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_pastor', title: '본당 사목자 지시 사항', items: [
+                    { name: '거룩한 독서', unit: '회' }, { name: '냉담 교우 회두', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_mission', title: '입교 권면', items: [
+                    { name: '외인 입교 권면', unit: '회' }, { name: '교리 중단자 재권면', unit: '회' },
+                    { name: '개종 권면', unit: '회' }, { name: '가두 선교', unit: '회' }, { name: '방문 선교', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_nonbeliever', title: '예비신자 돌봄', items: [
+                    { name: '교리반 인도 예비신자 돌봄', unit: '회' }, { name: '통신교리자 돌봄', unit: '회' }, { name: '교리반 봉사 또는 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_care', title: '교우 돌봄', items: [
+                    { name: '새영세자돌봄', unit: '회' }, { name: '전입교우 돌봄', unit: '회' }, { name: '쉬는교우 돌봄', unit: '회' },
+                    { name: '조당(혼인장애)자 안내', unit: '회' }, { name: '성사 권면', unit: '회' }, { name: '유아 세례 권면', unit: '회' },
+                    { name: '첫 영성체', unit: '회' }, { name: '교우 가정 방문', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_suffering', title: '어려움 겪는 분 돌봄', items: [
+                    { name: '교우 환자 방문', unit: '회' }, { name: '외인 환자 방문', unit: '회' }, { name: '다문화 가정 돌봄', unit: '회' },
+                    { name: '외인 상가 돌봄', unit: '회' }, { name: '교우 상가 돌봄', unit: '회' }, { name: '위령기도[연도]', unit: '회' },
+                    { name: '장례미사', unit: '회' }, { name: '추모미사', unit: '회' }, { name: '입관', unit: '회' }, { name: '장지 수행', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_expansion', title: '레지오 확장', items: [
+                    { name: '행동단원 모집', unit: '회' }, { name: '협조단원 모집 및 돌봄', unit: '회' }, { name: '소년 레지오 지도', unit: '회' }, { name: '입단권면', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_special', title: '특별 활동', items: [
+                    { name: '호구조사(호별방문)', unit: '회' }, { name: '재해 및 사고 피해자 돌봄', unit: '회' },
+                    { name: '복지시설 노력 봉사', unit: '회' }, { name: '병원방문 활동', unit: '회' }, { name: '기타 특별활동', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_parish_service', title: '본당 협조', items: [
+                    { name: '행사 준비 및 협조', unit: '회' }, { name: '주일학교 돌봄', unit: '회' },
+                    { name: '청소 미화', unit: '회' }, { name: '미사안내 봉사', unit: '회' }, { name: '기타 본당 협조', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_community', title: '소공동체 활동', items: [
+                    { name: '소공동체 모임 참석', unit: '회' }, { name: '구역.반장교육 참석', unit: '회' }, { name: '반모임 참석', unit: '회' }, { name: '기타 소공동체', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_family', title: '가정성화 활동', items: [
+                    { name: '가족이 함께 모여 기도하기', unit: '회' }, { name: '외짝교우 부부 성경 봉독 및 기도', unit: '회' },
+                    { name: '자녀와 함께 미사 참례 및 기도', unit: '회' }, { name: '가족 복지시설 봉사', unit: '회' },
+                    { name: '출가한 자녀 함께 기도 및 미사 참례', unit: '회' }, { name: '영유아와 함께 미사 참례', unit: '회' }
+                ]
+            },
+            {
+                id: 'cat_others_simple', title: '기타활동(1)', items: [
+                    { name: '출판물 보급', unit: '회', isActive: true }, { name: '탄소중립 실천하기', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_others_detail', title: '기타활동(2)', items: [
+                    { name: '묵주기도', unit: '단', isActive: true }, { name: '평일미사참례', unit: '회', isActive: true },
+                    { name: '성경읽기', unit: '장', isActive: true }, { name: '성경쓰기', unit: '장', isActive: true },
+                    { name: '매일미사읽고묵상', unit: '회', isActive: true }, { name: '십자가의 길', unit: '회', isActive: true },
+                    { name: '성체조배', unit: '회', isActive: true }, { name: '성시간 참석', unit: '회', isActive: true },
+                    { name: '교본읽기', unit: '쪽', isActive: true }, { name: '신심영상 시청', unit: '회', isActive: true },
+                    { name: '신심서적', unit: '쪽', isActive: true }, { name: '희생', unit: '회', isActive: true },
+                    { name: '피정', unit: '회', isActive: true }, { name: '성지순례', unit: '회', isActive: true },
+                    { name: '화살기도', unit: '회', isActive: true }
+                ]
+            },
+            {
+                id: 'cat_charity', title: '기타활동(사랑의 증언)', items: [
+                    { name: '복지시설', unit: '회', isActive: true }, { name: '병원.요양원', unit: '회', isActive: true }, { name: '기타 사랑봉사', unit: '회', isActive: true }
+                ]
+            }
+        ];
 
         // DOM 요소
         const churchSelect = document.getElementById('churchSelect');
@@ -1152,12 +1244,12 @@
                 return;
             }
 
-            // [수정] 공백 제거하여 매칭 시도
+            // [수정] 성당별 스키마 매칭 (없으면 기본 스키마 사용)
             const churchKey = (church || '').trim();
-            const prSchema = activitySchemaMap[churchKey] || [];
+            const prSchema = activitySchemaMap[churchKey] || DEFAULT_SCHEMA;
             
-            if (prSchema.length === 0) {
-                alert(`[${churchKey}] 성당의 활동 항목 설정이 없습니다.\n\n관리자 -> 활동항목 관리 메뉴에서 해당 성당을 선택하고 [내용 저장]을 먼저 진행해주세요.`);
+            if (!prSchema || prSchema.length === 0) {
+                alert(`[${churchKey}] 성당의 활동 항목 설정이 없습니다.`);
                 return;
             }
 
@@ -1214,23 +1306,11 @@
                     where('churchName', '==', church),
                     where('presidiumName', '==', pr)
                 );
-                const qOld = query(collection(db, 'activity_records'),
-                    where('church', '==', church),
-                    where('presidium', '==', pr)
-                );
 
-                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                const snapNew = await getDocs(qNew);
                 
-                // [수정] 중복 도큐먼트 제거 (Map 사용)
-                const allDocsMap = new Map();
-                snapNew.forEach(doc => allDocsMap.set(doc.id, doc.data()));
-                snapOld.forEach(doc => {
-                    if (!allDocsMap.has(doc.id)) {
-                        allDocsMap.set(doc.id, doc.data());
-                    }
-                });
-                
-                allDocsMap.forEach((data, id) => {
+                snapNew.forEach(doc => {
+                    const data = doc.data();
                     const isDateMatch = (!startD || data.date >= startD) && (!endD || data.date <= endD);
                     const isMemberMatch = !selectedMember || data.memberName === selectedMember;
                     if (isDateMatch && isMemberMatch) {
@@ -1256,9 +1336,11 @@
             // 3. 컬럼별 통계 계산 (스키마 필터링용)
             const colTotals = {};
             filteredRecords.forEach(r => {
-                for (const itemName in r.counts) {
-                    const val = parseInt(r.counts[itemName]) || 0;
-                    colTotals[itemName] = (colTotals[itemName] || 0) + val;
+                if (r.counts) {
+                    for (let itemName in r.counts) {
+                        const val = parseInt(r.counts[itemName]) || 0;
+                        colTotals[itemName] = (colTotals[itemName] || 0) + val;
+                    }
                 }
             });
 
@@ -1343,7 +1425,11 @@
 
                     filteredSchema.forEach(group => {
                         group.items.forEach(item => {
-                            const val = r.counts[item.name] || 0;
+                            // [명칭 통합 대응] 레코드에서 값을 찾을 때 구버전 키값도 함께 체크
+                            let val = r.counts[item.name] || 0;
+                            if (item.name === '탄소중립 실천하기' && r.counts['자연보호 활동']) {
+                                val += (parseInt(r.counts['자연보호 활동']) || 0);
+                            }
                             html += `<td>${val ? val.toLocaleString() : ''}</td>`;
                             rowSum += val;
                         });

@@ -442,9 +442,9 @@
                 // Load initial data if not admin
                 if (!isAdmin) {
                     // Ensure inputs are set before loading
-                    document.getElementById('churchInput').value = profile.churchName || profile.church || '';
-                    document.getElementById('curiaInput').value = profile.curiaName || profile.curia || '';
-                    document.getElementById('presidiumInput').value = profile.presidiumName || profile.presidium || '';
+                    document.getElementById('churchInput').value = profile.churchName || '';
+                    document.getElementById('curiaInput').value = profile.curiaName || '';
+                    document.getElementById('presidiumInput').value = profile.presidiumName || '';
                 }
             })();
 
@@ -479,9 +479,9 @@
             } else {
                 if (churchFilter) churchFilter.style.display = 'none';
                 if (curiaFilter) curiaFilter.style.display = 'none';
-                if (churchInput) { churchInput.style.display = 'inline-block'; churchInput.value = profile.churchName || profile.church || ''; }
-                if (curiaInput) { curiaInput.style.display = 'inline-block'; curiaInput.value = profile.curiaName || profile.curia || ''; }
-                presidiumInput.value = profile.presidiumName || profile.presidium || '';
+                if (churchInput) { churchInput.style.display = 'inline-block'; churchInput.value = profile.churchName || ''; }
+                if (curiaInput) { curiaInput.style.display = 'inline-block'; curiaInput.value = profile.curiaName || ''; }
+                presidiumInput.value = profile.presidiumName || '';
                 if (!isAdminRole) presidiumInput.readOnly = true;
             }
         }
@@ -502,10 +502,10 @@
             if (!churchFilter) return;
 
             // Property mapping check (handle both .churchName and .church)
-            const uniqueChurches = [...new Set(presidia.map(p => p.churchName || p.church).filter(c => c))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].filter(Boolean).sort();
 
             churchFilter.innerHTML = '<option value="">성당 선택</option>';
-            uniqueChurches.forEach(c => {
+            churches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
                 churchFilter.appendChild(opt);
@@ -520,9 +520,8 @@
                     curiaFilter.innerHTML = '<option value="">꾸리아 선택</option>';
                     curiaFilter.disabled = !selectedChurch;
                     if (selectedChurch) {
-                        const churchPresidia = presidia.filter(p => (p.churchName || p.church) === selectedChurch);
-                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName || p.curia).filter(c => c))].sort();
-                        uniqueCuriae.forEach(c => {
+                        const curiae = [...new Set(presidiaList.filter(p => p.churchName === selectedChurch).map(p => p.curiaName))].filter(Boolean).sort();
+                        curiae.forEach(c => {
                             const opt = document.createElement('option'); opt.value = c; opt.textContent = c;
                             curiaFilter.appendChild(opt);
                         });
@@ -536,9 +535,9 @@
                 const selectedCuria = curiaFilter.value;
                 if (selectedChurch && selectedCuria) {
                     currentPresidia = presidia.filter(p =>
-                        (p.churchName || p.church) === selectedChurch &&
-                        (p.curiaName || p.curia) === selectedCuria
-                    ).map(p => p.presidiumName || p.presidium).filter(n => n).sort();
+                        p.churchName === selectedChurch &&
+                        p.curiaName === selectedCuria
+                    ).map(p => p.presidiumName).filter(n => n).sort();
                 } else {
                     currentPresidia = [];
                 }
@@ -596,9 +595,9 @@
                 presidium = presidiumInput.value;
             } else {
                 const p = currentUser || {};
-                church = p.churchName || p.church || '';
-                curia = p.curiaName || p.curia || '';
-                presidium = presidiumInput.value || p.presidiumName || p.presidium || '';
+                church = p.churchName || '';
+                curia = p.curiaName || '';
+                presidium = presidiumInput.value || p.presidiumName || '';
             }
 
             return { year, startDate, endDate, church, curia, presidium };
@@ -624,56 +623,29 @@
                     // Fallback to calculate from previous year if not found
                     const prevYear = (parseInt(filters.year) - 1).toString();
                     
-                    // Robust lookup for previous year's transactions
-                    const [qSnapPrev1, qSnapPrev2] = await Promise.all([
-                        getDocs(query(collection(db, 'accounting_transactions'),
-                            where('year', '==', prevYear),
-                            where('churchName', '==', filters.church),
-                            where('presidiumName', '==', filters.presidium))),
-                        getDocs(query(collection(db, 'accounting_transactions'),
-                            where('year', '==', prevYear),
-                            where('church', '==', filters.church),
-                            where('presidium', '==', filters.presidium)))
-                    ]);
+                    // [정량화] 오직 표준화된 필드명으로만 이전 기록 조회
+                    const qSnapPrev = await getDocs(query(collection(db, 'accounting_transactions'),
+                        where('year', '==', prevYear),
+                        where('churchName', '==', filters.church),
+                        where('presidiumName', '==', filters.presidium)));
 
                     let prevBalance = 0; 
-                    const seenPrevIds = new Set();
-                    [qSnapPrev1, qSnapPrev2].forEach(snap => {
-                        snap.forEach(docSnap => {
-                            if (!seenPrevIds.has(docSnap.id)) {
-                                seenPrevIds.add(docSnap.id);
-                                const t = docSnap.data();
-                                const amt = parseInt(t.amount) || 0;
-                                if (t.type === 'deposit') prevBalance += amt;
-                                else prevBalance -= amt;
-                            }
-                        });
+                    qSnapPrev.forEach(docSnap => {
+                        const t = docSnap.data();
+                        const amt = parseInt(t.amount) || 0;
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
                     });
                     initialCarryover = prevBalance;
                 }
 
-                // 2. Load all transactions for this Org+Year using Robust Query
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('churchName', '==', filters.church),
-                        where('presidiumName', '==', filters.presidium))),
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('church', '==', filters.church),
-                        where('presidium', '==', filters.presidium)))
-                ]);
+                // [정량화] 오직 표준화된 필드명으로만 당해 기록 조회
+                const qSnap = await getDocs(query(collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('churchName', '==', filters.church),
+                    where('presidiumName', '==', filters.presidium)));
 
-                const orgTrans = [];
-                const seenTransIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenTransIds.has(docSnap.id)) {
-                            seenTransIds.add(docSnap.id);
-                            orgTrans.push(docSnap.data());
-                        }
-                    });
-                });
+                const orgTrans = qSnap.docs.map(docSnap => docSnap.data());
 
                 orgTrans.sort((a, b) => {
                     const dateA = new Date(parseInt(a.year), parseInt(a.month) - 1, parseInt(a.day));

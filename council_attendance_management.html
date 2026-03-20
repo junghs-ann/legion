@@ -654,13 +654,13 @@
                 `;
                 sessDiv.onclick = (e) => {
                     e.stopPropagation();
-                    if (record.church) {
-                        churchSelect.value = record.church;
+                    if (record.churchName) {
+                        churchSelect.value = record.churchName;
                         updateCuriaList();
-                        if (record.curia) {
-                            curiaSelect.value = record.curia;
+                        if (record.curiaName) {
+                            curiaSelect.value = record.curiaName;
                             updatePresidiumList();
-                            if (record.presidium) presidiumSelect.value = record.presidium;
+                            if (record.presidiumName) presidiumSelect.value = record.presidiumName;
                         }
                     }
                     sessionInput.value = s;

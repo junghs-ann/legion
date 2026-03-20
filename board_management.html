@@ -943,7 +943,7 @@
 
         function initOrgLogic(profile) {
             const isAdmin = profile.role === 'admin';
-            const churches = [...new Set(presidiaList.map(p => p.churchName || p.church))].sort();
+            const churches = [...new Set(presidiaList.map(p => p.churchName))].sort();
             [filterChurch, postChurch].forEach(select => {
                 churches.forEach(c => {
                     const opt = document.createElement('option');
@@ -953,21 +953,21 @@
             });
 
             if (!isAdmin) {
-                orgFilter.church = profile.church || '';
-                orgFilter.curia = profile.curia || '';
+                orgFilter.church = profile.churchName || '';
+                orgFilter.curia = profile.curiaName || '';
                 orgFilter.presidium = profile.presidiumName || '';
                 filterChurch.value = orgFilter.church;
                 filterChurch.disabled = true;
-                loadSelectOptions(filterCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
+                loadSelectOptions(filterCuria, [...new Set(presidiaList.filter(p => p.churchName === orgFilter.church).map(p => p.curiaName))].sort(), orgFilter.curia);
                 filterCuria.disabled = true;
-                loadSelectOptions(filterPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
+                loadSelectOptions(filterPresidium, presidiaList.filter(p => p.churchName === orgFilter.church && p.curiaName === orgFilter.curia).map(p => p.presidiumName).sort(), orgFilter.presidium);
                 filterPresidium.disabled = true;
 
                 postChurch.value = orgFilter.church;
                 postChurch.disabled = true;
-                loadSelectOptions(postCuria, [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort(), orgFilter.curia);
+                loadSelectOptions(postCuria, [...new Set(presidiaList.filter(p => p.churchName === orgFilter.church).map(p => p.curiaName))].sort(), orgFilter.curia);
                 postCuria.disabled = true;
-                loadSelectOptions(postPresidium, presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort(), orgFilter.presidium);
+                loadSelectOptions(postPresidium, presidiaList.filter(p => p.churchName === orgFilter.church && p.curiaName === orgFilter.curia).map(p => p.presidiumName).sort(), orgFilter.presidium);
                 postPresidium.disabled = true;
             } else {
                 setupAdminSelect(filterChurch, filterCuria, filterPresidium, (church, curia, presidium) => {
@@ -993,7 +993,7 @@
         function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
             churchEl.addEventListener('change', () => {
                 const church = churchEl.value;
-                const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === church).map(p => p.curiaName || p.curia))].sort();
+                const curiae = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
                 loadSelectOptions(curiaEl, curiae);
                 curiaEl.disabled = !church;
                 presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
@@ -1003,7 +1003,7 @@
             curiaEl.addEventListener('change', () => {
                 const church = churchEl.value;
                 const curia = curiaEl.value;
-                const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === church && (p.curiaName || p.curia) === curia).map(p => p.presidiumName || p.presidium).sort();
+                const presidiaNames = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
                 loadSelectOptions(presidiumEl, presidiaNames);
                 presidiumEl.disabled = !curia;
                 if (callback) callback(church, curia, '');
@@ -1026,8 +1026,8 @@
         function renderPosts() {
             const filtered = posts.filter(p => {
                 const catMatch = currentFilter === '전체' || p.category === currentFilter;
-                const churchMatch = !orgFilter.church || p.church === orgFilter.church;
-                const curiaMatch = !orgFilter.curia || p.curia === orgFilter.curia;
+                const churchMatch = !orgFilter.church || p.churchName === orgFilter.church;
+                const curiaMatch = !orgFilter.curia || p.curiaName === orgFilter.curia;
                 const presidiumMatch = !orgFilter.presidium || p.presidiumName === orgFilter.presidium;
                 const searchMatch = !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase());
                 return catMatch && churchMatch && curiaMatch && presidiumMatch && searchMatch;
@@ -1093,16 +1093,16 @@
             if (orgFilter.church) {
                 postChurch.value = orgFilter.church;
                 if (currentUser.role === 'admin') {
-                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church).map(p => p.curiaName || p.curia))].sort();
+                    const curiae = [...new Set(presidiaList.filter(p => p.churchName === orgFilter.church).map(p => p.curiaName))].sort();
                     loadSelectOptions(postCuria, curiae, orgFilter.curia);
                     postCuria.disabled = !orgFilter.church;
-                    const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === orgFilter.church && (p.curiaName || p.curia) === orgFilter.curia).map(p => p.presidiumName || p.presidium).sort();
+                    const presidiaNames = presidiaList.filter(p => p.churchName === orgFilter.church && p.curiaName === orgFilter.curia).map(p => p.presidiumName).sort();
                     loadSelectOptions(postPresidium, presidiaNames, orgFilter.presidium);
                     postPresidium.disabled = !orgFilter.curia;
                 }
             } else if (currentUser.role !== 'admin') {
-                postChurch.value = currentUser.church || '';
-                postCuria.value = currentUser.curia || '';
+                postChurch.value = currentUser.churchName || '';
+                postCuria.value = currentUser.curiaName || '';
                 postPresidium.value = currentUser.presidiumName || '';
             }
             writeModal.style.display = 'flex';
@@ -1128,8 +1128,8 @@
                     content: document.getElementById('postContent').value,
                     author: currentUser.name || "단원",
                     authorUid: currentUser.uid,
-                    church: postChurch.value,
-                    curia: postCuria.value,
+                    churchName: postChurch.value,
+                    curiaName: postCuria.value,
                     presidiumName: postPresidium.value,
                     updatedAt: serverTimestamp()
                 };
@@ -1159,11 +1159,11 @@
                 document.getElementById('postFileUrl').value = p.fileUrl || '';
 
                 if (currentUser.role === 'admin') {
-                    postChurch.value = p.church || '';
-                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || p.church) === p.church).map(p => p.curiaName || p.curia))].sort();
-                    loadSelectOptions(postCuria, curiae, p.curia);
+                    postChurch.value = p.churchName || '';
+                    const curiae = [...new Set(presidiaList.filter(item => item.churchName === p.churchName).map(item => item.curiaName))].sort();
+                    loadSelectOptions(postCuria, curiae, p.curiaName);
                     postCuria.disabled = false;
-                    const presidiaNames = presidiaList.filter(p => (p.churchName || p.church) === p.church && (p.curiaName || p.curia) === p.curia).map(pr => pr.presidiumName || pr.presidium).sort();
+                    const presidiaNames = presidiaList.filter(item => item.churchName === p.churchName && item.curiaName === p.curiaName).map(item => item.presidiumName).sort();
                     loadSelectOptions(postPresidium, presidiaNames, p.presidiumName);
                     postPresidium.disabled = false;
                 }

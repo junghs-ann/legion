@@ -109,6 +109,20 @@ export async function getUserProfile(uid) {
     return userDoc.exists() ? userDoc.data() : null;
 }
 
+// --- Update User Profile (Firebase) ---
+export async function updateUserProfile(uid, data) {
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, data);
+    
+    // 세션 동기화 (로컬 캐시 업데이트)
+    const current = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (current.uid === uid) {
+        const updated = { ...current, ...data };
+        localStorage.setItem('currentUser', JSON.stringify(updated));
+    }
+    return true;
+}
+
 // --- Auth State Observer (Firebase) ---
 export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
     onAuthStateChanged(auth, async (user) => {

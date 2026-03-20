@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><title>Check Records</title></head>
+<body>
+    <script type="module">
+        import { db, collection, getDocs, query, where } from "./firebase-config.js";
+        async function check() {
+            try {
+                // '관평동 성당'의 최근 기록을 조회해 봅니다.
+                const q = query(collection(db, 'activity_records'), where('churchName', '==', '관평동 성당'));
+                const snap = await getDocs(q);
+                const list = [];
+                snap.forEach(doc => {
+                    list.push({ id: doc.id, data: doc.data() });
+                });
+                console.log("RECORDS_DATA:" + JSON.stringify(list));
+                document.body.innerHTML = "<pre>" + JSON.stringify(list, null, 2) + "</pre>";
+            } catch (e) {
+                console.error(e);
+                document.body.innerHTML = "<h1>Error: " + e.message + "</h1>";
+            }
+        }
+        check();
+    </script>
+</body>
+</html>

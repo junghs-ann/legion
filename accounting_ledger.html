@@ -456,10 +456,10 @@
                 curiaInput.style.display = 'inline-block';
                 // presidiumInput.style.display = 'inline-block'; // Replaced by prInput
 
-                churchInput.value = profile.churchName || profile.church || '';
-                curiaInput.value = profile.curiaName || profile.curia || '';
+                churchInput.value = profile.churchName || '';
+                curiaInput.value = profile.curiaName || '';
                 // Try presidiumName first, then fallback to presidium
-                const pName = profile.presidiumName || profile.presidium || '';
+                const pName = profile.presidiumName || '';
                 if (prInput) {
                     prInput.value = pName;
                     if (selPr) selPr.value = pName;
@@ -475,7 +475,7 @@
                 const presidia = presSnap.docs.map(doc => doc.data());
 
                 // Load Churches
-                const uniqueChurches = [...new Set(presidia.map(p => p.churchName || p.church).filter(c => c))].sort();
+                const uniqueChurches = [...new Set(presidia.map(p => p.churchName).filter(c => c))].sort();
                 churchFilter.innerHTML = '<option value="">성당 선택</option>';
                 uniqueChurches.forEach(c => {
                     const opt = document.createElement('option');
@@ -497,8 +497,8 @@
                     }
 
                     if (selectedChurch) {
-                        const churchPresidia = presidia.filter(p => (p.churchName || p.church) === selectedChurch);
-                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName || p.curia).filter(c => c))].sort();
+                        const churchPresidia = presidia.filter(p => p.churchName === selectedChurch);
+                        const uniqueCuriae = [...new Set(churchPresidia.map(p => p.curiaName).filter(c => c))].sort();
                         uniqueCuriae.forEach(c => {
                             const opt = document.createElement('option');
                             opt.value = c;
@@ -607,45 +607,25 @@
             }
 
             try {
-                // 1. Load Accounting Items for Dropdown (Scoped to Curia) from Firestore [강화: 병렬 쿼리]
-                const buildItemQuery = (cField, cuField) => 
-                    query(collection(db, 'accounting_items'),
-                        where(cField, '==', filters.church),
-                        where(cuField, '==', filters.curia),
-                        where('isActive', '==', true)
-                    );
+                // 1. Load Accounting Items for Dropdown (Scoped to Curia) from Firestore [정량화]
+                const qItems = query(collection(db, 'accounting_items'),
+                    where('churchName', '==', filters.church),
+                    where('curiaName', '==', filters.curia),
+                    where('isActive', '==', true)
+                );
 
-                const [itemsSnap1, itemsSnap2] = await Promise.all([
-                    getDocs(buildItemQuery('churchName', 'curiaName')),
-                    getDocs(buildItemQuery('church', 'curia'))
-                ]);
-
+                const itemsSnap = await getDocs(qItems);
                 const itemMap = new Map();
-                [itemsSnap1, itemsSnap2].forEach(snap => {
-                    snap.docs.forEach(docSnap => itemMap.set(docSnap.id, docSnap.data()));
-                });
+                itemsSnap.docs.forEach(docSnap => itemMap.set(docSnap.id, docSnap.data()));
                 window.accountItems = Array.from(itemMap.values());
 
                 // 2. Load Session List (from attendance_list) from Firestore using Robust Query
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('churchName', '==', filters.church),
-                        where('presidiumName', '==', filters.presidium))),
-                    getDocs(query(collection(db, 'attendance_list'), 
-                        where('church', '==', filters.church),
-                        where('presidium', '==', filters.presidium)))
-                ]);
+                // [정량화] 오직 표준화된 필드명으로만 쿼리
+                const qSnap = await getDocs(query(collection(db, 'attendance_list'), 
+                    where('churchName', '==', filters.church),
+                    where('presidiumName', '==', filters.presidium)));
 
-                const sessions = [];
-                const seenIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenIds.has(docSnap.id)) {
-                            seenIds.add(docSnap.id);
-                            sessions.push(docSnap.data());
-                        }
-                    });
-                });
+                const sessions = qSnap.docs.map(docSnap => docSnap.data());
                 window.curSessionList = sessions
                     .filter(a => a.session && a.date)
                     .sort((a, b) => parseInt(b.session) - parseInt(a.session));
@@ -674,30 +654,18 @@
                 if (currentInitialBalance === undefined || currentInitialBalance === null) {
                     const prevYear = (parseInt(filters.year) - 1).toString();
                     
-                    // Robust lookup for previous year's transactions
-                    const [qSnapPrev1, qSnapPrev2] = await Promise.all([
-                        getDocs(query(collection(db, 'accounting_transactions'),
-                            where('year', '==', prevYear),
-                            where('churchName', '==', filters.church),
-                            where('presidiumName', '==', filters.presidium))),
-                        getDocs(query(collection(db, 'accounting_transactions'),
-                            where('year', '==', prevYear),
-                            where('church', '==', filters.church),
-                            where('presidium', '==', filters.presidium)))
-                    ]);
+                    // [정량화] 오직 표준화된 필드명으로만 이전 기록 조회
+                    const qSnapPrev = await getDocs(query(collection(db, 'accounting_transactions'),
+                        where('year', '==', prevYear),
+                        where('churchName', '==', filters.church),
+                        where('presidiumName', '==', filters.presidium)));
 
                     let prevBalance = 0; 
-                    const seenPrevIds = new Set();
-                    [qSnapPrev1, qSnapPrev2].forEach(snap => {
-                        snap.forEach(docSnap => {
-                            if (!seenPrevIds.has(docSnap.id)) {
-                                seenPrevIds.add(docSnap.id);
-                                const t = docSnap.data();
-                                const amt = parseInt(t.amount) || 0;
-                                if (t.type === 'deposit') prevBalance += amt;
-                                else prevBalance -= amt;
-                            }
-                        });
+                    qSnapPrev.forEach(docSnap => {
+                        const t = docSnap.data();
+                        const amt = parseInt(t.amount) || 0;
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
                     });
 
                     if (prevBalance !== 0) {
@@ -707,28 +675,13 @@
 
                 let yearInitialBalance = currentInitialBalance || 0;
 
-                // 4. Load Transactions from Firestore using Robust Query
-                const [qSnapT1, qSnapT2] = await Promise.all([
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('churchName', '==', filters.church),
-                        where('presidiumName', '==', filters.presidium))),
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('church', '==', filters.church),
-                        where('presidium', '==', filters.presidium)))
-                ]);
+                // [정량화] 오직 표준화된 필드명으로만 당해 기록 조회
+                const qSnapT = await getDocs(query(collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('churchName', '==', filters.church),
+                    where('presidiumName', '==', filters.presidium)));
 
-                const yearTransactions = [];
-                const seenTIds = new Set();
-                [qSnapT1, qSnapT2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenTIds.has(docSnap.id)) {
-                            seenTIds.add(docSnap.id);
-                            yearTransactions.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                const yearTransactions = qSnapT.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
                 // Sort by Date (Month, Day) and Category (Deposit first)
                 yearTransactions.sort((a, b) => {
@@ -1150,37 +1103,15 @@
                 const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
                 if (!initialBalanceInput.disabled) {
                     const initialVal = parseInt(initialBalanceInput.value.replace(/,/g, '')) || 0;
-                    await updateDoc(doc(db, 'accounting_summaries', summaryId), {
+                    const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                    await setDoc(doc(db, 'accounting_summaries', summaryId), {
                         initialBalance: initialVal,
+                        year: filters.year,
+                        churchName: filters.church,
+                        curiaName: filters.curia,
+                        presidiumName: filters.presidium,
                         updatedAt: serverTimestamp()
-                    }).catch(async (err) => {
-                        // If doc doesn't exist, create it
-                        if (err.code === 'not-found') {
-                            await updateDoc(doc(db, 'accounting_summaries', summaryId), {
-                                initialBalance: initialVal,
-                                year: filters.year,
-                                church: filters.church,
-                                curia: filters.curia,
-                                presidium: filters.presidium,
-                                createdAt: serverTimestamp()
-                            }, { merge: true }); // Using setDoc with merge instead of catch updateDoc is better but getDocs can check existance
-                            // Correction: using setDoc for summaries
-                            const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-                            await setDoc(doc(db, 'accounting_summaries', summaryId), {
-                                initialBalance: initialVal,
-                                year: filters.year,
-                                churchName: filters.church, // 신규 필드
-                                church: filters.church,     // 레거시 필드
-                                curiaName: filters.curia,    // 신규 필드
-                                curia: filters.curia,        // 레거시 필드
-                                presidiumName: filters.presidium, // 신규 필드
-                                presidium: filters.presidium,     // 레거시 필드
-                                updatedAt: serverTimestamp()
-                            }, { merge: true });
-                        } else {
-                            throw err;
-                        }
-                    });
+                    }, { merge: true });
                 }
 
                 // 2. Save Transactions
@@ -1197,24 +1128,14 @@
                 if (start) start.setHours(0, 0, 0, 0);
                 if (end) end.setHours(23, 59, 59, 999);
 
-                // Fetch existing to handle deletions (Robust Query to catch all variants)
-                const [qSnapDel1, qSnapDel2] = await Promise.all([
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('churchName', '==', filters.church),
-                        where('presidiumName', '==', filters.presidium))),
-                    getDocs(query(collection(db, 'accounting_transactions'),
-                        where('year', '==', filters.year.toString()),
-                        where('church', '==', filters.church),
-                        where('presidium', '==', filters.presidium)))
-                ]);
+                // Fetch existing to handle deletions [정량화]
+                const qSnapDel = await getDocs(query(collection(db, 'accounting_transactions'),
+                    where('year', '==', filters.year.toString()),
+                    where('churchName', '==', filters.church),
+                    where('presidiumName', '==', filters.presidium)));
 
                 // Mark for deletion if in range
-                const seenDelIds = new Set();
-                [qSnapDel1, qSnapDel2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenDelIds.has(docSnap.id)) {
-                            seenDelIds.add(docSnap.id);
+                qSnapDel.forEach(docSnap => {
                             const t = docSnap.data();
                             const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
 
@@ -1225,8 +1146,6 @@
                             } else {
                                 batch.delete(docSnap.ref);
                             }
-                        }
-                    });
                 });
 
                 // Add new rows
@@ -1266,11 +1185,8 @@
                         batch.set(newDocRef, {
                             year: filters.year.toString(),
                             churchName: filters.church,
-                            church: filters.church,
                             curiaName: filters.curia,
-                            curia: filters.curia,
                             presidiumName: filters.presidium,
-                            presidium: filters.presidium,
                             session: session.toString(),
                             month: month.toString(),
                             day: day.toString(),

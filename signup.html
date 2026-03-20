@@ -431,7 +431,6 @@
                 snapUsers.forEach(docSnap => {
                     const d = docSnap.data();
                     if (d.memberId) registeredMemberIds.add(d.memberId);
-                    else registeredMemberIds.add(d.name); // Fallback for old users
                 });
 
                 const mergedMembers = new Map();

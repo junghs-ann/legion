@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Schemas</title>
+</head>
+<body>
+    <script type="module">
+        import { db, collection, getDocs } from "./firebase-config.js";
+        async function check() {
+            try {
+                const snap = await getDocs(collection(db, 'activity_schemas'));
+                const list = [];
+                snap.forEach(doc => {
+                    list.push({ id: doc.id, data: doc.data() });
+                });
+                console.log("REGISTERED_DATA:" + JSON.stringify(list));
+                document.body.innerHTML = "<pre>" + JSON.stringify(list, null, 2) + "</pre>";
+            } catch (e) {
+                console.error(e);
+                document.body.innerHTML = "<h1>Error: " + e.message + "</h1>";
+            }
+        }
+        check();
+    </script>
+</body>
+</html>

@@ -511,7 +511,7 @@
             });
 
             if (!isAdmin) {
-                const myChurch = currentUser.churchName || currentUser.church || '';
+                const myChurch = currentUser.churchName || '';
                 const targetNorm = window.normalize(myChurch);
                 
                 // [강화] 드롭다운에서 가장 잘 맞는 항목 찾기
@@ -521,7 +521,7 @@
                 churchSelect.disabled = true;
                 updateCuriaList();
                 
-                const myCuria = currentUser.curiaName || currentUser.curia || '';
+                const myCuria = currentUser.curiaName || '';
                 const cuNorm = window.normalize(myCuria);
                 const matchedCuria = Array.from(curiaSelect.options).find(opt => window.normalize(opt.value) === cuNorm);
                 if (matchedCuria) curiaSelect.value = matchedCuria.value;
@@ -529,7 +529,7 @@
                 curiaSelect.disabled = true;
                 updatePresidiumList();
                 
-                const myPr = currentUser.presidiumName || currentUser.presidium || '';
+                const myPr = currentUser.presidiumName || '';
                 const prNorm = window.normalize(myPr);
                 const matchedPr = currentPresidia.find(p => window.normalize(p) === prNorm);
                 if (matchedPr) presidiumInput.value = matchedPr;
@@ -580,22 +580,10 @@
             }
 
             try {
-                // [강화] 병렬 쿼리: presidiumName(신) vs presidium(구)
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', pr))),
-                    getDocs(query(collection(db, 'attendance_list'), where('presidium', '==', pr)))
-                ]);
+                // [정량화] 오직 표준화된 필드명(presidiumName)으로만 쿼리
+                const qSnap = await getDocs(query(collection(db, 'attendance_list'), where('presidiumName', '==', pr)));
 
-                attendanceList = [];
-                const seenIds = new Set();
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        if (!seenIds.has(docSnap.id)) {
-                            seenIds.add(docSnap.id);
-                            attendanceList.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-                });
+                attendanceList = qSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
                 attendanceList.sort((a, b) => parseInt(b.session) - parseInt(a.session));
                 attendanceList.forEach(a => {
@@ -689,7 +677,7 @@
                 const pr = presidiumInput.value;
                 // [수정] 신규 필드(presidiumName)와 구 필드(presidium) 모두를 고려하여 레코드 찾기
                 const record = attendanceList.find(a => 
-                    (a.presidiumName === pr || a.presidium === pr) && 
+                    a.presidiumName === pr && 
                     String(a.session) === sessionNum
                 );
                 if (record) {
@@ -708,16 +696,11 @@
         async function updateDeleteButtonState(sessionNum) {
             const pr = presidiumInput.value;
             try {
-                // [강화] 병렬 쿼리 적용
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'auxiliary_care_list'),
-                        where('presidiumName', '==', pr),
-                        where('session', '==', String(sessionNum)))),
-                    getDocs(query(collection(db, 'auxiliary_care_list'),
-                        where('presidium', '==', pr),
-                        where('session', '==', String(sessionNum))))
-                ]);
-                const existingCare = !qSnap1.empty || !qSnap2.empty;
+                // [정량화] 오직 표준 필드명으로만 쿼리
+                const qSnap = await getDocs(query(collection(db, 'auxiliary_care_list'),
+                    where('presidiumName', '==', pr),
+                    where('session', '==', String(sessionNum))));
+                const existingCare = !qSnap.empty;
 
                 const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
                 if (existingCare && isAdmin) {
@@ -739,21 +722,11 @@
             if (!await showGlobalConfirm(`${session}회 돌봄 기록을 삭제하시겠습니까?`)) return;
 
             try {
-                const [qSnap1, qSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'auxiliary_care_list'),
-                        where('presidiumName', '==', pr),
-                        where('session', '==', String(session)))),
-                    getDocs(query(collection(db, 'auxiliary_care_list'),
-                        where('presidium', '==', pr),
-                        where('session', '==', String(session))))
-                ]);
+                const qSnap = await getDocs(query(collection(db, 'auxiliary_care_list'),
+                    where('presidiumName', '==', pr),
+                    where('session', '==', String(session))));
 
-                const deletePromises = [];
-                [qSnap1, qSnap2].forEach(snap => {
-                    snap.forEach(docSnap => {
-                        deletePromises.push(deleteDoc(doc(db, 'auxiliary_care_list', docSnap.id)));
-                    });
-                });
+                const deletePromises = qSnap.docs.map(docSnap => deleteDoc(doc(db, 'auxiliary_care_list', docSnap.id)));
                 await Promise.all(deletePromises);
 
                 await showGlobalAlert('삭제되었습니다.');
@@ -795,15 +768,11 @@
                     }
                 });
 
-                // Fetch existing care history for this session [강화: 병렬]
-                const [careSnap1, careSnap2] = await Promise.all([
-                    getDocs(query(collection(db, 'auxiliary_care_list'), where('presidiumName', '==', pr), where('session', '==', String(attendanceRecord.session)))),
-                    getDocs(query(collection(db, 'auxiliary_care_list'), where('presidium', '==', pr), where('session', '==', String(attendanceRecord.session))))
-                ]);
+                // Fetch existing care history for this session [정량화]
+                const careSnap = await getDocs(query(collection(db, 'auxiliary_care_list'), where('presidiumName', '==', pr), where('session', '==', String(attendanceRecord.session))));
 
                 let existingCare = null;
-                if (!careSnap1.empty) existingCare = { id: careSnap1.docs[0].id, ...careSnap1.docs[0].data() };
-                else if (!careSnap2.empty) existingCare = { id: careSnap2.docs[0].id, ...careSnap2.docs[0].data() };
+                if (!careSnap.empty) existingCare = { id: careSnap.docs[0].id, ...careSnap.docs[0].data() };
 
                 // 1. Get present active members for this session (ID 또는 성합 둘 다 수집)
                 const presentActiveMembers = Object.entries(attendanceRecord.attendanceData || {})
@@ -963,7 +932,7 @@
             try {
                 // Find if existing record needs update
                 const q = query(collection(db, 'auxiliary_care_list'),
-                    where('presidium', '==', pr),
+                    where('presidiumName', '==', pr),
                     where('session', '==', String(session)));
                 const querySnapshot = await getDocs(q);
                 let docId = `care_${pr}_${session}`; // Predictable ID
@@ -976,13 +945,10 @@
 
                 const newEntry = {
                     presidiumName: pr,
-                    presidium: pr,
                     session: String(session),
                     date: date,
                     churchName: church,
-                    church: church,
                     curiaName: curia,
-                    curia: curia,
                     careData: careData,
                     careDataSnapshot: careDataSnapshot,
                     updatedAt: serverTimestamp()

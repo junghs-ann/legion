@@ -308,7 +308,7 @@
                             신규 입력</button>
                         <button type="button" id="btnInquiryMember" class="btn-submit btn-secondary">조 회</button>
                         <button type="button" id="btnViewAllDB" class="btn-submit"
-                            style="background-color: #007bff; color: white; border: none;">전체 목록 진단</button>
+                            style="background-color: #007bff; color: white; border: none; display: none;">전체 목록 진단</button>
                     </div>
                 </div>
 
@@ -586,6 +586,12 @@
             const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].includes(role);
             const isMember = !isAdmin && !isOfficer;
 
+            // [권한 제어] '전체 목록 진단' 버튼은 관리자만 보이도록 설정
+            const btnViewAllDB = document.getElementById('btnViewAllDB');
+            if (btnViewAllDB) {
+                btnViewAllDB.style.display = isAdmin ? 'inline-block' : 'none';
+            }
+
             if (!isAdmin) {
                 const profileChurch = (profile.churchName || "").trim();
                 const profileCuria = (profile.curiaName || "").trim();
@@ -637,15 +643,16 @@
 
                 // [Emergency Fix] Simplified query to avoid 400 Bad Request (Missing Index)
                 try {
-                    const qSnapshot = await getDocs(collection(db, "members_list"));
-                    const myDoc = qSnapshot.docs.find(docSnap => {
-                        const d = docSnap.data();
-                        const dName = (d.name || '').trim();
-                        const dPr = (d.presidiumName || '').trim();
-                        const targetName = (profile.memberName || profile.name || user.displayName || "").trim();
-                        const targetPr = (profile.presidiumName || "").trim();
-                        return dName === targetName && dPr === targetPr;
-                    });
+                    const targetName = (profile.name || user.displayName || "").trim();
+                    const targetPr = (profile.presidiumName || "").trim();
+                    if (!targetName || !targetPr) throw new Error("사용자 정보가 불완전합니다.");
+
+                    const q = query(collection(db, "members_list"), 
+                        where("name", "==", targetName),
+                        where("presidiumName", "==", targetPr)
+                    );
+                    const qSnapshot = await getDocs(q);
+                    const myDoc = qSnapshot.docs[0];
 
                     if (myDoc) {
                         const myData = { id: myDoc.id, ...myDoc.data() };
@@ -745,17 +752,16 @@
         promiseDateInput.addEventListener('change', validatePromiseDate);
 
         // Reusable display logic for search results
-        async function displaySearchResults(querySnapshot) {
-            const memberList = document.getElementById('memberList');
+        async function displaySearchResults(memberList) {
+            const listElement = document.getElementById('memberList');
             const modal = document.getElementById('memberSearchModal');
-            memberList.innerHTML = '';
+            listElement.innerHTML = '';
 
-            if (querySnapshot.empty) {
-                memberList.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
+            if (!memberList || memberList.length === 0) {
+                listElement.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
             } else {
-                querySnapshot.forEach(docSnap => {
-                    const m = { id: docSnap.id, ...docSnap.data() };
-                    console.log("RAW DATA [%s]:", docSnap.ref.parent.id, m); // 컬렉션 명칭과 데이터를 함께 출력하여 명확히 함
+                memberList.forEach(m => {
+                    console.log("DISPLAY DATA:", m);
                     const li = document.createElement('li');
                     li.style.padding = '10px';
                     li.style.borderBottom = '1px solid #eee';
@@ -767,9 +773,14 @@
                     const displayChurch = (m.churchName || '성당미정').trim();
                     const displayPresidium = (m.presidiumName || 'Pr.미정').trim();
                     const orgInfo = `[${displayChurch} / ${displayPresidium}]`;
+                    
+                    // [사용자 요청] 이름(세례명) 표시 강화
+                    const namePart = `<strong>${m.name || '이름 없음'}</strong>`;
+                    const baptismPart = m.baptismalName ? ` (${m.baptismalName})` : '';
+
                     li.innerHTML = `
                         <div>
-                            <strong>${m.name}</strong> (${m.baptismalName || ''})
+                            ${namePart}${baptismPart}
                             <div style="font-size:0.8em; color:#888;">${orgInfo}</div>
                         </div>
                         <span style="font-size:0.9em; color:#888;">${m.status || ''}</span>
@@ -778,7 +789,7 @@
                         loadMemberDataForEdit(m);
                         modal.style.display = 'none';
                     };
-                    memberList.appendChild(li);
+                    listElement.appendChild(li);
                 });
             }
             modal.style.display = 'flex';
@@ -796,31 +807,16 @@
             }
 
             try {
-                console.log("Inquiry matching for compatibility:", { churchName, curiaName, presidiumName });
-                // [Compatibility Fix] Fetch all and filter client-side to handle both church/churchName fields
-                const qSnapshot = await getDocs(collection(db, "members_list"));
-                let results = [];
-                for (const docSnap of qSnapshot.docs) {
-                    const d = docSnap.data();
-                    
-                    // [데이터 정화] 구식 필드 실시간 이전 로직은 표준화 정책에 따라 제거되었습니다. (v16.90)
+                // [정석] 표준 필드명을 사용한 서버측 쿼리로 전환 (성능 및 정확도 향상)
+                const q = query(collection(db, "members_list"), 
+                    where("churchName", "==", churchName),
+                    where("curiaName", "==", curiaName),
+                    where("presidiumName", "==", presidiumName)
+                );
+                const qSnapshot = await getDocs(q);
+                let results = qSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
-                    const dChurch = (d.churchName || '').toString().trim();
-                    const dCuria = (d.curiaName || '').toString().trim();
-                    const dPr = (d.presidiumName || '').toString().trim();
-
-                    if (dChurch === churchName && dCuria === curiaName && dPr === presidiumName) {
-                        results.push({ id: docSnap.id, ...d });
-                    }
-                }
-
-                // Mock a QuerySnapshot-like object for displaySearchResults
-                const mockSnapshot = {
-                    empty: results.length === 0,
-                    forEach: (callback) => results.forEach(callback)
-                };
-
-                await displaySearchResults(mockSnapshot);
+                await displaySearchResults(results);
             } catch (err) {
                 console.error("Inquiry error:", err);
                 alert('조회 중 오류가 발생했습니다.');
@@ -865,7 +861,8 @@
                     alert(`경고: DB의 모든 주요 컬렉션이 비어있습니다.\n(접속 프로젝트: ${db.app.options.projectId})\n설정이 올바른지 확인이 필요합니다.`);
                 }
 
-                await displaySearchResults(memberSnap);
+                const memberList = memberSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                await displaySearchResults(memberList);
 
                 if (!memberSnap.empty) {
                     alert(`${memberSnap.size}명의 단원을 찾았습니다. 리스트를 확인해주세요.`);
@@ -1072,21 +1069,19 @@
 
         async function syncUserAccountStatus(memberData) {
             try {
-                // [Normalization] Search for both 'church' and 'churchName' fields for compatibility
+                // [정석] 표준 필드명(churchName, presidiumName)만 사용하여 사용자 계정 조회
                 const usersRef = collection(db, "users");
                 const qName = memberData.name;
                 const qChurch = memberData.churchName;
                 const qPr = memberData.presidiumName;
 
-                const querySnapshot = await getDocs(query(usersRef, where("name", "==", qName)));
-
-                // [정석화] 오직 표준 필드만 사용 (꼼수 제거)
-                const userDoc = querySnapshot.docs.find(d => {
-                    const data = d.data();
-                    const dChurch = (data.churchName || '').toString().trim();
-                    const dPr = (data.presidiumName || '').toString().trim();
-                    return dChurch === qChurch && dPr === qPr;
-                });
+                const q = query(usersRef, 
+                    where("name", "==", qName),
+                    where("churchName", "==", qChurch),
+                    where("presidiumName", "==", qPr)
+                );
+                const querySnapshot = await getDocs(q);
+                const userDoc = querySnapshot.docs[0];
 
                 if (userDoc) {
                     const userData = userDoc.data();

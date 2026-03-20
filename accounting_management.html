@@ -493,8 +493,8 @@
             if (profile.role === 'admin') {
                 loadChurches();
             } else {
-                churchInput.value = profile.churchName || profile.church || '';
-                curiaInput.value = profile.curiaName || profile.curia || '';
+                churchInput.value = profile.churchName || '';
+                curiaInput.value = profile.curiaName || '';
             }
         }
 
@@ -506,8 +506,9 @@
                     getDocs(collection(db, 'users'))
                 ]);
 
-                const presChurches = presSnap.docs.map(doc => doc.data().churchName || doc.data().church).filter(c => c);
-                const userChurches = userSnap.docs.map(doc => doc.data().church).filter(c => c);
+                // [정량화] 오직 표준화된 필드명(churchName)만 수집
+                const presChurches = presSnap.docs.map(doc => doc.data().churchName).filter(c => c);
+                const userChurches = userSnap.docs.map(doc => doc.data().churchName).filter(c => c);
                 const churches = [...new Set([...presChurches, ...userChurches])].sort();
 
                 churchSelect.innerHTML = '<option value="">성당 선택</option>';
@@ -630,24 +631,16 @@
         // --- Data Management ---
         async function loadItems(church, curia) {
             try {
-                // [강화] 병렬 쿼리: 새로운 필드명(churchName, curiaName)과 기존 필드명(church, curia) 모두 지원
-                const qNew = query(collection(db, 'accounting_items'),
+                // [정량화] 오직 표준화된 필드명으로만 쿼리 (폴백 제거)
+                const q = query(collection(db, 'accounting_items'),
                     where('churchName', '==', church),
                     where('curiaName', '==', curia)
                 );
-                const qOld = query(collection(db, 'accounting_items'),
-                    where('church', '==', church),
-                    where('curia', '==', curia)
-                );
 
-                const [snapNew, snapOld] = await Promise.all([getDocs(qNew), getDocs(qOld)]);
+                const snap = await getDocs(q);
                 
-                // 중복 제거 (ID 기준)
-                const docMap = new Map();
-                snapNew.docs.forEach(d => docMap.set(d.id, d.data()));
-                snapOld.docs.forEach(d => docMap.set(d.id, d.data()));
-
-                currentItems = Array.from(docMap.entries()).map(([id, data]) => ({ id, ...data }));
+                // 중복 제거 불필요 (단일 쿼리)
+                currentItems = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
                 // Sort: Deposit first, then Withdrawal
                 currentItems.sort((a, b) => {
@@ -759,9 +752,6 @@
                         type, name, isActive,
                         churchName: loadedChurch,
                         curiaName: loadedCuria,
-                        // [보강] 레거시 필드 동시 저장
-                        church: loadedChurch,
-                        curia: loadedCuria,
                         updatedAt: serverTimestamp()
                     };
 
