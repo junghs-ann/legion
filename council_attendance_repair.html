@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평의회 출석 데이터 복구 도구 - 레지오 관리시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --secondary: #d4a017;
+            --danger: #ef4444;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+        }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: var(--primary); font-size: 1.5rem; margin-top: 0; }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .data-table th, .data-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .data-table th { background: #f8f9fa; }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #1b5e20; }
+        .btn-secondary { background: #6b7280; color: white; text-decoration: none; }
+        
+        #log {
+            background: #111;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .status-wrong { background: #fee2e2; color: #b91c1c; }
+        .status-correct { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1><i class="fas fa-hammer"></i> 평의회 출석 데이터 긴급 복구 도구</h1>
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i> 잘못 입력된 회차 데이터를 찾아 올바른 회차로 정정하고, 시스템 규칙에 맞게 문서 ID를 갱신합니다.
+            </div>
+
+            <h3>대상 데이터 확인</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>입력 날짜</th>
+                        <th>현재 회차 (오류)</th>
+                        <th>변경할 회차 (성공)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2026-01-15</td>
+                        <td><span class="status-badge status-wrong">157회</span></td>
+                        <td><i class="fas fa-arrow-right"></i> <span class="status-badge status-correct">156회</span></td>
+                    </tr>
+                    <tr>
+                        <td>2026-02-26</td>
+                        <td><span class="status-badge status-wrong">158회</span></td>
+                        <td><i class="fas fa-arrow-right"></i> <span class="status-badge status-correct">157회</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="text-align: center; margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+                <button id="btnScan" class="btn btn-primary"><i class="fas fa-search"></i> 대상 데이터 검색 및 복구 시작</button>
+                <a href="dashboard.html" class="btn btn-secondary">닫기</a>
+            </div>
+        </div>
+
+        <div id="log" class="card"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { db } from "./firebase-config.js?v=20260303_1210";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+
+
+        const btnScan = document.getElementById('btnScan');
+        const logBox = document.getElementById('log');
+
+        const targets = [
+            { date: '2026-01-15', oldSession: '157', newSession: '156' },
+            { date: '2026-02-26', oldSession: '158', newSession: '157' }
+        ];
+
+        function addLog(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff0000' : type === 'success' ? '#00ff00' : '#ffffff';
+            logBox.innerHTML += `<div style="color: ${color}">[${time}] ${msg}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+            logBox.style.display = 'block';
+        }
+
+        initAuthObserver(async (user, profile) => {
+            if (!user) {
+                alert('로그인이 필요합니다.');
+                location.href = 'index.html';
+                return;
+            }
+            const roleLower = (profile.role || '').toLowerCase();
+            const isAdmin = roleLower.includes('관리자') || roleLower.includes('admin') || roleLower.includes('시스템');
+            
+            if (!isAdmin) {
+                alert('이 도구는 시스템 관리자만 사용할 수 있습니다.');
+                location.href = 'dashboard.html';
+                return;
+            }
+        });
+
+        btnScan.addEventListener('click', async () => {
+            if (!confirm('복구를 시작하시겠습니까?\n모든 데이터가 올바른 문서 ID로 이전됩니다.')) return;
+            
+            btnScan.disabled = true;
+            logBox.innerHTML = '';
+            addLog('🚀 복구 프로세스 시작...', 'info');
+
+            try {
+                const colRef = collection(db, 'council_attendance_list');
+                let totalFixed = 0;
+
+                for (const target of targets) {
+                    addLog(`🔍 검색 중: 날짜 ${target.date}, 회차 ${target.oldSession}...`);
+                    
+                    const q = query(colRef, 
+                        where('date', '==', target.date), 
+                        where('session', '==', target.oldSession)
+                    );
+                    
+                    const snap = await getDocs(q);
+                    addLog(`${snap.size}개의 문서를 발견했습니다.`);
+
+                    for (const docSnap of snap) {
+                        const oldId = docSnap.id;
+                        const data = docSnap.data();
+                        
+                        addLog(`🔧 처리 중: ${oldId}...`);
+
+                        // 1. 데이터 변경
+                        const newData = { ...data };
+                        newData.session = target.newSession;
+                        newData.updatedAt = serverTimestamp();
+                        newData.repairNote = `Fixed session from ${target.oldSession} to ${target.newSession} by Admin Repair Tool`;
+
+                        // 2. 새 문서 ID 생성 (attendance_성당_꾸리아_쁘레시디움_회차_날짜)
+                        const church = data.churchName || '';
+                        const curia = data.curiaName || '';
+                        const presidium = data.presidiumName || 'all';
+                        const newDocId = `attendance_${church}_${curia}_${presidium}_${target.newSession}_${target.date}`.replace(/\s+/g, '_');
+
+                        // 3. 새 위치에 저장
+                        await setDoc(doc(db, 'council_attendance_list', newDocId), newData);
+                        addLog(`✅ 새 문서 생성 완료: ${newDocId}`, 'success');
+
+                        // 4. 기존 문서 삭제
+                        if (oldId !== newDocId) {
+                            await deleteDoc(doc(db, 'council_attendance_list', oldId));
+                            addLog(`🗑️ 기존 문서 삭제 완료: ${oldId}`);
+                        } else {
+                            addLog(`ℹ️ 문서 ID가 동일하여 삭제는 생략합니다.`);
+                        }
+
+                        totalFixed++;
+                    }
+                }
+
+                addLog('------------------------------------------');
+                addLog(`✨ 모든 작업이 완료되었습니다. 총 ${totalFixed}건의 데이터가 복구되었습니다.`, 'success');
+                alert(`성공적으로 ${totalFixed}건의 데이터를 복구했습니다!\n이제 내역 화면에서 확인해 보세요.`);
+                
+            } catch (err) {
+                console.error(err);
+                addLog(`❌ 오류 발생: ${err.message}`, 'error');
+                alert('복구 중 오류가 발생했습니다. 로그를 확인해 주세요.');
+            } finally {
+                btnScan.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,8 +2,10 @@
 console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
 
 // === Global Custom Modal CSS Injection ===
-(function injectGlobalModalCSS() {
+// === Global Custom Modal & Toast CSS Injection ===
+(function injectGlobalUI_CSS() {
     const css = `
+        /* --- Modal Styles --- */
         .global-custom-modal {
             display: none;
             position: fixed;
@@ -11,14 +13,13 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            z-index: 20000; /* 헤더(10005)보다 높게 설정 */
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 20000;
             justify-content: center;
-            align-items: flex-start; /* 가로보기/작은 화면 대응: 상단부터 표시 */
-            overflow-y: auto;        /* 스크롤 허용 */
-            padding: 40px 20px;     /* 상하 여백 확보 */
+            align-items: center;
+            padding: 20px;
             font-family: 'Noto Sans KR', sans-serif;
             animation: modalFadeIn 0.3s ease;
         }
@@ -29,70 +30,122 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
         .global-custom-modal-content {
             background-color: white;
             padding: 0;
-            border-radius: 8px;
-            max-width: 420px;
-            width: 90%;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 100%;
             text-align: center;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-            word-break: keep-all;
-            line-height: 1.6;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            animation: modalSlideUp 0.3s ease;
-            margin: 40px auto; /* 상하 여백 확보하여 제목 가림 방지 */
+            animation: modalPopUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        /* [시니어 팁] 모달이 화면보다 클 경우 margin-top: 0으로 강제 조정 */
-        @media (max-height: 500px) {
-            .global-custom-modal-content { margin-top: 20px; }
+        @keyframes modalPopUp {
+            from { transform: scale(0.85) translateY(30px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
         }
-        @keyframes modalSlideUp {
-            from { transform: translateY(20px); }
-            to { transform: translateY(0); }
-        }
-        .global-custom-modal-header {
-            background-color: #2e7d32;
+        .global-custom-modal-header-line {
             height: 6px;
             width: 100%;
-            border-bottom: 2px solid #D4AF37;
+            background: linear-gradient(90deg, #2e7d32, #D4AF37);
         }
         .global-custom-modal-body {
-            padding: 30px 25px 20px;
+            padding: 40px 30px 20px;
         }
+        .global-custom-modal-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .icon-success { color: #2e7d32; }
+        .icon-error { color: #d32f2f; }
+        .icon-warning { color: #ffa000; }
+        .icon-info { color: #1976d2; }
+
         .global-custom-modal-message {
             margin-bottom: 25px;
-            font-size: 1.05rem;
-            color: #222;
-            font-weight: 500;
+            font-size: 1.15rem;
+            color: #333;
+            font-weight: 600;
+            line-height: 1.5;
+            word-break: keep-all;
         }
         .global-custom-modal-buttons {
             display: flex;
             justify-content: center;
             gap: 12px;
-            padding: 0 25px 25px;
+            padding: 0 30px 35px;
         }
         .global-custom-modal-btn {
-            padding: 12px 30px;
-            border-radius: 4px;
+            padding: 14px 24px;
+            border-radius: 10px;
             border: none;
             cursor: pointer;
             font-weight: 700;
-            font-size: 0.95rem;
-            transition: all 0.2s;
+            font-size: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
         }
         .global-custom-modal-btn-confirm {
             background-color: #2e7d32;
             color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
         }
         .global-custom-modal-btn-confirm:hover {
             background-color: #1b5e20;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
         }
         .global-custom-modal-btn-cancel {
             background-color: #f5f5f5;
             color: #666;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
         }
         .global-custom-modal-btn-cancel:hover {
-            background-color: #eee;
+            background-color: #e0e0e0;
+        }
+
+        /* --- Toast Styles --- */
+        .global-toast-container {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 21000;
+            pointer-events: none;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .global-toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #333;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            border-left: 5px solid #2e7d32;
+            animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 1;
+            transition: all 0.3s ease;
+        }
+        .global-toast.toast-error { border-left-color: #d32f2f; }
+        .global-toast.toast-warning { border-left-color: #ffa000; }
+        .global-toast.toast-info { border-left-color: #1976d2; }
+        
+        .global-toast.hide {
+            transform: translate(-50%, -100px);
+            opacity: 0;
+        }
+        @keyframes toastSlideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     `;
     const style = document.createElement('style');
@@ -100,8 +153,47 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
     document.head.appendChild(style);
 })();
 
-// === Global Custom Modal Implementation ===
-window.showGlobalAlert = function (message) {
+
+// === Global UI Enhancement Functions ===
+
+/**
+ * [Senior Helper] Toast 알림 표시
+ * @param {string} message 
+ * @param {string} type - 'success', 'error', 'warning', 'info'
+ */
+window.showToast = function(message, type = 'success') {
+    let container = document.getElementById('globalToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'globalToastContainer';
+        container.className = 'global-toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `global-toast toast-${type}`;
+    
+    let iconClass = 'fa-check-circle icon-success';
+    if (type === 'error') iconClass = 'fa-times-circle icon-error';
+    else if (type === 'warning') iconClass = 'fa-exclamation-triangle icon-warning';
+    else if (type === 'info') iconClass = 'fa-info-circle icon-info';
+
+    toast.innerHTML = `
+        <i class="fas ${iconClass}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+
+    // Auto remove
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
+
+window.showGlobalAlert = function (message, type = 'info') {
     return new Promise((resolve) => {
         let modal = document.getElementById('globalCustomModal');
         if (!modal) {
@@ -110,8 +202,9 @@ window.showGlobalAlert = function (message) {
             modal.className = 'global-custom-modal';
             modal.innerHTML = `
                 <div class="global-custom-modal-content">
-                    <div class="global-custom-modal-header"></div>
+                    <div class="global-custom-modal-header-line"></div>
                     <div class="global-custom-modal-body">
+                        <i id="globalCustomModalIcon" class="fas global-custom-modal-icon"></i>
                         <div id="globalCustomModalMessage" class="global-custom-modal-message"></div>
                     </div>
                     <div class="global-custom-modal-buttons">
@@ -124,21 +217,36 @@ window.showGlobalAlert = function (message) {
         }
 
         const msgEl = document.getElementById('globalCustomModalMessage');
+        const iconEl = document.getElementById('globalCustomModalIcon');
         const confirmBtn = document.getElementById('globalCustomModalConfirm');
         const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        // Set Icon based on type
+        iconEl.className = 'fas global-custom-modal-icon';
+        if (type === 'success') {
+            iconEl.classList.add('fa-check-circle', 'icon-success');
+        } else if (type === 'error') {
+            iconEl.classList.add('fa-exclamation-circle', 'icon-error');
+        } else if (type === 'warning') {
+            iconEl.classList.add('fa-exclamation-triangle', 'icon-warning');
+        } else {
+            iconEl.classList.add('fa-info-circle', 'icon-info');
+        }
 
         msgEl.innerHTML = message.replace(/\n/g, '<br>');
         cancelBtn.style.display = 'none';
         modal.style.display = 'flex';
+        document.body.classList.add('no-scroll');
 
         confirmBtn.onclick = () => {
             modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
             resolve();
         };
     });
 };
 
-window.showGlobalConfirm = function (message) {
+window.showGlobalConfirm = function (message, type = 'warning') {
     return new Promise((resolve) => {
         let modal = document.getElementById('globalCustomModal');
         if (!modal) {
@@ -148,19 +256,28 @@ window.showGlobalConfirm = function (message) {
         }
 
         const msgEl = document.getElementById('globalCustomModalMessage');
+        const iconEl = document.getElementById('globalCustomModalIcon');
         const confirmBtn = document.getElementById('globalCustomModalConfirm');
         const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        iconEl.className = 'fas global-custom-modal-icon';
+        if (type === 'warning') iconEl.classList.add('fa-question-circle', 'icon-warning');
+        else if (type === 'error') iconEl.classList.add('fa-trash-alt', 'icon-error');
+        else iconEl.classList.add('fa-question-circle', 'icon-info');
 
         msgEl.innerHTML = message.replace(/\n/g, '<br>');
         cancelBtn.style.display = 'inline-block';
         modal.style.display = 'flex';
+        document.body.classList.add('no-scroll');
 
         confirmBtn.onclick = () => {
             modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
             resolve(true);
         };
         cancelBtn.onclick = () => {
             modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
             resolve(false);
         };
     });
@@ -175,19 +292,26 @@ window.showGlobalPrompt = function (message, defaultValue = '') {
         }
 
         const msgEl = document.getElementById('globalCustomModalMessage');
+        const iconEl = document.getElementById('globalCustomModalIcon');
         const confirmBtn = document.getElementById('globalCustomModalConfirm');
         const cancelBtn = document.getElementById('globalCustomModalCancel');
+
+        iconEl.className = 'fas fa-edit global-custom-modal-icon icon-info';
 
         // Input field injection
         msgEl.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>
             <input type="text" id="globalCustomModalInput" 
-            style="width: 100%; padding: 10px; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1rem;" 
+            style="width: 100%; padding: 12px; margin-top: 15px; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1rem; text-align: center; outline: none; transition: border-color 0.2s;" 
             value="${defaultValue}" autocomplete="off">`;
+
+        const inputEl = document.getElementById('globalCustomModalInput');
+        inputEl.onfocus = () => inputEl.style.borderColor = '#2e7d32';
+        inputEl.onblur = () => inputEl.style.borderColor = '#eee';
 
         cancelBtn.style.display = 'inline-block';
         modal.style.display = 'flex';
+        document.body.classList.add('no-scroll');
 
-        const inputEl = document.getElementById('globalCustomModalInput');
         inputEl.focus();
         inputEl.select();
 

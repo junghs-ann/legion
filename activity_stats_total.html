@@ -122,15 +122,16 @@
         .range-wrapper {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap; /* Force one line */
             gap: 10px;
             background: white;
-            padding: 5px 10px; /* Reduced vertical padding, added horizontal */
+            padding: 5px 10px;
             border-radius: 8px;
             border: 1px solid #ced4da;
             position: relative;
-            min-height: 44px; /* Ensure consistent height */
+            min-height: 44px;
         }
+
 
         .range-wrapper input {
             border: none;
@@ -500,8 +501,9 @@
             color: white;
         }
 
-        /* Mobile specific adjustments */
-        @media (max-width: 768px) {
+        /* Mobile specific adjustments (Including Landscape) */
+        @media (max-width: 1024px) {
+
             .btn-group.bottom-actions {
                 flex-direction: row !important;
                 justify-content: center !important;
@@ -516,7 +518,8 @@
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
+
             .stats-container {
                 margin-top: 100px;
                 padding: 15px;
@@ -532,20 +535,35 @@
             }
 
             .range-wrapper {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 5px;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important; /* Extra guarantee */
+                align-items: center !important;
+                gap: 5px !important;
+                padding: 5px 6px !important; /* Slightly more compact */
             }
+
 
             .range-wrapper input {
-                width: 100%;
-                border: 1px solid #ced4da;
-                margin-bottom: 0;
+                flex: 1 !important;
+                width: 0 !important; /* Allow flexbox to control width */
+                min-width: 100px !important; /* Ensure readable date */
+                border: 1px solid #ced4da !important;
+                padding: 6px 4px !important;
+                font-size: 0.85rem !important;
             }
 
-            .range-wrapper>.range-separator {
-                display: none;
+            .range-wrapper > .range-separator {
+                display: inline !important;
+                font-size: 0.9rem !important;
+                color: #666 !important;
+                margin: 0 !important;
             }
+
+            .btn-list-trigger {
+                padding: 6px 8px !important;
+                font-size: 0.8rem !important;
+            }
+
 
             .btn-group.bottom-actions {
                 display: flex !important;

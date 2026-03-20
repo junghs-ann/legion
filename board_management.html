@@ -65,7 +65,11 @@
                 right: 15px;
                 font-size: 1.8rem;
             }
+            .board-container {
+                padding: 20px 15px !important; /* 모바일에서 패딩 줄여 가로 공간 확보 */
+            }
         }
+
 
         .board-title span {
             font-size: 0.95rem;
@@ -244,88 +248,43 @@
             width: 500px;
             max-width: 95%;
             /* 모바일에서 더 여유 있게 */
-            max-height: 90vh;
-            overflow-y: auto;
-            box-sizing: border-box;
         }
 
-        /* [NEW] Preview Modal Styles */
-        .preview-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 5000;
-            flex-direction: column;
-        }
-
-        .preview-content {
-            flex: 1;
-            width: 100%;
-            border: none;
-            background: #fff;
-        }
-
-        /* [NEW] Preview Header */
-        .preview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: #fff;
-            border-bottom: 1px solid #eee;
-            color: #333;
-            z-index: 5010;
-        }
-
-        .preview-header h3 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 70%;
-        }
-
-        .preview-header .close-icon {
-            font-size: 1.5rem;
-            color: #999;
+        /* 파일 아이콘 스타일만 유지 */
+        .file-icon {
+            color: #d32f2f;
             cursor: pointer;
-            transition: color 0.2s;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
         }
 
-        .preview-header .close-icon:hover {
-            color: #333;
+        .file-icon:hover {
+            transform: scale(1.2);
         }
 
-        /* [NEW] Floating Close Button */
         .btn-floating-close {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            width: 60px;
-            height: 60px;
-            background: var(--primary-color);
+            padding: 15px 25px;
+            background: #2e7d32; /* 더 뚜렷한 초록색 */
             color: white;
-            border-radius: 50%;
+            border-radius: 50px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5rem;
+            gap: 10px;
+            font-size: 1rem;
+            font-weight: 700;
             cursor: pointer;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 5100;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
         .btn-floating-close:hover {
-            transform: scale(1.1) rotate(90deg);
+            transform: scale(1.05) translateY(-5px);
             background: #1b5e20;
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
         }
@@ -511,48 +470,76 @@
         /* 조직 필터 영역 스타일 */
         .org-filter-container {
             display: flex;
-            gap: 15px;
+            flex-direction: column;
+            gap: 12px;
             margin-bottom: 20px;
             background: #f8f9fa;
-            padding: 20px;
-            /* 패딩을 늘려 여유 공간 확보 */
+            padding: 15px 5px 15px 5px; /* 좌측 여백 극소화 */
             border-radius: 8px;
-            flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             border: 1px solid #eee;
             width: 100%;
             box-sizing: border-box;
-            /* 너비 초과 방지 */
         }
+
+
+
+
 
         .org-filter-group {
             display: flex;
             align-items: center;
             gap: 10px;
-            flex: 1;
-            /* 유연한 너비 조절 */
-            min-width: 200px;
-            /* 최소 너비 설정으로 오버플로 방지 및 줄바꿈 유도 */
+            width: 100%; /* 부모 너비에 맞춤 */
+            box-sizing: border-box;
         }
+
+
+
+
+
+
 
         .org-filter-group label {
             font-weight: 600;
             font-size: 0.95rem;
             color: #555;
             white-space: nowrap;
-            width: 85px;
-            /* 레이블 너비 미세 조정 */
+            width: 80px; /* 고정 너비로 정렬 */
+            text-align: right;
+            flex-shrink: 0;
             display: inline-block;
         }
+
+
+
+
+
+
+        /* IE/Edge fallback for justification */
+        .org-filter-group label::after {
+            content: "";
+            display: inline-block;
+            width: 100%;
+        }
+
+
+
 
         .org-filter-group select {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            flex: 1;
-            /* 가로 공간을 꽉 채우도록 설정 */
-            min-width: 150px;
+            flex: 1; /* 가용 공간 모두 차지 */
+            min-width: 0; /* 강제로 오버플로 방지 */
+            max-width: 100%;
+            font-size: 0.9rem;
+            box-sizing: border-box;
         }
+
+
+
+
 
         .search-wrapper {
             position: relative;
@@ -681,13 +668,17 @@
             <!-- 조직 필터 영역 추가 -->
             <div class="org-filter-container">
                 <div class="org-filter-group">
-                    <label>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;당</label>
+                    <label>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;당</label>
+
+
                     <select id="filterChurch">
                         <option value="">성당 선택</option>
                     </select>
                 </div>
                 <div class="org-filter-group">
-                    <label>꾸&nbsp;&nbsp;&nbsp;리&nbsp;&nbsp;&nbsp;아</label>
+                    <label>꾸&nbsp;&nbsp;리&nbsp;&nbsp;아</label>
+
+
                     <select id="filterCuria" disabled>
                         <option value="">꾸리아 선택</option>
                     </select>
@@ -809,17 +800,7 @@
         </div>
     </div>
 
-    <!-- [NEW] File Preview Modal -->
-    <div id="previewModal" class="preview-modal">
-        <div class="preview-header">
-            <h3 id="previewTitle">파일 미리보기</h3>
-            <i class="fas fa-times close-icon" onclick="closePreviewModal()"></i>
-        </div>
-        <iframe id="previewFrame" class="preview-content" src=""></iframe>
-        <div class="btn-floating-close" onclick="closePreviewModal()" title="게시판으로 돌아가기">
-            <i class="fas fa-times"></i>
-        </div>
-    </div>
+    <!-- 미리보기 팝업 제거 (직통 링크 시스템으로 전환) -->
 
     <!-- [NEW] Custom Status Modal (Success/Alert) -->
     <div id="statusModal" class="custom-modal-overlay">
@@ -856,41 +837,7 @@
             document.getElementById('statusModal').style.display = 'none';
         };
 
-        // --- File Preview Modal Helper ---
-        window.openPreview = (url, title = '파일 미리보기') => {
-            let previewUrl = url;
-            
-            // Google Drive URL transformation (sharing link to preview mode)
-            if (url.includes('drive.google.com')) {
-                if (url.includes('/view')) {
-                    previewUrl = url.replace('/view', '/preview');
-                } else if (url.includes('id=')) {
-                    const id = url.split('id=')[1].split('&')[0];
-                    previewUrl = `https://drive.google.com/file/d/${id}/preview`;
-                }
-            }
-            
-            const modal = document.getElementById('previewModal');
-            const frame = document.getElementById('previewFrame');
-            const titleEl = document.getElementById('previewTitle');
-            
-            titleEl.textContent = title;
-            frame.src = previewUrl;
-            modal.style.display = 'flex';
-            
-            // Prevent body scroll
-            document.body.style.overflow = 'hidden';
-        };
-
-        window.closePreviewModal = () => {
-            const modal = document.getElementById('previewModal');
-            const frame = document.getElementById('previewFrame');
-            
-            frame.src = '';
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        };
-
+        // 미리보기 팝업 관련 헬퍼 함수 제거 (불필요한 에러 방지)
         const categoryTabs = document.getElementById('categoryTabs');
         const boardBody = document.getElementById('boardBody');
         const btnOpenWrite = document.getElementById('btnOpenWrite');
@@ -992,24 +939,34 @@
 
         function setupAdminSelect(churchEl, curiaEl, presidiumEl, callback) {
             churchEl.addEventListener('change', () => {
-                const church = churchEl.value;
-                const curiae = [...new Set(presidiaList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
+                const church = (churchEl.value || '').trim();
+                
+                // [시니어 패치] 성당 선택 시 해당 성당 소속 꾸리아만 필터링
+                const curiae = church ? [...new Set(presidiaList.filter(p => (p.churchName || '').trim() === church).map(p => (p.curiaName || '').trim()))].sort() : [];
                 loadSelectOptions(curiaEl, curiae);
                 curiaEl.disabled = !church;
-                presidiumEl.innerHTML = presidiumEl.options[0].outerHTML;
+                
+                // 쁘레시디움 보 초기화 및 비활성화
+                loadSelectOptions(presidiumEl, []);
                 presidiumEl.disabled = true;
+                
                 if (callback) callback(church, '', '');
             });
+
             curiaEl.addEventListener('change', () => {
-                const church = churchEl.value;
-                const curia = curiaEl.value;
-                const presidiaNames = presidiaList.filter(p => p.churchName === church && p.curiaName === curia).map(p => p.presidiumName).sort();
+                const church = (churchEl.value || '').trim();
+                const curia = (curiaEl.value || '').trim();
+                
+                // [시니어 패치] 꾸리아 선택 시 해당 성당 및 꾸리아 소속 쁘레시디움만 필터링
+                const presidiaNames = (church && curia) ? presidiaList.filter(p => (p.churchName || '').trim() === church && (p.curiaName || '').trim() === curia).map(p => (p.presidiumName || '').trim()).sort() : [];
                 loadSelectOptions(presidiumEl, presidiaNames);
                 presidiumEl.disabled = !curia;
+                
                 if (callback) callback(church, curia, '');
             });
+
             presidiumEl.addEventListener('change', () => {
-                if (callback) callback(churchEl.value, curiaEl.value, presidiumEl.value);
+                if (callback) callback((churchEl.value || '').trim(), (curiaEl.value || '').trim(), (presidiumEl.value || '').trim());
             });
         }
 
@@ -1025,11 +982,11 @@
 
         function renderPosts() {
             const filtered = posts.filter(p => {
-                const catMatch = currentFilter === '전체' || p.category === currentFilter;
-                const churchMatch = !orgFilter.church || p.churchName === orgFilter.church;
-                const curiaMatch = !orgFilter.curia || p.curiaName === orgFilter.curia;
-                const presidiumMatch = !orgFilter.presidium || p.presidiumName === orgFilter.presidium;
-                const searchMatch = !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase());
+                const catMatch = currentFilter === '전체' || (p.category || '').trim() === currentFilter.trim();
+                const churchMatch = !orgFilter.church || (p.churchName || '').trim() === orgFilter.church.trim();
+                const curiaMatch = !orgFilter.curia || (p.curiaName || '').trim() === orgFilter.curia.trim();
+                const presidiumMatch = !orgFilter.presidium || (p.presidiumName || '').trim() === orgFilter.presidium.trim();
+                const searchMatch = !searchQuery || (p.title || '').toLowerCase().includes(searchQuery.toLowerCase());
                 return catMatch && churchMatch && curiaMatch && presidiumMatch && searchMatch;
             });
 
@@ -1045,11 +1002,20 @@
                 let manageBtn = '';
                 if (manageCol.style.display !== 'none' && (currentUser.role === 'admin' || p.authorUid === currentUser.uid)) {
                     manageBtn = `<td>
-                        <button class="category-tab" onclick="window.editPost('${p.id}')" style="padding:4px 8px; font-size:0.8rem; background:#fff; border:1px solid #ccc;">수정</button>
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="category-tab" onclick="window.editPost('${p.id}')" style="padding:4px 8px; font-size:0.8rem; background:#fff; border:1px solid #ccc;">수정</button>
+                            <button class="category-tab" onclick="window.deletePost('${p.id}')" style="padding:4px 8px; font-size:0.8rem; background:#fff; border:1px solid #ff4d4f; color: #ff4d4f;">삭제</button>
+                        </div>
                     </td>`;
                 }
 
                 const dateStr = p.createdAt ? (p.createdAt.toDate ? p.createdAt.toDate().toISOString().split('T')[0] : p.date) : p.date;
+
+                let fileIcon = '';
+                if (p.fileUrl) {
+                    // [시니어 패치] 복잡한 팝업 에러 대신, 100% 확실하게 열리는 새 창(새 탭) 방식 채택
+                    fileIcon = `<i class="fas fa-file-alt file-icon" onclick="window.open('${p.fileUrl}', '_blank')" title="파일 보기 (새 창)"></i>`;
+                }
 
                 tr.innerHTML = `
                     <td>${filtered.length - index}</td>
@@ -1057,7 +1023,7 @@
                     <td class="title">${p.title}</td>
                     <td>${p.author || '관리자'}</td>
                     <td>${dateStr}</td>
-                    <td><a href="javascript:void(0)" onclick="window.openPreview('${p.fileUrl}', '${p.title}')" class="link-icon" title="파일 열기"><i class="fas fa-external-link-alt"></i></a></td>
+                    <td>${fileIcon}</td>
                     ${manageBtn}
                 `;
                 boardBody.appendChild(tr);
@@ -1090,20 +1056,53 @@
         btnOpenWrite.onclick = () => {
             boardForm.reset();
             document.getElementById('postId').value = '';
-            if (orgFilter.church) {
-                postChurch.value = orgFilter.church;
-                if (currentUser.role === 'admin') {
-                    const curiae = [...new Set(presidiaList.filter(p => p.churchName === orgFilter.church).map(p => p.curiaName))].sort();
-                    loadSelectOptions(postCuria, curiae, orgFilter.curia);
-                    postCuria.disabled = !orgFilter.church;
-                    const presidiaNames = presidiaList.filter(p => p.churchName === orgFilter.church && p.curiaName === orgFilter.curia).map(p => p.presidiumName).sort();
-                    loadSelectOptions(postPresidium, presidiaNames, orgFilter.presidium);
-                    postPresidium.disabled = !orgFilter.curia;
+            
+            const isAdmin = (currentUser.role || '').toLowerCase().includes('admin');
+            
+            if (isAdmin) {
+                // [시니어 패치] 관리자용 계단식 선택 초기 세팅
+                postChurch.disabled = false;
+                
+                const church = (orgFilter.church || '').trim();
+                const curia = (orgFilter.curia || '').trim();
+                const presidium = (orgFilter.presidium || '').trim();
+
+                if (church) {
+                    postChurch.value = church;
+                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || '').trim() === church).map(p => (p.curiaName || '').trim()))].sort();
+                    loadSelectOptions(postCuria, curiae, curia);
+                    postCuria.disabled = false;
+                    
+                    if (curia) {
+                        const presidiaNames = presidiaList.filter(p => (p.churchName || '').trim() === church && (p.curiaName || '').trim() === curia).map(p => (p.presidiumName || '').trim()).sort();
+                        loadSelectOptions(postPresidium, presidiaNames, presidium);
+                        postPresidium.disabled = false;
+                    } else {
+                        loadSelectOptions(postPresidium, []);
+                        postPresidium.disabled = true;
+                    }
+                } else {
+                    postCuria.disabled = true;
+                    postPresidium.disabled = true;
+                    loadSelectOptions(postCuria, []);
+                    loadSelectOptions(postPresidium, []);
                 }
-            } else if (currentUser.role !== 'admin') {
-                postChurch.value = currentUser.churchName || '';
-                postCuria.value = currentUser.curiaName || '';
-                postPresidium.value = currentUser.presidiumName || '';
+            } else {
+                // [시니어 패치] 일반 사용자(간부/단원)는 본인 소속을 '정확하게' 자동 설정 (Trim 보완)
+                const church = (currentUser.churchName || '').trim();
+                const curia = (currentUser.curiaName || '').trim();
+                const presidium = (currentUser.presidiumName || '').trim();
+
+                postChurch.value = church;
+                postChurch.disabled = true;
+                
+                const myCuriae = [...new Set(presidiaList.filter(p => (p.churchName || '').trim() === church).map(p => (p.curiaName || '').trim()))].sort();
+                loadSelectOptions(postCuria, myCuriae, curia);
+                postCuria.disabled = true;
+                
+                const myPresidia = presidiaList.filter(p => (p.churchName || '').trim() === church && (p.curiaName || '').trim() === curia).map(p => (p.presidiumName || '').trim()).sort();
+                loadSelectOptions(postPresidium, myPresidia, presidium);
+                postPresidium.disabled = true;
             }
             writeModal.style.display = 'flex';
         };
@@ -1121,16 +1120,28 @@
             }
 
             try {
+                // [시니어 패치] 조직 정보 필수 검증 및 정화 (Trim)
+                const church = (postChurch.value || '').trim();
+                const curia = (postCuria.value || '').trim();
+                const presidium = (postPresidium.value || '').trim();
+                const category = (document.getElementById('postCategory').value || '').trim();
+                const title = (document.getElementById('postTitle').value || '').trim();
+
+                if (!church || !curia) {
+                    alert('성당과 꾸리아 정보는 반드시 선택해야 합니다.');
+                    return;
+                }
+
                 const postData = {
-                    category: document.getElementById('postCategory').value,
-                    title: document.getElementById('postTitle').value,
-                    fileUrl: fileUrl,
-                    content: document.getElementById('postContent').value,
+                    category: category,
+                    title: title,
+                    fileUrl: fileUrl.trim(),
+                    content: (document.getElementById('postContent').value || '').trim(),
                     author: currentUser.name || "단원",
                     authorUid: currentUser.uid,
-                    churchName: postChurch.value,
-                    curiaName: postCuria.value,
-                    presidiumName: postPresidium.value,
+                    churchName: church,
+                    curiaName: curia,
+                    presidiumName: presidium,
                     updatedAt: serverTimestamp()
                 };
 
@@ -1172,12 +1183,15 @@
         };
 
         window.deletePost = async (id) => {
-            if (confirm('정말 삭제하시겠습니까?')) {
+            // [시니어 패치] 고품질 커스텀 확인창 활용 (showGlobalConfirm)
+            if (await window.showGlobalConfirm('정말 이 게시물을 삭제하시겠습니까? 게시되지 말아야 할 자료라면 삭제가 권장됩니다.', 'error')) {
                 try {
                     await deleteDoc(doc(db, "board_posts", id));
+                    // [시니어 패치] showStatusModal 대신 더 세련된 showToast 사용 제안 (또는 기존 유지)
                     showStatusModal('삭제 완료', '게시물이 안전하게 삭제되었습니다.');
                 } catch (err) {
-                    alert('삭제 실패: ' + err.message);
+                    console.error("Delete Error:", err);
+                    alert('삭제 중 오류가 발생했습니다: ' + err.message);
                 }
             }
         };

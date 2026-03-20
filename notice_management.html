@@ -280,10 +280,11 @@
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
-            overflow: hidden;
             margin-bottom: 0;
             white-space: pre-wrap;
-            word-break: break-all;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+            overflow: hidden;
         }
 
         .card-footer {
@@ -343,7 +344,7 @@
             line-height: 1.8;
             color: #333;
             white-space: pre-wrap;
-            word-break: break-all;
+            word-break: keep-all;
             overflow-wrap: break-word;
             min-height: 200px;
         }
@@ -938,11 +939,24 @@
 
         async function loadData() {
             try {
-                const q = query(collection(db, 'legion_notices_list'), orderBy('id', 'desc'));
+                // [Senior Fix] orderBy('id') removes docs that don't have an 'id' field.
+                // New docs only have Firestore doc IDs, so we fetch all and sort in memory for stability.
+                const q = query(collection(db, 'legion_notices_list'));
                 const querySnapshot = await getDocs(q);
                 notices = [];
                 querySnapshot.forEach(docSnap => {
                     notices.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                // Sort in memory by date (desc) then createdAt (desc)
+                notices.sort((a, b) => {
+                    const dateA = a.date || '';
+                    const dateB = b.date || '';
+                    if (dateA !== dateB) return dateB.localeCompare(dateA);
+                    
+                    const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                    const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                    return timeB - timeA;
                 });
             } catch (error) {
                 console.error("Error loading notices:", error);
@@ -1164,12 +1178,19 @@
                 const matchesFilter = filter === '전체' || n.category === filter;
                 const matchesSearch = n.title.includes(search) || n.content.includes(search);
 
-                // [Case 1] 성당이 선택되지 않은 경우 (관리자 초기 진입 등) -> 전체 노출
-                // [Case 2] 특정 조직 선택 시, 해당 조직 공지 + 상위 조직 공지(공통 공지) 노출
-                const matchesOrg = !orgFilter.churchName || (
-                    n.churchName === orgFilter.churchName &&
-                    (orgFilter.curiaName === "" || n.curiaName === "" || n.curiaName === orgFilter.curiaName) &&
-                    (orgFilter.presidiumName === "" || n.presidiumName === "" || n.presidiumName === orgFilter.presidiumName)
+                // [Senior Fix] Applying .trim() to match filtered values more accurately
+                const targetChurch = (orgFilter.churchName || '').trim();
+                const targetCuria = (orgFilter.curiaName || '').trim();
+                const targetPresidium = (orgFilter.presidiumName || '').trim();
+
+                const nChurch = (n.churchName || '').trim();
+                const nCuria = (n.curiaName || '').trim();
+                const nPresidium = (n.presidiumName || '').trim();
+
+                const matchesOrg = !targetChurch || (
+                    nChurch === targetChurch &&
+                    (targetCuria === "" || nCuria === "" || nCuria === targetCuria) &&
+                    (targetPresidium === "" || nPresidium === "" || nPresidium === targetPresidium)
                 );
 
                 return matchesFilter && matchesSearch && matchesOrg;
@@ -1295,14 +1316,14 @@
             e.preventDefault();
             const id = document.getElementById('noticeId').value;
             const data = {
-                title: document.getElementById('noticeTitle').value,
+                title: document.getElementById('noticeTitle').value.trim(),
                 category: document.getElementById('noticeCategory').value,
-                content: document.getElementById('noticeContent').value,
+                content: document.getElementById('noticeContent').value.trim(),
                 isPinned: document.getElementById('noticeIsPinned').checked,
                 author: currentUser.name || currentUser.username,
-                churchName: postChurch.value,
-                curiaName: postCuria.value,
-                presidiumName: postPresidium.value,
+                churchName: postChurch.value.trim(),
+                curiaName: postCuria.value.trim(),
+                presidiumName: (postPresidium.value || '').trim(),
                 date: new Date().toISOString().split('T')[0],
                 updatedAt: serverTimestamp()
             };

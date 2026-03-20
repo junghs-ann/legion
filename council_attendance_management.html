@@ -500,10 +500,12 @@
             const isOfficer = ['단장', '부단장', '서기', '회계', 'president', 'vice_president', 'secretary', 'treasurer'].includes(roleLower);
 
             if (!isAdmin && !isOfficer) {
-                alert('평의회 출석 관리 페이지는 관리자 및 간부만 접근할 수 있습니다.');
-                location.href = 'dashboard.html';
+                showGlobalAlert('평의회 출석 관리 페이지는 관리자 및 간부만 접근할 수 있습니다.', 'warning').then(() => {
+                    location.href = 'dashboard.html';
+                });
                 return;
             }
+
 
             // [New] Role-based Menu Control & Common Menus
             if (window.initCommonMenus) {
@@ -531,8 +533,9 @@
                 console.log("관리자 로그인: 전체 조직 조회 모드");
                 // 성당 목록이 하나도 없으면 관리자에게 안내
                 if (churchSelect.options.length <= 1) {
-                    alert("등록된 성당 정보가 없습니다. '관리자 -> 쁘레시디움 소속 등록' 메뉴에서 소속 정보를 먼저 등록해 주세요.");
+                    showGlobalAlert("등록된 성당 정보가 없습니다. '관리자 -> 쁘레시디움 소속 등록' 메뉴에서 소속 정보를 먼저 등록해 주세요.", "warning");
                 }
+
             } else {
                 console.log("일반 사용자 로그인: 소속 정보 고정");
                 // profile의 표준 필드명 사용
@@ -871,8 +874,9 @@
                 }
             } catch (error) {
                 console.error("Error loading attendance list:", error);
-                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+                showGlobalAlert("데이터를 불러오는 중 오류가 발생했습니다.", "error");
             }
+
         }
 
         function renderAttendanceRows(data) {
@@ -941,17 +945,19 @@
             const date = baseDateInput.value;
 
             if (!church || !curia || !session || !date) {
-                alert('모든 필수 입력 항목(성당, 꾸리아, 회차, 날짜)을 채워주세요.');
+                showGlobalAlert('모든 필수 입력 항목(성당, 꾸리아, 회차, 날짜)을 채워주세요.', 'warning');
                 return;
             }
+
 
             const attendanceData = [];
             const rows = attendanceBody.querySelectorAll('tr');
 
             if (rows.length === 0 || rows[0].cells.length < 8) {
-                alert('저장할 데이터가 없습니다.');
+                showGlobalAlert('저장할 데이터가 없습니다.', 'info');
                 return;
             }
+
 
             rows.forEach((tr, idx) => {
                 const baseInfo = JSON.parse(tr.dataset.rowData);
@@ -975,11 +981,13 @@
 
                 await setDoc(doc(db, 'council_attendance_list', docId), record);
                 await updateHistoryList();
-                alert('출석 정보가 성공적으로 저장되었습니다.');
+                if (window.showToast) window.showToast('출석 정보가 성공적으로 저장되었습니다.', 'success');
+                else showGlobalAlert('출석 정보가 성공적으로 저장되었습니다.', 'success');
             } catch (error) {
                 console.error("Error saving attendance:", error);
-                alert("저장 중 오류가 발생했습니다.");
+                showGlobalAlert("저장 중 오류가 발생했습니다.", "error");
             }
+
         }
 
         async function deleteAttendance() {
@@ -991,11 +999,13 @@
             const date = baseDateInput.value;
 
             if (!church || !curia || !session || !date) {
-                alert('삭제할 기록을 먼저 선택하거나 입력해 주세요.');
+                showGlobalAlert('삭제할 기록을 먼저 선택하거나 입력해 주세요.', 'info');
                 return;
             }
 
-            if (!confirm(`[${session}회차 / ${date}] 기록을 정말 삭제하시겠습니까?`)) return;
+
+            if (!(await showGlobalConfirm(`[${session}회차 / ${date}] 기록을 정말 삭제하시겠습니까?`, 'error'))) return;
+
 
             try {
                 const docId = `attendance_${church}_${curia}_${presidium || 'all'}_${session}_${date}`.replace(/\s+/g, '_');
@@ -1003,11 +1013,13 @@
 
                 await updateHistoryList();
                 clearAttendanceTable();
-                alert('기록이 삭제되었습니다.');
+                if (window.showToast) window.showToast('기록이 삭제되었습니다.', 'success');
+                else showGlobalAlert('기록이 삭제되었습니다.', 'success');
             } catch (error) {
                 console.error("Error deleting attendance:", error);
-                alert("삭제 중 오류가 발생했습니다.");
+                showGlobalAlert("삭제 중 오류가 발생했습니다.", "error");
             }
+
         }
 
         function setupEventListeners() {
