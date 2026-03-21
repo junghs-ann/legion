@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10명 단원 누락 ID 1초 자동 복구</title>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; padding: 40px; background-color: #f5f6fa; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        button { background-color: #3b82f6; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button:hover { background-color: #2563eb; transform: translateY(-2px); }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; }
+        .log-box { margin-top: 20px; text-align: left; background: #1e293b; color: #4ade80; padding: 20px; border-radius: 8px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.95rem; line-height: 1.5; display: none; }
+        .status { margin-top: 20px; font-size: 1.1rem; color: #4b5563; font-weight: bold; }
+        .error { color: #ef4444; }
+        h1 { color: #1e3a8a; font-size: 1.5rem; margin-bottom: 5px; }
+        p.subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 25px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🛠️ 누락된 단원 ID 1초 복구 유틸리티</h1>
+        <p class="subtitle">과거 가입자들 중 memberId가 비어있는 계정을 찾아내어 단원 명부와 연결시킵니다.</p>
+        
+        <p class="status" id="statusMessage">아래 버튼을 누르면 즉시 복구가 시작됩니다.</p>
+        <button id="btnStart" onclick="startRepair()">지금 즉시 누락 ID 복구하기</button>
+        
+        <div class="log-box" id="logBox"></div>
+    </div>
+
+    <!-- Firebase SDK (ES Modules) -->
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 전역 함수로 노출
+        window.startRepair = async function() {
+            const btn = document.getElementById('btnStart');
+            const logBox = document.getElementById('logBox');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            btn.disabled = true;
+            btn.textContent = "복구 작업 진행 중...";
+            logBox.style.display = "block";
+            logBox.innerHTML = "> 🔍 Firebase 데이터베이스 스캔을 시작합니다...\n";
+
+            try {
+                // 1. 단원 명부(members_list) 전체 정보 가져오기
+                const membersSnap = await getDocs(collection(db, 'members_list'));
+                const memberMap = new Map(); // key: 이름+성당+쁘레시디움 조합
+                membersSnap.forEach(doc => {
+                    const data = doc.data();
+                    const key = `${data.name}|${data.churchName}|${data.presidiumName}`;
+                    memberMap.set(key, doc.id); // 실제 명부 고유 ID (doc.id) 저장
+                });
+                
+                logBox.innerHTML += `\n> 📋 단원 명부 로딩 완료 (총 ${memberMap.size}건)\n`;
+
+                // 2. 가입 계정(users) 전체 스캔
+                const usersSnap = await getDocs(collection(db, 'users'));
+                let missingCount = 0;
+                let repairedCount = 0;
+
+                for (const userDoc of usersSnap.docs) {
+                    const u = userDoc.data();
+                    const uid = userDoc.id;
+
+                    // memberId 필드가 비어있고, 일반 단원인 경우 탐지
+                    if (!u.memberId && u.role !== 'admin') {
+                        missingCount++;
+                        // 명부 연결 고리 찾기
+                        const searchKey = `${u.name}|${u.churchName}|${u.presidiumName}`;
+                        const correctId = memberMap.get(searchKey);
+
+                        if (correctId) {
+                            // 3. ID 복구 쓰기 수행 (업데이트)
+                            await updateDoc(doc(db, 'users', uid), {
+                                memberId: correctId
+                            });
+                            logBox.innerHTML += `> ✅ [복구 완료] 성명: [${u.name}] ➔ 발급된 ID: ${correctId}\n`;
+                            repairedCount++;
+                        } else {
+                            logBox.innerHTML += `> ⚠️ [주의] 성명: [${u.name}] ➔ 명부 기록을 찾을 수 없어 연결 보류\n`;
+                        }
+                    }
+                }
+
+                if (missingCount === 0) {
+                    logBox.innerHTML += `\n> 🎉 복구할 계정이 없습니다! 모든 단원의 ID가 완벽하게 채워져 있습니다.`;
+                } else {
+                    logBox.innerHTML += `\n> 🎉 복구 스크립트 실행 완료!\n> - 발견된 ID 빈칸 계정: ${missingCount}명\n> - 성공적으로 채운 계정: ${repairedCount}명\n`;
+                }
+                
+                statusMessage.textContent = `작업이 정상적으로 종료되었습니다. 이제 100% 조회 가능합니다.`;
+                btn.textContent = "모든 복구가 완료되었습니다";
+                statusMessage.style.color = "#16a34a"; // green
+                
+            } catch (error) {
+                console.error(error);
+                logBox.innerHTML += `\n> ❌ 오류 발생: ${error.message}`;
+                statusMessage.innerHTML = `<span class="error">관리자(단장) 권한이 부족하여 데이터베이스에 접근할 수 없습니다.<br>반드시 관리자로 로그인한 상태에서 실행해 주세요.</span>`;
+                btn.textContent = "오류 발생 (다시 시도)";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

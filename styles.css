@@ -550,3 +550,29 @@ body {
     overflow: hidden !important;
     height: 100vh !important;
 }
+/* === Password Toggle Button (Reusable) === */
+.pwd-toggle {
+    position: absolute;
+    right: 5px;
+    bottom: 4px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #888;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+.pwd-toggle:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.pwd-toggle i {
+    font-size: 1rem;
+}

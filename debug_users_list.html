@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>사용자 계정 ID 누락 전수 조사 (실데이터 전용)</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f8f9fa; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 1000px; margin: 0 auto; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #dee2e6; text-align: left; font-size: 0.9rem; }
+        th { background: #f1f3f5; font-weight: bold; }
+        .status-bad { color: #e74c3c; font-weight: bold; background: #fff5f5; }
+        .status-good { color: #2ecc71; }
+        .summary { display: flex; gap: 20px; margin-bottom: 20px; }
+        .summary-item { padding: 15px; border-radius: 8px; flex: 1; text-align: center; color: white; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 사용자 계정(users) ID 누락 전수 조사</h1>
+        <p>백업 데이터가 아닌, <strong>실시간 Firestore 데이터</strong>를 직접 조회한 결과입니다.</p>
+        
+        <div id="summary" class="summary">
+            <div id="total-box" class="summary-item" style="background: #34495e;">전체 계정: -</div>
+            <div id="broken-box" class="summary-item" style="background: #e74c3c;">ID 누락/단절: -</div>
+            <div id="ok-box" class="summary-item" style="background: #27ae60;">정상 연결: -</div>
+        </div>
+
+        <div id="loading">데이터를 불러오는 중...</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>회원 성명</th>
+                    <th>성당/쁘레</th>
+                    <th>계정 UID</th>
+                    <th>연결된 memberId</th>
+                    <th>상태</th>
+                </tr>
+            </thead>
+            <tbody id="result-body">
+                <!-- 결과 출력 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { db } from "./firebase-config.js";
+        import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        async function runDiagnostic() {
+            try {
+                const userSnap = await getDocs(collection(db, "users"));
+                const memberSnap = await getDocs(collection(db, "members_list"));
+                
+                const members = {};
+                memberSnap.forEach(doc => members[doc.id] = doc.data());
+
+                const tbody = document.getElementById('result-body');
+                tbody.innerHTML = '';
+                
+                let broken = 0;
+                let ok = 0;
+
+                userSnap.forEach(doc => {
+                    const u = doc.data();
+                    const uid = doc.id;
+                    const name = u.name || u.memberName || '이름없음';
+                    const memberId = u.memberId;
+                    
+                    const tr = document.createElement('tr');
+                    let statusHtml = '';
+                    let isBroken = false;
+
+                    if (!memberId) {
+                        statusHtml = '❌ memberId 누락 (완전 단절)';
+                        isBroken = true;
+                        tr.className = 'status-bad';
+                    } else if (!members[memberId]) {
+                        statusHtml = '⚠️ 명부에 없는 ID (ID 단절)';
+                        isBroken = true;
+                        tr.className = 'status-bad';
+                    } else {
+                        statusHtml = '✅ 정상 연결';
+                        ok++;
+                    }
+
+                    if (isBroken) broken++;
+
+                    tr.innerHTML = `
+                        <td>${name}</td>
+                        <td>${u.churchName || '-'}<br><small>${u.presidiumName || '-'}</small></td>
+                        <td><code>${uid}</code></td>
+                        <td><code>${memberId || '-'}</code></td>
+                        <td>${statusHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('total-box').textContent = `전체 계정: ${userSnap.size}명`;
+                document.getElementById('broken-box').textContent = `ID 누락/단절: ${broken}명`;
+                document.getElementById('ok-box').textContent = `정상 연결: ${ok}명`;
+                document.getElementById('loading').style.display = 'none';
+
+            } catch (err) {
+                document.getElementById('loading').innerHTML = `<span style="color:red">오류 발생: ${err.message}</span>`;
+            }
+        }
+
+        runDiagnostic();
+    </script>
+</body>
+</html>

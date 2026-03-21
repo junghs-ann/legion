@@ -97,8 +97,22 @@ export async function logoutUser() {
 export async function updatePassword(uid, newPassword) {
     const user = auth.currentUser;
     if (user && user.uid === uid) {
-        await firebaseUpdatePassword(user, newPassword);
-        return true;
+        try {
+            // 1. Firebase Auth 비밀번호 변경
+            await firebaseUpdatePassword(user, newPassword);
+            
+            // 2. Firestore 프로필의 비밀번호 필드 동기화 (암호화하지 않는 시스템 특성 반영)
+            const userRef = doc(db, "users", uid);
+            await updateDoc(userRef, { password: newPassword });
+            
+            return true;
+        } catch (error) {
+            console.error("Firebase Password Update Error:", error);
+            if (error.code === 'auth/requires-recent-login') {
+                throw new Error("보안을 위해 다시 로그인한 직후에만 비밀번호 변경이 가능합니다. 로그아웃 후 다시 로그인하여 시도해 주세요.");
+            }
+            throw error;
+        }
     }
     throw new Error("비밀번호 변경 권한이 없거나 다시 로그인해야 합니다.");
 }
@@ -130,18 +144,25 @@ export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
             // Get most recent profile from Firestore
             const profile = await getUserProfile(user.uid);
             if (profile) {
-                // 표준 필드명만 사용 (구 필드명 제거)
+                // [V17.0] 표준 필드명 및 식별자(ID) 동기화 보강
                 const standardizedProfile = {
                     ...profile,
+                    uid: user.uid, // Auth UID 보존
                     churchName: profile.churchName || '',
                     presidiumName: profile.presidiumName || '',
                     curiaName: profile.curiaName || '',
                     role: profile.role || 'member'
                 };
-                // Assuming onAuthChanged is a new callback or a typo for onUserAuthenticated
-                // If onAuthChanged is not defined elsewhere, this line might cause an error.
-                // For now, I'm adding it as per the instruction.
-                // onAuthChanged(user, standardizedProfile); 
+
+                // [핵심] 단원 명부 ID(memberId)가 있으면 이를 기본 식별자(id)로 사용
+                // 관리자가 보고 있는 ID와 단원 본인이 로그인했을 때 사용하는 ID를 일치시킵니다.
+                if (profile.memberId) {
+                    standardizedProfile.id = profile.memberId;
+                } else {
+                    // [V17.0] Fallback 제거: 명확한 데이터 연결을 위해 보조 매칭 로직을 삭제함.
+                    // 향후 데이터 정리 도구를 통해 모든 사용자의 memberId를 채워 넣는 방식으로 해결합니다.
+                    standardizedProfile.id = profile.id || user.uid;
+                }
                 
                 localStorage.setItem('currentUser', JSON.stringify(standardizedProfile));
                 onUserAuthenticated(user, standardizedProfile);

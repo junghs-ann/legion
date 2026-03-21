@@ -1003,6 +1003,33 @@
             if (submitBtn) submitBtn.disabled = true; // [Double-click Protection]
 
             try {
+                // [근본 해결] 신규 등록인 경우, 이미 동일한 정보(성명+세례명+쁘레시디움)로 등록된 단원이 있는지 체크
+                if (!editId) {
+                    console.log("🔍 중복 등록 여부 사전 확인 중...");
+                    const dupQuery = query(collection(db, "members_list"),
+                        where("name", "==", memberData.name),
+                        where("churchName", "==", memberData.churchName),
+                        where("presidiumName", "==", memberData.presidiumName),
+                        where("baptismalName", "==", memberData.baptismalName)
+                    );
+                    const dupSnap = await getDocs(dupQuery);
+                    
+                    if (!dupSnap.empty) {
+                        const existingDoc = dupSnap.docs[0];
+                        const confirmLoad = confirm(`⚠️ 안내: 이미 동일한 정보로 등록된 단원이 있습니다.\n(이름: ${memberData.name}, 세례명: ${memberData.baptismalName})\n\n새로 등록하는 대신 기존 기록을 불러와서 수정하시겠습니까?`);
+                        
+                        if (confirmLoad) {
+                            loadMemberDataForEdit({ id: existingDoc.id, ...existingDoc.data() });
+                            if (submitBtn) submitBtn.disabled = false;
+                            return;
+                        } else {
+                            // 사용자가 강제로 등록을 원치 않는 경우 중단 (중복 생성 방지)
+                            if (submitBtn) submitBtn.disabled = false;
+                            return;
+                        }
+                    }
+                }
+
                 console.log("🚀 [저장 프로세스 시작] 수집된 데이터:", memberData);
                 memberData.updatedAt = serverTimestamp();
 

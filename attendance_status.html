@@ -1109,6 +1109,10 @@
         }
 
         let currentSessionCacheKey = ''; // [추가] 중복 쿼리 방지용 키
+        
+        // [공용] 명칭 표준화 함수: 공백을 1개로 통일하고 앞뒤 공백 제거
+        const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
+
         async function updateSessionList(filter = '') {
             const presidium = presidiumSelect.value;
             const church = churchSelect.value;
@@ -1123,9 +1127,9 @@
             try {
                 // [정석화] 이중 쿼리(꼼수) 제거 및 표준 쿼리 사용⚖️🌊
                 const qSnap = await getDocs(query(collection(db, 'attendance_list'),
-                    where('churchName', '==', church),
-                    where('curiaName', '==', curia),
-                    where('presidiumName', '==', presidium)));
+                    where('churchName', '==', normalizeName(church)),
+                    where('curiaName', '==', normalizeName(curia)),
+                    where('presidiumName', '==', normalizeName(presidium))));
 
                 const rawDocs = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -1547,9 +1551,9 @@
                 }
 
                 const newData = {
-                    churchName: churchSelect.value,
-                    curiaName: curiaSelect.value,
-                    presidiumName: presidium,
+                    churchName: normalizeName(churchSelect.value),
+                    curiaName: normalizeName(curiaSelect.value),
+                    presidiumName: normalizeName(presidium),
                     session: session.toString(),
                     date,
                     day: dayInput.value,

@@ -279,6 +279,7 @@
             <form id="edit-form">
                 <input type="hidden" id="edit-email">
                 <input type="hidden" id="edit-uid">
+                <input type="hidden" id="edit-member-id"> <!-- [V17.0] 명부 연결 ID 보관용 추가 -->
                 <div class="form-group">
                     <label>성당</label>
                     <input type="text" id="edit-church" disabled style="background: #e9ecef;">
@@ -333,24 +334,20 @@
                 <!-- ID/PW Fields Added -->
                 <div class="form-group">
                     <label>아이디 (ID)</label>
-                    <input type="text" id="edit-username" required style="background: #f9f9f9;">
+                    <input type="text" id="edit-username" disabled style="background: #e9ecef; cursor: not-allowed;">
                 </div>
                 <div class="form-group">
-                    <label>비밀번호</label>
-                    <div style="display: flex; gap: 10px; align-items: flex-start; position: relative;">
-                        <input type="password" id="edit-password" placeholder="비밀번호를 입력하세요" required
-                            style="flex: 1; padding-right: 40px;">
-                        <button type="button" id="toggle-password"
-                            style="position: absolute; right: 110px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.1rem; padding: 5px;">
-                            <i class="fas fa-eye-slash"></i>
+                    <label>비밀번호 (관리)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" id="btn-reset-help"
+                            style="padding: 10px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; color: #1565c0;">
+                            <i class="fas fa-question-circle"></i> 분실 시 재설정 안내
                         </button>
-                        <button type="button" id="btn-reset-password"
-                            style="padding: 10px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap;">1234로
-                            초기화</button>
                     </div>
-                    <small style="color: #666; display: block; margin-top: 5px;">* 사용자가 비밀번호를 분실한 경우 이곳에서 직접 수정하거나 초기화할
-                        수
-                        있습니다.</small>
+                    <small style="color: #666; display: block; margin-top: 5px; line-height: 1.4;">
+                        * <b>보안 정책:</b> 보안을 위해 관리자도 타인의 비밀번호를 직접 보거나 바꿀 수 없습니다. <br>
+                        분실 시 위 <b>[안내]</b> 버튼을 눌러 초기화 및 복구 절차를 진행하세요.
+                    </small>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                     <button type="button" id="btn-cancel-edit"
@@ -415,8 +412,6 @@
             // Setup Search Filters based on Role
             setupFilters(profile);
 
-            // [New] 비밀번호 가독성 토글 초기화
-            initPasswordToggle();
         }, () => {
             window.location.href = 'index.html';
         });
@@ -478,18 +473,6 @@
             }
         }
 
-        // [New] 비밀번호 보기/숨기기 기능 초기화
-        function initPasswordToggle() {
-            const pwdInput = document.getElementById('edit-password');
-            const pwdToggle = document.getElementById('toggle-password');
-            if (pwdToggle && pwdInput) {
-                pwdToggle.addEventListener('click', () => {
-                    const isPwd = pwdInput.type === 'password';
-                    pwdInput.type = isPwd ? 'text' : 'password';
-                    pwdToggle.innerHTML = isPwd ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-                });
-            }
-        }
 
         function loadCuriae(church, preselectVal = null) {
             const curiaList = [...new Set(presidiaGeneralList.filter(p => p.churchName === church).map(p => p.curiaName))].sort();
@@ -739,6 +722,7 @@
 
                 document.getElementById('edit-email').value = user.email;
                 document.getElementById('edit-uid').value = user.uid;
+                document.getElementById('edit-member-id').value = user.memberId || ''; // [추가] 명부 ID 로드
                 document.getElementById('edit-church').value = user.churchName || '';
                 document.getElementById('edit-presidium').value = user.presidiumName || '';
                 document.getElementById('edit-name').value = user.name;
@@ -750,7 +734,6 @@
                 document.getElementById('edit-role').value = currentRank.code;
 
                 document.getElementById('edit-username').value = user.username || '';
-                document.getElementById('edit-password').value = user.password || '';
 
                 const leaveDateGroup = document.getElementById('leave-date-group');
                 const leaveDateInput = document.getElementById('edit-leave-date');
@@ -762,14 +745,11 @@
                 }
 
                 // [Fix] Reset Password 버튼 핸들러 (기존 리스너 제거를 위해 복제 후 교체)
-                const resetBtn = document.getElementById('btn-reset-password');
-                const newResetBtn = resetBtn.cloneNode(true);
-                resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
-                newResetBtn.addEventListener('click', () => {
-                    if (confirm(`'${user.name}'님의 비밀번호를 '1234'로 초기화하시겠습니까?`)) {
-                        document.getElementById('edit-password').value = '1234';
-                        alert("비밀번호가 '1234'로 설정되었습니다.\n'저장' 버튼을 눌러야 최종 반영됩니다.");
-                    }
+                const helpBtn = document.getElementById('btn-reset-help');
+                const newHelpBtn = helpBtn.cloneNode(true);
+                helpBtn.parentNode.replaceChild(newHelpBtn, helpBtn);
+                newHelpBtn.addEventListener('click', () => {
+                    alert(`🔐 비밀번호 분실 시 복구 방법\n\n1. Firebase 콘솔에서 해당 사용자의 'Auth 계정'을 삭제합니다.\n2. 현재 이 화면(계정 관리)에서 사용자의 '가입 정보'를 삭제합니다.\n3. 사용자에게 '회원가입'을 다시 하라고 안내하세요.\n\n※ 재가입 시 이름을 선택하면 기존의 활동 기록은 자동으로 모두 복구되니 안심하셔도 됩니다! (서명 이미지만 재등록 필요)`);
                 });
                 editModal.style.display = 'flex';
             } catch (error) {
@@ -792,7 +772,7 @@
             const newStatus = document.getElementById('edit-status').value;
             const newRole = document.getElementById('edit-role').value;
             const newUsername = document.getElementById('edit-username').value;
-            const newPassword = document.getElementById('edit-password').value;
+            const memberId = document.getElementById('edit-member-id').value; // [추가] 명부 ID 추출
 
             try {
                 const docRef = doc(db, 'users', uid);
@@ -815,11 +795,11 @@
                         role: newRole,
                         username: newUsername,
                         email: `${newUsername}@legion.app`,
-                        password: newPassword,
                         churchName: currentUserData.churchName,
                         curiaName: currentUserData.curiaName,
                         presidiumName: currentUserData.presidiumName,
                         presidiumId: currentUserData.presidiumId,
+                        memberId: memberId, // [핵심] 재입단 시에도 기존 명부 ID 승계 (중요!)
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     };
@@ -834,7 +814,7 @@
                         role: newRole,
                         username: newUsername,
                         email: `${newUsername}@legion.app`,
-                        password: newPassword,
+                        memberId: memberId, // [핵심] 일반 수정 시에도 명부 ID 명시적 보존
                         updatedAt: serverTimestamp()
                     };
                     await updateDoc(docRef, updateData);

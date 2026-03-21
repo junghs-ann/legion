@@ -173,6 +173,7 @@
                 font-size: 1.5rem;
             }
         }
+
     </style>
 </head>
 
@@ -312,27 +313,24 @@
                         <div class="form-group" style="margin-bottom: 15px; position: relative;">
                             <label style="color: #d32f2f;">현재 비밀번호 확인</label>
                             <input type="password" id="current-password" placeholder="현재 비밀번호를 입력하세요"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
-                            <button type="button" class="pwd-toggle" data-target="current-password"
-                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 45px;">
+                            <button type="button" class="pwd-toggle" data-target="current-password" onclick="togglePassword(this)">
                                 <i class="fas fa-eye-slash"></i>
                             </button>
                         </div>
                         <div class="form-group" style="margin-bottom: 15px; position: relative;">
                             <label>새 비밀번호</label>
                             <input type="password" id="new-password" placeholder="새 비밀번호 (6자 이상)"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
-                            <button type="button" class="pwd-toggle" data-target="new-password"
-                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 45px;">
+                            <button type="button" class="pwd-toggle" data-target="new-password" onclick="togglePassword(this)">
                                 <i class="fas fa-eye-slash"></i>
                             </button>
                         </div>
                         <div class="form-group" style="margin-bottom: 0; position: relative;">
                             <label>새 비밀번호 확인</label>
                             <input type="password" id="confirm-password" placeholder="새 비밀번호를 한 번 더 입력하세요"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 40px;">
-                            <button type="button" class="pwd-toggle" data-target="confirm-password"
-                                style="position: absolute; right: 10px; bottom: 8px; background: none; border: none; cursor: pointer; color: #666;">
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; padding-right: 45px;">
+                            <button type="button" class="pwd-toggle" data-target="confirm-password" onclick="togglePassword(this)">
                                 <i class="fas fa-eye-slash"></i>
                             </button>
                         </div>
@@ -355,9 +353,9 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260313_1650"></script>
+    <script src="script.js?v=20260321_1245"></script>
     <script type="module">
-        import { initAuthObserver, logoutUser, updatePassword, convertToStdRole, updateUserProfile } from "./auth.js?v=20260313_1650";
+        import { initAuthObserver, logoutUser, updatePassword, convertToStdRole, updateUserProfile } from "./auth.js?v=20260321_1245";
 
         let currentUser = null;
         const signaturePad = document.getElementById('signature-pad');
@@ -399,6 +397,7 @@
                 currentImg.style.display = 'block';
                 noMsg.style.display = 'none';
             }
+
         }
 
         // --- Signature Pad Logic ---
@@ -473,22 +472,22 @@
         // --- Save Logic ---
         document.getElementById('btn-save-profile').addEventListener('click', async () => {
             if (!newSignatureData) {
-                alert('변경할 서명을 그리거나 파일을 선택해 주세요.');
+                await window.showGlobalAlert('변경할 서명을 그리거나 파일을 선택해 주세요.', 'warning');
                 return;
             }
 
-            if (confirm('서명을 업데이트하시겠습니까?')) {
+            if (await window.showGlobalConfirm('서명을 업데이트하시겠습니까?')) {
                 try {
                     const uid = currentUser.uid;
                     if (!uid) throw new Error("사용자 고유 ID가 없습니다. 다시 로그인해 주세요.");
 
                     await updateUserProfile(uid, { signature: newSignatureData });
                     
-                    alert('서명이 성공적으로 업데이트되었습니다.');
+                    await window.showGlobalAlert('서명이 성공적으로 업데이트되었습니다.', 'success');
                     location.reload();
                 } catch (e) {
                     console.error("Profile Update Error:", e);
-                    alert('오류 발생: ' + e.message);
+                    await window.showGlobalAlert('오류 발생: ' + e.message, 'error');
                 }
             }
         });
@@ -501,52 +500,39 @@
 
             // 1. Validation
             if (!curPwd || !newPwd || !confirmPwd) {
-                alert('모든 비밀번호 필드를 입력해 주세요.');
+                await window.showGlobalAlert('모든 비밀번호 필드를 입력해 주세요.', 'warning');
                 return;
             }
 
-            if (curPwd !== currentUser.password) {
-                alert('현재 비밀번호가 일치하지 않습니다.');
-                return;
-            }
+            // [제거] DB의 비밀번호(stale 가능성 있음)와 비교하는 로직을 제거하고 Auth 세션에 맡김
 
             if (newPwd.length < 4) { // Simplified for demo, maybe 6+
-                alert('새 비밀번호는 최소 4자 이상이어야 합니다.');
+                await window.showGlobalAlert('새 비밀번호는 최소 4자 이상이어야 합니다.', 'warning');
                 return;
             }
 
             if (newPwd !== confirmPwd) {
-                alert('새 비밀번호 확인이 일치하지 않습니다.');
+                await window.showGlobalAlert('새 비밀번호 확인이 일치하지 않습니다.', 'error');
                 return;
             }
 
             if (curPwd === newPwd) {
-                alert('현재 비밀번호와 새 비밀번호가 동일합니다.');
+                await window.showGlobalAlert('현재 비밀번호와 새 비밀번호가 동일합니다.', 'warning');
                 return;
             }
 
             // 2. Execute Update
-            if (confirm('비밀번호를 정말로 변경하시겠습니까?\n변경 후 세션 동기화를 위해 페이지가 새로고침됩니다.')) {
+            if (await window.showGlobalConfirm('비밀번호를 정말로 변경하시겠습니까?\n변경 후 세션 동기화를 위해 페이지가 새로고침됩니다.', 'warning')) {
                 try {
                     await updatePassword(currentUser.uid, newPwd);
-                    alert('비밀번호가 안전하게 변경되었습니다.');
-                    location.reload();
+                    await window.showGlobalAlert('비밀번호가 안전하게 변경되었습니다. 보안을 위해 새로운 비밀번호로 다시 로그인해 주세요.', 'success');
+                    await logoutUser();
                 } catch (e) {
-                    alert('오류 발생: ' + e.message);
+                    await window.showGlobalAlert('오류 발생: ' + e.message, 'error');
                 }
             }
         });
 
-        // --- Password Visibility Toggle Logic ---
-        document.querySelectorAll('.pwd-toggle').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const targetId = this.dataset.target;
-                const input = document.getElementById(targetId);
-                const isPwd = input.type === 'password';
-                input.type = isPwd ? 'text' : 'password';
-                this.innerHTML = isPwd ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-            });
-        });
 
     </script>
 </body>

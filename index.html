@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - 레지오 마리애 관리시스템</title>
     <link rel="stylesheet" href="styles.css?v=20260308_0345">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body class="login-body">
@@ -16,10 +17,15 @@
             <h1>레지오 마리애 관리시스템</h1>
             <form id="loginForm">
                 <div class="form-group">
-                    <input type="text" placeholder="아이디를 입력하세요" required>
+                    <input type="text" id="loginId" name="username" placeholder="아이디를 입력하세요" required
+                        style="width: 100%; padding: 14px; border: 1px solid #ccc; border-radius: 2px;">
                 </div>
-                <div class="form-group">
-                    <input type="password" placeholder="비밀번호를 입력하세요" required>
+                <div class="form-group" style="position: relative;">
+                    <input type="password" id="loginPassword" name="password" placeholder="비밀번호를 입력하세요" required
+                        style="width: 100%; padding: 14px; padding-right: 45px; border: 1px solid #ccc; border-radius: 2px;">
+                    <button type="button" class="pwd-toggle" data-target="loginPassword" onclick="togglePassword(this)">
+                        <i class="fas fa-eye-slash"></i>
+                    </button>
                 </div>
                 <button type="submit" class="login-btn">로그인</button>
                 <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
@@ -36,17 +42,17 @@
     </div>
     <script>
         // 시스템 종료 버튼 핸들러
-        document.getElementById('exitBtn')?.addEventListener('click', function () {
-            if (confirm('안전한 종료를 위해 브라우저 탭을 닫으시겠습니까?\n(확인을 누르시면 종료 안내가 표시됩니다.)')) {
+        document.getElementById('exitBtn')?.addEventListener('click', async function () {
+            if (await window.showGlobalConfirm('안전한 종료를 위해 브라우저 탭을 닫으시겠습니까?\n(확인을 누르시면 종료 안내가 표시됩니다.)', 'warning')) {
                 // 브라우저 보안 정책상 대부분의 경우 탭 수동 닫기가 필요함을 안내
-                alert('안전하게 종료되었습니다. 이제 브라우저 탭 또는 창을 닫아주세요. 이용해 주셔서 감사합니다!');
+                await window.showGlobalAlert('안전하게 종료되었습니다. 이제 브라우저 탭 또는 창을 닫아주세요. 이용해 주셔서 감사합니다!', 'info');
                 window.close(); // 시도는 해보지만 수동 닫기 안내가 더 중요
             }
         });
     </script>
-    <script src="script.js?v=20260308_0345"></script>
+    <script src="script.js?v=20260321_1245"></script>
     <script type="module">
-        import { loginUser, initAuthObserver } from "./auth.js?v=20260308_0345";
+        import { loginUser, initAuthObserver } from "./auth.js?v=20260321_1245";
 
         // Auto-redirect if already logged in
         initAuthObserver((user, profile) => {
@@ -57,11 +63,11 @@
 
         document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            const usernameInput = this.querySelector('input[type="text"]').value.trim();
-            const password = this.querySelector('input[type="password"]').value.trim();
+            const usernameInput = document.getElementById('loginId').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
 
             if (!usernameInput || !password) {
-                alert("아이디와 비밀번호를 모두 입력해주세요.");
+                await window.showGlobalAlert("아이디와 비밀번호를 모두 입력해주세요.", 'warning');
                 return;
             }
 
@@ -72,7 +78,7 @@
                 await loginUser(email, password);
                 window.location.href = "dashboard.html";
             } catch (error) {
-                alert(error.message || "로그인 실패: 아이디 또는 비밀번호를 확인해주세요.");
+                await window.showGlobalAlert(error.message || "로그인 실패: 아이디 또는 비밀번호를 확인해주세요.", 'error');
                 console.error(error);
             }
         });

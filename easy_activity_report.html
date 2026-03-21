@@ -691,7 +691,7 @@
                 <span class="nav-link">관리자</span>
                 <ul class="sub-menu">
                     <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
-                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="activity_register.html?v=22">활동항목 관리</a></li>
                     <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
                     <li><a href="member_management.html">회원가입정보 관리</a></li>
                 </ul>
@@ -811,7 +811,7 @@
     </div>
 
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260321_1530"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy, serverTimestamp } from "./firebase-config.js";
         import { initAuthObserver } from "./auth.js";
@@ -819,6 +819,7 @@
 
         let activitySchemaMap = {}; // 성당별 스키마 캐시
         let userPresetsMap = {}; // 사용자별 프리셋 캐시
+        let cachedAttendanceDocs = []; // [추가] 출석 기록 전체 데이터 캐시
 
         let currentUser = null;
         let currentPrAttendance = null; // Current week info
@@ -826,6 +827,12 @@
         let myPresets = []; // User's selected item names
         let tempInputData = {}; // [추가] 항목 설정 시 입력 데이터 임시 보관용
         let lastLoadId = 0; // [추가] Race Condition 방지용
+        
+        let churchVal = "", curiaVal = "", prVal = ""; // [전역] 표준화된 성당/쁘레/꾸리아 명칭
+        let targetName = "", uid = null; // [전역] 단원 정보
+        
+        // [공용] 명칭 표준화 함수: 공백을 1개로 통일하고 앞뒤 공백 제거
+        const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
 
         // --- 이미지 기반 고도화된 기본 데이터 세트 ---
         const DEFAULT_SCHEMA = [
@@ -921,12 +928,8 @@
 
         // --- Auth & Init ---
         initAuthObserver(async (user, profile) => {
-            // [ID 보정] 성격상 memberId가 있는 경우 이를 우선적으로 식별자로 사용합니다. (출석부/활동기록 규격)
+            // [V17.0] 표준화된 프로필 적용 (auth.js에서 이미 id = memberId 동기화 완료)
             currentUser = profile;
-            if (currentUser && currentUser.memberId) {
-                currentUser.originalId = currentUser.id; // 원본 ID 보관
-                currentUser.id = currentUser.memberId;
-            }
             
             // [추가] 성당/쁘레시디움 목록 데이터 로드 (Firestore 캐싱)
             await fetchPresidiaList();
@@ -1014,12 +1017,26 @@
             selDate.onchange = async () => {
                 const opt = selDate.options[selDate.selectedIndex];
                 if (opt) {
-                    currentPrAttendance = {
-                        date: opt.value,
-                        session: opt.dataset.session
-                    };
+                    const selectedDate = opt.value;
+                    const selectedPr = normalizeName(selPr.value);
+                    
+                    // [개선] 캐싱된 전체 출석 문서를 찾아서 currentPrAttendance에 할당 (표준화된 명칭으로 비교)
+                    const matchedDoc = cachedAttendanceDocs.find(d => 
+                        d.date === selectedDate && 
+                        normalizeName(d.presidiumName) === selectedPr
+                    );
+                    
+                    if (matchedDoc) {
+                        currentPrAttendance = matchedDoc;
+                    } else {
+                        // 만약 캐시에서 못 찾으면 (이론상 발생 희박) 기본 정보라도 생성
+                        currentPrAttendance = {
+                            date: selectedDate,
+                            session: opt.dataset.session
+                        };
+                    }
                 }
-                // Refresh member list based on the newly selected date
+                // Refresh member list based on the newly selected date (Now with attendance data)
                 await syncMembers(selPr.value);
             };
 
@@ -1166,6 +1183,9 @@
                     }
                 });
 
+                // [추가] 전체 문서를 캐시에 저장 (attendanceData 포함)
+                cachedAttendanceDocs = myAttendance;
+
                 // 메모리에서 날짜 내림차순 정렬
                 myAttendance.sort((a, b) => b.date.localeCompare(a.date));
 
@@ -1234,29 +1254,51 @@
                     let html = '<option value="">-- 단원 선택 --</option>';
                     // [UI 단순화] 간부/단원 그룹 제목(optgroup)을 제거하고 한 줄로 구성합니다.
                     if (officers.length > 0) {
-                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId}">${m.name} (${m.baptismalName})</option>`).join('');
+                        html += officers.map(m => `<option value="${m.name}" data-uid="${m.memberId}" data-baptism="${m.baptismalName || ''}">${m.name} (${m.baptismalName || ''})</option>`).join('');
                     }
                     if (members.length > 0) {
-                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}">${m.name} (${m.baptismalName})</option>`).join('');
+                        html += members.map(m => `<option value="${m.name}" data-uid="${m.id}" data-baptism="${m.baptismalName || ''}">${m.name} (${m.baptismalName || ''})</option>`).join('');
                     }
                     selMemberObj.innerHTML = html;
 
-                    // 본인 선택 및 선택 유지 로직
-                    const myId = currentUser.id;
+                    // [보강] 본인 선택 및 선택 유지 로직 (UID 및 이름 매칭 강화)
+                    const myId = String(currentUser.id || '');
+                    const myName = (currentUser.name || '').trim();
                     let targetIndex = 0;
+
                     for (let i = 1; i < selMemberObj.options.length; i++) {
                         const opt = selMemberObj.options[i];
-                        if (opt.dataset.uid === currentSelectedUid) {
+                        const optUid = String(opt.dataset.uid || '');
+                        const optName = (opt.value || '').trim();
+
+                        // 1순위: 이전 선택 유지 (UID 기준)
+                        if (currentSelectedUid && optUid === String(currentSelectedUid)) {
                             targetIndex = i;
                             break;
                         }
-                        if (targetIndex === 0 && myId && opt.dataset.uid === myId) {
+                        // 2순위: 내 ID(UID/MemberId)와 일치
+                        if (targetIndex === 0 && myId && optUid === myId) {
+                            targetIndex = i;
+                        }
+                        // 3순위: 이름으로 매칭 (성격상 ID가 상이하거나 누락된 경우를 위해 이름으로 한 번 더 확인)
+                        if (targetIndex === 0 && myName && optName === myName) {
                             targetIndex = i;
                         }
                     }
+                    
+                    if (targetIndex > 0) {
+                        console.log(`[EasyReport] Auto-selected Member Index: ${targetIndex} (Name: ${selMemberObj.options[targetIndex].value})`);
+                    } else {
+                        console.log(`[EasyReport] Auto-select failed for Member: ${myName} (ID: ${myId})`);
+                    }
                     selMemberObj.selectedIndex = targetIndex;
                     
-                    await loadExistingData();
+                    // [개선] 본인이 자동 선택되었거나 선택이 유지된 경우, 해당 단원의 프리셋(항목 설정)과 기존 데이터를 즉시 로드하여 화면을 갱신합니다.
+                    if (targetIndex > 0) {
+                        await selMemberObj.onchange();
+                    } else {
+                        await loadExistingData();
+                    }
                 } else {
                     selMember.innerHTML = `<option value="">-- 단원 없음 --</option>`;
                 }
@@ -1362,7 +1404,7 @@
             const empty = document.getElementById('emptyState');
             grid.innerHTML = '';
 
-            if (myPresets.length === 0) {
+            if (!myPresets || myPresets.length === 0) {
                 if (!activitySchema || activitySchema.length === 0) {
                     console.error("[EasyReport] No activity schema available. Cannot render form.");
                     grid.innerHTML = '<div style="color:red; padding:20px; text-align:center;">활동 항목(스키마)이 등록되지 않았습니다.<br>성당 관리자가 [활동 항목 관리]에서 먼저 설정해야 합니다.</div>';
@@ -1427,6 +1469,9 @@
                 return;
             }
 
+            const sessStr = String(currentPrAttendance.session || '');
+            const sessNum = parseInt(sessStr) || 0;
+
             const canManageOthers = window.canManageOthers;
             const isAdmin = window.isAdmin;
 
@@ -1450,8 +1495,9 @@
                     prVal = (currentUser.presidiumName || '').replace(/\s+/g, ' ');
                 }
             } else {
-                targetName = currentUser.memberName;
-                uid = currentUser.id;
+                targetName = currentUser.memberName || currentUser.name || '';
+                // [FIX] 단원 명부 ID(memberId)를 최우선으로 사용하여 출석/활동 데이터 매칭
+                uid = currentUser.memberId || currentUser.id;
                 // [공백 정규화] 중복 공백으로 인한 매칭 실패 방지
                 churchVal = currentUser.churchName.replace(/\s+/g, ' ');
                 curiaVal = currentUser.curiaName.replace(/\s+/g, ' ');
@@ -1473,43 +1519,19 @@
 
             if (currentLoadId !== lastLoadId) return;
 
-            // --- 1. 출석 여부 화면단 사전 검증 (타입 혼용 및 정규화 대응) ---
+            // --- 1. 출석 여부 화면단 사전 검증 (캐싱된 데이터를 즉시 참조하여 오류 차단) ---
             let isAttended = false;
-            let sessNum = 0;
-            let sessStr = "";
+            
+            if (currentPrAttendance && currentPrAttendance.attendanceData) {
+                const data = uid ? currentPrAttendance.attendanceData[uid] : null;
+                console.log(`[Attendance] Fast Check for UID(${uid}):`, data);
 
-            try {
-                sessNum = parseInt(currentPrAttendance.session);
-                sessStr = currentPrAttendance.session.toString();
-                
-                const targetChurch = churchVal.trim();
-                const targetPr = prVal.trim();
-                
-                console.log(`[Attendance] Querying for -> Church: ${targetChurch}, Pr: ${targetPr}, Session: ${sessStr}`);
-
-                // [정예화] 오직 신규 표준 필드로만 정확히 1개 문서 조회
-                const qAtt = query(collection(db, 'attendance_list'),
-                    where('churchName', '==', targetChurch),
-                    where('presidiumName', '==', targetPr),
-                    where('session', 'in', [sessStr, sessNum])
-                );
-
-                const snapAtt = await getDocs(qAtt);
-                if (!snapAtt.empty) {
-                    const attRecord = snapAtt.docs[0].data();
-                    const data = uid ? attRecord.attendanceData[uid] : null;
-                    
-                    console.log(`[Attendance] Clean Load Success for UID(${uid}):`, data);
-
-                    if (data) {
-                        const status = (typeof data === 'object') ? data.status : data;
-                        if (status === 'P' || status === 'L') isAttended = true;
-                    }
-                } else {
-                    console.warn(`[Attendance] No standardized record found for ${targetPr} session ${sessStr}`);
+                if (data) {
+                    const status = (typeof data === 'object') ? data.status : data;
+                    if (status === 'P' || status === 'L') isAttended = true;
                 }
-            } catch (error) {
-                console.error("Error check attendance sync:", error);
+            } else {
+                console.warn(`[Attendance] No cached attendance data found for the current session.`);
             }
 
             if (currentLoadId !== lastLoadId) return;

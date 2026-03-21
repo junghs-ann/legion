@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gwanpyeong-dong Schema Check</title>
+</head>
+<body>
+    <pre id="output">Checking...</pre>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA64eMVDXBQ80UHIVU58gueRukmwjQDZ5g",
+            authDomain: "legion-f319a.firebaseapp.com",
+            projectId: "legion-f319a",
+            storageBucket: "legion-f319a.firebasestorage.app",
+            messagingSenderId: "852854704608",
+            appId: "1:852854704608:web:f9fbb0962bdcea3c538385"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const out = document.getElementById('output');
+
+        async function check() {
+            try {
+                let found = false;
+                let resultText = "--- Gwanpyeong-dong Schema Search ---\n";
+                const snap = await getDocs(collection(db, "activity_schemas"));
+                
+                snap.forEach(doc => {
+                    if (doc.id.replace(/\s/g, '').includes("관평동")) {
+                        found = true;
+                        resultText += `Doc ID: [${doc.id}]\n`;
+                        const cats = doc.data().categories;
+                        cats.forEach(cat => {
+                            if (cat.title.includes("본당 사목자 지시 사항")) {
+                                resultText += `  Category: ${cat.title}\n`;
+                                cat.items.forEach(item => {
+                                    resultText += `    - ${item.name} (${item.unit})\n`;
+                                });
+                            }
+                        });
+                    }
+                });
+
+                if (!found) resultText += "No matching documents found.";
+                out.textContent = resultText;
+            } catch (e) {
+                out.textContent = "Error: " + e.message;
+            }
+        }
+        check();
+    </script>
+</body>
+</html>

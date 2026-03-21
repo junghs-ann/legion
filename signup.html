@@ -410,8 +410,17 @@
         // --- 3.1 Handle Presidium Selection (Fetch Members & Officers) ---
         presidiumSelect.addEventListener('change', async function () {
             const prName = this.options[this.selectedIndex]?.text;
+            const submitBtn = document.querySelector('button[type="submit"]');
+            
             resetMemberSelect();
             if (!prName || prName === '쁘레지디움(Pr.) 선택') return;
+
+            // [추가] 명부 로딩 동안 가입 버튼 비활성화 (Race Condition 방지)
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.textContent = '단원 목록 불러오는 중...';
+            }
 
             try {
                 console.log(`🔍 [${prName}] 단원 및 간부 목록 조회 시작...`);
@@ -482,10 +491,20 @@
                     memberSelect.appendChild(option);
                 });
                 memberSelect.disabled = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.textContent = '가입하기';
+                }
                 console.log(`✅ 통합 단원 목록 로드 완료: ${finalMembers.length}명`);
             } catch (error) {
                 console.error("단원 목록 로드 중 오류 발생:", error);
                 memberSelect.innerHTML = '<option value="">단원 로드 오류</option>';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.textContent = '가입하기';
+                }
             }
         });
 
@@ -827,12 +846,15 @@
             return !pixelBuffer.some(color => color !== 0);
         }
 
+        // [공용] 명칭 표준화 함수: 공백을 1개로 통일하고 앞뒤 공백 제거
+        const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
+
         // --- 4. Handle Form Submission ---
         signupForm.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const church = churchSelect.value;
-            const curia = curiaSelect.value;
+            const church = normalizeName(churchSelect.value);
+            const curia = normalizeName(curiaSelect.value);
             const presidiumId = presidiumSelect.value;
             const name = document.getElementById('name').value;
             const baptismalName = document.getElementById('baptismal-name').value;
@@ -881,19 +903,25 @@
                 gender,
                 username: username.trim(),
                 role,
-                churchName: church.trim(),
-                curiaName: curia.trim(),
+                churchName: normalizeName(church),
+                curiaName: normalizeName(curia),
                 presidiumId,
-                presidiumName: presidiumName.trim(),
+                presidiumName: normalizeName(presidiumName),
                 memberId: document.getElementById('member-select').value, // [추가] 단원 고유 ID 저장 (동명이인 방지용)
                 password, // [추가] 관리자 조회를 위해 비밀번호 저장
                 signature: finalSignature // 서명 이미지 보관
             };
 
-            // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
-            if (userData.role !== 'admin' && (!userData.churchName || !userData.curiaName || !userData.presidiumName)) {
-                await window.showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 가입이 차단됩니다.');
-                return;
+            // [🚨 철벽 검증] 조직 정보 및 단원 식별 정보 필수 체크 (v17.0)
+            if (userData.role !== 'admin') {
+                if (!userData.churchName || !userData.curiaName || !userData.presidiumName) {
+                    await window.showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 가입이 차단됩니다.');
+                    return;
+                }
+                if (!userData.name || !userData.memberId) {
+                    await window.showGlobalAlert('⚠️ 본인의 이름을 명부에서 선택해야 가입이 가능합니다.\n이름 목록이 나타나지 않는다면 쁘레시디움 선택을 다시 확인해 주세요.');
+                    return;
+                }
             }
 
             console.log("Attempting Signup with:", userData);

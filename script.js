@@ -560,3 +560,18 @@ window.initCommonMenus = (profile, logoutUser) => {
         console.log("Common menus initialized (vFinal with Global Handler).");
     }, 50);
 };
+
+// === Password Toggle Logic ===
+window.togglePassword = function(btn) {
+    const targetId = btn.getAttribute('data-target');
+    const input = document.getElementById(targetId);
+    if (!input) return;
+
+    const isPwd = input.type === 'password';
+    input.type = isPwd ? 'text' : 'password';
+    
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPwd ? 'fas fa-eye' : 'fas fa-eye-slash';
+    }
+};
