@@ -150,19 +150,32 @@
             background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 12px 40px;
-            border-radius: 4px;
-            font-size: 1.1rem;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            min-width: 100px;
         }
 
         .btn-submit:hover {
             background-color: var(--hover-color);
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-submit:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .btn-close {
@@ -223,12 +236,30 @@
         }
 
         .member-list-box {
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            height: 200px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            height: 280px;
             overflow-y: auto;
-            padding: 10px;
+            padding: 5px;
             background: #fff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f5f5f5;
+            transition: all 0.2s;
+        }
+
+        .member-item:last-child {
+            border-bottom: none;
+        }
+
+        .member-item:hover {
+            background: #fdfaf0;
         }
 
         .member-item {
@@ -249,8 +280,9 @@
 
         #attendanceStats {
             font-size: 0.9rem;
-            color: #666;
+            color: var(--primary-color);
             margin-top: 10px;
+            font-weight: 600;
         }
 
         /* 테이블 스타일 */
@@ -300,6 +332,14 @@
 
             #attendanceStats {
                 font-size: 0.8rem;
+            }
+
+            .attendee-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .member-list-box {
+                height: 220px;
             }
 
             .member-item label {
@@ -544,27 +584,36 @@
                         </div>
                         <div class="form-group">
                             <label>인원 정보</label>
-                            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                <div style="flex:1;">
-                                    <label style="font-size:0.8rem;">총인원</label>
-                                    <input type="number" name="totalCount" id="totalCount" readonly>
-                                </div>
-                                <div style="flex:1;">
-                                    <label style="font-size:0.8rem;">참석인원</label>
-                                    <input type="number" name="attendanceCount" id="attendanceCount" readonly>
-                                </div>
+                            <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                                        <td style="padding: 8px 0; color: #666; font-weight: 500;">행동단원</td>
+                                        <td id="memberStatsText" style="padding: 8px 0; text-align: right; color: var(--primary-color); font-weight: 700; font-size: 1rem;">0 / 0</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                                        <td style="padding: 8px 0; color: #666; font-weight: 500;">협조단원</td>
+                                        <td id="auxStatsText" style="padding: 8px 0; text-align: right; color: var(--secondary-color); font-weight: 700; font-size: 1rem;">0 / 0</td>
+                                    </tr>
+                                    <tr style="background: #fdfaf0; border-radius: 4px;">
+                                        <td style="padding: 10px 5px; color: #333; font-weight: 700;">총 합계</td>
+                                        <td id="totalStatsText" style="padding: 10px 5px; text-align: right; color: #000; font-weight: 800; font-size: 1.1rem;">0 / 0</td>
+                                    </tr>
+                                </table>
+                                <!-- 기존 호환성을 위한 숨겨진 필드 -->
+                                <input type="hidden" name="totalCount" id="totalCount">
+                                <input type="hidden" name="attendanceCount" id="attendanceCount">
                             </div>
-                            <label style="font-size:0.8rem;">참석자 명단</label>
-                            <textarea id="attendeeNames" readonly rows="4" style="font-size:0.85rem;"></textarea>
+                            <label style="font-size:0.8rem; margin-top: 15px; display: block; color: #555; font-weight: 600;">참석자 명단</label>
+                            <textarea id="attendeeNames" readonly rows="5" style="width: 100%; font-size:0.85rem; line-height: 1.6; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa; color: #333; resize: none; word-break: keep-all; box-sizing: border-box;"></textarea>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="submit" class="btn-submit">저 장</button>
+                    <button type="submit" class="btn-submit" id="btnSubmit"><i class="fas fa-save"></i> 저 장</button>
                     <button type="button" class="btn-submit" id="btnDelete"
-                        style="background-color: #f44336; display:none;">삭 제</button>
-                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'">닫
+                        style="background-color: #f44336; opacity: 0.5; pointer-events: none;"><i class="fas fa-trash-alt"></i> 삭 제</button>
+                    <button type="button" class="btn-submit btn-close" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i> 닫
                         기</button>
                 </div>
             </form>
@@ -626,7 +675,9 @@
             await loadBaseData();
             setupPermissions();
             setupEventListeners();
-            await renderEventList();
+            // Non-admin setupPermissions already calls renderEventList, 
+            // so we don't call it here to avoid duplication. 
+            // Admin will trigger it when selecting organization.
         }, () => {
             location.href = 'index.html';
         });
@@ -665,6 +716,7 @@
                 presidiumInput.disabled = true;
 
                 loadMemberList();
+                renderEventList();
             }
         }
 
@@ -884,25 +936,26 @@
             // 편집 모드 해제
             form.removeAttribute('data-edit-id');
 
-            // 하위 상세 데이터만 초기화 (소속, 구분, 종류, 행사명은 유지)
+            // 폼 필드 초기화
+            if (form.category) form.category.value = '';
+            if (form.type) form.type.value = '';
+            document.getElementById('eventNameHidden').value = '';
+            document.getElementById('eventNameSelect').value = '';
+            document.getElementById('eventNameInput').value = '';
             document.getElementById('organizer').value = '';
             document.getElementById('venue').value = '';
-
-            // 인원 정보 초기화
-            document.getElementById('totalCount').value = '';
-            document.getElementById('attendanceCount').value = '';
             document.getElementById('attendeeNames').value = '';
-
-            // 삭제 버튼 숨김
-            document.getElementById('btnDelete').style.display = 'none';
+            document.getElementById('totalCount').value = '0';
+            document.getElementById('attendanceCount').value = '0';
 
             // 참석자 체크박스 해제
             const checkboxes = memberListBox.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = false);
 
-            // 일자는 초기화하지 않도록 변경 (일자를 유지해야 단원 명부를 볼 수 있음)
-            // document.getElementById('eventDate').value = '';
+            // 삭제 버튼 숨김
+            document.getElementById('btnDelete').style.display = 'none';
         }
+
 
         async function resetEventForm() {
             form.removeAttribute('data-edit-id');
@@ -983,65 +1036,112 @@
             }
 
             try {
-                // [정석화] 오직 표준 필드명으로만 쿼리
-                const qMembers = query(collection(db, 'members_list'),
-                    where('churchName', '==', church),
-                    where('curiaName', '==', curia),
-                    where('presidiumName', '==', presidium)
-                );
+                // [정석화] 오직 표준 필드명으로만 쿼리 (단원 + 협조단원 둘 다 가져옴)
+                const [memSnap, auxSnap] = await Promise.all([
+                    getDocs(query(collection(db, 'members_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia),
+                        where('presidiumName', '==', presidium))),
+                    getDocs(query(collection(db, 'auxiliary_members_list'),
+                        where('churchName', '==', church),
+                        where('curiaName', '==', curia),
+                        where('presidiumName', '==', presidium)))
+                ]);
 
-                const snap = await getDocs(qMembers);
-                membersList = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                const standardMembers = memSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isAux: false }));
+                const extraMembers = auxSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isAux: true }));
+
+                membersList = [...standardMembers, ...extraMembers];
             } catch (error) {
                 console.error("Error fetching members for event:", error);
                 membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
             }
 
             const filteredMembers = membersList.filter(m => {
-                // (1) 입단/전입일이 행사일보다 '이전'인 경우
-                const isJoinedBefore = !eventDate || !m.probationaryDate || m.probationaryDate <= eventDate;
+                if (!eventDate) return true;
 
-                // (2) 퇴단/전출일이 없거나, 퇴단일이 행사일보다 '이후'인 경우
-                const isActiveDuringEvent = !eventDate || !m.leaveDate || m.leaveDate.trim() === '' || m.leaveDate > eventDate;
+                // [🚨 필터 강화] 퇴단, 전출 단원이 아닌 단원만 필터링
+                const isLeft = m.status === '퇴단' || m.status === '전출';
 
-                // (3) 상태 필터 (행사일이 없는 경우 기본적으로 활동/수련 단원 표시)
-                if (!eventDate) {
-                    return (m.status === '활동' || m.status === '수련');
+                if (m.isAux) {
+                    const isJoined = !m.admissionDate || m.admissionDate <= eventDate;
+                    const isActive = !isLeft && (!m.withdrawalDate || m.withdrawalDate.trim() === '' || m.withdrawalDate > eventDate);
+                    return isJoined && isActive;
+                } else {
+                    const isJoinedBefore = !m.probationaryDate || m.probationaryDate <= eventDate;
+                    const isActiveDuringEvent = !isLeft && (!m.leaveDate || m.leaveDate.trim() === '' || m.leaveDate > eventDate);
+                    return isJoinedBefore && isActiveDuringEvent;
                 }
+            });
 
-                return isJoinedBefore && isActiveDuringEvent;
+            // [🚨 정렬 강화] 이름순 정렬 (단원 우선, 협조단원 나중)
+            filteredMembers.sort((a, b) => {
+                if (a.isAux !== b.isAux) return a.isAux ? 1 : -1;
+                return a.name.localeCompare(b.name);
             });
 
             memberListBox.innerHTML = '';
             filteredMembers.forEach(m => {
+                const baptismal = m.baptismalName ? `(${m.baptismalName})` : '';
+                const fullDisplayName = m.isAux ? `(협조) ${m.name}${baptismal}` : `${m.name}${baptismal}`;
+                
                 const div = document.createElement('div');
                 div.className = 'member-item';
+                div.style = "padding: 10px 12px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; cursor: pointer; display: flex; align-items: center;";
+                
                 div.innerHTML = `
-                    <label>
-                        <input type="checkbox" name="attendee" value="${m.name}" data-uid="${m.id}" style="margin: 0; flex-shrink: 0;">
-                        <div style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1;">
-                            <span style="font-weight: 700; font-size: 1rem; color: #333; line-height: 1.2;">${m.name}</span>
-                            <span class="baptismal-name" style="font-size: 0.8rem; color: #888; font-weight: normal; text-align: left;">(${m.baptismalName || '-'})</span>
-                        </div>
-                    </label>`;
-                div.querySelector('input').addEventListener('change', updateCount);
+                    <input type="checkbox" name="attendee" value="${fullDisplayName}" data-name="${m.name}" data-uid="${m.id || m.UID}" data-is-aux="${m.isAux}" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
+                    <span style="font-weight: 600; font-size: 1.05rem; color: #333; flex-grow: 1;">${fullDisplayName}</span>
+                `;
+                
+                const checkbox = div.querySelector('input');
+                checkbox.addEventListener('change', () => {
+                    div.style.background = checkbox.checked ? "#fff9e6" : "transparent";
+                    updateCount();
+                });
+
+                div.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                });
+                
                 memberListBox.appendChild(div);
             });
 
-            totalCount.value = filteredMembers.length;
+            // 통계 필드 업데이트
             updateCount();
         }
 
         function updateCount() {
-            const checked = Array.from(memberListBox.querySelectorAll('input[name="attendee"]:checked'));
-            attendanceCount.value = checked.length;
+            const allItems = Array.from(memberListBox.querySelectorAll('.member-item'));
+            const checkedItems = Array.from(memberListBox.querySelectorAll('input[name="attendee"]:checked'));
+            
+            // 단원 vs 협조단원 집계
+            const totalMembers = allItems.filter(div => div.querySelector('input').dataset.isAux === 'false').length;
+            const totalAux = allItems.filter(div => div.querySelector('input').dataset.isAux === 'true').length;
+            
+            const attendedMembers = checkedItems.filter(i => i.dataset.isAux === 'false').length;
+            const attendedAux = checkedItems.filter(i => i.dataset.isAux === 'true').length;
 
-            // 2명씩 묶어서 줄바꿈 처리
+            // UI 업데이트
+            document.getElementById('memberStatsText').textContent = `${attendedMembers} / ${totalMembers}`;
+            document.getElementById('auxStatsText').textContent = `${attendedAux} / ${totalAux}`;
+            document.getElementById('totalStatsText').textContent = `${attendedMembers + attendedAux} / ${totalMembers + totalAux}`;
+            
+            // 숨겨진 필드 동기화 (기존 저장 로직 유지)
+            totalCount.value = totalMembers + totalAux;
+            attendanceCount.value = attendedMembers + attendedAux;
+
+            // 참석자 명단 포맷팅 (가독성 개선: 3명씩 묶고 명확한 구분자 사용)
             let formattedNames = [];
-            const names = checked.map(i => i.value);
-            for (let i = 0; i < names.length; i += 2) {
-                formattedNames.push(names.slice(i, i + 2).join(', '));
+            const names = checkedItems.map(i => i.value); // 이제 i.value에 '이름(세례명)'이 들어있음
+            const itemsPerRow = 3;
+            for (let i = 0; i < names.length; i += itemsPerRow) {
+                formattedNames.push(names.slice(i, i + itemsPerRow).join(', '));
             }
+            // 마지막 쉼표 제거 및 보기 좋게 조인
             attendeeNames.value = formattedNames.join(',\n');
         }
 
@@ -1100,9 +1200,9 @@
             // [개선] 날짜 정보를 가장 먼저 설정하여 이후 트리거되는 단원 목록 필터링 시 활용되도록 함
             document.getElementById('eventDate').value = event.eventDate;
 
-            churchNameVal = event.churchName || '';
-            curiaNameVal = event.curiaName || '';
-            prNameVal = event.presidiumName || '';
+            const churchNameVal = event.churchName || '';
+            const curiaNameVal = event.curiaName || '';
+            const prNameVal = event.presidiumName || '';
 
             // 조직 정보 설정 및 단계적 트리거
             churchSelect.value = churchNameVal;
@@ -1157,7 +1257,9 @@
             const deleteBtn = document.getElementById('btnDelete');
 
             if (isAdmin || isOfficer) {
-                deleteBtn.style.display = 'block';
+                deleteBtn.style.display = 'inline-block';
+                deleteBtn.style.opacity = '1';
+                deleteBtn.style.pointerEvents = 'auto';
             } else {
                 deleteBtn.style.display = 'none';
             }
@@ -1166,10 +1268,15 @@
             form.venue.value = event.venue || '';
 
             // 참석자 체크 상태 복원
-            const checkboxes = memberListBox.querySelectorAll('input[type="checkbox"]');
+            const checkboxes = Array.from(memberListBox.querySelectorAll('input[type="checkbox"]'));
             if (checkboxes.length > 0) {
                 checkboxes.forEach(cb => {
-                    cb.checked = event.attendees && event.attendees.some(a => a.uid === cb.dataset.uid);
+                    const isAttending = event.attendees && event.attendees.some(a => (a.uid === cb.dataset.uid) || (a.UID === cb.dataset.uid));
+                    cb.checked = isAttending;
+                    
+                    // 체크박스 부모 div 배경색 업데이트
+                    const itemDiv = cb.closest('.member-item');
+                    if (itemDiv) itemDiv.style.background = isAttending ? "#fff9e6" : "transparent";
                 });
                 updateCount();
             }
@@ -1181,7 +1288,8 @@
             e.preventDefault();
             const editId = form.getAttribute('data-edit-id');
             const attendees = Array.from(memberListBox.querySelectorAll('input[name="attendee"]:checked')).map(i => ({
-                name: i.value,
+                name: i.dataset.name, // 순수 이름만 저장
+                displayName: i.value, // 표시용 이름(세례명 포함) 저장
                 uid: i.dataset.uid
             }));
 
@@ -1222,6 +1330,10 @@
                 }
             }
 
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+
             try {
                 const docId = editId || Date.now().toString();
                 await setDoc(doc(db, 'events_list', docId), eventData);
@@ -1234,6 +1346,9 @@
             } catch (error) {
                 console.error("Error saving event:", error);
                 await showGlobalAlert('저장 중 오류가 발생했습니다.');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fas fa-save"></i> 저 장';
             }
         }
     </script>
