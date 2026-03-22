@@ -683,17 +683,21 @@
 
                 const yearTransactions = qSnapT.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
-                // Sort by Date (Month, Day) and Category (Deposit first)
+                // [Fix] Sort by Session (Priority 1) and Category (Deposit first)
                 yearTransactions.sort((a, b) => {
-                    if (parseInt(a.month) !== parseInt(b.month)) return parseInt(a.month) - parseInt(a.month);
-                    if (parseInt(a.day) !== parseInt(b.day)) return parseInt(a.day) - parseInt(b.day);
+                    const sessA = parseInt(a.session) || 0;
+                    const sessB = parseInt(b.session) || 0;
                     
-                    // [New] If same day, deposit first to avoid negative balance display
+                    if (sessA !== sessB) return sessA - sessB;
+                    
+                    // [Fix] Secondary sort: Deposit first (-1) to maintain correct running balance
                     if (a.type !== b.type) {
                         return a.type === 'deposit' ? -1 : 1; 
                     }
                     
-                    return parseInt(a.session) - parseInt(b.session);
+                    // Same session/type: fallback to date (Month/Day)
+                    if (parseInt(a.month) !== parseInt(b.month)) return parseInt(a.month) - parseInt(b.month);
+                    return (parseInt(a.day) || 0) - (parseInt(b.day) || 0);
                 });
 
                 // Date filtering logic

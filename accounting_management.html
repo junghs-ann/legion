@@ -470,8 +470,9 @@
                     'secretary', '서기'
                 ];
                 if (!allowedRoles.includes(profile.role)) {
-                    alert("접근 권한이 없습니다.");
-                    window.location.href = 'dashboard.html';
+                    window.showGlobalAlert("접근 권한이 없습니다.").then(() => {
+                        window.location.href = 'dashboard.html';
+                    });
                     return;
                 }
 

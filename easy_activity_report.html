@@ -1861,7 +1861,8 @@
                     prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
                 }
             } else {
-                targetName = currentUser.memberName;
+                // [ID 기반] 성함 필드(memberName)가 없더라도 고유 ID(uid)가 있으면 저장이 가능하도록 처리
+                targetName = currentUser.memberName || currentUser.name || "";
                 uid = currentUser.id;
                 // [공백 정규화] 중복 공백으로 인한 매칭 실패 방지
                 churchVal = document.getElementById('selChurch').value.replace(/\s+/g, ' ');
@@ -1869,8 +1870,8 @@
                 prVal = document.getElementById('selPr').value.replace(/\s+/g, ' ');
             }
 
-            if (!targetName || !prVal || !uid) {
-                await showGlobalAlert('단원 정보(계정)가 올바르지 않거나 선택되지 않았습니다. 다시 선택해 주세요.');
+            if (!prVal || !uid) {
+                await showGlobalAlert('단원 정보(계정) 또는 소속 정보가 올바르지 않습니다. 다시 확인해 주세요.');
                 return;
             }
 

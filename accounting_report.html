@@ -429,8 +429,9 @@
             const isAdminRole = role === 'admin' || role === '관리자';
 
             if (!allowedRoles.includes(role)) {
-                alert("접근 권한이 없습니다. (관리자 및 간부 전용)");
-                window.location.href = 'dashboard.html';
+                window.showGlobalAlert("접근 권한이 없습니다. (관리자 및 간부 전용)").then(() => {
+                    window.location.href = 'dashboard.html';
+                });
                 return;
             }
 
@@ -647,11 +648,19 @@
 
                 const orgTrans = qSnap.docs.map(docSnap => docSnap.data());
 
+                // [Fix] Sort by Session (Priority 1) and Type (Deposit first) for consistency
                 orgTrans.sort((a, b) => {
+                    const sessA = parseInt(a.session) || 0;
+                    const sessB = parseInt(b.session) || 0;
+                    if (sessA !== sessB) return sessA - sessB;
+                    
+                    if (a.type !== b.type) {
+                        return a.type === 'deposit' ? -1 : 1; 
+                    }
+                    
                     const dateA = new Date(parseInt(a.year), parseInt(a.month) - 1, parseInt(a.day));
                     const dateB = new Date(parseInt(b.year), parseInt(b.month) - 1, parseInt(b.day));
-                    if (dateA - dateB !== 0) return dateA - dateB;
-                    return (parseInt(a.session) || 0) - (parseInt(b.session) || 0);
+                    return dateA - dateB;
                 });
 
                 // Date Range

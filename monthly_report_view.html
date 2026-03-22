@@ -1682,16 +1682,26 @@
                     try {
                         // [개선] 이름 대신 고유 ID(UID)로 직접 조회하여 동명이인 문제 원천 차단
                         let matchedProfile = null;
-                        if (officialPresidentId) {
-                            const pSnap = await getDoc(doc(db, 'users', officialPresidentId));
-                            if (pSnap.exists()) matchedProfile = pSnap.data();
+                        // 1. 최우선: 보고서 작성(결재) 당시 기록된 실제 서명자의 UID로 조회
+                        if (data.signerUid) {
+                            const pSnap = await getDoc(doc(db, 'users', data.signerUid));
+                            if (pSnap.exists()) {
+                                matchedProfile = pSnap.data();
+                            }
                         }
                         
-                        // ID로 못 찾은 경우에만 이름 기반 검색 (보안/정확도는 낮음, 하지만 명시적 Fallback은 제거 대상으로 고려)
+                        // 2. 차선책: signerUid가 누락된 구형 데이터의 경우, 현재 단장의 'memberId'로 users 컬렉션 검색
+                        if (!matchedProfile && officialPresidentId) {
+                            const pQuery = query(collection(db, 'users'), where('memberId', '==', officialPresidentId));
+                            const pSnap = await getDocs(pQuery);
+                            if (!pSnap.empty) {
+                                matchedProfile = pSnap.docs[0].data();
+                            }
+                        }
+                        
+                        // [V18.0] 엄격한 ID 기반 연결 의무화에 따라 이름 기반 Fallback 로직 일괄 삭제
                         if (!matchedProfile) {
-                            const targetName = officialPresidentName || data.signer;
-                            const profileSnap = await getDocs(query(collection(db, 'users'), where('name', '==', targetName)));
-                            matchedProfile = profileSnap.docs.map(d => d.data()).find(p => isOrgMatch(p.churchName, p.presidiumName));
+                            console.warn("Signature fetch failed: No matching profile found by ID.");
                         }
 
                         if (matchedProfile) {
