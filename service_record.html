@@ -554,7 +554,7 @@
                         div.innerHTML = `
                             ${m.name} (${m.baptismalName || '-'})
                             <span class="sub-text" style="color: #666; font-size: 0.8rem;">
-                                ${m.statusText} | ${m.probationaryDate || '-'}
+                                ${m.statusText} | ${m.displayDate || '-'}
                             </span>
                         `;
                         div.onclick = () => {
@@ -660,18 +660,24 @@
                         return (b.probationaryDate || "").localeCompare(a.probationaryDate || "");
                     });
 
-                    currentMembers = sorted.map(m => ({
-                        ...m,
-                        statusText: !(m.retiredDate || m.leaveDate || m.retired_date || m.status === '퇴단') ? '활동' : '퇴단'
-                    }));
+                    currentMembers = sorted.map(m => {
+                        const isActive = !(m.retiredDate || m.leaveDate || m.retired_date || m.status === '퇴단');
+                        // 활동 중이면 입단일, 퇴단 상태면 퇴단일 중 있는 값을 가져옴
+                        const displayDate = isActive ? (m.probationaryDate || '-') : (m.retiredDate || m.leaveDate || m.retired_date || '-');
+                        return {
+                            ...m,
+                            statusText: isActive ? '활동' : '퇴단',
+                            displayDate: displayDate
+                        };
+                    });
 
                     memberFilter.value = '';
                     memberSearch.value = '';
                     renderMemberDropdown('');
 
-                    // 본인 자동 선택 로직 (관리자나 간부가 아닌 경우)
-                    const isOfficer = ['단장', '부단장', '서기', '회계'].includes(stdRole);
-                    if (!isAdmin && !isOfficer) {
+                    // 본인 자동 선택 로직 (관리자나 단장/부단장이 아닌 경우)
+                    const isPresidentOrVP = ['단장', '부단장'].includes(stdRole);
+                    if (!isAdmin && !isPresidentOrVP) {
                         const myId = profile.id || profile.uid;
                         const me = currentMembers.find(m => (m.id || m.uid) === myId);
                         if (me) {
