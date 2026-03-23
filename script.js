@@ -373,21 +373,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Intercept menu clicks to check for unsaved data
     const handleNavigation = async (e) => {
+        const targetUrl = e.currentTarget.href;
+        if (!targetUrl || targetUrl === '#' || targetUrl.includes('javascript:void(0)')) return;
+
         if (window.isDirty) {
             e.preventDefault();
-            const targetUrl = e.currentTarget.href;
             await window.safeNavigate(targetUrl);
-            return false;
         }
     };
 
     // Attach to all navigation links
     document.querySelectorAll('.nav-menu a, .brand-logo, .sub-menu a').forEach(link => {
-        link.addEventListener('click', handleNavigation);
-    });
+        link.addEventListener('click', (e) => {
+            // 1. Unsaved changes check
+            handleNavigation(e);
 
-    // === Login Page Logic ===
-    // [Removed] Redundant login listener that was conflicting with auth.js
+            // 2. [UX Improvement] Auto-close mobile menu on link click
+            const navMenu = document.querySelector('.nav-menu');
+            if (navMenu && navMenu.classList.contains('active')) {
+                // 서브메뉴가 있는 항목(부모)을 클릭했을 때는 닫지 않음
+                if (e.currentTarget.parentElement.classList.contains('has-submenu') && (!e.currentTarget.href || e.currentTarget.href.endsWith('#'))) {
+                    return;
+                }
+                navMenu.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            }
+        });
+    });
 
     // === Dashboard Logic ===
     if (isDashboard) {
@@ -476,17 +488,6 @@ window.handleLogout = async () => {
     }
 };
 
-// [Removed] Emergency Force Refresh Function - System is now fully Firestore-based.
-
-// [Removed] Auto Data Initialization - System is now fully Firestore-based.
-
-// Removed old definition
-// (Cleared legacy block)
-
-// === End of Global Initialization ===
-
-
-// [시니어 패치] 데이터 입력 정화 함수 (줄바꿈/유령 공백 원천 차단)
 window.sanitizeInput = (val) => {
     if (typeof val !== 'string') return val;
     // 줄바꿈, 탭을 공백으로 바꾸고 연속된 공백을 하나로 합친 뒤 앞뒤 공백 제거

@@ -662,3 +662,23 @@ body {
 .pwd-toggle i {
     font-size: 1rem;
 }
+
+/* === Footer Credit === */
+.footer-credit {
+    text-align: center;
+    padding: 30px 0 20px;
+    color: #bbb;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    font-family: 'Noto Sans KR', sans-serif;
+    width: 100%;
+}
+
+.login-footer-credit {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: #aaa;
+    font-size: 0.8rem;
+}
