@@ -227,11 +227,6 @@ body {
     flex-shrink: 0;
 }
 
-.nav-item {
-    position: relative;
-    text-align: center;
-}
-
 .nav-link {
     color: #444;
     text-decoration: none;
@@ -397,6 +392,84 @@ body {
     }
 }
 
+/* === Dashboard Card Menu === */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-top: 40px;
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.menu-card {
+    background: white;
+    padding: 30px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid #eee;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.menu-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.card-icon-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    transition: all 0.3s;
+}
+
+/* Card Icons Color Themes */
+.icon-green { background: rgba(46, 125, 50, 0.1); color: #2E7D32; }
+.icon-gold { background: rgba(212, 175, 55, 0.1); color: #D4AF37; }
+.icon-blue { background: rgba(3, 169, 244, 0.1); color: #03A9F4; }
+.icon-red { background: rgba(244, 67, 54, 0.1); color: #F44136; }
+
+.menu-card:hover .card-icon-circle {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.card-desc {
+    font-size: 0.95rem;
+    color: #777;
+    margin: 0;
+    word-break: keep-all;
+    line-height: 1.4;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Main Content Area Override for Reports */
 .main-content {
     margin-top: 0;
@@ -436,7 +509,6 @@ body {
         background-color: #ffffff;
         flex-direction: column;
         justify-content: flex-start;
-        /* Override desktop center alignment */
         height: auto;
         overflow-x: hidden;
         gap: 0;
@@ -447,7 +519,6 @@ body {
         border-bottom: 2px solid var(--secondary-color);
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         z-index: 10006;
-        background-color: #ffffff;
         opacity: 1;
     }
 
@@ -455,7 +526,6 @@ body {
         max-height: calc(100vh - 70px);
         min-height: calc(100vh - 70px);
         padding-bottom: 50px;
-        /* More space at bottom */
     }
 
     .nav-item {
@@ -502,7 +572,6 @@ body {
 
     .nav-item.active-menu .sub-menu {
         max-height: 1000px;
-        /* Wider for mobile if needed */
         opacity: 1;
         visibility: visible;
         padding: 5px 0;
@@ -524,7 +593,6 @@ body {
     .dashboard-body {
         padding-top: 85px;
         background-attachment: scroll;
-        /* 모바일에서 배경 고정 해제 (스크롤 호환성) */
     }
 
     .login-body {
@@ -535,13 +603,30 @@ body {
         padding: 10px 20px;
     }
 
-    .dashboard-cards {
-        grid-template-columns: 1fr;
-        gap: 20px;
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr); /* 모바일에서도 2줄로 변경 */
+        gap: 12px; /* 간격 축소 */
+        margin-top: 25px;
     }
 
-    .card {
-        padding: 30px 20px;
+    .menu-card {
+        padding: 20px 10px; /* 내부 여백 축소 */
+        border-radius: 8px;
+    }
+
+    .card-icon-circle {
+        width: 50px;
+        height: 50px;
+        font-size: 1.35rem;
+        margin-bottom: 12px;
+    }
+
+    .card-title {
+        font-size: 1.15rem;
+    }
+
+    .card-desc {
+        font-size: 0.88rem;
     }
 }
 
@@ -550,6 +635,7 @@ body {
     overflow: hidden !important;
     height: 100vh !important;
 }
+
 /* === Password Toggle Button (Reusable) === */
 .pwd-toggle {
     position: absolute;

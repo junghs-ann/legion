@@ -8,7 +8,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메인 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260323_1010">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -101,13 +101,49 @@
         <div class="welcome-card"
             style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; margin-top: 50px; border: 1px solid var(--border-color);">
             <i class="fas fa-church" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 20px;"></i>
-            <h2 style="font-family: 'Noto Serif KR', serif; color: var(--primary-color); margin-bottom: 15px;">반갑습니다!
-            </h2>
+            <h2 style="font-family: 'Noto Serif KR', serif; color: var(--primary-color); margin-bottom: 15px;">찬미 예수님!</h2>
             <p style="color: #666; font-size: 1.1rem; line-height: 1.6; word-break: keep-all;">
-                레지오 마리애 관리시스템에 오신 것을<br>
-                환영합니다.<br>
-                상단 메뉴 버튼(<i class="fas fa-bars"></i>)을 눌러 원하시는 메뉴를 선택해 주세요.
+                레지오 마리애 관리시스템에 오신 것을 환영합니다.<br>
+                자주 쓰는 기능은 아래 카드에서, 전체 메뉴는 상단(三) 버튼을 눌러보세요.
             </p>
+        </div>
+
+        <div class="card-grid">
+            <!-- 1. 주회합 출석 -->
+            <a href="attendance_status.html" class="menu-card">
+                <div class="card-icon-circle icon-green">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-title">주회합 출석</div>
+                <p class="card-desc">오늘의 출석을 체크하세요</p>
+            </a>
+
+            <!-- 2. 간편 활동보고 -->
+            <a href="easy_activity_report.html" class="menu-card">
+                <div class="card-icon-circle icon-gold">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="card-title">간편 활동보고</div>
+                <p class="card-desc">활동보고 해주세요</p>
+            </a>
+
+            <!-- 3. 협조단원 돌봄 -->
+            <a href="auxiliary_care_management.html" class="menu-card">
+                <div class="card-icon-circle icon-blue">
+                    <i class="fas fa-hand-holding-heart"></i>
+                </div>
+                <div class="card-title">협조단원 돌봄</div>
+                <p class="card-desc">협조단원 따뜻한 돌봄 등록</p>
+            </a>
+
+            <!-- 4. 일정 관리 -->
+            <a href="schedule_management.html" class="menu-card">
+                <div class="card-icon-circle icon-red">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="card-title">일정 보기</div>
+                <p class="card-desc">레지오의 일정을 확인하세요</p>
+            </a>
         </div>
     </div>
 
