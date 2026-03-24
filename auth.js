@@ -17,6 +17,11 @@ import {
 export function convertToStdRole(role) {
     if (!role) return '단원';
     const r = String(role).toLowerCase().trim();
+    
+    // [강화] '전(임)', '역대', '퇴임' 등 과거 직책 키워드가 있으면 '단원'으로 간주
+    const pastKeywords = ['전', '전임', '퇴임', '역대', 'past', 'former', 'ex-'];
+    if (pastKeywords.some(k => r.includes(k))) return '단원';
+    
     if (r.includes('단장') && !r.includes('부단장')) return '단장';
     if (r.includes('president') && !r.includes('vice')) return '단장';
     if (r.includes('부단장') || r.includes('vice')) return '부단장';

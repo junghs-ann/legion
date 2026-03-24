@@ -1060,17 +1060,31 @@
             const filteredMembers = membersList.filter(m => {
                 if (!eventDate) return true;
 
-                // [🚨 필터 강화] 퇴단, 전출 단원이 아닌 단원만 필터링
+                // [🚨 필터 강화] 행사 일자 기준 퇴단/전출 여부 판단
                 const isLeft = m.status === '퇴단' || m.status === '전출';
 
                 if (m.isAux) {
                     const isJoined = !m.admissionDate || m.admissionDate <= eventDate;
-                    const isActive = !isLeft && (!m.withdrawalDate || m.withdrawalDate.trim() === '' || m.withdrawalDate > eventDate);
-                    return isJoined && isActive;
+                    // 퇴단/전출 여부 판단: 행사일보다 이전(또는 당일)에 나갔으면 제외
+                    if (isLeft) {
+                        if (m.withdrawalDate && m.withdrawalDate.trim() !== '') {
+                            if (m.withdrawalDate <= eventDate) return false; // 행사전 퇴단
+                        } else {
+                            return false; // 퇴단일 없으나 현재 퇴단 상태면 제외
+                        }
+                    }
+                    return isJoined;
                 } else {
                     const isJoinedBefore = !m.probationaryDate || m.probationaryDate <= eventDate;
-                    const isActiveDuringEvent = !isLeft && (!m.leaveDate || m.leaveDate.trim() === '' || m.leaveDate > eventDate);
-                    return isJoinedBefore && isActiveDuringEvent;
+                    // 퇴단/전출 여부 판단: 행사일보다 이전(또는 당일)에 나갔으면 제외
+                    if (isLeft) {
+                        if (m.leaveDate && m.leaveDate.trim() !== '') {
+                            if (m.leaveDate <= eventDate) return false; // 행사전 퇴단
+                        } else {
+                            return false; // 퇴단일 없으나 현재 퇴단 상태면 제외
+                        }
+                    }
+                    return isJoinedBefore;
                 }
             });
 

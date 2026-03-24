@@ -457,7 +457,7 @@
     <script src="script.js?v=20260308_0430"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
-        import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
+        import { initAuthObserver, logoutUser, convertToStdRole } from "./auth.js?v=20260303_1210";
         import { fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
@@ -702,7 +702,8 @@
                     where('session', '==', String(sessionNum))));
                 const existingCare = !qSnap.empty;
 
-                const isAdmin = currentUser.role === 'admin' || currentUser.role === '관리자';
+                const stdRole = convertToStdRole(currentUser.role);
+                const isAdmin = stdRole === '관리자';
                 if (existingCare && isAdmin) {
                     btnDelete.style.display = 'inline-block';
                 } else {
@@ -787,43 +788,71 @@
                     })
                     .map(([key]) => key.trim());
 
-                // [수정] 권한 인식 로직 강화 (영문/한글 직책 정규화 및 표준화)
-                const roleLower = (currentUser.role || '').toLowerCase();
-                const isAdmin = roleLower === 'admin' || roleLower === '관리자';
-                // [표준화] roleMap을 기준으로 모든 한글/영문 직책 대응
-                const isOfficer = ['president', 'vice_president', 'secretary', 'treasurer', '단장', '부단장', '서기', '회계'].some(r => roleLower.includes(r.toLowerCase()));
+                // [🚨 실시간 간부 권한 검증] users 컬렉션의 role 필드가 과거 정보일 수 있으므로 
+                // officers_list에서 현재 활동 중인(만료되지 않은) 기록이 있는지 실시간으로 확인합니다.
+                let realTimeIsOfficer = false;
+                const todayStr = new Date().toISOString().split('T')[0];
+                try {
+                    const myId = String(currentUser.id || currentUser.memberId);
+                    const qOff = query(
+                        collection(db, 'officers_list'),
+                        where('memberId', '==', myId)
+                    );
+                    const offSnap = await getDocs(qOff);
+                    realTimeIsOfficer = offSnap.docs.some(doc => {
+                        const d = doc.data();
+                        // 1) 내가 속한 조직의 기록이어야 함
+                        const isMyOrg = d.churchName === currentUser.churchName && 
+                                        d.curiaName === currentUser.curiaName && 
+                                        d.presidiumName === currentUser.presidiumName;
+                        // 2) 임기가 만료되지 않았어야 함
+                        const isActive = !d.appointmentExpiryDate || d.appointmentExpiryDate >= todayStr;
+                        return isMyOrg && isActive;
+                    });
+                } catch (e) {
+                    console.error("❌ 실시간 간부 권한 확인 실패:", e);
+                }
+
+                // [수정] 권한 인식 로직 표준화 (관리자 권한은 기존 role 소스 사용)
+                const stdRole = convertToStdRole(currentUser.role);
+                const isAdmin = stdRole === '관리자';
+                // [표 표준화] 이제 '실시간 활동 여부'를 가진 realTimeIsOfficer 변수를 최종 간부 권한으로 사용합니다.
+                const isOfficer = realTimeIsOfficer;
 
                 // 2. Map to auxiliary members (Scope logic based on Role)
                 let matchedAuxiliaries = auxiliaryList.filter(aux => {
                     // 담당 행동단원의 출석 여부 확인 (하이브리드 매칭)
                     const isActiveMemberMatch = presentActiveMembers.some(key => {
                         const trimmedKey = key.trim();
-                        // 1) ID 일치 확인
                         if (trimmedKey === String(aux.activeMemberId)) return true;
                         if (trimmedKey === String(aux.activeMemberUid)) return true;
-                        // 2) 이름 일치 확인
                         if (trimmedKey === aux.activeMemberName) return true;
-                        // 3) 이름(세례명) 형식 일치 확인
                         const nameWithBaptism = `${aux.activeMemberName}(${aux.activeMemberBaptismalName || ''})`;
                         if (trimmedKey === nameWithBaptism) return true;
                         return false;
                     });
 
-                    // [핵심] 관리자/간부/단원 모두 공통적으로 '출석(지각 포함)한 행동단원'이 담당하는 협조단원만 표시
+                    // [핵심] 해당 회차 시점에 활동 중인 협조단원만 표시
                     const isWithinTerm = (!aux.withdrawalDate || aux.withdrawalDate.trim() === '' || aux.withdrawalDate > attendanceRecord.date);
                     
                     return isActiveMemberMatch && isWithinTerm;
                 });
 
-                // [강화] 일반 단원은 본인이 담당하는 협조단원만 필터링 (관리자/간부가 아닐 때)
+                // [🚨 필터링 강화] 관리자나 명확한 "현직 간부"가 아닌 경우, 본인의 UID/ID와 일치하는 데이터만 보이도록 강제합니다.
                 if (!isAdmin && !isOfficer) {
+                    const myId = String(currentUser.id || currentUser.uid || currentUser.memberId);
+                    console.log(`🔒 일반 단원 모드: 본인(${currentUser.name})의 데이터만 필터링 중... (ID: ${myId})`);
+                    
                     matchedAuxiliaries = matchedAuxiliaries.filter(aux => {
-                        const myId = String(currentUser.id || currentUser.uid || currentUser.memberId);
+                        // 1) 고유 ID가 일치하거나
                         const isMyId = String(aux.activeMemberId) === myId || String(aux.activeMemberUid) === myId;
+                        // 2) 이름과 세례명이 모두 일치하는 경우 (ID 누락 대비)
                         const isMyName = aux.activeMemberName === (currentUser.name || currentUser.memberName) && 
                                          (aux.activeMemberBaptismalName === (currentUser.baptismalName || ''));
                         return isMyId || isMyName;
                     });
+                } else {
+                    console.log(`🔓 ${isAdmin ? '관리자' : '간부'} 모드: 조직 전체 데이터 조회 중... (Role: ${isAdmin ? 'admin' : stdRole})`);
                 }
 
                 if (matchedAuxiliaries.length === 0) {

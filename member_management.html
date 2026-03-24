@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 계정 관리 - 레지오 마리애</title>
     <!-- UI Update: 2026-03-13_1515 (Table Name Column Fixed) -->
-    <link rel="stylesheet" href="styles.css?v=20260313_1515">
+    <link rel="stylesheet" href="styles.css?v=20260324_2345">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Premium UI Standardization */
@@ -241,11 +241,11 @@
                     <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
                         <thead>
                             <tr style="background-color: var(--primary-color); color: white;">
-                                <th style="padding: 10px; border: 1px solid #ddd;">이름</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">성함</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">세례명</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">성당</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">소속 (Pr.)</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">직급</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">역할</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">소속 성당</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">소속 쁘레시디움</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">상태</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">탈퇴일</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">관리</th>
@@ -281,15 +281,15 @@
                 <input type="hidden" id="edit-uid">
                 <input type="hidden" id="edit-member-id"> <!-- [V17.0] 명부 연결 ID 보관용 추가 -->
                 <div class="form-group">
-                    <label>성당</label>
+                    <label>소속 성당</label>
                     <input type="text" id="edit-church" disabled style="background: #e9ecef;">
                 </div>
                 <div class="form-group">
-                    <label>소속 (Pr.)</label>
+                    <label>소속 쁘레시디움</label>
                     <input type="text" id="edit-presidium" disabled style="background: #e9ecef;">
                 </div>
                 <div class="form-group">
-                    <label>이름</label>
+                    <label>성함</label>
                     <input type="text" id="edit-name" required>
                 </div>
                 <div class="form-group">
@@ -314,14 +314,18 @@
                         <option value="transfer">전입 (Transfer)</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>회원가입일</label>
+                    <input type="text" id="edit-created-at" disabled style="background: #e9ecef; cursor: not-allowed;">
+                </div>
                 <div class="form-group" id="leave-date-group" style="display: none;">
                     <label>탈퇴일</label>
-                    <input type="text" id="edit-leave-date" disabled
-                        style="background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">
-                    <small style="color: #721c24;">* 단원관리에서 퇴단/전출 처리 시 자동 입력됩니다.</small>
+                    <input type="text" id="edit-leave-date"
+                        style="background: #fff; color: #721c24; border: 1px solid #ced4da;" placeholder="YYYY-MM-DD" maxlength="10">
+                    <small style="color: #666;">* 미입력 시 기존 자동 입력값이 유지됩니다. (형식: YYYY-MM-DD)</small>
                 </div>
                 <div class="form-group">
-                    <label>직급 (Role)</label>
+                    <label>역할 (Role)</label>
                     <select id="edit-role" required style="width: 100%; padding: 10px; border: 1px solid #ccc;">
                         <option value="member">단원 (Member)</option>
                         <option value="president">단장 (President)</option>
@@ -359,11 +363,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260313_1515"></script>
+    <script src="script.js?v=20260324_2345"></script>
     <script type="module">
-        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
-        import { fetchPresidiaList } from "./data.js?v=20260313_1515";
-        import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260313_1515";
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260324_2345";
+        import { fetchPresidiaList } from "./data.js?v=20260324_2345";
+        import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260324_2345";
 
         // DOM Elements
         const searchChurch = document.getElementById('search-church');
@@ -562,20 +566,28 @@
                 };
                 const statusInfo = statusMap[u.status] || { text: u.status, bg: '#eee', color: '#333' };
 
-                const rankInfo = await getLatestRank(u);
+                // [수정] 내정보 관리 화면처럼 DB(users)의 role 필드를 직접 사용 (복잡한 계산 로직 제거)
+                const roleText = convertToStdRole(u.role);
+
+                // [수정] 날짜 형식을 강제로 YYYY-MM-DD로 변환하여 표시 (가독성 향상) 🧼
+                let displayLeaveDate = u.leaveDate || '-';
+                if (displayLeaveDate.replace(/[^0-9]/g, '').length === 8) {
+                    const d = displayLeaveDate.replace(/[^0-9]/g, '');
+                    displayLeaveDate = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}`;
+                }
 
                 tr.innerHTML = `
                     <td style="padding: 10px;">${u.name}</td>
                     <td style="padding: 10px;">${u.baptismalName}</td>
+                    <td style="padding: 10px;">${roleText}</td>
                     <td style="padding: 10px;">${u.churchName || '-'}</td>
                     <td style="padding: 10px;">${u.presidiumName || '-'}</td>
-                    <td style="padding: 10px;">${rankInfo.text}</td>
                     <td style="padding: 10px;">
                         <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; background: ${statusInfo.bg}; color: ${statusInfo.color};">
                             ${statusInfo.text}
                         </span>
                     </td>
-                    <td style="padding: 10px; color: #d32f2f; font-weight: bold;">${u.leaveDate || '-'}</td>
+                    <td style="padding: 10px; color: #d32f2f; font-weight: bold;">${displayLeaveDate}</td>
                     <td style="padding: 10px;">
                         <button class="btn-edit" data-uid="${u.uid}" style="padding: 5px 10px; background: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">수정</button>
                         <button class="btn-delete" data-uid="${u.uid}" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">삭제</button>
@@ -601,91 +613,7 @@
             });
         }
 
-        async function getLatestRank(u) {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                const roleMap = {
-                    'admin': '관리자',
-                    'president': '단장',
-                    'vice_president': '부단장',
-                    'secretary': '서기',
-                    'treasurer': '회계',
-                    'member': '단원'
-                };
-
-                const reverseRoleMap = {
-                    '단장': 'president',
-                    '부단장': 'vice_president',
-                    '서기': 'secretary',
-                    '회계': 'treasurer',
-                    '단원': 'member',
-                    '관리자': 'admin'
-                };
-
-                // 1순위: 간부 명단에서 활동 중인 직책 확인
-                // 1순위: 고유 ID(memberId)로 간부 명단 확인 (동명이인 방지)
-                let offQuery;
-                if (u.memberId) {
-                    offQuery = query(collection(db, 'officers_list'), where('memberId', '==', u.memberId));
-                } else {
-                    offQuery = query(collection(db, 'officers_list'),
-                        where('name', '==', u.name),
-                        where('churchName', '==', u.churchName),
-                        where('presidiumName', '==', u.presidiumName)
-                    );
-                }
-                const offSnapshot = await getDocs(offQuery);
-                const officialOfficer = offSnapshot.docs.map(d => d.data()).find(o =>
-                    (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
-                );
-
-                if (officialOfficer) {
-                    return {
-                        text: officialOfficer.role,
-                        code: reverseRoleMap[officialOfficer.role] || 'member'
-                    };
-                }
-
-                // 2순위: 단원 명단에서 활동 중인지 확인
-                let memQuery;
-                if (u.memberId) {
-                    memQuery = query(collection(db, 'members_list'), where('__name__', '==', u.memberId)); // Firestore ID 매칭
-                } else {
-                    memQuery = query(collection(db, 'members_list'),
-                        where('name', '==', u.name),
-                        where('churchName', '==', u.churchName),
-                        where('presidiumName', '==', u.presidiumName)
-                    );
-                }
-                const memSnapshot = await getDocs(memQuery);
-                const activeMember = memSnapshot.docs.map(d => d.data()).find(m =>
-                    (m.status !== '퇴단' && m.status !== '전출')
-                );
-
-                if (activeMember) {
-                    return { text: '단원', code: 'member' };
-                }
-
-                // 3순위: 기본 프로필 직책 반환 (공통 함수 사용)
-                const roleText = convertToStdRole(u.role);
-                const roleMapForReverse = {
-                    '단장': 'president',
-                    '부단장': 'vice_president',
-                    '서기': 'secretary',
-                    '회계': 'treasurer',
-                    '단원': 'member',
-                    '관리자': 'admin'
-                };
-                return {
-                    text: roleText,
-                    code: roleMapForReverse[roleText] || 'member'
-                };
-            } catch (error) {
-                console.error("Error getting latest rank:", error);
-                return { text: '단원', code: 'member' };
-            }
-        }
+        // [제거] getLatestRank 함수는 더 이상 사용하지 않으므로 삭제합니다. (users 컬렉션 직접 참조로 대체)
 
         async function deleteUser(uid) {
             try {
@@ -731,8 +659,43 @@
                 document.getElementById('edit-gender').value = user.gender || '';
                 document.getElementById('edit-status').value = user.status;
 
-                const currentRank = await getLatestRank(user);
-                document.getElementById('edit-role').value = currentRank.code;
+                // [추가] 회원가입일 표시 (ISO 형식을 년-월-일로 변환)
+                const createdAt = user.createdAt ? user.createdAt.substring(0, 10) : '날짜정보 없음';
+                document.getElementById('edit-created-at').value = createdAt;
+
+                // [수정] DB의 역할 값(한글 또는 코드)을 셀렉트 박스 옵션(코드)에 맞춰 매핑하여 선택하도록 보완
+                const roleValue = user.role || 'member';
+                const roleSelect = document.getElementById('edit-role');
+                
+                // 직접 코드가 맞는 경우 (선택 가능 여부 확인)
+                let isMapped = false;
+                for (let i = 0; i < roleSelect.options.length; i++) {
+                    if (roleSelect.options[i].value === roleValue) {
+                        roleSelect.selectedIndex = i;
+                        isMapped = true;
+                        break;
+                    }
+                }
+
+                // 코드가 안 맞는 경우 (한글 명칭 등) 매핑 시도
+                if (!isMapped) {
+                    const roleMapForSelect = {
+                        '단장': 'president',
+                        '부단장': 'vice_president',
+                        '서기': 'secretary',
+                        '회계': 'treasurer',
+                        '단원': 'member',
+                        '관리자': 'admin',
+                        'admin': 'admin',
+                        'president': 'president',
+                        'vice_president': 'vice_president',
+                        'secretary': 'secretary',
+                        'treasurer': 'treasurer',
+                        'member': 'member'
+                    };
+                    const mappedValue = roleMapForSelect[roleValue] || 'member';
+                    roleSelect.value = mappedValue;
+                }
 
                 document.getElementById('edit-username').value = user.username || '';
 
@@ -740,9 +703,18 @@
                 const leaveDateInput = document.getElementById('edit-leave-date');
                 if (user.status === 'retire' || user.leaveDate) {
                     leaveDateGroup.style.display = 'block';
-                    leaveDateInput.value = user.leaveDate || '기록 없음';
+                    
+                    // [시니어 패치] 날짜 형식을 강제로 YYYY-MM-DD로 변환하여 로드 🧼
+                    let lDate = (user.leaveDate || '').replace(/[^0-9]/g, '');
+                    if (lDate.length === 8) {
+                        lDate = `${lDate.substring(0, 4)}-${lDate.substring(4, 6)}-${lDate.substring(6, 8)}`;
+                    } else {
+                        lDate = user.leaveDate || '';
+                    }
+                    leaveDateInput.value = lDate;
                 } else {
                     leaveDateGroup.style.display = 'none';
+                    leaveDateInput.value = '';
                 }
 
                 // [Fix] Reset Password 버튼 핸들러 (기존 리스너 제거를 위해 복제 후 교체)
@@ -772,6 +744,7 @@
             const newGender = document.getElementById('edit-gender').value;
             const newStatus = document.getElementById('edit-status').value;
             const newRole = document.getElementById('edit-role').value;
+            const newLeaveDate = document.getElementById('edit-leave-date').value;
             const newUsername = document.getElementById('edit-username').value;
             const memberId = document.getElementById('edit-member-id').value; // [추가] 명부 ID 추출
 
@@ -814,6 +787,7 @@
                         status: newStatus,
                         role: newRole,
                         username: newUsername,
+                        leaveDate: newLeaveDate,
                         email: `${newUsername}@legion.app`,
                         memberId: memberId, // [핵심] 일반 수정 시에도 명부 ID 명시적 보존
                         updatedAt: serverTimestamp()
@@ -828,6 +802,16 @@
                 console.error("Error saving user:", error);
                 alert("저장 중 오류가 발생했습니다.");
             }
+        });
+
+        // [추가] 날짜 형식 (YYYY-MM-DD) 자동 포맷팅 리스너
+        document.getElementById('edit-leave-date').addEventListener('input', function(e) {
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            let formatted = '';
+            if (val.length <= 4) formatted = val;
+            else if (val.length <= 6) formatted = val.substring(0, 4) + '-' + val.substring(4, 6);
+            else formatted = val.substring(0, 4) + '-' + val.substring(4, 6) + '-' + val.substring(6, 8);
+            e.target.value = formatted;
         });
 
     </script>

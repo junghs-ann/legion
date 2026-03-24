@@ -1394,18 +1394,25 @@
                     });
                 }
 
-                // [Sync] 유저 프로필 직책 동기화 (고유 ID 사용으로 동명이인 문제 원천 차단)
-                const q = query(collection(db, 'users'), where('memberId', '==', data.memberId));
-                const userSnap = await getDocs(q);
-                
-                if (userSnap.empty) {
-                    console.log(`ℹ️ 해당 단원(${data.name})으로 가입된 사용자 계정이 없어 직책 동기화를 건너뜁니다.`);
-                }
+                // [Sync] 유저 프로필 직책 동기화 (현재 활성 임기일 경우만 동기화하여 과거 이력으로 인한 꼬임 방지)
+                const todayForSync = new Date().toISOString().split('T')[0];
+                const isCurrentActive = !data.appointmentExpiryDate || data.appointmentExpiryDate >= todayForSync;
 
-                userSnap.forEach(async (uDoc) => {
-                    await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
-                    console.log(`✅ User Profile Role Synced (ID): ${data.name} -> ${data.role}`);
-                });
+                if (isCurrentActive) {
+                    const q = query(collection(db, 'users'), where('memberId', '==', data.memberId));
+                    const userSnap = await getDocs(q);
+                    
+                    if (userSnap.empty) {
+                        console.log(`ℹ️ 해당 단원(${data.name})으로 가입된 사용자 계정이 없어 직책 동기화를 건너뜁니다.`);
+                    }
+
+                    userSnap.forEach(async (uDoc) => {
+                        await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
+                        console.log(`✅ 현직 간부 프로필 직책 동기화 완료: ${data.name} -> ${data.role}`);
+                    });
+                } else {
+                    console.log(`ℹ️ 과거 이력 데이터(만료일: ${data.appointmentExpiryDate})이므로 유저 프로필 직책 동기화를 생략합니다.`);
+                }
 
                 await window.showGlobalAlert('간부 정보가 성공적으로 저장되었습니다.');
                 

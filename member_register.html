@@ -1205,14 +1205,16 @@
 
         async function syncUserAccountStatus(memberData) {
             try {
-                // [정석] 표준 필드명(churchName, presidiumName)만 사용하여 사용자 계정 조회
+                // [정석] 표준 필드명 및 세례명까지 포함하여 정확한 사용자 계정 조회
                 const usersRef = collection(db, "users");
                 const qName = memberData.name;
+                const qBap = memberData.baptismalName;
                 const qChurch = memberData.churchName;
                 const qPr = memberData.presidiumName;
 
                 const q = query(usersRef, 
                     where("name", "==", qName),
+                    where("baptismalName", "==", qBap),
                     where("churchName", "==", qChurch),
                     where("presidiumName", "==", qPr)
                 );
@@ -1221,11 +1223,20 @@
 
                 if (userDoc) {
                     const userData = userDoc.data();
+                    const signupDate = (userData.createdAt || "").substring(0, 10); // "YYYY-MM-DD"
+                    const leaveDate = memberData.leaveDate || new Date().toISOString().split('T')[0];
+
                     let updateData = {};
                     if (memberData.status === '퇴단' || memberData.status === '전출') {
-                        updateData.status = 'retire';
-                        updateData.leaveDate = memberData.leaveDate || new Date().toISOString().split('T')[0];
+                        // [시니어 패치] 가입일보다 이전의 퇴단 기록이면 현재 계정 상태를 변경하지 않음 (과거 이력 꼬임 방지)
+                        if (signupDate && leaveDate < signupDate) {
+                            console.log(`ℹ️ 가입 전(${signupDate})의 과거 퇴단 이력(${leaveDate})이므로 계정 상태 동기화를 생략합니다.`);
+                        } else {
+                            updateData.status = 'retire';
+                            updateData.leaveDate = leaveDate;
+                        }
                     } else if (userData.status === 'retire') {
+                        // 재입단/활동 복귀의 경우 (현재 계정이 퇴단 상태일 때만 활성화)
                         updateData.status = 'active';
                         updateData.leaveDate = null;
                     }

@@ -8,9 +8,55 @@
     <!-- Force reload of styles -->
     <link rel="stylesheet" href="styles.css?v=20260307_2253">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="accounting_styles.css?v=20260306_2345_rollback2">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260325_0150_isolated">
+    <link rel="stylesheet" href="accounting_styles.css?v=20260326_0000_isolated">
     <style>
         /* CSS resets for consistency */
+        .results-section h3 {
+            word-break: keep-all;
+            line-height: 1.3;
+            padding: 0 10px;
+            font-size: 1.15rem !important; /* 글자 크기 축소 */
+        }
+
+        .main-ledger-table th, .main-ledger-table td {
+            white-space: nowrap;
+            padding: 8px 4px !important;
+            text-align: center !important;
+        }
+
+        .month-input, .day-input, .weekday-input {
+            text-align: center !important;
+            padding: 0 !important;
+            width: 100% !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            display: block !important;
+        }
+
+        /* [최종 리셋] 시스템 표준 테이블 스타일 (가로 고정 없음) */
+        .ledger-table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            background-color: #fff;
+            margin-top: 10px;
+        }
+        .ledger-table th, .ledger-table td { 
+            white-space: nowrap; 
+            padding: 10px 8px !important; 
+            border: 1px solid #ddd !important;
+            text-align: center !important; 
+        }
+        .ledger-table thead th {
+            position: sticky !important;
+            top: 0;
+            z-index: 10;
+            background-color: #2e7d32 !important; /* 표준 초록색 */
+            color: white !important;
+        }
+
         .filter-group select,
         .filter-group input {
             width: 180px !important;
@@ -249,11 +295,10 @@
                         <input type="number" id="yearFilter" min="2000" max="2100" style="text-align: center;">
                     </div>
                     <div class="filter-group">
-                        <label>기준일자</label>
-                        <div style="display: flex; gap: 5px; align-items: center; width: 100%;">
-                            <input type="date" id="startDateFilter" style="width: 130px; flex: 1;">
-                            <span>~</span>
-                            <input type="date" id="endDateFilter" style="width: 130px; flex: 1;">
+                        <label>회합일자</label>
+                        <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                            <input type="date" id="sessionDateFilter" style="width: 150px; flex: 1;">
+                            <span id="sessionInfoDisplay" style="font-weight: bold; color: var(--secondary-color); font-size: 0.9rem; white-space: nowrap;"></span>
                         </div>
                     </div>
                 </div>
@@ -278,7 +323,7 @@
                         style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <label for="initialBalance"
-                                style="font-weight: bold; color: #444; white-space: nowrap;">전월이월금:</label>
+                                style="font-weight: bold; color: #444; white-space: nowrap;">이월금:</label>
                             <input type="text" id="initialBalance" placeholder="0"
                                 style="text-align: right; padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 140px; color: #000; font-weight: bold; background-color: #fff;"
                                 disabled>
@@ -293,15 +338,15 @@
                     <table class="ledger-table">
                         <thead>
                             <tr>
-                                <th style="width: 90px;">회차</th>
-                                <th style="width: 60px;">월</th>
-                                <th style="width: 60px;">일</th>
-                                <th style="width: 60px;">요일</th>
-                                <th style="width: 110px;">입/출 구분</th>
-                                <th style="width: 200px;">항목</th>
-                                <th style="width: 120px;">금액</th>
-                                <th style="width: 120px;">잔액</th>
-                                <th style="width: 300px;">적요</th>
+                                <th style="width: 80px;">회차</th>
+                                <th style="width: 45px;">월</th>
+                                <th style="width: 45px;">일</th>
+                                <th style="width: 45px;">요일</th>
+                                <th style="width: 100px;">입/출 구분</th>
+                                <th style="width: 180px;">항목</th>
+                                <th style="width: 110px;">금액</th>
+                                <th style="width: 110px;">잔액</th>
+                                <th style="width: 250px;">적요</th>
                                 <th style="width: 70px;">관리</th>
                             </tr>
                         </thead>
@@ -349,8 +394,8 @@
 
         // DOM Elements
         const yearFilter = document.getElementById('yearFilter');
-        const startDateFilter = document.getElementById('startDateFilter');
-        const endDateFilter = document.getElementById('endDateFilter');
+        const sessionDateFilter = document.getElementById('sessionDateFilter');
+        const sessionInfoDisplay = document.getElementById('sessionInfoDisplay');
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
         const presidiumFilter = document.getElementById('presidiumFilter');
@@ -580,8 +625,7 @@
             if (isAdmin) {
                 return {
                     year: yearFilter.value,
-                    startDate: startDateFilter.value,
-                    endDate: endDateFilter.value,
+                    sessionDate: sessionDateFilter.value,
                     church: churchFilter.value,
                     curia: curiaFilter.value,
                     presidium: selPr.value || prInput.value
@@ -589,8 +633,7 @@
             } else {
                 return {
                     year: yearFilter.value,
-                    startDate: startDateFilter.value,
-                    endDate: endDateFilter.value,
+                    sessionDate: sessionDateFilter.value,
                     church: churchInput.value,
                     curia: curiaInput.value,
                     presidium: prInput.value
@@ -598,9 +641,38 @@
             }
         }
 
+        // [추가] 날짜 선택 시 회차 정보를 자동으로 찾아주는 함수
+        async function updateSessionInfo() {
+            const filters = getFilterValues();
+            if (!filters.sessionDate || !filters.presidium) {
+                sessionInfoDisplay.textContent = "";
+                window.currentSelectedSession = null;
+                return;
+            }
+
+            try {
+                const q = query(collection(db, 'attendance_list'),
+                    where('churchName', '==', filters.church),
+                    where('presidiumName', '==', filters.presidium),
+                    where('date', '==', filters.sessionDate)
+                );
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
+                    window.currentSelectedSession = data.session;
+                    sessionInfoDisplay.textContent = `(${data.session}회)`;
+                } else {
+                    window.currentSelectedSession = null;
+                    sessionInfoDisplay.textContent = "(회차 정보 없음)";
+                }
+            } catch (error) {
+                console.error("Error updateSessionInfo:", error);
+            }
+        }
+
         async function loadTransactions() {
             const filters = getFilterValues();
-            window.isDateFiltered = !!(filters.startDate || filters.endDate);
+            window.isDateFiltered = !!filters.sessionDate;
             if (!filters.church || !filters.curia || !filters.presidium) {
                 window.showGlobalAlert("성당, 꾸리아, 쁘레시디움을 모두 선택/확인해주세요.");
                 return;
@@ -704,24 +776,27 @@
                 let displayTransactions = yearTransactions;
                 let displayInitialBalance = yearInitialBalance;
 
-                if (filters.startDate && filters.endDate) {
-                    const start = new Date(filters.startDate);
-                    const end = new Date(filters.endDate);
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(23, 59, 59, 999);
-
+                if (filters.sessionDate) {
+                    const targetDateStr = filters.sessionDate;
                     const filtered = [];
                     let runningBalance = yearInitialBalance;
 
                     for (const t of yearTransactions) {
-                        const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
+                        const tDate = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
 
-                        if (tDate < start) {
+                        if (tDate < targetDateStr) {
                             const amt = parseInt(t.amount) || 0;
                             if (t.type === 'deposit') runningBalance += amt;
                             else runningBalance -= amt;
-                        } else if (tDate >= start && tDate <= end) {
-                            filtered.push(t);
+                        } else if (tDate === targetDateStr) {
+                            // [수정] 회차 정보가 있는 경우 회차까지 정확히 매칭 (같은 날 여러 회차 가능성 대비)
+                            if (window.currentSelectedSession && t.session) {
+                                if (String(t.session) === String(window.currentSelectedSession)) {
+                                    filtered.push(t);
+                                }
+                            } else {
+                                filtered.push(t);
+                            }
                         }
                     }
 
@@ -738,11 +813,15 @@
                     btnAddRow.style.display = 'none';
                     btnSave.style.display = 'none';
                 } else {
-                    if (filters.startDate || filters.endDate) {
-                        initialBalanceInput.disabled = true;
-                    } else {
-                        initialBalanceInput.disabled = false;
-                    }
+                // [수정] 헤더 날짜 표시 변경 (두 줄로 예쁘게)
+                if (filters.sessionDate) {
+                    const sessLabel = window.currentSelectedSession ? `<br><span style="font-size: 0.95em; color: #555;">[ ${filters.sessionDate} (${window.currentSelectedSession}회) ]</span>` : `<br><span style="font-size: 0.95em; color: #555;">[ ${filters.sessionDate} ]</span>`;
+                    document.querySelector('.results-section h3').innerHTML = `입/출금 상세내역${sessLabel}`;
+                    initialBalanceInput.disabled = true; // 날짜 필터 시 이월금 수정 불가
+                } else {
+                    document.querySelector('.results-section h3').innerHTML = `입/출금 상세내역<br><span style="font-size: 0.9em; color: #555;">(${filters.year}년 전체)</span>`;
+                    initialBalanceInput.disabled = isReadOnly; 
+                }
                     btnAddRow.style.display = 'inline-block';
                     btnSave.style.display = 'inline-block';
                 }
@@ -816,16 +895,19 @@
             let day = data.day || '';
 
             // Pre-fill Date in Input Mode for new rows
+            // [수정] '함께' 채워지는 기능: 자동 회차/날짜 연동
             const filters = getFilterValues();
-            if (!data.id && isInputMode && filters.startDate) {
-                // Parse YYYY-MM-DD
-                const yyyy = parseInt(filters.startDate.substring(0, 4));
-                const mm = parseInt(filters.startDate.substring(5, 7));
-                const dd = parseInt(filters.startDate.substring(8, 10));
-
-                if (mm && dd) {
-                    month = mm;
-                    day = dd;
+            if (!data.id && filters.sessionDate) {
+                // 회차 자동 연동
+                if (window.currentSelectedSession) {
+                    session = window.currentSelectedSession;
+                }
+                
+                // 날짜 자동 연동
+                const dateParts = filters.sessionDate.split('-');
+                if (dateParts.length === 3) {
+                    month = parseInt(dateParts[1]);
+                    day = parseInt(dateParts[2]);
                 }
             }
 
@@ -865,14 +947,14 @@
             }
 
             tr.innerHTML = `
-                <td style="width: 90px;">${sessionHtml}</td>
-                <td><input type="number" class="month-input" value="${month}" min="1" max="12"></td>
-                <td><input type="number" class="day-input" value="${day}" min="1" max="31"></td>
-                <td>
-                    <input type="text" class="weekday-input readonly-input" value="${weekday}" readonly tabindex="-1">
+                <td style="width: 80px;">${sessionHtml}</td>
+                <td style="width: 45px;"><input type="number" class="month-input" value="${month}" min="1" max="12" style="text-align: center;"></td>
+                <td style="width: 45px;"><input type="number" class="day-input" value="${day}" min="1" max="31" style="text-align: center;"></td>
+                <td style="width: 45px;">
+                    <input type="text" class="weekday-input readonly-input" value="${weekday}" readonly tabindex="-1" style="text-align: center !important; border:none !important; background:rgba(0,0,0,0) !important; width:100% !important; padding:0 !important; display:block !important; box-shadow:none !important;">
                 </td>
-                <td>
-                    <select class="type-select" style="padding-left: 2px; padding-right: 2px;">
+                <td style="width: 100px;">
+                    <select class="type-select" style="padding-left: 1px; padding-right: 1px; font-size: 0.85rem;">
                         <option value="" ${type === '' ? 'selected' : ''}>선택</option>
                         <option value="deposit" ${type === 'deposit' ? 'selected' : ''}>입금</option>
                         <option value="withdrawal" ${type === 'withdrawal' ? 'selected' : ''}>출금</option>
@@ -1127,10 +1209,8 @@
                 // But this is risky if other users are editing (unlikely here).
 
                 // Let's use the same logic as before: replace all in the current filter scope.
-                const start = filters.startDate ? new Date(filters.startDate) : null;
-                const end = filters.endDate ? new Date(filters.endDate) : null;
-                if (start) start.setHours(0, 0, 0, 0);
-                if (end) end.setHours(23, 59, 59, 999);
+                // [수정] 단일 날짜 기준 필터링 및 삭제 로직
+                const targetDateStr = filters.sessionDate;
 
                 // Fetch existing to handle deletions [정량화]
                 const qSnapDel = await getDocs(query(collection(db, 'accounting_transactions'),
@@ -1141,11 +1221,18 @@
                 // Mark for deletion if in range
                 qSnapDel.forEach(docSnap => {
                             const t = docSnap.data();
-                            const tDate = new Date(parseInt(t.year), parseInt(t.month) - 1, parseInt(t.day));
+                            const tDate = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
 
-                            if (start && end) {
-                                if (tDate >= start && tDate <= end) {
-                                    batch.delete(docSnap.ref);
+                            if (targetDateStr) {
+                                if (tDate === targetDateStr) {
+                                    // 세션 정보가 있는 경우 세션까지 맞아야 삭제
+                                    if (window.currentSelectedSession && t.session) {
+                                        if (String(t.session) === String(window.currentSelectedSession)) {
+                                            batch.delete(docSnap.ref);
+                                        }
+                                    } else {
+                                        batch.delete(docSnap.ref);
+                                    }
                                 }
                             } else {
                                 batch.delete(docSnap.ref);
@@ -1227,14 +1314,16 @@
                 loadTransactions();
             });
 
-            btnInput.addEventListener('click', () => {
-                // Input Mode Logic
-                // 1. If startDate is set, mirror to endDate
-                if (startDateFilter.value) {
-                    endDateFilter.value = startDateFilter.value;
-                }
-
+            btnInput.addEventListener('click', async () => {
                 window.isInputMode = true;
+                if (sessionDateFilter.value) {
+                    await updateSessionInfo();
+                }
+                loadTransactions();
+            });
+
+            sessionDateFilter.addEventListener('change', async () => {
+                await updateSessionInfo();
                 loadTransactions();
             });
 
