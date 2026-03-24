@@ -1,0 +1,32 @@
+async function finalRestore() {
+    const { db, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+    const membersRef = collection(window.db, "members_list");
+
+    console.log("🔍 기존 'dlalgl' 또는 중복 데이터 삭제 중...");
+    const q = query(membersRef, where("name", "in", ["이미희", "dlalgl"]));
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+        await deleteDoc(doc(window.db, "members_list", d.id));
+    }
+
+    console.log("💾 1단계: 2015년 퇴단 기록 복구 중...");
+    await addDoc(membersRef, {
+        "churchName": "관평동 성당", "curiaName": "원죄없으신 성모마리아", "presidiumName": "천사의 모후",
+        "classification": "행동단원", "status": "퇴단", "role": "단원", "name": "이미희", "baptismalName": "율리안나",
+        "feastDate": "06.19", "birthDate": "1957-11-06", "phone": "010-7377-3614",
+        "address": "유성구 학하남로10 오투그란데미학 아파트 211동1601호.", "probationaryDate": "2011-03-15",
+        "promiseDate": "2011-08-23", "leaveDate": "2015-04-21", "gender": "여"
+    });
+
+    console.log("💾 2단계: 2026년 전출 기록 복구 중...");
+    await addDoc(membersRef, {
+        "churchName": "관평동 성당", "curiaName": "원죄없으신 성모마리아", "presidiumName": "천사의 모후",
+        "classification": "행동단원", "status": "전출", "role": "단원", "name": "이미희", "baptismalName": "율리안나",
+        "feastDate": "06.19", "birthDate": "1957-11-06", "phone": "010-7377-3614",
+        "address": "유성구 학하남로10 오투그란데미학 아파트 211동1601호.", "probationaryDate": "2016-03-15",
+        "promiseDate": "2016-06-14", "leaveDate": "2026-01-31", "notes": "본당 덕명동 성당으로 전출", "gender": "여"
+    });
+
+    console.log("✅ 복구 완료! 단원 명단에서 확인해 보세요.");
+}
+finalRestore();

@@ -881,13 +881,18 @@
                 const officersList = ofSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 const membersMap = {};
-                membersList.forEach(m => membersMap[String(m.id)] = m);
+                const nameMap = {};
+                membersList.forEach(m => {
+                    membersMap[String(m.id)] = m;
+                    if (m.name) nameMap[m.name] = m.baptismalName || '-';
+                });
                 // Also map officers to caught those not in members_list or with different IDs
                 officersList.forEach(o => {
                     const mid = o.memberId || o.id || o.uid;
                     if (mid && !membersMap[String(mid)]) {
                         membersMap[String(mid)] = { name: o.name, baptismalName: o.baptismalName || '-' };
                     }
+                    if (o.name && !nameMap[o.name]) nameMap[o.name] = o.baptismalName || '-';
                 });
 
                 function getRoleAtDate(memberId, date) {
@@ -932,7 +937,7 @@
                         const status = (typeof rowData === 'object') ? rowData.status : rowData;
                         const m = membersMap[id] || { name: '알수없음', baptismalName: '-', probationaryDate: '9999-12-31' };
                         const name = (typeof rowData === 'object' && rowData.name) ? rowData.name : m.name;
-                        const baptismalName = (typeof rowData === 'object' && rowData.baptismalName) ? rowData.baptismalName : (m.baptismalName || '-');
+                        const baptismalName = (typeof rowData === 'object' && rowData.baptismalName) ? rowData.baptismalName : (m.baptismalName !== '-' ? m.baptismalName : (nameMap[name] || '-'));
                         const role = (typeof rowData === 'object' && rowData.role) ? rowData.role : getRoleAtDate(id, record.date);
                         const probationaryDate = m.probationaryDate || '9999-12-31';
 

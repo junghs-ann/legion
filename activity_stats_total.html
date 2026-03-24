@@ -1347,6 +1347,7 @@
             const memberSortMap = {};     
             const seniorityMap = {};     
             const memberBaptismalLookup = {}; 
+            const nameBaptismalLookup = {}; 
 
             allOfficers.forEach(o => {
                 const uid = o.uid;
@@ -1355,6 +1356,7 @@
                     memberSortMap[uid] = priority;
                 }
                 memberBaptismalLookup[uid] = o.baptismalName || '';
+                nameBaptismalLookup[o.name] = o.baptismalName || '';
             });
 
             const sortedMembers = [...allMembers].sort((a, b) => {
@@ -1369,6 +1371,7 @@
                 seniorityMap[uid] = sPriority;
                 if (!memberSortMap[uid]) memberSortMap[uid] = sPriority;
                 if (!memberBaptismalLookup[uid]) memberBaptismalLookup[uid] = m.baptismalName || '';
+                if (!nameBaptismalLookup[m.name]) nameBaptismalLookup[m.name] = m.baptismalName || '';
             });
 
             const schemaCopy = JSON.parse(JSON.stringify(prSchema));
@@ -1511,7 +1514,7 @@
 
                     let rowSum = 0;
                     // [원복] 사용자 요청에 따라 강제 trim 제거 (데이터 원본 그대로 출력)
-                    let html = `<td class="sticky-col col-year">${displayYear}</td><td class="sticky-col col-month">${displayMonth}</td><td class="sticky-col col-session">${displaySession}</td><td class="sticky-col col-member">${r.memberName} (${memberBaptismalLookup[r.memberId] || r.baptismalName || '-'})</td>`;
+                    let html = `<td class="sticky-col col-year">${displayYear}</td><td class="sticky-col col-month">${displayMonth}</td><td class="sticky-col col-session">${displaySession}</td><td class="sticky-col col-member">${r.memberName} (${memberBaptismalLookup[r.memberId] || r.baptismalName || nameBaptismalLookup[r.memberName] || '-'})</td>`;
 
                     filteredSchema.forEach(group => {
                         group.items.forEach(item => {

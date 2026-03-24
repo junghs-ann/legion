@@ -275,7 +275,7 @@
                 presidiumName: member.presidiumName || '-', 
                 curiaName: member.curiaName || '-', 
                 churchName: member.churchName || '-', 
-                period: `${member.probationaryDate || ''} ~` 
+                period: `${member.probationaryDate || ''} ~ ${member.leaveDate || ''}` 
             }];
             const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;
             const totalEduPages = Math.ceil(allEvents.length / PAGE_LIMITS.education) || 1;
@@ -304,7 +304,7 @@
                                     <tr><td class="label-bg">생년월일</td><td>${member.birthDate || ''}</td><td class="label-bg">축 일</td><td>${member.feastDate || ''}</td><td class="label-bg" style="width:40px;">성별</td><td style="width:40px;">${member.gender || '여'}</td></tr>
                                     <tr><td class="label-bg">입 단 일</td><td>${member.probationaryDate || ''}</td><td class="label-bg">선 서 일</td><td colspan="3">${member.promiseDate || ''}</td></tr>
                                     <tr><td class="label-bg">연 락 처</td><td colspan="5">${member.phone || ''}</td></tr>
-                                    <tr><td class="label-bg">퇴 단 일</td><td colspan="5">${member.retiredDate || member.extinctionDate || ''}</td></tr>
+                                    <tr><td class="label-bg">퇴 단 일</td><td colspan="5">${member.leaveDate || member.retiredDate || member.extinctionDate || ''}</td></tr>
                                 </table>
                             </div>
                             <div class="move-history">

@@ -1,0 +1,20 @@
+﻿                    '<span style="background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 4px;">만료</span>';
+
+                html += `
+                    <tr style="cursor: pointer; transition: background 0.2s;" onclick="setFormFromTable('${o.id}')" onmouseover="this.style.background='#f1f1f1'" onmouseout="this.style.background='white'">
+                        <td style="font-weight:bold;">${
+                            {
+                                'admin': '관리자',
+                                'president': '단장',
+                                'vice_president': '부�            // [사용자 요청] 간부 선임 정보의 단원명과 직급 자동 세팅 보완🚿
+            const mId = record.memberId || record.memberUid || record.member || '';
+            if (mId) {
+                // 만약 현재 드롭다운 목록에 해당 단원이 없으면(퇴단자 등), 임시로 추가하여 표시되게 함🚿
+                let exists = Array.from(memberSelect.options).some(o => o.value === mId);
+                if (!exists) {
+                    const tempOpt = document.createElement('option');
+                    tempOpt.value = mId;
+                    tempOpt.textContent = `${record.name} (${record.baptismalName || '성명미상'}) [과거기록]`;
+                    memberSelect.appendChild(tempOpt);
+                }
+                memberSelect.value = mId;

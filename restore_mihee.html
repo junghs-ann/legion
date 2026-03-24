@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>단원 정보 한글 복구 도구</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 50px; text-align: center; background: #fdfdfd; }
+        .card { max-width: 500px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: white; }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+        p { color: #7f8c8d; line-height: 1.6; }
+        button { 
+            background: #27ae60; color: white; border: none; padding: 15px 30px; 
+            font-size: 18px; border-radius: 10px; cursor: pointer; margin-top: 20px;
+            transition: transform 0.2s, background 0.2s;
+        }
+        button:hover { background: #2ecc71; transform: scale(1.05); }
+        #status { margin-top: 20px; font-weight: bold; color: #e67e22; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🛠️ 이미희 단원님 한글 복구</h1>
+        <p>복구 자동화 과정에서 영문(dlalgl)으로 입력된 성명을 한글(이미희)로 즉시 바꿉니다.</p>
+        <button id="fixBtn">한글 정보 일괄 보정하기</button>
+        <div id="status"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA64eMVDXBQ80UHIVU58gueRukmwjQDZ5g",
+            authDomain: "legion-f319a.firebaseapp.com",
+            projectId: "legion-f319a",
+            storageBucket: "legion-f319a.firebasestorage.app",
+            messagingSenderId: "852854704608",
+            appId: "1:852854704608:web:f9fbb0962bdcea3c538385"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('fixBtn').onclick = async () => {
+            const status = document.getElementById('status');
+            status.innerText = "🔍 수정할 데이터를 찾는 중...";
+            
+            try {
+                // name이 'dlalgl'인 레코드 찾기
+                const q = query(collection(db, "members_list"), where("name", "==", "dlalgl"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    status.innerHTML = "❌ 수정할 'dlalgl' 데이터를 찾지 못했습니다.<br>이미 수정되었거나 입력되지 않았을 수 있습니다.";
+                    return;
+                }
+
+                let count = 0;
+                for (const d of querySnapshot.docs) {
+                    await updateDoc(doc(db, "members_list", d.id), {
+                        name: "이미희",
+                        baptismalName: "율리안나",
+                        address: "유성구 학하남로10 오투그란데미학 아파트 211동1601호.",
+                        notes: "본당 덕명동 성당으로 전출"
+                    });
+                    count++;
+                }
+
+                status.style.color = "#27ae60";
+                status.innerText = `✅ ${count}개의 레코드가 한글로 완벽 복구되었습니다!`;
+                alert("복구 완료! 이제 이 페이지를 닫으셔도 됩니다.");
+            } catch (error) {
+                console.error(error);
+                status.style.color = "#e74c3c";
+                status.innerText = "❌ 오류 발생: " + error.message;
+            }
+        };
+    </script>
+</body>
+</html>

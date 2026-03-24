@@ -131,6 +131,7 @@
             display: flex;
             justify-content: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .btn-submit {
@@ -383,16 +384,16 @@
 
                 <div class="form-btn-group">
                     <button type="button" id="btnNewForm" class="btn btn-save"
-                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #007bff; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                        style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: #007bff; color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-plus"></i> 신규 입력</button>
                     <button type="submit" class="btn btn-save"
-                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                        style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-save"></i> 저 장</button>
                     <button type="button" id="btnDelete" class="btn btn-delete"
-                        style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                        style="display: none; padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-trash-alt"></i> 삭제</button>
                     <button type="button" class="btn btn-close" onclick="location.href='dashboard.html'"
-                        style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #6c757d; color: white; border: none; cursor: pointer; min-width: 80px;"><i
+                        style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: #6c757d; color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-times"></i> 닫기</button>
                 </div>
             </form>
@@ -759,6 +760,7 @@
 
             // [New] Delete Logic
             const btnDelete = document.getElementById('btnDelete');
+            btnDelete.clickEvent = handleDelete; // Store reference to original or wrap it 
             btnDelete.addEventListener('click', handleDelete);
 
             // [New Entry] Guard original values
@@ -767,16 +769,33 @@
                 btnNewForm.addEventListener('click', () => {
                     const cVal = churchSelect.value;
                     const cuVal = curiaSelect.value;
-                    const prVal = document.getElementById('presidiumInput').value;
+                    const pInput = document.getElementById('presidiumInput');
+                    const prVal = pInput ? pInput.value : '';
                     const prHiddenVal = document.getElementById('presidiumSelect').value;
 
                     form.reset();
                     form.removeAttribute('data-edit-id');
                     resetMemberUI();
 
+                    // Re-enable fields for new entry
+                    memberSelect.disabled = false;
+                    const roleSel = form.querySelector('select[name="role"]');
+                    if (roleSel) roleSel.disabled = false;
+
+                    const userRole = String(currentUser.role || '').toLowerCase();
+                    const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
+
+                    if (isAdmin) {
+                        churchSelect.disabled = false;
+                        if (churchSelect.value) curiaSelect.disabled = false;
+                        if (curiaSelect.value && pInput) pInput.disabled = false;
+                    }
+
                     churchSelect.value = cVal;
                     curiaSelect.value = cuVal;
-                    document.getElementById('presidiumInput').value = prVal;
+                    if (pInput) {
+                        pInput.value = prVal;
+                    }
                     document.getElementById('presidiumSelect').value = prHiddenVal;
                     
                     updateDeleteButtonVisibility();
@@ -989,46 +1008,70 @@
 
         // Helper: When clicking a table row, populate the form
         window.setFormFromTable = async function (id) {
+            // [?ъ슜???붿껌] 遺덈윭???곗씠???섏젙 ?? ?깅떦/袁몃━???섎젅?쒕뵒? ?좏깮 遺덇? 泥섎━?슡
+            churchSelect.disabled = true;
+            curiaSelect.disabled = true;
+            presidiumSelect.disabled = true;
+
             let record = null;
             try {
-                const docSnap = await getDoc(doc(db, 'officers_list', id));
+                // [?ъ슜???붿껌] Firestore?먯꽌 吏곸젒 ?곸꽭 ?뺣낫 媛?몄삤湲?(?깅뒫 蹂댁셿 2026.03.15)
+                const docSnap = await getDoc(doc(db, "officers_list", id));
                 if (docSnap.exists()) record = { id: docSnap.id, ...docSnap.data() };
             } catch (error) {
                 console.error("Error fetching officer detail:", error);
-                const officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-                record = officersList.find(o => o.id === id);
             }
+
             if (!record) return;
 
             // Trigger member selection
-            const mId = record.memberId || record.memberUid || record.member || '';
+            const mId = record.memberId || record.memberUid || record.member || "";
             if (mId) {
+                // [시니어 패치] 드롭다운에 해당 단원이 없는 경우(예: 퇴단자 등)를 대비해 임시 옵션 추가
+                const existingOption = Array.from(memberSelect.options).find(opt => opt.value === mId);
+                if (!existingOption) {
+                    const tempOpt = document.createElement('option');
+                    tempOpt.value = mId;
+                    tempOpt.textContent = `${record.name || '단원명 미상'} (${record.baptismalName || '세례명 미상'})`;
+                    memberSelect.appendChild(tempOpt);
+                }
+                
                 memberSelect.value = mId;
-                // Manually trigger the member change logic since we have the full data
-                const member = {
-                    id: mId,
+                // [용도에 따라] 선택된 단원정보 수정 불가 처리
+                memberSelect.disabled = true;
+                
+                // Find matching member in membersList to populate other info or use record data
+                const member = (typeof membersList !== "undefined" ? membersList.find(m => m.id === mId || (m.UID && m.UID === mId)) : null) || {
                     name: record.name,
-                    baptismalName: record.baptismalName,
-                    feastDate: record.feastDate,
-                    phone: record.phone
+                    baptismalName: record.baptismalName || "",
+                    feastDate: record.feastDate || "",
+                    phone: record.phone || ""
                 };
-                memberNameOutput.value = member.name || '';
-                baptismalNameOutput.value = member.baptismalName || '';
-                feastDateOutput.value = member.feastDate || '';
-                phoneOutput.value = member.phone || '';
+
+                memberNameOutput.value = member.name || "";
+                baptismalNameOutput.value = member.baptismalName || "";
+                feastDateOutput.value = member.feastDate || "";
+                phoneOutput.value = member.phone || "";
             }
 
-            form.querySelector('select[name="role"]').value = record.role || '';
-            form.querySelector('input[name="appointmentDate"]').value = record.appointmentDate || '';
-            form.querySelector('input[name="appointmentExpiryDate"]').value = record.appointmentExpiryDate || '';
-            form.querySelector('textarea[name="notes"]').value = record.notes || '';
+            const roleSel = form.querySelector("select[name='role']");
+            if (roleSel) {
+                roleSel.value = record.role || "";
+                // [?ъ슜???붿껌] 遺덈윭??吏곴툒 ?뺣낫 ?섏젙 遺덇? 泥섎━?슡   
+                roleSel.disabled = true;
+            }
 
-            form.setAttribute('data-edit-id', record.id);
+            form.querySelector("input[name='appointmentDate']").value = record.appointmentDate || "";
+            form.querySelector("input[name='appointmentExpiryDate']").value = record.appointmentExpiryDate || "";
+            form.querySelector("textarea[name='notes']").value = record.notes || "";
+
+            form.setAttribute("data-edit-id", record.id);
             updateTenure();
             updateDeleteButtonVisibility();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+            console.log("📍 [목록 선택] 수정 모드 활성화 (만료 여부 무관) - ID:", record.id);
+            window.scrollTo({ top: 0, behavior: "smooth" });
 
+        };
         function updateTenure() {
             const startStr = document.getElementsByName('appointmentDate')[0].value;
             const endStr = document.getElementsByName('appointmentExpiryDate')[0].value;
@@ -1291,6 +1334,12 @@
             const apptInput = form.querySelector('input[name="appointmentDate"]');
             data.appointmentDate = window.sanitizeInput(apptInput ? apptInput.value : (data.appointmentDate || ''));
 
+            const roleSel = form.querySelector('select[name="role"]');
+            data.role = window.sanitizeInput(roleSel ? roleSel.value : (data.role || ''));
+
+            const notesArea = form.querySelector('textarea[name="notes"]');
+            data.notes = window.sanitizeInput(notesArea ? notesArea.value : (data.notes || ''));
+
             const today = new Date().toISOString().split('T')[0];
             const editId = form.getAttribute('data-edit-id');
 
@@ -1378,7 +1427,7 @@
                 return;
             }
 
-            if (confirm(`현재 조회된 [${role} - ${name}] 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+            if (confirm("현재 조회된 [ - ] 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
                 try {
                     await deleteDoc(doc(db, 'officers_list', editId));
                     alert('성공적으로 삭제되었습니다.');

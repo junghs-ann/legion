@@ -307,6 +307,9 @@
                             style="background-color: #007bff; color: white; border: none;"><i class="fas fa-plus"></i>
                             신규 입력</button>
                         <button type="button" id="btnInquiryMember" class="btn-submit btn-secondary">조 회</button>
+                        <button type="button" id="btnReAdmissionTop" class="btn-submit"
+                            style="display: none; background-color: #28a745; color: white; border: none;"><i
+                                class="fas fa-user-plus"></i> 재입단 등록</button>
                         <button type="button" id="btnViewAllDB" class="btn-submit"
                             style="background-color: #007bff; color: white; border: none; display: none;">전체 목록 진단</button>
                     </div>
@@ -400,6 +403,9 @@
                     <button type="button" id="btnDeleteMember" class="btn btn-delete"
                         style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 80px;"><i
                             class="fas fa-trash-alt"></i> 삭제</button>
+                    <button type="button" id="btnReAdmissionSide" class="btn"
+                        style="display: none; padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #28a745; color: white; border: none; cursor: pointer; min-width: 100px;"><i
+                            class="fas fa-user-plus"></i> 재입단 등록</button>
                     <button type="button" class="btn btn-close" onclick="location.href='dashboard.html'"
                         style="padding: 10px 15px; font-size: 1rem; border-radius: 4px; background-color: #6c757d; color: white; border: none; cursor: pointer; min-width: 80px;"><i
                             class="fas fa-times"></i> 닫기</button>
@@ -412,14 +418,23 @@
     <div id="memberSearchModal" class="modal-overlay"
         style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
         <div class="modal-content"
-            style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
-            <h3 style="margin-top: 0; border-bottom: 2px solid #ccc; padding-bottom: 10px;">단원 선택</h3>
+            style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative;">
+            <!-- [사용자 요청] 우측 상단 X 닫기 버튼 추가 및 모바일 대응 🚿 -->
+            <button type="button" class="btn-close-modal" 
+                style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; padding: 5px; line-height: 1; transition: color 0.2s; z-index: 10;"
+                onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">
+                <i class="fas fa-times"></i>
+            </button>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #2e7d32; padding-bottom: 10px; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #2e7d32; font-family: 'Gowun Batang', serif; font-weight: 700;">단원 선택</h3>
+            </div>
             <ul id="memberList" style="list-style: none; padding: 0; margin-top: 15px;">
                 <!-- List items will be injected here -->
             </ul>
             <div style="text-align: right; margin-top: 20px;">
-                <button type="button" id="btnCloseModal"
-                    style="padding: 8px 16px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
+                <!-- [사용자 요청] 하단 닫기 버튼 기능 복구 (ID 중복 제거) 🚿 -->
+                <button type="button" class="btn-close-modal"
+                    style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">닫기</button>
             </div>
         </div>
     </div>
@@ -429,8 +444,8 @@
         import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy, deleteField } from './firebase-config.js';
         import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from './data.js';
         import { initAuthObserver, logoutUser } from "./auth.js";
-
-        console.log("Member Register Script Loaded: 20260315_V16_CLEAN_DUAL");
+ 
+        console.log("Member Register Script Loaded: 20260323_V17_REBOOT");
 
         // Define Organization Data Logic
         const initOrgSelectors = async () => {
@@ -760,6 +775,19 @@
             if (!memberList || memberList.length === 0) {
                 listElement.innerHTML = '<li style="padding:10px; color:#666;">등록된 단원이 없습니다.</li>';
             } else {
+                // [사용자 요청] 입단자 우선, 퇴단자 나중 + 입단일 최신순(내림차순) 정렬 보완🚿
+                memberList.sort((a,b) => {
+                    const statusVal = (m) => (m.status === '퇴단' || m.status === '전출') ? 1 : 0;
+                    const sA = statusVal(a);
+                    const sB = statusVal(b);
+                    if (sA !== sB) return sA - sB;
+                    
+                    // 같은 상태면 입단일 내림차순 (최신 순)
+                    const dA = a.probationaryDate || '1900-01-01';
+                    const dB = b.probationaryDate || '1900-01-01';
+                    return dB.localeCompare(dA);
+                });
+
                 memberList.forEach(m => {
                     console.log("DISPLAY DATA:", m);
                     const li = document.createElement('li');
@@ -769,21 +797,33 @@
                     li.style.display = 'flex';
                     li.style.justifyContent = 'space-between';
 
-                    // [정석화] 오직 표준 필드(`churchName` 등)만 사용
+                    // [사용자 제안] 이력을 쉽게 구분할 수 있도록 날짜 정보 추가
+                    const status = m.status || '';
+                    let dateInfo = '';
+                    if (status === '퇴단' || status === '전출') {
+                        dateInfo = `[퇴단: ${m.leaveDate || '날짜미상'}]`;
+                    } else {
+                        dateInfo = `[입단: ${m.probationaryDate || '날짜미상'}]`;
+                    }
+
                     const displayChurch = (m.churchName || '성당미정').trim();
                     const displayPresidium = (m.presidiumName || 'Pr.미정').trim();
                     const orgInfo = `[${displayChurch} / ${displayPresidium}]`;
                     
+                    // [사용자 제안] 날짜 정보를 별도 행으로 깔끔하게 표시
+                    const dateLine = `<div style="font-size:0.85em; color:var(--primary-color); font-weight:500; margin-top:3px;">${dateInfo}</div>`;
+
                     // [사용자 요청] 이름(세례명) 표시 강화
                     const namePart = `<strong>${m.name || '이름 없음'}</strong>`;
                     const baptismPart = m.baptismalName ? ` (${m.baptismalName})` : '';
 
                     li.innerHTML = `
-                        <div>
+                        <div style="flex: 1; padding-right: 15px;">
                             ${namePart}${baptismPart}
-                            <div style="font-size:0.8em; color:#888;">${orgInfo}</div>
+                            <div style="font-size:0.8em; color:#888; margin-top:2px;">${orgInfo}</div>
+                            ${dateLine}
                         </div>
-                        <span style="font-size:0.9em; color:#888;">${m.status || ''}</span>
+                        <span style="font-size:0.9em; color:#666; white-space:nowrap; align-self: flex-start;">${m.status || ''}</span>
                     `;
                     li.onclick = () => {
                         loadMemberDataForEdit(m);
@@ -797,12 +837,12 @@
 
         // Standard Inquiry (3-level organization match)
         document.getElementById('btnInquiryMember').addEventListener('click', async () => {
-            const churchName = document.getElementById('churchSelect').value.trim();
-            const curiaName = document.getElementById('curiaSelect').value.trim();
-            const presidiumName = document.getElementById('presidiumInput').value.trim();
-
-            if (!presidiumName) {
-                await window.showGlobalAlert('먼저 쁘레시디움 혹은 꾸리아를 선택해주세요.');
+            const churchName = (document.getElementById('churchSelect').value || '').trim();
+            const curiaName = (document.getElementById('curiaSelect').value || '').trim();
+            const presidiumName = (document.getElementById('presidiumInput').value || '').trim();
+ 
+            if (!churchName || !presidiumName) {
+                await window.showGlobalAlert('성당과 쁘레시디움을 모두 선택해주세요.');
                 return;
             }
 
@@ -825,7 +865,7 @@
 
         // [Emergency View All] Shows EVERYTHING in the DB without any filters
         document.getElementById('btnViewAllDB').addEventListener('click', async () => {
-            if (!confirm('DB의 모든 컬렉션을 정밀 진단합니다. (단원, 사용자, 부락 등) \n모든 데이터를 불러오시겠습니까?')) return;
+            if (!await window.showGlobalConfirm('DB의 모든 컬렉션을 정밀 진단합니다. (단원, 사용자, 부락 등) \n모든 데이터를 불러오시겠습니까?', 'info')) return;
 
             try {
                 console.log("--- [DB 정밀 진단 시작] ---");
@@ -882,7 +922,7 @@
             const name = form.elements['name'].value;
             if (!editId) return;
 
-            if (confirm(`정말로 '${name}' 단원의 정보를 삭제하시겠습니까?`)) {
+            if (await window.showGlobalConfirm(`정말로 '${name}' 단원의 정보를 삭제하시겠습니까?`, 'error')) {
                 try {
                     await deleteDoc(doc(db, "members_list", editId));
                     alert('삭제되었습니다.');
@@ -893,8 +933,12 @@
             }
         });
 
-        document.getElementById('btnCloseModal').addEventListener('click', () => {
-            document.getElementById('memberSearchModal').style.display = 'none';
+        // [사용자 요청] 모달 닫기 기능 복구 (클래스 기반 멀티 바인딩) 🚿
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = document.getElementById('memberSearchModal');
+                if (modal) modal.style.display = 'none';
+            });
         });
 
         function loadMemberDataForEdit(member) {
@@ -960,11 +1004,63 @@
             if (submitBtn) submitBtn.textContent = '수 정';
 
             updateLeaveDateState();
+ 
+            // [Senior Fix] role 변수명 변경 및 안전한 프로필 체크 (ReferenceError/TypeError 방지)
+            const profile = (currentUserProfile && typeof currentUserProfile === 'object') ? currentUserProfile : {};
+            const currentUserRole = (profile.role || '').toLowerCase();
+            const isAdmin = currentUserRole === 'admin' || currentUserRole === '관리자';
+            
+            const delBtn = document.getElementById('btnDeleteMember');
+            if (delBtn) delBtn.style.display = isAdmin ? 'inline-block' : 'none';
 
-            const role = (currentUserProfile.role || '').toLowerCase();
-            const isAdmin = role === 'admin' || role === '관리자';
-            document.getElementById('btnDeleteMember').style.display = isAdmin ? 'inline-block' : 'none';
+            // 5. [재입단 기능] 퇴단/전출 상태일 때만 '재입단 등록' 버튼 노출 (상단/하단 모두)
+            const showReAdmission = member.status === '퇴단' || member.status === '전출';
+            const btnTop = document.getElementById('btnReAdmissionTop');
+            const btnSide = document.getElementById('btnReAdmissionSide');
+            if (btnTop) btnTop.style.display = showReAdmission ? 'inline-block' : 'none';
+            if (btnSide) btnSide.style.display = showReAdmission ? 'inline-block' : 'none';
         }
+
+        // --- 재입단 등록 버튼 클릭 시 로직 (상단/하단 공용) ---
+        const handleReAdmissionClick = async function() {
+            const form = document.getElementById('memberRegisterForm');
+            const name = form.elements['name'].value;
+            const bName = form.elements['baptismalName'].value;
+
+            if (await window.showGlobalConfirm(`'${name} (${bName})' 단원의 이전 기록은 보존하고, 신규 재입단 기록을 만드시겠습니까?\n(확인을 누르면 신규 등록 모드로 전환됩니다.)`, 'info')) {
+                // 1. 핵심 ID 정보 제거 (신규 등록으로 인식하게 함)
+                form.removeAttribute('data-edit-id');
+                form.setAttribute('data-is-readmission', 'true');
+                
+                // 2. 상태 및 날짜 초기화 (새로운 차수를 위해 이전 기록 비움)
+                form.elements['status'].value = '입단';
+                form.elements['probationaryDate'].value = ''; 
+                form.elements['promiseDate'].value = ''; 
+                form.elements['leaveDate'].value = '';
+                
+                // 3. UI 변경 (사용자 요청: 제목을 더 정확한 셀렉터(h2.form-title)로 접근하여 변경)
+                const pageTitle = document.querySelector('h2.form-title');
+                if (pageTitle) pageTitle.textContent = '단원정보 등록';
+                
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.textContent = '재입단 저장';
+                
+                // 4. 불필요한 버튼 숨김
+                document.getElementById('btnReAdmissionTop').style.display = 'none';
+                document.getElementById('btnReAdmissionSide').style.display = 'none';
+                document.getElementById('btnDeleteMember').style.display = 'none';
+                
+                // 5. 비고란 자동 메모 제거 (사용자 요청: 시스템적인 메모 불필요)
+                // const originalNotes = form.elements['notes'].value || '';
+                // ... (지움)
+
+                updateLeaveDateState();
+                window.showToast("신규 재입단 모드로 전환되었습니다. 새로운 입단일을 입력해주세요.", "info");
+            }
+        };
+
+        if (document.getElementById('btnReAdmissionTop')) document.getElementById('btnReAdmissionTop').addEventListener('click', handleReAdmissionClick);
+        if (document.getElementById('btnReAdmissionSide')) document.getElementById('btnReAdmissionSide').addEventListener('click', handleReAdmissionClick);
 
         // Form Submission (Firestore)
         document.getElementById('memberRegisterForm').addEventListener('submit', async function (e) {
@@ -993,6 +1089,7 @@
             }
 
             const editId = this.getAttribute('data-edit-id');
+            const isReadmission = this.getAttribute('data-is-readmission') === 'true';
 
             if (!memberData.churchName || !memberData.presidiumName || !memberData.name || !memberData.probationaryDate) {
                 await window.showGlobalAlert('성당, 쁘레시디움, 성명, 입단/전입일은 필수 입력입니다.');
@@ -1003,8 +1100,9 @@
             if (submitBtn) submitBtn.disabled = true; // [Double-click Protection]
 
             try {
-                // [근본 해결] 신규 등록인 경우, 이미 동일한 정보(성명+세례명+쁘레시디움)로 등록된 단원이 있는지 체크
-                if (!editId) {
+                // [근본 해결] 신규 등록인 경우, 이미 동일한 정보(성명+세례명+성당+쁘레시디움)로 등록된 단원이 있는지 체크
+                // 단, '재입단 등록' 버튼을 통해 명시적으로 새로 만드는 경우는 체크를 건너뜀
+                if (!editId && !isReadmission) {
                     console.log("🔍 중복 등록 여부 사전 확인 중...");
                     const dupQuery = query(collection(db, "members_list"),
                         where("name", "==", memberData.name),
@@ -1016,16 +1114,25 @@
                     
                     if (!dupSnap.empty) {
                         const existingDoc = dupSnap.docs[0];
-                        const confirmLoad = confirm(`⚠️ 안내: 이미 동일한 정보로 등록된 단원이 있습니다.\n(이름: ${memberData.name}, 세례명: ${memberData.baptismalName})\n\n새로 등록하는 대신 기존 기록을 불러와서 수정하시겠습니까?`);
+                        const existingData = existingDoc.data();
+                        const status = existingData.status || '';
                         
-                        if (confirmLoad) {
-                            loadMemberDataForEdit({ id: existingDoc.id, ...existingDoc.data() });
-                            if (submitBtn) submitBtn.disabled = false;
-                            return;
+                        let message = `⚠️ 안내: 이미 동일한 정보로 등록된 단원이 있습니다.\n(이름: ${memberData.name}, 세례명: ${memberData.baptismalName})\n\n`;
+                        
+                        if (status === '퇴단' || status === '전출') {
+                            message += `이 단원은 현재 [${status}] 상태입니다. \n새로 등록하는 대신 기존 기록을 불러와서 '재입단(또는 전입)' 처리를 하시겠습니까?\n(이력을 하나로 관리하는 것을 권장합니다.)`;
                         } else {
-                            // 사용자가 강제로 등록을 원치 않는 경우 중단 (중복 생성 방지)
-                            if (submitBtn) submitBtn.disabled = false;
-                            return;
+                            message += `이미 [${status}] 상태로 활동 중인 단원입니다. \n기존 기록을 불러와서 정보를 수정하시겠습니까?`;
+                        }
+
+                        if (await window.showGlobalConfirm(message, 'warning')) {
+                            // [사용자 요청] 자동 메모 기능 제거 (기존엔 historyLine 추가 로직 있었음)
+                            loadMemberDataForEdit({ id: existingDoc.id, ...existingData });
+                            return; // 로드 후 종료
+                        } else {
+                             // 사용자가 수락하지 않은 경우 (취소)
+                             if (submitBtn) submitBtn.disabled = false;
+                             return;
                         }
                     }
                 }
@@ -1038,7 +1145,7 @@
                     await updateDoc(doc(db, "members_list", editId), memberData);
                     console.log("✅ 수정 성공!");
                     await syncUserAccountStatus(memberData);
-                    await window.showGlobalAlert(`✅ 수정 완료되었습니다.\n(문서 ID: ${editId})`);
+                    await window.showGlobalAlert('✅ 수정 완료되었습니다.');
                 } else {
                     console.log("🆕 신규 등록 시도 중 (members_list)...");
                     const docRef = await addDoc(collection(db, "members_list"), memberData);
@@ -1048,11 +1155,12 @@
 
                     // [Anti-Duplicate Fix] Switch to Edit mode immediately after first save
                     this.setAttribute('data-edit-id', docRef.id);
+                    this.removeAttribute('data-is-readmission'); // 플래그 제거
                     this.setAttribute('data-original-status', memberData.status || '');
                     document.querySelector('.form-title').textContent = '단원정보 수정';
                     if (submitBtn) submitBtn.textContent = '수 정';
 
-                    await window.showGlobalAlert(`🎊 신규 등록 성공!\n(서버 문서 ID: ${docRef.id})\n\n이제 이어서 수정하시거나 [조회]로 돌아가실 수 있습니다.`);
+                    await window.showGlobalAlert('🎊 신규 등록 성공!\n이제 이어서 수정하시거나 [조회]로 돌아가실 수 있습니다.');
                 }
             } catch (err) {
                 console.error("🚨 [치명적 저장 실패] 에러 상세:", err);
@@ -1076,6 +1184,7 @@
             // 2. Clear personal data
             form.reset();
             form.removeAttribute('data-edit-id');
+            form.removeAttribute('data-is-readmission');
             form.removeAttribute('data-original-status');
             form.removeAttribute('data-initial-prob-date');
             document.querySelector('.form-title').textContent = '단원정보 등록';

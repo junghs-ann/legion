@@ -296,6 +296,78 @@
             filter: brightness(1.1);
             transform: translateY(-1px);
         }
+
+        /* 모달 스타일 추가 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .member-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+
+        .member-list li {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .member-list li:hover {
+            background-color: #f8f9fa;
+        }
+
+        .member-list li:last-child {
+            border-bottom: none;
+        }
+
+        .btn-close-modal-top {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .modal-title {
+            margin: 0;
+            color: var(--primary-color);
+            font-family: 'Noto Serif KR', serif;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            font-size: 1.3rem;
+        }
     </style>
 </head>
 
@@ -434,9 +506,9 @@
                         </div>
                     </div>
                     <div class="filter-group">
-                        <label>성명</label>
-                        <input type="text" id="nameFilter" placeholder="이름 입력" autocomplete="off"
-                            style="width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <label>성명 (클릭하여 선택)</label>
+                        <input type="text" id="nameFilter" placeholder="클릭하여 단원 선택" readonly
+                            style="width: 140px; padding: 8px; border: 1.5px solid #d4a017; border-radius: 4px; cursor: pointer; background-color: #fff;">
                     </div>
                 </div>
 
@@ -496,6 +568,22 @@
         </div>
     </div>
 
+    <!-- Member Search Modal -->
+    <div id="memberSearchModal" class="modal-overlay">
+        <div class="modal-content">
+            <button type="button" class="btn-close-modal-top" onclick="closeMemberModal()">&times;</button>
+            <h3 class="modal-title">단원 선택</h3>
+            <div id="modalLoading" style="text-align: center; padding: 20px; display: none;">
+                <i class="fas fa-spinner fa-spin"></i> 데이터를 불러오는 중...
+            </div>
+            <ul id="memberModalList" class="member-list"></ul>
+            <div style="text-align: right; margin-top: 20px;">
+                <button type="button" onclick="closeMemberModal()" 
+                    style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js?v=20260307_2335"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2335";
@@ -520,6 +608,131 @@
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
+        const memberModal = document.getElementById('memberSearchModal');
+        const memberModalList = document.getElementById('memberModalList');
+        const modalLoading = document.getElementById('modalLoading');
+
+        // [New] 모달 제어 함수 (전역 노출)
+        window.closeMemberModal = () => {
+            memberModal.style.display = 'none';
+        };
+
+        async function openMemberModal() {
+            memberModal.style.display = 'flex';
+            memberModalList.innerHTML = '';
+            modalLoading.style.display = 'block';
+
+            try {
+                // 현재 필터 값 수집
+                let church, curia, presidium;
+                if (isAdmin) {
+                    church = churchFilter.value;
+                    curia = curiaFilter.value;
+                    presidium = presidiumFilter.value;
+                } else {
+                    church = currentUser.churchName || '';
+                    curia = currentUser.curiaName || '';
+                    presidium = presidiumFilter.value || currentUser.presidiumName || '';
+                }
+
+                const status = statusFilter.value;
+                const start = startDateFilter.value;
+                const end = endDateFilter.value;
+
+                // 데이터 가져오기 (성당/쁘레 단위 쿼리)
+                let members = [];
+                let q;
+                if (presidium) {
+                    q = query(collection(db, 'members_list'), where('presidiumName', '==', presidium));
+                } else if (church) {
+                    q = query(collection(db, 'members_list'), where('churchName', '==', church));
+                } else {
+                    q = collection(db, 'members_list');
+                }
+                
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => members.push({ id: doc.id, ...doc.data() }));
+
+                // [사용자 요구사항] 필터링 수행
+                const isWithdrawalStatus = ["퇴단", "전출", "비활동단원"].includes(status);
+                const dateField = isWithdrawalStatus ? 'leaveDate' : 'probationaryDate';
+
+                let filtered = members.filter(m => {
+                    // 기본 조직 일치 확인 (쿼리에서 걸러지나 로컬 분기도 대비)
+                    const isChurchMatch = !church || m.churchName === church;
+                    const isCuriaMatch = !curia || m.curiaName === curia;
+                    const isPresidiumMatch = !presidium || m.presidiumName === presidium;
+                    if (!(isChurchMatch && isCuriaMatch && isPresidiumMatch)) return false;
+
+                    // 상태 및 날짜 필터 (요구사항 2, 3 반영)
+                    if (status === '전체' && !start && !end) return true; 
+
+                    let isStatusMatch = false;
+                    if (status === '전체') {
+                        isStatusMatch = true;
+                    } else if (status === '행동단원') {
+                        const probDate = m.probationaryDate || '';
+                        const leaveDate = m.leaveDate || '';
+                        const sDate = start || '0000-00-00';
+                        const eDate = end || '9999-12-31';
+                        const isJoinedBeforeEnd = probDate && probDate <= eDate;
+                        const isStillActiveDuringPeriod = !leaveDate || leaveDate > sDate;
+                        const isActionClassification = !m.classification || m.classification === '행동단원' || m.classification === '활동단원';
+                        isStatusMatch = isJoinedBeforeEnd && isStillActiveDuringPeriod && isActionClassification;
+                    } else if (status === '비활동단원') {
+                        isStatusMatch = (m.status === '퇴단' || m.status === '전출' || m.status === '비활동단원');
+                    } else {
+                        isStatusMatch = m.status === status;
+                    }
+
+                    const memberDate = m[dateField] || '';
+                    const isDateMatch = (status === '행동단원') ? true : (!start || memberDate >= start) && (!end || memberDate <= end);
+
+                    return isStatusMatch && isDateMatch;
+                });
+
+                // [요구사항] 입단자 우선, 퇴단자 나중 + 각각 최근일자(내림차순) 순으로 정렬
+                filtered.sort((a, b) => {
+                    const getPriority = (s) => (s === '퇴단' || s === '전출') ? 1 : 0;
+                    const pA = getPriority(a.status);
+                    const pB = getPriority(b.status);
+                    if (pA !== pB) return pA - pB;
+                    
+                    const dateValA = (pA === 0) ? (a.probationaryDate || '') : (a.leaveDate || '');
+                    const dateValB = (pB === 0) ? (b.probationaryDate || '') : (b.leaveDate || '');
+                    return dateValB.localeCompare(dateValA);
+                });
+
+                if (filtered.length === 0) {
+                    memberModalList.innerHTML = '<li style="color:#999; justify-content:center;">조건에 맞는 단원이 명부에 없습니다.</li>';
+                } else {
+                    filtered.forEach(m => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div>
+                                <strong style="font-size: 1.05rem;">${m.name}</strong> <span style="color:#555;">(${m.baptismalName || '세례명 미상'})</span>
+                                <div style="font-size:0.8rem; color:#666; margin-top:3px;">${m.presidiumName} | ${m.status || '입단'}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size:0.8rem; color:#888;">${m.probationaryDate || '-'}</div>
+                            </div>
+                        `;
+                        li.onclick = () => {
+                            nameFilter.value = m.name;
+                            window.closeMemberModal();
+                        };
+                        memberModalList.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error("Modal Data Load Error:", error);
+                memberModalList.innerHTML = `<li style="color:red; justify-content:center;">오류: ${error.message}</li>`;
+            } finally {
+                modalLoading.style.display = 'none';
+            }
+        }
+        
+        nameFilter.onclick = openMemberModal;
 
         let presidiaList = [];
 
@@ -679,8 +892,18 @@
                 return;
             }
 
-            // 선택된 기준일(입단일 또는 퇴단일)에 따라 오름차순 정렬
-            filtered.sort((a, b) => (a[dateField] || '').localeCompare(b[dateField] || ''));
+            // [요구사항] 입단자 우선, 퇴단자 나중 + 각각 최근일자(내림차순) 순으로 정렬
+            filtered.sort((a, b) => {
+                const getPriority = (s) => (s === '퇴단' || s === '전출') ? 1 : 0;
+                const pA = getPriority(a.status);
+                const pB = getPriority(b.status);
+                if (pA !== pB) return pA - pB;
+                
+                // 같은 우선순위면 최근 날짜(내림차순) 정렬
+                const dateValA = (pA === 0) ? (a.probationaryDate || '') : (a.leaveDate || '');
+                const dateValB = (pB === 0) ? (b.probationaryDate || '') : (b.leaveDate || '');
+                return dateValB.localeCompare(dateValA);
+            });
 
             noDataMsg.style.display = 'none';
             reportContent.style.display = 'block';

@@ -674,11 +674,10 @@ body {
     width: 100%;
 }
 
-.login-footer-credit {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    text-align: center;
-    color: #aaa;
-    font-size: 0.8rem;
+
+/* 모바일 폰트 크기 자동 조절 (대시보드 푸터용 등 필요시 유지, 현재는 신규 인라인 스타일이 처리) */
+@media (max-width: 480px) {
+    .footer-credit {
+        font-size: 0.72rem;
+    }
 }
