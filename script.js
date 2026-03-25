@@ -510,12 +510,17 @@ window.initCommonMenus = (profile, logoutUser) => {
 
         // 2. 관리자 메뉴 권한 제어
         const isAdmin = (profile && (profile.role || '')).toLowerCase().includes('admin') || (profile && (profile.role || '')).includes('관리자');
+        const isOfficer = isAdmin || ['단장', '부단장', '서기', '회계'].some(r => (profile.role || '').includes(r));
+
         const resourcesMenu = document.getElementById('menu-resources');
         if (resourcesMenu) {
             resourcesMenu.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
         }
         navMenu.querySelectorAll('.nav-item').forEach(item => {
-            if (item.textContent.includes('관리자')) {
+            const navLinkText = item.querySelector('.nav-link')?.textContent || '';
+            
+            // [권한 제어] 관리자 메뉴
+            if (navLinkText.includes('관리자')) {
                 item.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
                 
                 // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 표준화 진단' 링크 동적 주입
@@ -536,6 +541,17 @@ window.initCommonMenus = (profile, logoutUser) => {
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="event_type_register"]')) {
                     const li = document.createElement('li');
                     li.innerHTML = '<a href="event_type_register.html" style="color: #6a1b9a; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">📋 행사 종류 관리</a>';
+                    subMenu.appendChild(li);
+                }
+            }
+
+            // [권한 제어] 소통 메뉴 내 '긴급/휘발성 공지' 추가
+            if (navLinkText.includes('소통')) {
+                const subMenu = item.querySelector('.sub-menu');
+                if (subMenu && !subMenu.querySelector('a[href*="volatile_notice_management"]')) {
+                    const li = document.createElement('li');
+                    li.className = 'dynamic-menu-item';
+                    li.innerHTML = '<a href="volatile_notice_management.html" style="color: #d32f2f; font-weight: bold;"><i class="fas fa-bolt"></i> 긴급/휘발성 공지</a>';
                     subMenu.appendChild(li);
                 }
             }

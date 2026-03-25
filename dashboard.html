@@ -97,7 +97,68 @@
         </ul>
     </header>
 
+    <style>
+        /* --- 긴급 공지 배너 스타일 --- */
+        .volatile-banner-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 0 15px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .volatile-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: #fff9db;
+            border: 1.5px solid #ffec99;
+            border-radius: 12px;
+            color: #d48806;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            animation: slideDown 0.4s ease-out;
+            position: relative;
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .banner-close {
+            background: none;
+            border: none;
+            color: #d48806;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+
+        .banner-close:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+
     <div class="dashboard-container">
+        <!-- 긴급 공지 배너 영역 -->
+        <div id="volatileBannerArea" class="volatile-banner-container" style="margin-top: 25px;"></div>
+
         <div class="welcome-card"
             style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; margin-top: 50px; border: 1px solid var(--border-color);">
             <i class="fas fa-church" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 20px;"></i>
@@ -152,10 +213,12 @@
 
     <script src="script.js?v=20260308_0430"></script>
     <script type="module">
+        import { db, auth } from "./firebase-config.js?v=20260308_0430";
+        import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260308_0430";
 
         // Auth Guard & Role Check
-        initAuthObserver((user, profile) => {
+        initAuthObserver(async (user, profile) => {
             console.log("Logged in user:", profile);
 
             if (profile.status === 'pending') {
@@ -167,10 +230,104 @@
             if (window.initCommonMenus) {
                 window.initCommonMenus(profile, logoutUser);
             }
+
+            // === 긴급/휘발성 공지 로직 추가 ===
+            loadVolatileNotices(user.uid, profile);
         }, () => {
             // User Not Authenticated
             window.location.href = "index.html";
         });
+
+        async function loadVolatileNotices(uid, profile) {
+            const now = new Date().toISOString();
+            const bannerArea = document.getElementById('volatileBannerArea');
+            
+            try {
+                // 성당 필터를 빼고 전체 활성 공지를 가져와서 클라이언트 측에서 타게팅 로직으로 거름
+                const q = query(
+                    collection(db, "volatile_notices"), 
+                    where("expiresAt", ">", new Date().toISOString()),
+                    orderBy("expiresAt", "asc")
+                );
+                const querySnapshot = await getDocs(q);
+                
+                querySnapshot.forEach(async (docSnap) => {
+                    const notice = docSnap.data();
+                    const noticeId = docSnap.id;
+                    
+                    // [고도화] 계층별 대상 체크 (church:, curia:, presidium: 접두사 대응)
+                    const targetRaw = notice.targetId || 'all';
+                    let isTarget = false;
+
+                    if (targetRaw === 'all') {
+                        isTarget = true;
+                    } else if (targetRaw.startsWith('church:')) {
+                        const targetName = targetRaw.split(':')[1];
+                        if (targetName === profile.churchName) isTarget = true;
+                    } else if (targetRaw.startsWith('curia:')) {
+                        const targetName = targetRaw.split(':')[1];
+                        if (targetName === profile.curiaName) isTarget = true;
+                    } else if (targetRaw.startsWith('presidium:')) {
+                        const targetName = targetRaw.split(':')[1];
+                        if (targetName === profile.presidiumName) isTarget = true;
+                    } else {
+                        // [하위 호환] 접두사가 없는 경우 예전처럼 쁘레시디움명으로 간주
+                        if (targetRaw === profile.presidiumName) isTarget = true;
+                    }
+
+                    if (!isTarget) return;
+
+                    // 이미 확인한 공지인지 체크 (seenBy에 내 uid가 있는지)
+                    const isSeen = notice.seenBy && notice.seenBy.includes(uid);
+                    if (isSeen) return;
+
+                    if (notice.displayType === 'popup') {
+                        // 팝업 노출 (이미 본 게 아닐 때만)
+                        await window.showGlobalAlert(`<div style="text-align:left; font-weight:normal;">${notice.content}</div>`, 'info');
+                        // 확인 버튼 누르면 seenBy 업데이트
+                        await markAsSeen(noticeId, uid);
+                    } 
+                    else if (notice.displayType === 'banner') {
+                        // 배너 노출
+                        const banner = document.createElement('div');
+                        banner.className = 'volatile-banner';
+                        banner.innerHTML = `
+                            <div class="banner-content" onclick="window.showGlobalAlert('${notice.content.replace(/\n/g, '<br>')}', 'info')">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span>${notice.title}</span>
+                            </div>
+                            <button class="banner-close" onclick="closeBanner(this, '${noticeId}', '${uid}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                        bannerArea.appendChild(banner);
+                    }
+                });
+            } catch (err) {
+                console.error("휘발성 공지 로드 실패:", err);
+            }
+        }
+
+        async function markAsSeen(noticeId, uid) {
+            try {
+                const noticeRef = doc(db, "volatile_notices", noticeId);
+                await updateDoc(noticeRef, {
+                    seenBy: arrayUnion(uid)
+                });
+            } catch (e) {
+                console.error("seenBy 업데이트 실패:", e);
+            }
+        }
+
+        window.closeBanner = async (btn, noticeId, uid) => {
+            const banner = btn.closest('.volatile-banner');
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-10px)';
+            setTimeout(() => banner.remove(), 300);
+            
+            // 배너도 닫으면 '본 것'으로 처리
+            await markAsSeen(noticeId, uid);
+        };
     </script>
 </body>
 
