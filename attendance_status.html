@@ -222,41 +222,47 @@
             }
 
             /* Narrow the Presence/Absence columns */
+            .attendance-table th:nth-child(3),
+            .attendance-table td:nth-child(3),
             .attendance-table th:nth-child(4),
-            .attendance-table td:nth-child(4),
-            .attendance-table th:nth-child(5),
-            .attendance-table td:nth-child(5) {
-                width: 40px;
-                /* 너비 추가 축소하여 성명 칸 확보 */
+            .attendance-table td:nth-child(4) {
+                width: 50px !important;
+                min-width: 50px !important;
                 padding: 10px 1px;
             }
 
-            /* Narrow Role and Name columns slightly to give more room */
+            /* 직급 컬럼 너비 최소화 */
             .attendance-table th:nth-child(1),
             .attendance-table td:nth-child(1) {
-                width: 45px;
+                width: 55px !important;
+                min-width: 55px !important;
+                white-space: nowrap;
             }
 
+            /* 성명 컬럼 너비 최대 확보 */
             .attendance-table th:nth-child(2),
             .attendance-table td:nth-child(2) {
-                width: 65px;
-                /* 성명 칸 너비 확대 */
+                width: auto !important;
+                min-width: 90px;
+                padding: 10px 4px;
             }
 
-            /* Ensure baptismal name can use remaining space effectively */
-            .attendance-table td:nth-child(3) {
-                word-break: keep-all;
-                white-space: nowrap;
-                /* 강제 줄바꿈 방지 */
+            .name-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                line-height: 1.3;
+            }
+
+            .member-name {
+                font-weight: bold;
+                font-size: 0.95rem;
+            }
+
+            .baptismal-name {
                 font-size: 0.8rem;
-                /* 세례명 폰트 크기 추가 조정 */
-            }
-
-            /* 직급 컬럼 너비 조정 및 줄바꿈 방지 */
-            .attendance-table th:nth-child(1),
-            .attendance-table td:nth-child(1) {
-                width: 58px !important;
-                white-space: nowrap;
+                color: #666;
+                margin-top: 1px;
             }
 
             .checkbox-group {
@@ -373,7 +379,7 @@
             background: #e8f5e9;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .btn-emergency-sync {
                 padding: 6px 10px;
                 font-size: 0.85rem;
@@ -432,19 +438,27 @@
         }
 
         /* 모바일 대응 레이아웃 수정 */
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .form-grid-header {
-                grid-template-columns: 1fr;
-                /* 모바일에서는 1열로 세로 배치 */
+                grid-template-columns: repeat(3, 1fr);
+                /* 태블릿/가로보기에서 3열 배치 */
                 gap: 15px;
                 padding: 15px;
+            }
+
+            /* 좁은 세로 화면 대응 */
+            @media (max-width: 480px) {
+                .form-grid-header {
+                    grid-template-columns: 1fr;
+                    /* 모바일 세로에서는 1열 */
+                }
             }
 
             .col-span-2,
             .col-span-3,
             .col-span-6 {
                 grid-column: span 1;
-                /* 모바일에서는 모든 칸이 100% 너비 */
+                /* 모든 칸이 1칸씩 차지 */
             }
 
             .form-group {
@@ -686,14 +700,13 @@
                         <tr>
                             <th>직급</th>
                             <th>성명</th>
-                            <th>세례명</th>
                             <th style="width: 100px;">출석</th>
                             <th style="width: 100px;">결석</th>
                         </tr>
                     </thead>
                     <tbody id="attendanceTableBody">
                         <tr>
-                            <td colspan="5" style="color: #999; padding: 40px;">조직을 선택하면 단원 목록이 표시됩니다.</td>
+                            <td colspan="4" style="color: #999; padding: 40px;">조직을 선택하면 단원 목록이 표시됩니다.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1290,7 +1303,7 @@
             const meetingDate = dateInput.value;
 
             if (!church || !curia || !presidium) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">조직을 선택하면 단원 목록이 표시됩니다.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="4" style="color: #999; padding: 40px;">조직을 선택하면 단원 목록이 표시됩니다.</td></tr>';
                 return;
             }
 
@@ -1340,7 +1353,7 @@
             tableBody.innerHTML = '';
 
             if (officers.length === 0 && members.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">등록된 간부 및 단원이 없습니다.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="4" style="color: #999; padding: 40px;">등록된 간부 및 단원이 없습니다.</td></tr>';
                 return;
             }
 
@@ -1376,8 +1389,12 @@
 
             tr.innerHTML = `
                 <td>${role}</td>
-                <td>${name} (${baptismal || '-'})</td>
-                <td>${baptismal || '-'}</td>
+                <td>
+                    <div class="name-container">
+                        <span class="member-name">${name}</span>
+                        <span class="baptismal-name">(${baptismal || '-'})</span>
+                    </div>
+                </td>
                 <td><input type="checkbox" class="attendance-checkbox present" data-id="${id}" data-role="${role}" data-name="${name}" data-baptismal="${baptismal || ''}" data-officer="${isOfficer}"></td>
                 <td><input type="checkbox" class="attendance-checkbox absent" data-id="${id}" data-role="${role}" data-name="${name}" data-baptismal="${baptismal || ''}"></td>
             `;

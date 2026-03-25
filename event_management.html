@@ -539,10 +539,6 @@
                             <label>종류</label>
                             <select name="type" id="type" required>
                                 <option value="">종류 선택</option>
-                                <option value="레지오마리애 5대행사">레지오마리애 5대행사</option>
-                                <option value="기타행사">기타행사</option>
-                                <option value="교육">교육</option>
-                                <option value="피정">피정</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -650,6 +646,7 @@
         let currentUser = null;
         let membersList = [];
         let eventsList = [];
+        let eventTypesList = []; // [Dynamic] 서버에서 불러온 행사 종류 목록 (v16.88)
 
         const form = document.getElementById('eventForm');
         const churchSelect = document.getElementById('churchSelect');
@@ -683,10 +680,28 @@
         });
 
         async function loadBaseData() {
-            // Since we need to pre-load some data for suggestions or filtering, 
-            // but we'll query dynamically as well.
             const allPresidia = await fetchPresidiaList();
-            // membersList and eventsList will be fetched based on filters later.
+            
+            // [Dynamic] 행사 종류 목록 동적 로드 (v16.88)
+            try {
+                const snap = await getDocs(collection(db, 'event_types_list'));
+                if (!snap.empty) {
+                    eventTypesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    eventTypesList.sort((a, b) => (a.order || 99) - (b.order || 99));
+                    
+                    // HTML Select 메뉴 동적 갱신
+                    const typeSelect = document.getElementById('type');
+                    typeSelect.innerHTML = '<option value="">종류 선택</option>';
+                    eventTypesList.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.name;
+                        opt.textContent = t.name;
+                        typeSelect.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading event types:", err);
+            }
         }
 
         function setupPermissions() {
@@ -803,14 +818,14 @@
                 eventNameHidden.value = '';
 
                 if (e.isTrusted) {
-                    clearFormDetails();
+                    // clearFormDetails(); // 종류 변경 시 다른 필드 강제 초기화 중단 (v16.87)
                 }
             });
 
             // Select 변경 시 숨겨진 필드 동기화 및 자동 초기화
             eventNameSelect.addEventListener('change', (e) => {
                 eventNameHidden.value = e.target.value;
-                if (e.isTrusted) clearFormDetails(); // 사용자가 직접 바꾼 경우에만 나머지 필드 초기화
+                // if (e.isTrusted) clearFormDetails(); // 사용자가 직접 바꾼 경우에만 나머지 필드 초기화 - 과도한 리셋으로 비활성화 (v16.87)
             });
 
             // Input 변경 시 숨겨진 필드 동기화 및 자동 초기화
@@ -819,7 +834,7 @@
             });
             eventNameInput.addEventListener('change', (e) => {
                 eventNameHidden.value = e.target.value;
-                if (e.isTrusted) clearFormDetails(); // 사용자가 직접 바꾼 경우에만 나머지 필드 초기화
+                // if (e.isTrusted) clearFormDetails(); // 사용자가 직접 바꾼 경우에만 나머지 필드 초기화 - 과도한 리셋으로 비활성화 (v16.87)
             });
 
             // 삭제 버튼 리스너
@@ -936,9 +951,9 @@
             // 편집 모드 해제
             form.removeAttribute('data-edit-id');
 
-            // 폼 필드 초기화
-            if (form.category) form.category.value = '';
-            if (form.type) form.type.value = '';
+            // 폼 필드 초기화 (구분/종류는 사용자 선택 유지 위해 주석 처리)
+            // if (form.category) form.category.value = '';
+            // if (form.type) form.type.value = '';
             document.getElementById('eventNameHidden').value = '';
             document.getElementById('eventNameSelect').value = '';
             document.getElementById('eventNameInput').value = '';
@@ -973,15 +988,9 @@
             dataList.innerHTML = '';
             eventNameSelect.innerHTML = '<option value="">행사명 선택</option>';
 
-            // 1. 기본 제공 목록 정의
-            const baseOptions = {
-                '레지오마리애 5대행사': ['아치에스', '야외행사', '쁘레시디움 친목회', '연차 총 친목회', '토론대회'],
-                '기타행사': ['성모의 밤', '본당의 날'],
-                '교육': [],
-                '피정': []
-            };
-
-            const options = new Set(baseOptions[type] || []);
+            // [Dynamic] 서버에서 불러온 데이터에서 추천 목록 추출
+            const targetType = eventTypesList.find(t => t.name === type);
+            const options = new Set(targetType ? targetType.baseEvents : []);
 
             // 2. 기존 저장된 데이터에서 해당 종류의 행사명 추가 (Firestore 쿼리)
             if (type) {
@@ -1010,8 +1019,9 @@
                 dataList.appendChild(dlOpt);
             });
 
-            // 4. 모드에 따른 가시성 제어
-            if (type === '레지오마리애 5대행사') {
+            // 4. 모드에 따른 가시성 제어 (특정 행사는 선택형, 나머지는 입력형)
+            // '레지오마리애 5대행사'이거나 추천 목록이 있는 경우 선택형(Select)으로 표시 시도
+            if (type === '레지오마리애 5대행사' || (targetType && targetType.baseEvents && targetType.baseEvents.length > 0)) {
                 eventNameSelect.style.display = 'block';
                 eventNameSelect.required = true;
                 eventNameInput.style.display = 'none';
@@ -1060,23 +1070,19 @@
             const filteredMembers = membersList.filter(m => {
                 if (!eventDate) return true;
 
-                // [🚨 필터 강화] 행사 일자 기준 퇴단/전출 여부 판단
-                const isLeft = m.status === '퇴단' || m.status === '전출';
-
                 if (m.isAux) {
                     const isJoined = !m.admissionDate || m.admissionDate <= eventDate;
-                    // 퇴단/전출 여부 판단: 행사일보다 이전(또는 당일)에 나갔으면 제외
-                    if (isLeft) {
-                        if (m.withdrawalDate && m.withdrawalDate.trim() !== '') {
-                            if (m.withdrawalDate <= eventDate) return false; // 행사전 퇴단
-                        } else {
-                            return false; // 퇴단일 없으나 현재 퇴단 상태면 제외
-                        }
+                    // [🚨 협조단원 필터 강화] status 필드 유무와 관계없이 withdrawalDate로 판단
+                    if (m.withdrawalDate && m.withdrawalDate.trim() !== '') {
+                        if (m.withdrawalDate <= eventDate) return false; // 행사전 퇴단
+                    } else if (m.status === '퇴단' || m.status === '전출') {
+                        return false; // 날짜는 없으나 상태가 퇴단이면 제외
                     }
                     return isJoined;
                 } else {
                     const isJoinedBefore = !m.probationaryDate || m.probationaryDate <= eventDate;
-                    // 퇴단/전출 여부 판단: 행사일보다 이전(또는 당일)에 나갔으면 제외
+                    // [🚨 행동단원 필터] 행사 일자 기준 퇴단/전출 여부 판단
+                    const isLeft = m.status === '퇴단' || m.status === '전출';
                     if (isLeft) {
                         if (m.leaveDate && m.leaveDate.trim() !== '') {
                             if (m.leaveDate <= eventDate) return false; // 행사전 퇴단

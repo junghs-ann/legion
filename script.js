@@ -531,6 +531,13 @@ window.initCommonMenus = (profile, logoutUser) => {
                     li.innerHTML = '<a href="data_cleanup.html" style="color: #ef4444; font-size: 0.85rem;">⚠️ 데이터 일괄 정리(구)</a>';
                     subMenu.appendChild(li);
                 }
+
+                // [새 기능] 행사 종류 관리 메뉴 추가 (v16.88)
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="event_type_register"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="event_type_register.html" style="color: #6a1b9a; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">📋 행사 종류 관리</a>';
+                    subMenu.appendChild(li);
+                }
             }
         });
 
