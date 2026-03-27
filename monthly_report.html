@@ -368,6 +368,18 @@
                 </div>
             </div>
 
+            <div class="filter-item" id="versionContainer" style="grid-column: span 2;">
+                <label>보고서 양식 버전 (2026.03 ~ V2 양식 권장)</label>
+                <div style="display: flex; gap: 20px; background: #fffde7; padding: 10px; border-radius: 8px; border: 1px solid #fff59d;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="reportVersion" value="v1" style="width: auto;"> <b>V1 (기존 양식)</b>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                        <input type="radio" name="reportVersion" value="v2" checked style="width: auto;"> <b>V2 (신규 양식)</b>
+                    </label>
+                </div>
+            </div>
+
             <div class="filter-item">
                 <label>성당</label>
                 <select id="churchSelect">
@@ -566,8 +578,25 @@
                     startSess.add(opt1);
                     endSess.add(opt2);
                 });
+
+                // [추가] 초기 상단 회차 기준으로 버전 자동 설정
+                if (filteredAtts.length > 0) {
+                    updateVersionByDate(filteredAtts[0].date);
+                }
             } catch (error) {
                 console.error("Error updateSessionLists:", error);
+            }
+        }
+
+        // [추가] 날짜에 따른 양식 버전 자동 변경 함수
+        function updateVersionByDate(dateString) {
+            if (!dateString) return;
+            const versionRadios = document.getElementsByName('reportVersion');
+            // 2026년 3월 1일 기준 (V1: 2월까지, V2: 3월부터)
+            if (dateString < '2026-03-01') {
+                versionRadios[0].checked = true; // V1
+            } else {
+                versionRadios[1].checked = true; // V2
             }
         }
 
@@ -578,7 +607,10 @@
 
         endSess.addEventListener('change', () => {
             const opt = endSess.options[endSess.selectedIndex];
-            if (opt && opt.dataset.date) endDate.value = opt.dataset.date;
+            if (opt && opt.dataset.date) {
+                endDate.value = opt.dataset.date;
+                updateVersionByDate(opt.dataset.date); // 날짜 변경 시 버전 자동 업데이트
+            }
         });
 
         function setupEnterToNext() {
@@ -590,11 +622,12 @@
             const c = churchSelect.value, p = presidiumSelect.value, s = startDate.value, e = endDate.value;
             const ss = startSess.value, es = endSess.value;
             const mode = document.querySelector('input[name="reportMode"]:checked').value;
+            const version = document.querySelector('input[name="reportVersion"]:checked').value;
 
             if (!c || !p || !s || !e) { window.showCustomAlert('모든 항목을 채워주세요.'); return; }
             if (s > e) { window.showCustomAlert('날짜 범위를 확인해주세요.'); return; }
 
-            // 보고서 상태 체크
+            // 보고서 상태 체크 (복구된 부분)
             let found = null;
             try {
                 const reportId = `${c}_${p}_${ss}_${es}`;
@@ -627,7 +660,8 @@
             const left = (window.screen.width / 2) - (width / 2);
             const top = (window.screen.height / 2) - (height / 2);
 
-            let url = `monthly_report_view.html?churchName=${encodeURIComponent(c)}&curiaName=${encodeURIComponent(curiaSelect.value)}&presidiumName=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}`;
+            let baseUrl = version === 'v2' ? 'monthly_report_view_v2.html' : 'monthly_report_view.html';
+            let url = `${baseUrl}?churchName=${encodeURIComponent(c)}&curiaName=${encodeURIComponent(curiaSelect.value)}&presidiumName=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}&version=${version}`;
             if (ss) url += `&ss=${ss}`;
             if (es) url += `&es=${es}`;
 

@@ -22,12 +22,14 @@ export function convertToStdRole(role) {
     const pastKeywords = ['전', '전임', '퇴임', '역대', 'past', 'former', 'ex-'];
     if (pastKeywords.some(k => r.includes(k))) return '단원';
     
-    if (r.includes('단장') && !r.includes('부단장')) return '단장';
-    if (r.includes('president') && !r.includes('vice')) return '단장';
-    if (r.includes('부단장') || r.includes('vice')) return '부단장';
-    if (r.includes('서기') || r.includes('secretary')) return '서기';
-    if (r.includes('회계') || r.includes('treasurer')) return '회계';
-    if (r.includes('관리자') || r.includes('admin')) return '관리자';
+    if (r.indexOf('단장') !== -1 && r.indexOf('부단장') === -1) return '단장';
+    if (r.indexOf('president') !== -1 && r.indexOf('vice') === -1) return '단장';
+    if (r.indexOf('leader') !== -1 || r.indexOf('head') !== -1) return '단장';
+    
+    if (r.indexOf('부단장') !== -1 || r.indexOf('vice') !== -1) return '부단장';
+    if (r.indexOf('서기') !== -1 || r.indexOf('secretary') !== -1) return '서기';
+    if (r.indexOf('회계') !== -1 || r.indexOf('treasurer') !== -1) return '회계';
+    if (r.indexOf('관리자') !== -1 || r.indexOf('admin') !== -1) return '관리자';
     return '단원';
 }
 

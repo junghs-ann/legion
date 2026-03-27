@@ -115,7 +115,7 @@
         .report-header {
             text-align: center;
             position: relative;
-            margin-bottom: 5mm;
+            margin-bottom: 2mm;
         }
 
         .title-main {
@@ -640,13 +640,16 @@
                 <span id="acc_out" class="underline">-</span> 잔 액 <span id="acc_bal" class="underline">-</span>
             </div>
             <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
-                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow"
-                    class="underline">-</span> (기타)
-                <span id="exp_etc" class="underline">-</span>
+                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow" class="underline">-</span> (기타) <span id="exp_etc" class="underline">-</span>
             </div>
 
-            <div class="section-title">8. 주요 활동 요약</div>
-            <table class="report-table" style="width: 185mm; margin: 0 auto; table-layout: fixed;">
+            <div class="section-title">
+                <span>8. 주요 활동 요약</span>
+                <span id="anniversaryHeader" style="color:red; font-size:9pt; font-weight:bold; letter-spacing: -0.1mm; margin-left: 15px;">
+                    2027년 대전교구 레지오마리애 도입 70주년 '단원 특별활동 실천'(~2027년 12월)
+                </span>
+            </div>
+            <table class="report-table" id="activitySummaryTable">
                 <colgroup>
                     <col style="width: 10mm;"> <!-- 좌 번호 -->
                     <col style="width: 18mm;"> <!-- 좌 활동 1 (폭 축소) -->
@@ -779,7 +782,7 @@
                     <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(평의회)</span>
                     <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>직속</b>
                 </div>
-                <div class="sig-line" style="font-weight:bold; font-size:12.5pt; margin-bottom: 3.5mm;">
+                <div class="sig-line" style="font-weight:bold; font-size:11.5pt; margin-bottom: 1.5mm;">
                     <span id="footChurch" class="underline" style="min-width:30mm">-</span>
                     <span id="footPr" class="underline" style="min-width:35mm">-</span> 쁘레시디움 단장
                     <span id="footName" class="underline" style="min-width:30mm">-</span> (인)
@@ -806,11 +809,11 @@
                     </tr>
                 </thead>
                 <tbody id="activityDetailBody"></tbody>
-                <tfoot id="activityTotalFoot">
-                    <tr>
-                        <th>합 계</th>
-                        <td id="grandTotalCount" style="font-weight:bold;">-</td>
-                        <td style="background:#eee;"></td>
+                <tfoot id="activityTotalFoot" style="font-weight:bold;">
+                    <tr style="height:8mm;">
+                        <th style="border:1px solid #000; text-align:center;">합 계</th>
+                        <td id="grandTotalCount" style="border:1px solid #000; text-align:right; padding-right:5px;">-</td>
+                        <td style="border:1px solid #000;"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -831,6 +834,7 @@
         let pr = normalize(urlParams.get('presidiumName'));
         let start = normalize(urlParams.get('start'));
         let end = normalize(urlParams.get('end'));
+        const endYear = end ? end.split('-')[0] : new Date().getFullYear();
         const mode = normalize(urlParams.get('mode')) || 'view';
 
         // [디버그] URL 파라미터 수신 확인
@@ -867,12 +871,10 @@
 
         window.showCustomConfirm = (message) => {
             return new Promise((resolve) => {
-                console.log("📢 [모달] showCustomConfirm 호출됨:", message);
                 modalMessage.textContent = message;
                 modalCancelBtn.style.display = 'block';
                 modalConfirmBtn.style.maxWidth = '120px';
                 modalOverlay.style.display = 'flex';
-                console.log(" ✅ [모달] overlay.style.display를 flex로 변경함");
 
                 const handleConfirm = () => {
                     modalOverlay.style.display = 'none';
@@ -910,7 +912,7 @@
             if (isGenerating) return;
             isGenerating = true;
             try {
-                // [시니어 패치] 공유 변수 스코프 확보 (ReferenceError 방지)
+                // [시니어 패치] 공유 변수 스코프 확보 (ReferenceError 방지) 🌊
                 let offIds = new Set();
                 let officialPresidentId = '';
                 let officialPresidentName = '';
@@ -922,20 +924,21 @@
                     window.showCustomAlert('[데이터 무결성 오류]\n필수 매개변수(성당, Pr, 기간)가 누락되었습니다.').then(() => window.close());
                     return;
                 }
+
+                const t = (val) => String(val || '').trim();
+                const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
+                const targetChurchClean = clean(church);
+                const targetPrClean = clean(pr);
+                const isOrgMatch = (churchVal, prVal) => {
+                    const cc = clean(churchVal), cp = clean(prVal);
+                    if (!cc || !cp) return false;
+                    return cp === targetPrClean && cc === targetChurchClean;
+                };
             // [정석화] 꼼수 함수(getField) 제거⚖️🌊
 
             const curiaParam = urlParams.get('curia');
             const ssValue = urlParams.get('ss'), esValue = urlParams.get('es');
 
-            const t = (val) => String(val || '').trim();
-            const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
-            const targetChurchClean = clean(church);
-            const targetPrClean = clean(pr);
-            const isOrgMatch = (churchVal, prVal) => {
-                const cc = clean(churchVal), cp = clean(prVal);
-                if (!cc || !cp) return false;
-                return cp === targetPrClean && cc === targetChurchClean;
-            };
 
             const targetChurch = t(church);
             const targetPr = t(pr);
@@ -990,7 +993,7 @@
                     );
 
                     // [추가] 단장 성명 및 ID 추출 (서명 매칭용 - Robust Matching 적용)
-                    const presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
+                    let presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
                     officialPresidentName = presOff.name || '';
                     officialPresidentId = presOff.memberId || '';
 
@@ -1403,7 +1406,7 @@
                 setVal('exp_flow', expFlow.toLocaleString());
                 setVal('exp_etc', expEtc.toLocaleString());
 
-                // [정예화] 오직 표준 명칭으로만 합계 산출
+                // [정예화] 오직 표준 명칭(adjs)으로만 활동 실적 합산
                 const sumAct = (name) => {
                     return recs.reduce((a, c) => {
                         let val = (parseInt(c.counts && c.counts[name]) || 0);
@@ -1620,17 +1623,22 @@
                     // [시니어 패치] 스냅샷 데이터가 없을 때만 실시간 계산 로직 실행
 
                 // 1. 일반 그룹 처리 및 특수 그룹 분리
-                prSchema.forEach(group => {
-                    // 특수 그룹은 별도 처리를 위해 저장하고 루프 건너뜀
-                    if (group.id === 'cat_others_simple') { grpSimple = group; return; }
-                    if (group.id === 'cat_others_detail') { grpDetail = group; return; }
-                    if (group.id === 'cat_charity') { grpCharity = group; return; }
+                grpSimple = null; grpDetail = null; grpCharity = null;
+                const filteredSchema = prSchema.filter(group => {
+                    const title = group.title || '';
+                    if (title.includes('기타활동(1)')) { grpSimple = group; return false; }
+                    if (title.includes('기타활동(2)') || title === '기타 활동') { grpDetail = group; return false; }
+                    if (title.includes('사랑의 증언')) { grpCharity = group; return false; }
+                    return true;
+                });
 
-                    let groupCount = 0, groupDetails = [];
+                filteredSchema.forEach(group => {
+                    let groupCount = 0;
+                    let groupDetails = [];
+
                     group.items.forEach(it => {
                         const c = sumAct(it.name);
                         groupCount += c;
-                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         groupDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
@@ -1641,19 +1649,16 @@
                 });
 
                 // 2. 기타 활동 병합 처리 (2행 구성)
-                // [1행] 기타활동(1) 내용
                 let simpleCount = 0, simpleDetails = [];
                 if (grpSimple) {
                     grpSimple.items.forEach(it => {
                         const c = sumAct(it.name);
                         simpleCount += c;
-                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
                 }
 
-                // [2행] 기타활동(2) + 사랑의 증언활동 내용 합산
                 let combinedCount = 0;
                 let detailItemsStr = '', charityItemsStr = '';
 
@@ -1662,7 +1667,6 @@
                     grpDetail.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
-                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
@@ -1674,7 +1678,6 @@
                     grpCharity.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
-                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
@@ -1683,20 +1686,143 @@
 
                 gCount += (simpleCount + combinedCount);
 
-                // 기타 활동 헤더 병합 (Rowspan 2)
                 detailHtml += `<tr>
-                <th rowspan="2">기타 활동</th>
-                <td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
-                <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
-            </tr>`;
+                    <th rowspan="2">기타 활동</th>
+                    <td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
+                    <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
+                </tr>`;
 
                 detailHtml += `<tr>
-                <td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
-                <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
-                    ${detailItemsStr}
-                    ${charityItemsStr}
-                </td>
-            </tr>`;
+                    <td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
+                    <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
+                        ${detailItemsStr}
+                        ${charityItemsStr}
+                    </td>
+                </tr>`;
+
+
+                const spec1Val = sumAct('대전교구 레지오마리애 도입 70주년 묵주기도');
+                const spec2Val = sumAct('서울세계청년대회 묵주기도 10억 단 바치기');
+                const spec3Val = sumAct('관평동성당 첫 사제를 위한 영적 예물 바치기');
+                const rosaryMax = Math.max(spec1Val, spec2Val, spec3Val);
+
+                const newFamVal = sumAct('새 가족 찾기');
+                const soulVal = sumAct('냉담 교우 회두');
+                const welVal = sumAct('복지시설');
+                const hospVal = sumAct('병원.요양원');
+                const charityEtcVal = sumAct('기타 사랑봉사');
+                const peaceVal = sumAct('밤9시 주모경 바치기');
+                const enlistVal = sumAct('행동단원 모집') + sumAct('협조단원 모집 및 돌봄');
+                const ecoVal = sumAct('탄소중립 실천하기');
+                const holyReadVal = sumAct('거룩한 독서');
+                const noteVal = 0; // 노트작성 (추후 필요시 연동)
+
+                const massVal = sumAct('평일미사참례');
+                const bibleVal = sumAct('성경읽기') + sumAct('성경쓰기');
+                const mediVal = sumAct('매일미사읽고묵상');
+                const armyVal = sumAct('월간 성모님의 군단 읽기');
+
+                const summaryTable = document.getElementById('activitySummaryTable');
+                if (summaryTable) {
+                    summaryTable.innerHTML = `
+                        <colgroup>
+                            <col style="width: 8mm;">  <!-- 번호1 -->
+                            <col style="width: 18mm;"> <!-- Title1 -->
+                            <col style="width: 51mm;"> <!-- Item1 (추가 조정) -->
+                            <col style="width: 17mm;"> <!-- Value1 (천단위 수치 대비 확대) -->
+                            <col style="width: 8mm;">  <!-- 번호2 -->
+                            <col style="width: 18mm;"> <!-- Title2 -->
+                            <col style="width: 51mm;"> <!-- Item2 (추가 조정) -->
+                            <col style="width: 17mm;"> <!-- Value2 (천단위 수치 대비 확대) -->
+                        </colgroup>
+                        <thead>
+                            <tr style="height: 6.5mm;">
+                                <th>번호</th>
+                                <th colspan="3">기도 및 신심행위 (Se. 및 교구 · Re.)</th>
+                                <th>번호</th>
+                                <th colspan="3">중 점 활 동</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activitySummaryBody">
+                            <!-- 1~2행: 묵주기도 + 새가족/회두 -->
+                            <tr style="height: 10.0mm;">
+                                <td rowspan="2">1</td>
+                                <td rowspan="2" colspan="2" style="text-align:left; font-size:7.5pt; padding:1px 5px; line-height:1.1;">
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">① 2027년 대전교구 레지오마리애 도입 70주년 묵주기도 7천만 단 바치기 <span style="white-space:nowrap;">(${spec1Val.toLocaleString()})</span></div>
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">② 서울세계청년대회 묵주기도 10억 단 바치기 <span style="white-space:nowrap;">(${spec2Val.toLocaleString()})</span></div>
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">③ 관평동성당 첫 사제를 위한 묵주기도 100만 단 바치기 <span style="white-space:nowrap;">(${spec3Val.toLocaleString()})</span></div>
+                                </td>
+                                <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} 단</td>
+                                <td rowspan="2">1</td>
+                                <th style="font-size:8pt; border-bottom:0.5pt solid #000;">새 가족찾기</th>
+                                <td style="font-size:8pt; text-align:left; padding-left:5px; border-bottom:0.5pt solid #000;">예비자 교리반 입교</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-bottom:0.5pt solid #000;">${newFamVal.toLocaleString()} 명</td>
+                            </tr>
+                            <tr style="height: 10.0mm;">
+                                <th style="font-size:8pt; border-top:1px solid #000; line-height:1.2;">쉬는교우<br>회두</th>
+                                <td style="font-size:8pt; border-top:1px solid #000; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-top:1px solid #000;">${soulVal.toLocaleString()} 명</td>
+                            </tr>
+
+                            <!-- 3~4행: 평일미사 + 사랑의증언(1,2) -->
+                            <tr style="height: 10mm;">
+                                <td rowspan="8">2</td>
+                                <td rowspan="8" style="font-weight:bold; font-size:9pt; line-height:1.2;">매일미사<br>와<br>말씀과<br>함께하기</td>
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">① 평일미사 참례</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${massVal.toLocaleString()} 회</td>
+                                <td rowspan="3">2</td>
+                                <td rowspan="3" style="font-weight:bold;">사랑의<br>증언활동</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">① 복지시설</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${welVal.toLocaleString()} 회</td>
+                            </tr>
+                            <tr style="height: 7.5mm;">
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">② 병원, 요양원</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${hospVal.toLocaleString()} 회</td>
+                            </tr>
+
+                            <!-- 5~6행: 성경읽기/쓰기 + 사랑의증언(3) + 밤9시주모경 -->
+                            <tr style="height: 7.5mm;">
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">② 성경읽기, 쓰기</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${bibleVal.toLocaleString()} 장</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">③ 기타(독거노인 등 소외된 이웃 돌봄)</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${charityEtcVal.toLocaleString()} 회</td>
+                            </tr>
+                            <tr style="height: 7.5mm;">
+                                <td>3</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">한반도 평화를 위한 밤 9시 주모경 바치기</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${peaceVal.toLocaleString()} 회</td>
+                            </tr>
+
+                            <!-- 7~8행: 매일미사 묵상 + 모집/돌봄 + 탄소중립 -->
+                            <tr style="height: 7.5mm;">
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">③ 매일미사 읽고, 묵상</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${mediVal.toLocaleString()} 회</td>
+                                <td>4</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">행동단원, 협조단원 모집 및 돌봄 활동</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${enlistVal.toLocaleString()} 회</td>
+                            </tr>
+                            <tr style="height: 7.5mm;">
+                                <td>5</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">탄소중립 실천하기</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${ecoVal.toLocaleString()} 회</td>
+                            </tr>
+
+                            <!-- 9~10행: 군단읽기 + 거룩한독서 -->
+                            <tr style="height: 7.5mm;">
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">④ 성모님의 군단읽기</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${armyVal.toLocaleString()} 쪽</td>
+                                <td rowspan="2">6</td>
+                                <td rowspan="2" style="font-weight:bold; font-size:8.5pt; line-height:1.2;">거룩한<br>독서</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">① 말씀 봉독하기(시청,묵상,기도)</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${holyReadVal.toLocaleString()} 회</td>
+                            </tr>
+                            <tr style="height: 7.5mm;">
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">② 노트작성</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${noteVal.toLocaleString()} 회</td>
+                            </tr>
+                        </tbody>
+                    `;
+                }
 
                 document.getElementById('activityDetailBody').innerHTML = detailHtml || '<tr><td colspan="3">해당 기간의 활동 상세 내역이 없습니다.</td></tr>';
                 setVal('grandTotalCount', gCount.toLocaleString());
@@ -1706,19 +1832,11 @@
                 setVal('footCu', info.curiaName || (userProfile ? userProfile.curiaName : '') || '-');
                 setVal('footPr', pr);
 
-                // 단장 성명 찾기 (간부 현황에서 조회 - Robust Match)
-                // const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]'); // Replaced by Firestore fetch
-                const today = new Date().toISOString().split('T')[0];
-                const president = offs.find(o =>
-                    isOrgMatch(o.churchName, o.presidiumName) &&
-                    convertToStdRole(o.role) === '단장' &&
-                    (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
-                );
-
-                officialPresidentName = president ? president.name : '';
-                officialPresidentId = president ? (president.id || president.memberId || president.uid || '') : '';
-
-
+                // [수정] 단장 및 간부 식별 정보 최종 매개변수화 (V18.1 정석화 - Robust Matching)
+                presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
+                officialPresidentName = presOff.name || '';
+                officialPresidentId = presOff.memberId || '';
+                
                 setVal('footName', officialPresidentName || (userProfile?.name || '-'));
                 }
 
@@ -1728,7 +1846,9 @@
                 return;
             }
 
-            // --- 보고서 결재 및 워크플로우 로직 추가 ---
+            // [추가] 보고서 결재 관련 유틸리티 함수 (V2 복구)
+            // reportKey, getStatusData, renderStatus 등은 generateReport 스코프 전역에서 사용 가능하도록 이미 상단 혹은 구조적으로 배치됨.
+            // 중복 선언부 제거
 
             async function renderStatus() {
                 try {
@@ -1997,33 +2117,17 @@
                 }
             };
 
-            console.log("🛠️ [최종단계] 버튼 이벤트 핸들러 등록 시도...");
-            
-            const btnFinalize = document.getElementById('btnFinalize');
-            const btnApprove = document.getElementById('btnApprove');
-            const btnCancelApprove = document.getElementById('btnCancelApprove');
+            document.getElementById('btnFinalize').onclick = async () => {
+                if (await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
+                    await saveStatus('Draft');
+                }
+            };
 
-            if (btnFinalize) {
-                btnFinalize.onclick = async () => {
-                    console.log("🖱️ [버튼 클릭] 확정/저장 (btnFinalize)");
-                    const confirmed = await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.');
-                    console.log(" 📝 [확인 결과]:", confirmed);
-                    if (confirmed) {
-                        await saveStatus('Draft');
-                    }
-                };
-                console.log(" ✅ btnFinalize 핸들러 등록 완료");
-            }
-
-            if (btnApprove) {
-                btnApprove.onclick = async () => {
-                    console.log("🖱️ [버튼 클릭] 단장 승인 (btnApprove)");
-                    if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
-                        await saveStatus('Approved', userProfile.name);
-                    }
-                };
-                console.log(" ✅ btnApprove 핸들러 등록 완료");
-            }
+            document.getElementById('btnApprove').onclick = async () => {
+                if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
+                    await saveStatus('Approved', userProfile.name);
+                }
+            };
 
             const deleteStatus = async () => {
                 const reportId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`;
@@ -2037,29 +2141,20 @@
                 }
             };
 
-            if (btnCancelApprove) {
-                btnCancelApprove.onclick = async () => {
-                    console.log("🖱️ [버튼 클릭] 승인 취소/확정 취소 (btnCancelApprove)");
-                    const data = await getStatusData();
-                    const status = data ? data.status : 'Draft';
-                    console.log(" - 현재 데이터 상태:", status);
-                    
-                    if (status === 'Approved') {
-                        if (await window.showCustomConfirm('최종 승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
-                            console.log(" 🔄 승인 취소 진행");
-                            await saveStatus('Draft', null);
-                        }
-                    } else if (status === 'Draft') {
-                        if (await window.showCustomConfirm('보고서 확정을 취소하시겠습니까?\n취소 시 단원들이 이 보고서를 조회할 수 없게 됩니다.')) {
-                            console.log(" 🗑️ 확정 취소(데이터 삭제) 진행");
-                            await deleteStatus();
-                        }
+            document.getElementById('btnCancelApprove').onclick = async () => {
+                const data = await getStatusData();
+                const status = data ? data.status : 'Draft';
+                
+                if (status === 'Approved') {
+                    if (await window.showCustomConfirm('최종 승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
+                        await saveStatus('Draft', null);
                     }
-                };
-                console.log(" ✅ btnCancelApprove 핸들러 등록 완료");
-            }
-
-            console.log("🛠️ [최종단계] 모든 버튼 핸들러 등록 완료");
+                } else if (status === 'Draft') {
+                    if (await window.showCustomConfirm('보고서 확정을 취소하시겠습니까?\n취소 시 단원들이 이 보고서를 조회할 수 없게 됩니다.')) {
+                        await deleteStatus();
+                    }
+                }
+            };
 
             await renderStatus();
             } finally {
