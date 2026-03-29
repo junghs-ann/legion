@@ -964,7 +964,7 @@
                         getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
-                        getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
+                        getDocs(query(collection(db, 'events_list'), where('churchName', '==', targetChurch))),
                         getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
@@ -981,7 +981,13 @@
                     const recsAll = recSnapDocs.map(d => ({ ...d.data(), id: d.id }));
 
                     const transAll = transSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-                    const evsAll = eventSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+                    // [필터링 보강] 해당 꾸리아의 공통 행사 또는 우리 쁘레시디움 행사만 수합
+                    const targetCuria = info.curiaName || curiaParam || '';
+                    const evsAll = eventSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+                                         .filter(e => {
+                                             const eCuria = e.curiaName || '';
+                                             return eCuria === targetCuria && (!e.presidiumName || e.presidiumName === targetPr || e.presidiumName === '전체');
+                                         });
                     const ams = auxSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const pts = pretSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const adjs = adjSnap.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -1007,8 +1013,8 @@
                         console.log(`   [${idx+1}] ${o.role}: ${o.name} (ID: ${o.memberId || o.uid})`);
                     });
 
-                    const reportYear = new Date(end).getFullYear();
-                    const reportMonth = new Date(end).getMonth() + 1;
+                    const reportYear = new Date(start).getFullYear();
+                    const reportMonth = new Date(start).getMonth() + 1;
                     const reportMonthStart = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
                     // 해당 월의 마지막 날짜 구하기
                     const reportMonthEnd = new Date(reportYear, reportMonth, 0).toISOString().split('T')[0];
@@ -1038,9 +1044,9 @@
                     });
                 });
 
-                // 1. 헤더 및 주회합 정보
-                const endYear = new Date(end).getFullYear();
-                const endMonth = new Date(end).getMonth() + 1;
+                // 1. 헤더 및 주회합 정보 (기준 월: start 날짜의 월)
+                const endYear = reportYear;
+                const endMonth = reportMonth;
                 document.getElementById('repYear').textContent = endYear;
                 document.getElementById('repMonth').textContent = endMonth;
                 document.getElementById('repStartSess').textContent = ssValue || (atts.length > 0 ? (atts[0].session || '-') : '-');
@@ -1301,26 +1307,25 @@
                 setVal('a_i_m', fLen(aux_i, '남')); setVal('a_i_f', fLen(aux_i, '여')); setVal('a_i_t', aux_i.length);
                 setVal('a_o_m', fLen(aux_o, '남')); setVal('a_o_f', fLen(aux_o, '여')); setVal('a_o_t', aux_o.length);
 
-                // 5. 행사 내역 (주요 사항) - [고도화]
+                // 5. 행사 내역 (주요 사항) - [고도화] DB 카테고리 그대로 표시
                 // 기준 월(당월) 및 익월(다음달) 계산
-                const refYear = endYear;
-                const refMonth = endMonth;
+                const refYear = reportYear;
+                const refMonth = reportMonth;
                 const nextYear = refMonth === 12 ? refYear + 1 : refYear;
                 const nextMonth = refMonth === 12 ? 1 : refMonth + 1;
 
                 const curPrefix = `${refYear}-${String(refMonth).padStart(2, '0')}`;
                 const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
+                // [수정] DB 데이터를 있는 그대로 가져오며, 날짜 기준으로만 배분
                 const executedEvs = evsAll.filter(e => {
-                    const cat = e.category || '';
                     const d = e.eventDate || '';
-                    return cat === '실행' && d.startsWith(curPrefix);
+                    return d.startsWith(curPrefix);
                 });
 
                 const plannedEvs = evsAll.filter(e => {
-                    const cat = e.category || '';
                     const d = e.eventDate || '';
-                    return (cat === '계획' || cat === '예정') && d.startsWith(nextPrefix);
+                    return d.startsWith(nextPrefix);
                 });
 
                 // 합치고 날짜순 정렬
@@ -2076,9 +2081,9 @@
                     rd.eventTableBody = document.getElementById('eventTableBody').innerHTML;
                 }
 
-                // 매칭용 메타데이터
-                rd.officialPresidentName = officialPresidentName;
-                rd.officialPresidentId = officialPresidentId;
+                // 매칭용 메타데이터 (undefined 방지)
+                rd.officialPresidentName = officialPresidentName || '';
+                rd.officialPresidentId = officialPresidentId || '';
 
                 return rd;
             };
@@ -2093,11 +2098,11 @@
                 const newData = {
                     ...reportKey,
                     status: status,
-                    signer: signer || (data ? data.signer : null),
-                    signerUid: (status === 'Approved' && userProfile) ? (userProfile.UID || userProfile.uid || userProfile.id || null) : (data ? data.signerUid : null),
-                    signDate: signer ? new Date().toISOString() : (data ? data.signDate : null),
+                    signer: signer || (data ? data.signer : null) || null,
+                    signerUid: (status === 'Approved' && userProfile) ? (userProfile.UID || userProfile.uid || userProfile.id || null) : (data ? (data.signerUid || null) : null),
+                    signDate: signer ? new Date().toISOString() : (data ? (data.signDate || null) : null),
                     updatedAt: new Date().toISOString(),
-                    reportData: reportSnapshot || (data ? data.reportData : null)
+                    reportData: reportSnapshot || (data ? (data.reportData || null) : null)
                 };
 
                 try {
