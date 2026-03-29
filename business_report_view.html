@@ -1054,6 +1054,57 @@
                 return;
             }
 
+            // --- [UI 유틸리티] 커스텀 모달 팝업 정의 (최상단 배치로 조기 종료 대비) ---
+            const modalOverlay = document.getElementById('customModal');
+            const modalMessage = document.getElementById('modalMessage');
+            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+            const modalCancelBtn = document.getElementById('modalCancelBtn');
+
+            window.showCustomAlert = (message) => {
+                return new Promise((resolve) => {
+                    if (!modalOverlay || !modalMessage) { alert(message); resolve(true); return; }
+                    modalMessage.textContent = message;
+                    modalCancelBtn.style.display = 'none';
+                    modalConfirmBtn.style.maxWidth = '100%';
+                    modalOverlay.style.display = 'flex';
+
+                    const handleConfirm = () => {
+                        modalOverlay.style.display = 'none';
+                        modalConfirmBtn.removeEventListener('click', handleConfirm);
+                        resolve(true);
+                    };
+                    modalConfirmBtn.addEventListener('click', handleConfirm);
+                });
+            };
+
+            window.showCustomConfirm = (message) => {
+                return new Promise((resolve) => {
+                    if (!modalOverlay || !modalMessage) { const r = confirm(message); resolve(r); return; }
+                    modalMessage.textContent = message;
+                    modalCancelBtn.style.display = 'block';
+                    modalConfirmBtn.style.maxWidth = '120px';
+                    modalOverlay.style.display = 'flex';
+
+                    const handleConfirm = () => {
+                        modalOverlay.style.display = 'none';
+                        cleanup();
+                        resolve(true);
+                    };
+                    const handleCancel = () => {
+                        modalOverlay.style.display = 'none';
+                        cleanup();
+                        resolve(false);
+                    };
+                    const cleanup = () => {
+                        modalConfirmBtn.removeEventListener('click', handleConfirm);
+                        modalCancelBtn.removeEventListener('click', handleCancel);
+                    };
+
+                    modalConfirmBtn.addEventListener('click', handleConfirm);
+                    modalCancelBtn.addEventListener('click', handleCancel);
+                });
+            };
+
             console.log("Generating Report for:", { targetChurch, targetPr, targetCuria, ss, es, start, end, mode });
             
             // [강제 알림] 데이터 로딩 시작 확인용
@@ -1120,6 +1171,353 @@
                 });
             } catch (err) {
                 console.error("Firestore loading error:", err);
+            }
+
+            // [시니어 패치] 보고서 식별키 정의 및 상태 제어 함수들을 최상단으로 전진 배치 (실행 순서 버그 해결)
+            // 1. 회차 정보 확정 (URL 파라미터가 없으면 계산)
+            const ssV = ss || (allAtt.length > 0 ? (allAtt.sort((a,b) => (a.date||'').localeCompare(b.date||''))[0].session || '-') : '-');
+            const esV = es || (allAtt.length > 0 ? (allAtt.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0].session || '-') : '-');
+
+            const reportKey = {
+                churchName: targetChurch,
+                presidiumName: targetPr,
+                startSess: String(ssV),
+                endSess: String(esV)
+            };
+
+            const getStatusData = () => {
+                const target = allReportStatus.find(h => 
+                    h.churchName === reportKey.churchName && 
+                    h.presidiumName === reportKey.presidiumName && 
+                    String(h.startSess) === String(reportKey.startSess) && 
+                    String(h.endSess) === String(reportKey.endSess)
+                );
+                return target;
+            };
+
+            const renderStatus = () => {
+                console.group("🔍 [사업보고서 버튼 노출 흐름 디버깅]");
+                
+                // 1단계: 보고서 식별 정보 및 상태 확인
+                const workflowData = getStatusData();
+                const status = workflowData ? workflowData.status : 'Draft';
+                console.log("Step 1. 보고서 식별 키 및 DB 상태:", { key: reportKey, dbStatus: status });
+
+                // 2단계: 사용자 로그인 정보 확인
+                if (!userProfile) {
+                    console.error("Step 2. [오류] 사용자 프로필을 불러오지 못했습니다. (script.js 로딩 확인 필요)");
+                    console.groupEnd();
+                    return;
+                }
+
+                const userChurch = userProfile.churchName || '';
+                const userPr = userProfile.presidiumName || '';
+                const stdRole = convertToStdRole(userProfile.role);
+                const isAdmin = (stdRole === '관리자');
+                console.log("Step 2. 로그인 사용자 정보:", { name: userProfile.name, role: stdRole, church: userChurch, pr: userPr, isAdmin });
+
+                // 3단계: 조직 일치 여부 확인 (성당 & 쁘레시디움)
+                const isOrgMatched = isAdmin || (userChurch === targetChurch && userPr === targetPr);
+                console.log("Step 3. 조직 일치 여부 (User vs Report):", { isOrgMatched });
+
+                // 4단계: 권한 상세 판정 (단장/간부)
+                const presidentInfo = allOff.find(o => convertToStdRole(o.role) === '단장');
+                const presidentName = presidentInfo ? presidentInfo.name : null;
+
+                const isPresident = isAdmin || (isOrgMatched && (
+                    stdRole === '단장' || (userProfile.name && (presidentName === userProfile.name))
+                ));
+
+                const isOfficer = isAdmin || (isOrgMatched && (
+                    ['단장', '부단장', '서기', '회계'].includes(stdRole) || isPresident
+                ));
+                console.log("Step 4. 권한 판정 결과:", { isOfficer, isPresident, dbPresidentName: presidentName });
+
+                const hasData = !!workflowData;
+                const isApproved = (status === 'approved' || status === 'Approved');
+                const isFinalized = (status === 'finalized' || status === 'Finalized');
+
+                const btnFin = document.getElementById('btnFinalize');
+                const btnApp = document.getElementById('btnApprove');
+                const btnCan = document.getElementById('btnCancelApprove');
+                const statusBadge = document.getElementById('reportStatusBadge');
+
+                if (statusBadge) {
+                    if (isApproved) {
+                        statusBadge.textContent = '상태: 최종 승인 완료';
+                        statusBadge.style.background = '#27ae60';
+                    } else if (isFinalized) {
+                        statusBadge.textContent = '상태: 검토 중 (미승인)';
+                        statusBadge.style.background = '#e67e22';
+                    } else if (hasData) {
+                        statusBadge.textContent = '상태: 작성 중 (임시저장)';
+                        statusBadge.style.background = '#3498db';
+                    } else {
+                        statusBadge.textContent = '상태: 미작성';
+                        statusBadge.style.background = '#eee';
+                        statusBadge.style.color = '#666';
+                    }
+                    statusBadge.style.color = isApproved || isFinalized || hasData ? 'white' : '#666';
+                }
+
+                if (btnFin) btnFin.style.display = (isOfficer && !isApproved && !isFinalized) ? 'flex' : 'none';
+                if (btnApp) btnApp.style.display = (isPresident && isFinalized) ? 'flex' : 'none';
+
+                if (btnCan) {
+                    if (isApproved) {
+                        btnCan.style.display = isPresident ? 'flex' : 'none';
+                        btnCan.textContent = '승인 취소';
+                    } else if (isFinalized) {
+                        btnCan.style.display = isOfficer ? 'flex' : 'none';
+                        btnCan.textContent = '확정 취소';
+                    } else {
+                        btnCan.style.display = 'none';
+                    }
+                }
+                console.log("Step 5. 최종 버튼 표시 상태:", { 
+                    "확정/저장": btnFin?.style.display === 'flex' ? '보임' : '안보임',
+                    "단장 승인": btnApp?.style.display === 'flex' ? '보임' : '안보임',
+                    "취소 버튼": btnCan?.style.display === 'flex' ? '보임' : '안보임'
+                });
+                console.groupEnd();
+            };
+
+            // [시니어 패치] 이벤트 핸들러 정의 및 할당 (초기화 블록으로 전진 배치)
+            const saveStatus = async (status, signer = null) => {
+                const reportData = {};
+                const t = (id) => document.getElementById(id)?.textContent || '';
+                const h = (id) => document.getElementById(id)?.innerHTML || '';
+
+                // [Snapshot] 전체 화면 데이터 수집
+                reportData.prTitle = h('prTitle');
+                reportData.churchTitle = t('churchTitle');
+                reportData.curiaTitle = t('curiaTitle');
+                reportData.serialNum = t('serialNum');
+                reportData.submitDate = t('submitDate');
+                reportData.foundDate = t('foundDate');
+                reportData.apprDate = t('apprDate');
+                reportData.startYear = t('startYear');
+                reportData.startMonth = t('startMonth');
+                reportData.endYear = t('endYear');
+                reportData.endMonth = t('endMonth');
+                reportData.startSess = t('startSess');
+                reportData.endSess = t('endSess');
+                reportData.totalSess = t('totalSess');
+                reportData.meetingDay = t('meetingDay');
+                reportData.meetingHour = t('meetingHour');
+                reportData.meetingMin = t('meetingMin');
+                reportData.meetingPlace = t('meetingPlace');
+
+                const offKeys = ['priest', 'proxy', 'pres', 'vice', 'sec', 'trea'];
+                offKeys.forEach(k => {
+                    reportData[`offName_${k}`] = h(`offName_${k}`);
+                    reportData[`offAppDate_${k}`] = t(`offAppDate_${k}`);
+                    reportData[`offPrAtt_${k}`] = t(`offPrAtt_${k}`);
+                    reportData[`offCuAtt_${k}`] = t(`offCuAtt_${k}`);
+                });
+                reportData.memAttRate = t('memAttRate');
+                reportData.offMovement = t('offMovement');
+
+                const catIds = ['m', 'p', 'a', 'aj'];
+                catIds.forEach(cid => {
+                    ['p_m', 'p_f', 'p_t', 'c_m', 'c_f', 'c_t', 'i_t', 'o_t', 'd_t'].forEach(suffix => {
+                        reportData[`${cid}_${suffix}`] = t(`${cid}_${suffix}`);
+                    });
+                });
+
+                const accIds = [
+                    'accPrev', 'accSecret', 'accExtra', 'accInTotal',
+                    'expCont', 'expFlower', 'expMass', 'expPrint', 'expCandle', 'expExtra',
+                    'accOutTotal', 'accBal'
+                ];
+                accIds.forEach(id => reportData[id] = t(id));
+
+                const evIds = ['acies', 'outdoor', 'pr_social', 'annual_social', 'debate'];
+                evIds.forEach(id => {
+                    reportData[`ev_${id}_date`] = t(`ev_${id}_date`);
+                    reportData[`ev_${id}_att`] = t(`ev_${id}_att`);
+                });
+                for(let i=1; i<=4; i++) {
+                    reportData[`etc_${i}_name`] = t(`etc_${i}_name`);
+                    reportData[`etc_${i}_date`] = t(`etc_${i}_date`);
+                    reportData[`etc_${i}_att`] = t(`etc_${i}_att`);
+                }
+                for(let i=1; i<=5; i++) {
+                    reportData[`edu_${i}_name`] = t(`edu_${i}_name`);
+                    reportData[`edu_${i}_date`] = t(`edu_${i}_date`);
+                    reportData[`edu_${i}_att`] = t(`edu_${i}_att`);
+                }
+
+                reportData.activityDetailBody = h('activityDetailBody');
+                reportData.grandTotalCount = t('grandTotalCount');
+                reportData.managementStatus = document.getElementById('managementStatus')?.textContent || '';
+                reportData.footChurch = t('footChurch');
+                reportData.footPr = t('footPr');
+
+                const newData = {
+                    ...reportKey,
+                    curiaName: urlParams.get('curiaName'),
+                    reportSess: urlParams.get('brSess'),
+                    status: status,
+                    signer: signer || (getStatusData() ? getStatusData().signer : null),
+                    mgmtStatus: reportData.managementStatus,
+                    reportData: reportData, // 전체 데이터 스냅샷 저장
+                    updatedAt: new Date().toISOString()
+                };
+
+                const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                await setDoc(doc(db, 'business_report_status', docId), newData);
+                renderStatus();
+
+                if (status === 'approved') await window.showCustomAlert('사업보고서가 최종 승인되었습니다.');
+                else if (status === 'finalized') await window.showCustomAlert('사업보고서가 확정(저장)되었습니다. 이제 단장님 승인이 가능합니다.');
+
+                location.reload();
+            };
+
+            const btnFin = document.getElementById('btnFinalize');
+            const btnApp = document.getElementById('btnApprove');
+            const btnCan = document.getElementById('btnCancelApprove');
+
+            if (btnFin) {
+                btnFin.onclick = async () => {
+                    if (await window.showCustomConfirm('현재 내용으로 사업보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 이 내용을 조회할 수 있습니다.')) {
+                        saveStatus('finalized');
+                    }
+                };
+            }
+            if (btnApp) {
+                btnApp.onclick = async () => {
+                    if (await window.showCustomConfirm('이 사업보고서를 최종 승인하시겠습니까?\n승인 시 내용 수정이 제한됩니다.')) {
+                        saveStatus('approved', userProfile.name);
+                    }
+                };
+            }
+            if (btnCan) {
+                btnCan.onclick = async () => {
+                    console.log("🔍 [Debug] Cancel Button Clicked. showCustomConfirm type:", typeof window.showCustomConfirm);
+                    const currentStatus = getStatusData()?.status;
+                    const msg = (currentStatus === 'approved')
+                        ? '승인을 취소하고 다시 수정하시겠습니까?'
+                        : '확정을 취소하고 다시 수정하시겠습니까?';
+
+                    if (await window.showCustomConfirm(msg)) {
+                        const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
+                        await deleteDoc(doc(db, 'business_report_status', docId));
+                        await window.showCustomAlert('취소되었습니다.');
+                        location.reload();
+                    }
+                };
+            }
+
+            // [🚨 필독] 전역 스코프 할당 (이게 없으면 버튼이 작동하지 않으며, 스냅샷 로드 시에도 필수입니다)
+            window.renderStatus = renderStatus;
+            window.getStatusData = getStatusData;
+            window.reportKey = reportKey;
+
+            // [초기화 완료] 스냅샷 확인 및 렌더링 시작
+            const saved = getStatusData();
+
+            if (saved && saved.reportData) {
+                console.log("📦 [Business Report] Snapshot found. Loading fixed data...");
+                const rd = saved.reportData;
+
+                // 1. 헤더 및 기본 정보
+                const safeSet = (id, val, isHtml = false) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (isHtml) el.innerHTML = val || '';
+                        else el.textContent = val || '';
+                    }
+                };
+
+                safeSet('prTitle', rd.prTitle, true);
+                safeSet('churchTitle', rd.churchTitle);
+                safeSet('curiaTitle', rd.curiaTitle);
+                safeSet('serialNum', rd.serialNum);
+                safeSet('submitDate', rd.submitDate);
+                safeSet('foundDate', rd.foundDate);
+                safeSet('apprDate', rd.apprDate);
+                safeSet('startYear', rd.startYear);
+                safeSet('startMonth', rd.startMonth);
+                safeSet('endYear', rd.endYear);
+                safeSet('endMonth', rd.endMonth);
+                safeSet('startSess', rd.startSess);
+                safeSet('endSess', rd.endSess);
+                safeSet('totalSess', rd.totalSess);
+                safeSet('meetingDay', rd.meetingDay);
+                safeSet('meetingHour', rd.meetingHour);
+                safeSet('meetingMin', rd.meetingMin);
+                safeSet('meetingPlace', rd.meetingPlace);
+
+                // 2. 간부 및 출석
+                const offKeys = ['priest', 'proxy', 'pres', 'vice', 'sec', 'trea'];
+                offKeys.forEach(k => {
+                    safeSet(`offName_${k}`, rd[`offName_${k}`], true);
+                    safeSet(`offAppDate_${k}`, rd[`offAppDate_${k}`]);
+                    safeSet(`offPrAtt_${k}`, rd[`offPrAtt_${k}`]);
+                    safeSet(`offCuAtt_${k}`, rd[`offCuAtt_${k}`]);
+                });
+                safeSet('memAttRate', rd.memAttRate);
+                safeSet('offMovement', rd.offMovement);
+
+                // 3. 단원 수 (m, p, a, aj)
+                const catIds = ['m', 'p', 'a', 'aj'];
+                catIds.forEach(cid => {
+                    ['p_m', 'p_f', 'p_t', 'c_m', 'c_f', 'c_t', 'i_t', 'o_t', 'd_t'].forEach(suffix => {
+                        safeSet(`${cid}_${suffix}`, rd[`${cid}_${suffix}`]);
+                    });
+                });
+
+                // 4. 회계 보고
+                const accIds = [
+                    'accPrev', 'accSecret', 'accExtra', 'accInTotal',
+                    'expCont', 'expFlower', 'expMass', 'expPrint', 'expCandle', 'expExtra',
+                    'accOutTotal', 'accBal'
+                ];
+                accIds.forEach(id => safeSet(id, rd[id]));
+
+                // 5. 행사 및 교육
+                const evIds = ['acies', 'outdoor', 'pr_social', 'annual_social', 'debate'];
+                evIds.forEach(id => {
+                    safeSet(`ev_${id}_date`, rd[`ev_${id}_date`]);
+                    safeSet(`ev_${id}_att`, rd[`ev_${id}_att`]);
+                });
+                for(let i=1; i<=4; i++) {
+                    safeSet(`etc_${i}_name`, rd[`etc_${i}_name`]);
+                    safeSet(`etc_${i}_date`, rd[`etc_${i}_date`]);
+                    safeSet(`etc_${i}_att`, rd[`etc_${i}_att`]);
+                }
+                for(let i=1; i<=5; i++) {
+                    safeSet(`edu_${i}_name`, rd[`edu_${i}_name`]);
+                    safeSet(`edu_${i}_date`, rd[`edu_${i}_date`]);
+                    safeSet(`edu_${i}_att`, rd[`edu_${i}_att`]);
+                }
+
+                // 6. 활동 사항 (2페이지)
+                safeSet('activityDetailBody', rd.activityDetailBody, true);
+                safeSet('grandTotalCount', rd.grandTotalCount);
+                safeSet('managementStatus', rd.managementStatus);
+                safeSet('footChurch', rd.footChurch);
+                safeSet('footPr', rd.footPr);
+
+                // 관리 포인트 복원
+                const mgmtStatusEl = document.getElementById('managementStatus');
+                if (rd.managementStatus && mgmtStatusEl) {
+                    mgmtStatusEl.textContent = rd.managementStatus;
+                }
+
+                // 승인된 상태라면 편집 비활성화
+                if (saved.status === 'approved' || saved.status === 'Approved') {
+                    if (mgmtStatusEl) {
+                        mgmtStatusEl.contentEditable = "false";
+                        mgmtStatusEl.style.backgroundColor = "transparent";
+                    }
+                }
+
+                if (window.renderStatus) window.renderStatus();
+                else renderStatus(); // [폴백] 전역 할당 전이라도 즉시 갱신 (v16.96)
+                return; // [종료] 스냅샷 로드 완료 시 실시간 계산 생략
             }
 
             // [정석화] 꼼수 함수(getField) 제거⚖️🌊
@@ -1727,227 +2125,13 @@
                     safeSetText('footChurch', church);
                     safeSetText('footPr', pr);
 
-                    const reportKey = {
-                        churchName: urlParams.get('churchName'),
-                        presidiumName: urlParams.get('presidiumName'),
-                        startSess: urlParams.get('ss'),
-                        endSess: urlParams.get('es')
-                    };
-                    // [정규화] 호환성 로직 삭제 및 표준 필드 매칭으로 단순화
-                    const getStatusData = () => allReportStatus.find(h => 
-                        h.churchName === reportKey.churchName && 
-                        h.presidiumName === reportKey.presidiumName && 
-                        String(h.startSess) === String(reportKey.startSess) && 
-                        String(h.endSess) === String(reportKey.endSess)
-                    );
+                    // [정규화] 중복 정의된 로직 삭제 (최상단으로 이동됨)
+                    if (window.renderStatus) window.renderStatus();
 
-                    // --- 보고러 결재 및 워크플로우 로직 ---
-                    const renderStatus = () => {
-                        const workflowData = getStatusData();
-                        const status = workflowData ? workflowData.status : 'Draft';
-                        
-                        if (!userProfile) return;
+                // [정규모] 중복 로직 제거
+                if (window.renderStatus) window.renderStatus();
 
-                        // [보강] 최신 필드명(churchName, presidiumName)만 사용
-                        const userChurch = userProfile.churchName || '';
-                        const userPr = userProfile.presidiumName || '';
-                        
-                        // [시니어 패치] 관리자(Admin)는 조직 매칭과 상관없이 모든 권한 부여
-                        const stdRole = convertToStdRole(userProfile.role);
-                        const isAdmin = (stdRole === '관리자');
-                        
-                        // 조직 매칭 확인 (관리자는 자동 패스)
-                        const isOrgMatched = isAdmin || isMatch(userChurch, userPr);
-
-                        // 단장 권한 확인: 조직이 맞고 (단장 직책이거나 실명이 일치할 때)
-                        const isPresident = isAdmin || (isOrgMatched && (
-                            stdRole === '단장' || 
-                            (userProfile.name && (allOff.find(o => convertToStdRole(o.role) === '단장')?.name === userProfile.name))
-                        ));
-
-                        // 간부 권한 확인: 관리자, 단장, 또는 4대 간부 그룹
-                        const isOfficer = isAdmin || (isOrgMatched && (
-                            ['단장', '부단장', '서기', '회계'].includes(stdRole) || isPresident
-                        ));
-                        
-                        const hasData = !!workflowData;
-                        const isApproved = (status === 'approved' || status === 'Approved');
-                        const isFinalized = (status === 'finalized' || status === 'Finalized');
-
-                        const btnFin = document.getElementById('btnFinalize');
-                        const btnApp = document.getElementById('btnApprove');
-                        const btnCan = document.getElementById('btnCancelApprove');
-                        const statusBadge = document.getElementById('reportStatusBadge');
-
-                        if (!btnFin || !btnApp || !btnCan) return;
-
-                        // 상단 상태 뱃지 업데이트
-                        if (statusBadge) {
-                            if (isApproved) {
-                                statusBadge.textContent = '상태: 최종 승인 완료';
-                                statusBadge.style.background = '#27ae60';
-                                statusBadge.style.color = 'white';
-                            } else if (isFinalized) {
-                                statusBadge.textContent = '상태: 검토 중 (미승인)';
-                                statusBadge.style.background = '#e67e22';
-                                statusBadge.style.color = 'white';
-                            } else if (hasData) {
-                                statusBadge.textContent = '상태: 작성 중 (임시저장)';
-                                statusBadge.style.background = '#3498db';
-                                statusBadge.style.color = 'white';
-                            } else {
-                                statusBadge.textContent = '상태: 미작성';
-                                statusBadge.style.background = '#eee';
-                                statusBadge.style.color = '#666';
-                            }
-                        }
-
-                        // 1. 확정/저장 버튼: 미작성이거나 Draft 상태이고 간부일 때 노출
-                        const canFinalize = isOfficer && !isApproved && !isFinalized;
-                        btnFin.style.display = canFinalize ? 'flex' : 'none';
-
-                        // 2. 승인 버튼: 단장 권한이 있고, 검토 중(Finalized) 상태일 때 노출
-                        const canApprove = isPresident && isFinalized;
-                        btnApp.style.display = canApprove ? 'flex' : 'none';
-
-                        // 3. 확정 취소 / 승인 취소 버튼
-                        if (isApproved) {
-                            btnCan.style.display = isPresident ? 'flex' : 'none';
-                            btnCan.textContent = '승인 취소';
-                        } else if (isFinalized) {
-                            btnCan.style.display = isOfficer ? 'flex' : 'none';
-                            btnCan.textContent = '확정 취소';
-                        } else {
-                            btnCan.style.display = 'none';
-                        }
-                    };
-                    window.renderStatus = renderStatus;
-
-                const modalOverlay = document.getElementById('customModal');
-                const modalMessage = document.getElementById('modalMessage');
-                const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-                const modalCancelBtn = document.getElementById('modalCancelBtn');
-
-                window.showCustomAlert = (message) => {
-                    return new Promise((resolve) => {
-                        modalMessage.textContent = message;
-                        modalCancelBtn.style.display = 'none';
-                        modalConfirmBtn.style.maxWidth = '100%';
-                        modalOverlay.style.display = 'flex';
-
-                        const handleConfirm = () => {
-                            modalOverlay.style.display = 'none';
-                            modalConfirmBtn.removeEventListener('click', handleConfirm);
-                            resolve(true);
-                        };
-                        modalConfirmBtn.addEventListener('click', handleConfirm);
-                    });
-                };
-
-                window.showCustomConfirm = (message) => {
-                    return new Promise((resolve) => {
-                        modalMessage.textContent = message;
-                        modalCancelBtn.style.display = 'block';
-                        modalConfirmBtn.style.maxWidth = '120px';
-                        modalOverlay.style.display = 'flex';
-
-                        const handleConfirm = () => {
-                            modalOverlay.style.display = 'none';
-                            cleanup();
-                            resolve(true);
-                        };
-                        const handleCancel = () => {
-                            modalOverlay.style.display = 'none';
-                            cleanup();
-                            resolve(false);
-                        };
-                        const cleanup = () => {
-                            modalConfirmBtn.removeEventListener('click', handleConfirm);
-                            modalCancelBtn.removeEventListener('click', handleCancel);
-                        };
-
-                        modalConfirmBtn.addEventListener('click', handleConfirm);
-                        modalCancelBtn.addEventListener('click', handleCancel);
-                    });
-                };
-
-                const saveStatus = async (status, signer = null) => {
-                    // [Data Save Fix] 화면에서 수동으로 수정된 단원수 데이터 수집
-                    const prevMemberCounts = {};
-                    const catIds = ['m', 'p', 'a', 'aj'];
-                    catIds.forEach(id => {
-                        const mEl = document.getElementById(`${id}_p_m`);
-                        const fEl = document.getElementById(`${id}_p_f`);
-                        if (mEl || fEl) {
-                            prevMemberCounts[id] = {
-                                m: mEl ? (mEl.textContent || '0') : '0',
-                                f: fEl ? (fEl.textContent || '0') : '0'
-                            };
-                        }
-                    });
-
-                    const newData = {
-                        ...reportKey,
-                        curiaName: urlParams.get('curiaName'),
-                        reportSess: urlParams.get('brSess'),
-                        status: status,
-                        signer: signer || (getStatusData() ? getStatusData().signer : null),
-                        mgmtStatus: document.getElementById('managementStatus').textContent,
-                        prevMemberCounts: prevMemberCounts, // 수동 수정 데이터 포함
-                        updatedAt: new Date().toISOString()
-                    };
-
-                    const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
-                    await setDoc(doc(db, 'business_report_status', docId), newData);
-                    renderStatus();
-
-                    if (status === 'approved') await window.showCustomAlert('사업보고서가 최종 승인되었습니다.');
-                    else if (status === 'finalized') await window.showCustomAlert('사업보고서가 확정(저장)되었습니다. 이제 단장님 승인이 가능합니다.');
-
-                    location.reload();
-                };
-
-                document.getElementById('btnFinalize').onclick = async () => {
-                    if (await window.showCustomConfirm('현재 내용으로 사업보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 이 내용을 조회할 수 있습니다.')) {
-                        saveStatus('finalized');
-                    }
-                };
-
-                document.getElementById('btnApprove').onclick = async () => {
-                    if (await window.showCustomConfirm('이 사업보고서를 최종 승인하시겠습니까?\n승인 시 내용 수정이 제한됩니다.')) {
-                        saveStatus('approved', userProfile.name);
-                    }
-                };
-
-                document.getElementById('btnCancelApprove').onclick = async () => {
-                    const currentStatus = getStatusData()?.status;
-                    const msg = (currentStatus === 'approved')
-                        ? '승인을 취소하고 다시 수정하시겠습니까?'
-                        : '확정을 취소하고 다시 수정하시겠습니까?';
-
-                    if (await window.showCustomConfirm(msg)) {
-                        const docId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`.replace(/\s+/g, '_');
-                        await deleteDoc(doc(db, 'business_report_status', docId));
-                        await window.showCustomAlert('취소되었습니다.');
-                        location.reload();
-                    }
-                };
-
-                    // 7. 쁘레시디움 운영 상황 로드
-                    const mgmtStatusEl = document.getElementById('managementStatus');
-                    if (saved && saved.mgmtStatus) {
-                        mgmtStatusEl.textContent = saved.mgmtStatus;
-                    } else if (saved && saved.managementStatus) { // 하위 호환성
-                        mgmtStatusEl.textContent = saved.managementStatus;
-                    }
-
-                    // 승인된 상태라면 편집 비활성화
-                    if (saved && saved.status === 'approved') {
-                        mgmtStatusEl.contentEditable = "false";
-                        mgmtStatusEl.style.backgroundColor = "transparent";
-                    }
-                    
-                    // [버튼 표시 상태 갱신] 모든 데이터 로드 및 렌더링 완료 후 호출 (v16.90)
+                    // [정규모] 중복 로직 제거
                     if (window.renderStatus) window.renderStatus();
 
                 } catch (err) {

@@ -595,6 +595,12 @@
                 const mode = document.querySelector('input[name="reportMode"]:checked').value;
 
                 if (!c || !p || !s || !e) { window.showCustomAlert('모든 항목을 채워주세요.'); return; }
+                const brSess = document.getElementById('brSession').value;
+                if (!brSess) { 
+                    window.showCustomAlert('보고서 회차(제목용)를 반드시 입력해 주세요.\n예: 15 (제 15차 사업보고서)');
+                    document.getElementById('brSession').focus();
+                    return; 
+                }
                 if (parseInt(ss) > parseInt(es)) { window.showCustomAlert('회차 범위를 확인해주세요.'); return; }
 
                 if (mode === 'view') {
