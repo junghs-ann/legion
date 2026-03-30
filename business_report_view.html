@@ -7,6 +7,7 @@
     <title>사업 보고서 출력 - 레지오 마리애</title>
     <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --report-border: #000;
@@ -139,11 +140,12 @@
             font-size: 9pt;
             margin-bottom: 0px;
             table-layout: fixed;
+            border: 0.5px solid #000; /* 선 색상 및 두께 조정 */
         }
 
         table.report-table th,
         table.report-table td {
-            border: 1px solid #000;
+            border: 0.5px solid #000; /* 내부 선색 검정 복구 */
             padding: 1mm 0.5mm;
             text-align: center;
             word-break: break-all;
@@ -349,6 +351,8 @@
                 취소/수정</button>
         </div>
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button class="btn-action btn-download" id="btnDownloadPDF" style="display: flex; background: #2980b9; color: white;"><i
+                    class="fas fa-file-pdf"></i> 파일 만들기</button>
             <button class="btn-action btn-print" onclick="window.print()" style="display: flex;"><i
                     class="fas fa-print"></i> 인쇄하기</button>
             <button class="btn-action btn-close" onclick="window.close()" style="display: flex;"><i
@@ -2140,6 +2144,179 @@
             } catch (error) {
                 console.error("보고서 렌더링 중 치명적 오류 발생:", error);
             }
+        }
+
+        // [최종 안정화: onclone 표준화 방식] 월례보고서와 동일하게 백지 및 쏠림 방지
+        const downloadBtn = document.getElementById('btnDownloadPDF');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                const original = document.getElementById('reportDisplay');
+                
+                // 데이터 추출
+                const serial = document.getElementById('serialNum').textContent.trim() || '0';
+                let church = document.getElementById('churchTitle').textContent.trim() || '성당미상';
+                if (church !== '성당미상' && !church.endsWith('성당')) church += ' 성당';
+                const prName = (document.getElementById('footPr') ? document.getElementById('footPr').textContent.trim() : '') || '쁘레시디움미상';
+                const year = (document.getElementById('endYear') ? document.getElementById('endYear').textContent.trim() : '') || new Date().getFullYear();
+                const titleFull = document.getElementById('prTitle').textContent.trim().replace(/\s+/g, '');
+                const titleSuffix = titleFull.replace('쁘레시디움', '');
+                
+                // 사업보고서 파일명 조합: 고유번호.성당명.쁘레시디움명Pr._년도년-보고서제목
+                const fileName = `${serial}.${church}.${prName}Pr._${year}년-${titleSuffix}.pdf`;
+
+                const btn = this;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
+                btn.disabled = true;
+
+                // 원본 요소 여백 제거
+                const originalPages = original.querySelectorAll('.report-page');
+                originalPages.forEach(p => {
+                    p.style.margin = '0';
+                    p.style.boxShadow = 'none';
+                });
+
+                const opt = {
+                    margin:       0,
+                    filename:     fileName,
+                    image:        { type: 'jpeg', quality: 1.0 },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true, 
+                        letterRendering: true,
+                        scrollY: 0,
+                        scrollX: 0,
+                        onclone: (clonedDoc) => {
+                            const originalElement = document.getElementById('reportDisplay');
+                            const clonedElement = clonedDoc.getElementById('reportDisplay');
+                            
+                            // 1. 가상 도큐먼트 내에서 보고서를 정중앙 및 상단 고정
+                            clonedElement.style.position = 'absolute';
+                            clonedElement.style.top = '0';
+                            clonedElement.style.left = '50%';
+                            clonedElement.style.transform = 'translateX(-50%)'; 
+                            clonedElement.style.margin = '0';
+                            clonedElement.style.zIndex = '999999';
+                            
+                            // 2. 바디 영점 조절
+                            clonedDoc.body.style.margin = '0';
+                            clonedDoc.body.style.padding = '0';
+                            clonedDoc.body.style.backgroundColor = '#ffffff';
+                            clonedDoc.documentElement.style.margin = '0';
+                            clonedDoc.documentElement.style.padding = '0';
+                            
+                            // 3. 보고서 본체 규격 고정 (210mm) 및 2장 높이(594mm)
+                            clonedElement.style.width = '210mm';
+                            clonedElement.style.height = '594mm'; 
+                            clonedElement.style.overflow = 'hidden';
+                            clonedElement.style.display = 'block';
+                            
+                            // 4. 각 페이지 규격 박제
+                            const pages = clonedElement.querySelectorAll('.report-page');
+                            pages.forEach((p, idx) => {
+                                p.style.margin = '0';
+                                p.style.padding = '10mm 12mm'; // 사업보고서 패딩 수복
+                                p.style.boxShadow = 'none';
+                                p.style.width = '210mm';
+                                p.style.height = '297mm'; 
+                                p.style.minHeight = '297mm';
+                                p.style.maxHeight = '297mm';
+                                p.style.overflow = 'hidden';
+                                p.style.backgroundColor = '#ffffff';
+                                p.style.boxSizing = 'border-box'; 
+                                p.style.pageBreakAfter = 'avoid';
+                                p.style.pageBreakBefore = 'avoid';
+                                p.style.pageBreakInside = 'avoid';
+                            });
+
+                            clonedDoc.querySelectorAll('.page-break').forEach(el => el.classList.remove('page-break'));
+
+                            // [시니어 패치] PDF 전용 초정밀 '단선 법칙(Single Line Law)' 🖋️
+                            const styleNode = clonedDoc.createElement('style');
+                            styleNode.textContent = `
+                                .report-table {
+                                    border-collapse: separate !important;
+                                    border-spacing: 0 !important;
+                                    border: none !important;
+                                    border-top: 0.1pt solid #444 !important;
+                                    border-left: 0.1pt solid #444 !important;
+                                    margin-top: -1px !important; /* 표 간 장벽 제거 */
+                                }
+                                .report-table th, .report-table td {
+                                    border: none !important;
+                                    border-right: 0.1pt solid #444 !important;
+                                    border-bottom: 0.1pt solid #444 !important;
+                                    box-sizing: border-box !important;
+                                }
+                                /* 제목 칸 하단 선 누락 방지 (최강 우선순위) */
+                                table.report-table.event-table tr td.vertical-header {
+                                    border-bottom: 0.1pt solid #444 !important;
+                                }
+                                /* 중간에 비어 있던 내용, 일자, 참석 윗선 복구 (일직선 정렬) */
+                                .event-table tr td.vertical-header ~ th {
+                                    border-top: 0.1pt solid #444 !important;
+                                }
+                                /* 회계보고 합계 행 윗선 복구 (구조적 우회 및 직접 보강) */
+                                #accounting_list tr:last-child td {
+                                    border-bottom: 0.1pt solid #444 !important;
+                                }
+                                table.report-table.accounting-table tr td#inc_total,
+                                table.report-table.accounting-table tr td#exp_total,
+                                table.report-table.accounting-table tr td#p_balance {
+                                    border-top: 0.1pt solid #444 !important;
+                                    display: table-cell !important;
+                                }
+                                /* 첫 줄 중복 방지 */
+                                table.report-table.event-table tr:first-child th {
+                                    border-top: none !important;
+                                }
+                                .serial-box {
+                                    border: 0.1pt solid #444 !important;
+                                }
+                                .serial-label {
+                                    border: none !important;
+                                    border-bottom: 0.1pt solid #444 !important;
+                                }
+                                .underline {
+                                    border: none !important;
+                                    border-bottom: 0.1pt solid #444 !important;
+                                    display: inline-block !important;
+                                }
+                            `;
+                            clonedDoc.head.appendChild(styleNode);
+
+                            // [시니어 최종 패치] 회계보고 테이블의 고집불통 인라인 스타일을 물리적으로 제거 🔨
+                            const accTable = clonedDoc.querySelector('.accounting-table');
+                            if (accTable) {
+                                // 모든 칸의 인라인 스타일(border-top:none 등)을 싹 지움
+                                accTable.querySelectorAll('td, th').forEach(el => el.removeAttribute('style'));
+                            }
+
+                            // [시니어 물리 패치] 합계 바로 윗줄의 바닥 선을 0.1pt로 한 줄만 확실하게 주입 (진해짐 방지)
+                            const accountingBody = clonedDoc.getElementById('accounting_list');
+                            if (accountingBody && accountingBody.lastElementChild) {
+                                Array.from(accountingBody.lastElementChild.cells).forEach(cell => {
+                                    cell.style.setProperty('border-bottom', '0.1pt solid #444', 'important');
+                                });
+                            }
+                        }
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: 'avoid-all' }
+                };
+
+                html2pdf().set(opt).from(original).save().then(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    originalPages.forEach(p => { p.style.margin = ''; p.style.boxShadow = ''; });
+                }).catch(err => {
+                    console.error('PDF 생성 에러:', err);
+                    alert('PDF 생성 중 오류가 발생했습니다.');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    originalPages.forEach(p => { p.style.margin = ''; p.style.boxShadow = ''; });
+                });
+            });
         }
     </script>
 </body>

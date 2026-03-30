@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>중복 데이터 확인 (929회 - 정혜숙)</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; }
+        .header { border-bottom: 2px solid #d4a017; padding-bottom: 10px; margin-bottom: 15px; }
+        .item { margin-bottom: 8px; font-size: 14px; }
+        .label { font-weight: bold; color: #555; display: inline-block; width: 100px; }
+        .att-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        .att-table th, .att-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .att-table th { background: #f9f9f9; }
+        .status-P { color: green; font-weight: bold; }
+        .status-A { color: red; }
+        .delete-btn { background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; width: 100%; font-weight: bold; }
+        .delete-btn:hover { background: #c82333; }
+        #loading { text-align: center; font-size: 18px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: center;">🕵️‍♂️ 929회차 중복 데이터 분석 결과</h2>
+    <div id="loading">데이터를 불러오는 중입니다... 잠시만 기다려 주세요.</div>
+    <div class="container" id="results"></div>
+
+    <script type="module">
+        import { db } from "./firebase-config.js";
+        import { collection, query, where, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        async function loadDuplicates() {
+            try {
+                // 929회차 데이터만 가져옵니다.
+                const q = query(
+                    collection(db, 'attendance_list'),
+                    where('session', '==', '929')
+                );
+                const querySnapshot = await getDocs(q);
+                
+                const records = [];
+                querySnapshot.forEach(d => {
+                    const data = d.data();
+                    if (data.date === '2026-03-31') {
+                        records.push({ id: d.id, ...data });
+                    }
+                });
+
+                // 생성일 순으로 정렬 (오래된 것 먼저)
+                records.sort((a, b) => {
+                    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                    return timeA - timeB;
+                });
+
+                document.getElementById('loading').style.display = 'none';
+                const container = document.getElementById('results');
+
+                if (records.length === 0) {
+                    container.innerHTML = '<h3>929회 (2026-03-31) 데이터가 없습니다.</h3>';
+                    return;
+                }
+
+                records.forEach((record, index) => {
+                    const isJeongPresent = Object.values(record.attendanceData || {}).some(a => a.name === '정혜숙');
+                    let jeongStatus = '정보 없음';
+                    if (isJeongPresent) {
+                        const jeong = Object.values(record.attendanceData).find(a => a.name === '정혜숙');
+                        jeongStatus = jeong.status === 'P' ? '<span class="status-P">출석(P)</span>' : '<span class="status-A">결석(A)</span>';
+                    }
+
+                    // 시간 포맷
+                    const createTime = record.createdAt?.toDate ? record.createdAt.toDate().toLocaleString('ko-KR') : '알 수 없음';
+                    const updateTime = record.updatedAt?.toDate ? record.updatedAt.toDate().toLocaleString('ko-KR') : '알 수 없음';
+
+                    // 출석표 생성
+                    let tableRows = '';
+                    if (record.attendanceData) {
+                        const sortedIds = Object.keys(record.attendanceData).sort((a,b) => {
+                            const rA = record.attendanceData[a].role === '단원' ? 1 : 0;
+                            const rB = record.attendanceData[b].role === '단원' ? 1 : 0;
+                            return rA - rB;
+                        });
+                        
+                        sortedIds.forEach(uid => {
+                            const att = record.attendanceData[uid];
+                            const st = att.status === 'P' ? '<span class="status-P">출석</span>' : '<span class="status-A">결석</span>';
+                            tableRows += `<tr><td>${att.role}</td><td>${att.name || ''}</td><td>${att.baptismalName || ''}</td><td>${st}</td></tr>`;
+                        });
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <div class="header">
+                            <h3 style="margin:0; color: #d4a017;">문서 #${index + 1} ${index === records.length - 1 && index > 0 ? '(🔥 최근 추가된 중복)' : ''}</h3>
+                            <small style="color:#888;">ID: ${record.id}</small>
+                        </div>
+                        <div class="item"><span class="label">성당/소속</span> ${record.churchName} > ${record.curiaName} > ${record.presidiumName}</div>
+                        <div class="item"><span class="label">회차/날짜</span> ${record.session}회 (${record.date})</div>
+                        <div class="item"><span class="label">생성 시간</span> ${createTime}</div>
+                        <div class="item"><span class="label">최종 수정</span> ${updateTime}</div>
+                        <div class="item" style="background:#f4f4f4; padding:8px; border-radius:4px; margin-top:10px;">
+                            <span class="label">👩 정혜숙 님:</span> ${jeongStatus}
+                        </div>
+                        
+                        <h4 style="margin-bottom: 5px; margin-top: 15px;">전체 출결 명단</h4>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            <table class="att-table">
+                                <tr><th>직책</th><th>이름</th><th>세례명</th><th>상태</th></tr>
+                                ${tableRows}
+                            </table>
+                        </div>
+                        
+                        <button class="delete-btn" onclick="deleteRecord('${record.id}', ${index+1})">🗑️ 이 데이터 삭제하기</button>
+                    `;
+                    container.appendChild(card);
+                });
+
+                window.deleteRecord = async (docId, num) => {
+                    if (confirm(`정말로 문서 #${num} (ID: ${docId}) 번 데이터를 삭제하시겠습니까?\n한 번 지우면 복구할 수 없습니다.`)) {
+                        try {
+                            await deleteDoc(doc(db, 'attendance_list', docId));
+                            alert('🗑️ 삭제 완료! 페이지를 새로고침합니다.');
+                            location.reload();
+                        } catch(e) {
+                            alert('오류 발생: ' + e.message);
+                        }
+                    }
+                };
+            } catch (err) {
+                document.getElementById('loading').innerHTML = `<span style="color:red;">오류가 발생했습니다: ${err.message}</span>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDuplicates);
+    </script>
+</body>
+</html>

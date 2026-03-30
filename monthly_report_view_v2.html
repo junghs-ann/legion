@@ -7,6 +7,8 @@
     <title>월례 보고서 출력 - 레지오 마리애</title>
     <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- PDF 생성 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --report-border: #000;
@@ -85,6 +87,7 @@
         .btn-finalize { background: #e67e22; color: white; }
         .btn-approve { background: #27ae60; color: white; }
         .btn-cancel-approve { background: #c0392b; color: white; }
+        .btn-download { background: #0277bd; color: white; } /* 파일 만들기 전용 색상 */
 
         .btn-action:hover {
             transform: translateY(-1.5px);
@@ -98,10 +101,8 @@
         /* 월례보고서 A4 용지 레이아웃 */
         .report-page {
             width: 210mm;
-            height: 297mm;
-            /* min-height 대신 height 고정으로 페이지 일관성 유지 */
-            padding: 10mm 10mm 3mm 10mm;
-            /* 상단 여백을 10mm로 늘리고 하단을 3mm로 축소 */
+            height: 297mm; /* 282mm에서 A4 정규 높이(297mm)로 복구 */
+            padding: 10mm 10mm 5mm 10mm;
             margin: 0 auto 30px auto;
             background: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
@@ -109,7 +110,18 @@
             position: relative;
             font-family: 'Malgun Gothic', 'Dotum', sans-serif;
             color: #000;
-            overflow: hidden;
+            overflow: visible; /* 잘림 방지 (hidden 해제) */
+        }
+        
+        /* 공식 세나뚜스 양식 문구 (하단) */
+        .form-footer {
+            position: absolute;
+            bottom: 3.5mm;
+            width: calc(100% - 20mm);
+            left: 10mm;
+            text-align: center;
+            font-size: 7.5pt;
+            color: #222;
         }
 
         .report-header {
@@ -138,7 +150,7 @@
             position: absolute;
             right: 0;
             top: 0;
-            border: 1px solid #000;
+            border: 0.5px solid #000;
             width: 22mm;
             /* 25mm에서 22mm로 축소 */
             height: 25mm;
@@ -146,7 +158,7 @@
         }
 
         .serial-label {
-            border-bottom: 1px solid #000;
+            border-bottom: 0.1px solid rgba(0,0,0,0.2);
             font-size: 9pt;
             /* 10pt에서 9pt로 축소 */
             padding: 0.5mm 0;
@@ -187,7 +199,7 @@
 
         table.report-table th,
         table.report-table td {
-            border: 1px solid #000;
+            border: 0.5px solid #000;
             padding: 0.5mm 1mm;
             /* 0.8mm에서 0.5mm로 극한 축소 */
             text-align: center;
@@ -212,7 +224,7 @@
         }
 
         .underline {
-            border-bottom: 1px solid #000;
+            border-bottom: 0.1px solid rgba(0,0,0,0.2);
             display: inline-block;
             min-width: 15mm;
             text-align: center;
@@ -238,7 +250,7 @@
         }
 
         .page-break {
-            page-break-after: always;
+            page-break-after: always !important;
         }
 
         /* 활동 상세 테이블 특화 스타일 */
@@ -256,7 +268,7 @@
 
         @page {
             size: A4;
-            margin: 0;
+            margin: 0 !important;
         }
 
         @media print {
@@ -276,9 +288,8 @@
                 border: none;
                 width: 210mm;
                 /* 인쇄 시에도 정확한 너비 유지 */
-                height: 297mm;
-                /* 인쇄 시에도 정확한 높이 유지 */
-                page-break-after: always;
+                height: 282mm;
+                /* 브라우저 강제 주소 출력 공간을 위해 297mm보다 넉넉히 작게 설정 */
             }
 
             .report-page:last-child {
@@ -479,10 +490,175 @@
             </div>
         </div>
         <div class="action-btns">
-            <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄하기</button>
+            <button class="btn-action btn-download" id="btnDownloadPDF"><i class="fas fa-file-pdf"></i> 파일 만들기</button>
+            <button class="btn-action btn-print" onclick="window.handlePrint()"><i class="fas fa-print"></i> 인쇄하기</button>
             <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 창 닫기</button>
         </div>
     </div>
+
+    <script>
+        // [강력 처방] 인쇄 시 머리말/꼬리말(사이트 주소)을 숨기기 위한 스크립트
+        window.handlePrint = function() {
+            const originalTitle = document.title;
+            document.title = ""; // 제목을 비워 상단 주소를 억제
+            window.print();
+            setTimeout(() => { document.title = originalTitle; }, 500); // 0.5초 후 복구
+        };
+
+        // [최종 안정화: onclone 표준화 방식] 백지 및 여백 문제 해결
+        document.getElementById('btnDownloadPDF').addEventListener('click', function() {
+            const original = document.getElementById('reportDisplay');
+            
+            // 데이터 추출
+            const serial = document.getElementById('serialNum').textContent.trim();
+            const church = document.getElementById('footChurch').textContent.trim();
+            const presidium = document.getElementById('footPr').textContent.trim();
+            const month = document.getElementById('repMonth').textContent.trim().padStart(2, '0');
+            const year = document.getElementById('repYear').textContent.trim();
+            const fileName = `${serial}.${church}.${presidium}Pr._${month}월 월례보고서(${year}년).pdf`;
+
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
+            btn.disabled = true;
+
+            // [핵심 해결] html2canvas는 onclone 이전의 **원본 요소** 크기를 기준으로 캔버스를 만듭니다.
+            // 화면상에 있는 30px 마진 때문에 캔버스 길이가 길어져서 빈 3페이지가 나오는 것을 막기 위해 임시로 마진을 제거합니다.
+            const originalPages = original.querySelectorAll('.report-page');
+            originalPages.forEach(p => {
+                p.style.margin = '0';
+                p.style.boxShadow = 'none';
+            });
+
+            const opt = {
+                margin:       0,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 1.0 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true,
+                    scrollY: 0,
+                    scrollX: 0,
+                    // [핵심] onclone 콜백을 통한 가상 렌더링 최적화 (좌우 밸런스 수복) 🧪
+                    onclone: (clonedDoc) => {
+                        const originalElement = document.getElementById('reportDisplay');
+                        const clonedElement = clonedDoc.getElementById('reportDisplay');
+                        
+                        // [사용자 요청] 영점 좌표 비교 로그 기록 🚩
+                        const screenRect = originalElement.getBoundingClientRect();
+                        console.log(`📍 [영점 비교] 화면 시작점(Top): ${Math.round(screenRect.top)}px`);
+                        
+                        // 1. 가상 도큐먼트 내에서 보고서를 정중앙(Center) 및 상단(Top 0) 고정 (쏠림 및 백지 방지)
+                        clonedElement.style.position = 'absolute';
+                        clonedElement.style.top = '0';
+                        clonedElement.style.left = '50%';
+                        clonedElement.style.transform = 'translateX(-50%)'; // 좌우 중앙 정렬
+                        clonedElement.style.margin = '0';
+                        clonedElement.style.zIndex = '999999';
+                        
+                        console.log(`📍 [영점 비교] 파일 시작점(Top): 0px (상단 영점 및 좌우 밸런스 수복 완료)`);
+
+                        // 2. 바디 및 도큐먼트 영점 조절
+                        clonedDoc.body.style.margin = '0';
+                        clonedDoc.body.style.padding = '0';
+                        clonedDoc.body.style.backgroundColor = '#ffffff';
+                        clonedDoc.documentElement.style.margin = '0';
+                        clonedDoc.documentElement.style.padding = '0';
+                        
+                        // 3. 보고서 본체 규격 고정 (210mm) 및 3페이지 백지 방지를 위한 2장 높이(594mm) 고정
+                        clonedElement.style.width = '210mm';
+                        clonedElement.style.height = '594mm'; // 297mm * 2
+                        clonedElement.style.overflow = 'hidden';
+                        clonedElement.style.display = 'block';
+                        
+                        // 4. 각 페이지 규격 박제 (A4 정규 사이즈 적용 및 강제 분할 완전 해제)
+                        const pages = clonedElement.querySelectorAll('.report-page');
+                        pages.forEach((p, idx) => {
+                            p.style.margin = '0';
+                            p.style.padding = '10mm 10mm 5mm 10mm'; // 내부 패딩 수복
+                            p.style.boxShadow = 'none';
+                            p.style.width = '210mm';
+                            p.style.height = '297mm'; // 정확히 A4 1장에 맞춤
+                            p.style.minHeight = '297mm';
+                            p.style.maxHeight = '297mm';
+                            p.style.overflow = 'hidden';
+                            p.style.backgroundColor = '#ffffff';
+                            p.style.boxSizing = 'border-box'; // 패딩 포함해서 297mm 유지
+                            p.style.pageBreakAfter = 'avoid'; // 자동 페이지 넘김 및 엔진 오동작 방지
+                            p.style.pageBreakBefore = 'avoid';
+                            p.style.pageBreakInside = 'avoid';
+                        });
+
+                        // 5. 중복 브레이크 태그 완전 제거 (요소를 통째로 삭제하지 않고 클래스만 제거)
+                        clonedDoc.querySelectorAll('.page-break').forEach(el => el.classList.remove('page-break'));
+
+                        console.log("🚀 [PDF 디버그] 상단 영점 및 좌우 중앙 정렬 완료!");
+
+                        // [시니어 패치] PDF 전용 초정밀 '단선 법칙(Single Line Law)' 🖋️
+                        // 선이 겹치는 것을 원천 차단하여 모든 선을 8번의 얇은 선처럼 통일합니다.
+                        const styleNode = clonedDoc.createElement('style');
+                        styleNode.textContent = `
+                            /* 1. 모든 보고서 표의 중첩 방지 및 외곽선 설정 */
+                            .report-table {
+                                border-collapse: separate !important;
+                                border-spacing: 0 !important;
+                                border: none !important;
+                                border-top: 0.1pt solid #444 !important;
+                                border-left: 0.1pt solid #444 !important;
+                                margin-top: -1px !important; /* 확실한 표 간 중첩 (1px) */
+                            }
+                            /* 2. 모든 셀은 오른쪽과 아래쪽 선만 그려서 중복을 피함 */
+                            .report-table th, .report-table td {
+                                border: none !important;
+                                border-right: 0.1pt solid #444 !important;
+                                border-bottom: 0.1pt solid #444 !important;
+                                box-sizing: border-box !important;
+                            }
+                            /* 3. 기타 인코딩 요소(시리얼 박스 등) 동일 굵기 적용 */
+                            .serial-box {
+                                border: 0.1pt solid #444 !important;
+                            }
+                            .serial-label {
+                                border: none !important;
+                                border-bottom: 0.1pt solid #444 !important;
+                            }
+                            .underline {
+                                border: none !important;
+                                border-bottom: 0.1pt solid #444 !important;
+                                display: inline-block !important;
+                            }
+                            /* 4. 8번 항목 전용 ID 예외 처리 제거 및 통합 */
+                            #activitySummaryTable { width: 100% !important; }
+                        `;
+                        clonedDoc.head.appendChild(styleNode);
+                    }
+                },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: 'avoid-all' } // 엔진의 자동 분할 억제
+            };
+
+            html2pdf().set(opt).from(original).save().then(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // 마진 원상복구
+                originalPages.forEach(p => {
+                    p.style.margin = '';
+                    p.style.boxShadow = '';
+                });
+            }).catch(err => {
+                console.error('PDF 생성 에러:', err);
+                alert('PDF 생성 중 오류가 발생했습니다.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // 마진 원상복구
+                originalPages.forEach(p => {
+                    p.style.margin = '';
+                    p.style.boxShadow = '';
+                });
+            });
+        });
+    </script>
 
     <!-- 커스텀 모달 구조 추가 -->
     <div id="customModal" class="custom-modal-overlay no-print">
@@ -675,9 +851,9 @@
                         <td rowspan="2" colspan="2" style="text-align:center; font-weight:bold;">묵 주 기 도</td>
                         <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_rosary">-</span>단</td>
                         <td rowspan="2" style="text-align:center;">1</td>
-                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">새 가족찾기</td>
-                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">예비자 교리반 입교</td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_new">-</span> 명</td>
+                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1; border-bottom:0.1px solid rgba(0,0,0,0.15);">새 가족찾기</td>
+                        <td style="text-align:left; padding-left:5px; font-size:9.5pt; border-bottom:0.1px solid rgba(0,0,0,0.15);">예비자 교리반 입교</td>
+                        <td style="text-align:right; padding-right:5px; border-bottom:0.1px solid rgba(0,0,0,0.15);"><span id="sum_new">-</span> 명</td>
                     </tr>
                     <!-- 2행: 쉬는교우회두 (우) -->
                     <tr style="height:8mm;">
@@ -774,7 +950,7 @@
             </table>
             <div class="section-title" style="display:flex; align-items:flex-end; gap:5px;">
                 <span style="white-space:nowrap;">9. 기타(질의 및 건의) :</span>
-                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 1px solid black;"></span>
+                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 0.1px solid rgba(0,0,0,0.2);"></span>
             </div>
 
             <div class="footer-sig">
@@ -811,13 +987,12 @@
                 <tbody id="activityDetailBody"></tbody>
                 <tfoot id="activityTotalFoot" style="font-weight:bold;">
                     <tr style="height:8mm;">
-                        <th style="border:1px solid #000; text-align:center;">합 계</th>
-                        <td id="grandTotalCount" style="border:1px solid #000; text-align:right; padding-right:5px;">-</td>
-                        <td style="border:1px solid #000;"></td>
+                        <th style="border:0.1px solid rgba(0,0,0,0.15); text-align:center;">합 계</th>
+                        <td id="grandTotalCount" style="border:0.1px solid rgba(0,0,0,0.15); text-align:right; padding-right:5px;">-</td>
+                        <td style="border:0.1px solid rgba(0,0,0,0.15);"></td>
                     </tr>
                 </tfoot>
-            </table>
-            <div class="form-info">월례보고서 - 활동 상세 내역 (Page 2)</div>
+            <!-- 하단 문구 삭제 (겹침 방지 및 깔끔한 레이아웃을 위해 제거) -->
         </div>
     </div>
 
@@ -1759,14 +1934,14 @@
                                 </td>
                                 <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} 단</td>
                                 <td rowspan="2">1</td>
-                                <th style="font-size:8pt; border-bottom:0.5pt solid #000;">새 가족찾기</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px; border-bottom:0.5pt solid #000;">예비자 교리반 입교</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-bottom:0.5pt solid #000;">${newFamVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt; border-bottom:none;">새 가족찾기</th>
+                                <td style="font-size:8pt; text-align:left; padding-left:5px; border-bottom:none;">예비자 교리반 입교</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-bottom:none;">${newFamVal.toLocaleString()} 명</td>
                             </tr>
                             <tr style="height: 10.0mm;">
-                                <th style="font-size:8pt; border-top:1px solid #000; line-height:1.2;">쉬는교우<br>회두</th>
-                                <td style="font-size:8pt; border-top:1px solid #000; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-top:1px solid #000;">${soulVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt; border-top:none; line-height:1.2;">쉬는교우<br>회두</th>
+                                <td style="font-size:8pt; border-top:none; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-top:none;">${soulVal.toLocaleString()} 명</td>
                             </tr>
 
                             <!-- 3~4행: 평일미사 + 사랑의증언(1,2) -->

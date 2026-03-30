@@ -665,7 +665,7 @@
                     </select>
                 </div>
 
-                <!-- 2행: 쁘레시디움 (3 - 꾸리아와 너비 맞춤) -->
+                <!-- 2행: 쁘레시디움, 날짜 (3+3) -->
                 <div class="form-group col-span-3">
                     <label>쁘레시디움(Pr.)</label>
                     <div class="search-container" id="presidiumSearchContainer">
@@ -675,21 +675,24 @@
                         <div id="presidiumDropdown" class="custom-dropdown"></div>
                     </div>
                 </div>
-
-                <div class="form-group col-span-2">
+                <div class="form-group col-span-3">
                     <label>날짜</label>
                     <input type="date" id="dateInput">
                 </div>
-                <div class="form-group col-span-2">
+
+                <!-- 3행: 요일, 회차 (3+3) -->
+                <div class="form-group col-span-3">
                     <label>요일</label>
                     <input type="text" id="dayInput" readonly placeholder="자동 계산">
                 </div>
-                <div class="form-group col-span-2 session-container">
+                <div class="form-group col-span-3">
                     <label>주회합 회차</label>
-                    <input type="text" id="session" placeholder="회차 또는 목록 선택" inputmode="numeric" pattern="[0-9]*"
-                        autocomplete="off">
-                    <div id="sessionDropdown" class="custom-dropdown-list"></div>
-                    <div id="sessionGuide" class="guide-text" style="display: block;">날짜를 선택해 주세요.</div>
+                    <div class="session-container" style="flex: 1; position: relative;">
+                        <input type="text" id="session" placeholder="회차 또는 목록 선택" inputmode="numeric" pattern="[0-9]*"
+                            autocomplete="off" style="width: 100%; box-sizing: border-box;">
+                        <div id="sessionDropdown" class="custom-dropdown-list"></div>
+                        <div id="sessionGuide" class="guide-text" style="display: block;">날짜를 선택해 주세요.</div>
+                    </div>
                 </div>
             </div>
 
@@ -1245,7 +1248,8 @@
                     const week = ['일', '월', '화', '수', '목', '금', '토'];
                     dayInput.value = week[date.getDay()] + '요일';
                 }
-                loadAttendanceList();
+                await loadAttendanceList();
+                loadAttendanceByDate();
                 isProcessingSession = false;
             } else {
                 currentEditingId = null; // [추가] 신규 회차이므로 ID 초기화
@@ -1485,6 +1489,9 @@
         }
 
         async function saveAttendance() {
+            const btnSave = document.getElementById('btnSave');
+            if (btnSave.disabled) return; // 중복 클릭 방지
+
             const presidium = presidiumSelect.value;
             const session = sessionInput.value;
             const date = dateInput.value;
@@ -1493,6 +1500,10 @@
                 await window.showGlobalAlert('⚠️ 소속, 회차, 날짜를 모두 정확히 입력해 주세요.');
                 return;
             }
+
+            btnSave.disabled = true; // 저장 중 버튼 비활성화
+            const originalBtnHtml = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
 
             try {
                 const numericSession = parseInt(session);
@@ -1508,9 +1519,15 @@
 
                 const existingSession = prRecords.find(a => parseInt(a.session) === numericSession);
 
-                if (existingSession && existingSession.id !== currentEditingId && existingSession.date !== date) {
-                    await window.showGlobalAlert(`⚠️ 이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
-                    return;
+                if (existingSession && existingSession.id !== currentEditingId) {
+                    if (existingSession.date !== date) {
+                        await window.showGlobalAlert(`⚠️ 이미 ${existingSession.date} 날짜에 ${numericSession}회차 출석이 등록되어 있습니다.\n한 회차에는 하나의 날짜만 등록할 수 있습니다.`);
+                        return;
+                    } else {
+                        // 날짜가 같은데 currentEditingId가 매칭되지 않는 경우 (새로고침 직후 등)
+                        // 강제로 기존 ID를 할당하여 중복 문서(쌍둥이)가 생성되지 않고 덮어쓰기(업데이트) 되도록 방어
+                        currentEditingId = existingSession.id;
+                    }
                 }
 
                 if (!currentEditingId && !existingSession && prRecords.length > 0) {
@@ -1595,11 +1612,14 @@
 
                 await window.showGlobalAlert('✅ 출석부가 성공적으로 저장되었습니다!');
                 window.setDirty(false);
-                updateSessionList();
-                loadAttendanceBySession();
+                await updateSessionList();
+                await loadAttendanceBySession();
             } catch (error) {
                 console.error("Error saving attendance:", error);
                 await window.showGlobalAlert("🚨 저장 중 오류가 발생했습니다. 다시 시도해 주세요.");
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerHTML = originalBtnHtml;
             }
         }
     </script>
