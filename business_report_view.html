@@ -159,13 +159,14 @@
             max-width: var(--label-col-width) !important;
             font-weight: bold;
             background: #fff;
-            text-align: center;
-            vertical-align: middle;
+            text-align: center !important; /* 우선순위 상향 */
+            vertical-align: middle !important;
             padding: 1mm 1mm !important;
+            display: table-cell;
         }
 
         /* 회계 및 행사 섹션 세부 정렬 스타일 복구 */
-        .accounting-table td {
+        .accounting-table td:not(.vertical-header) {
             text-align: left !important;
             padding: 1.5mm 1mm !important;
             font-size: 8.5pt;
@@ -438,14 +439,14 @@
             <!-- 설립일/승인일/보고기간 테이블 -->
             <table class="report-table">
                 <tr>
-                    <th style="width:15%" class="justify-th">설립일</th>
-                    <td id="foundDate" style="width:35%">년 월 일</td>
-                    <th style="width:15%" class="justify-th">승인일</th>
-                    <td id="apprDate" style="width:35%">년 월 일</td>
+                    <th class="justify-th">설립일</th>
+                    <td id="foundDate" style="width:72mm">년 월 일</td>
+                    <th class="justify-th">승인일</th>
+                    <td id="apprDate" style="width:72mm">년 월 일</td>
                 </tr>
                 <tr>
                     <th class="justify-th">보고기간</th>
-                    <td colspan="3">
+                    <td colspan="3" style="text-align: left; padding-left: 2mm;">
                         <span id="startYear" style="min-width:12mm; display:inline-block; text-align:center;">-</span>년 <span id="startMonth"
                             style="min-width:8mm; display:inline-block; text-align:center;">-</span>월 ~
                         <span id="endYear" style="min-width:12mm; display:inline-block; text-align:center;">-</span>년 <span id="endMonth"
@@ -457,7 +458,7 @@
                 </tr>
                 <tr>
                     <th class="justify-th">주회합</th>
-                    <td colspan="3">
+                    <td colspan="3" style="text-align: left; padding-left: 2mm;">
                         <span id="meetingDay" style="min-width:15mm; display:inline-block; text-align:center;">-</span>요일 <span id="meetingHour"
                             style="min-width:10mm; display:inline-block; text-align:center;">-</span>시 <span id="meetingMin"
                             style="min-width:10mm; display:inline-block; text-align:center;">-</span>분
@@ -500,7 +501,7 @@
                     <td id="offPrAtt_trea">- / -</td>
                 </tr>
                 <tr>
-                    <th>평의회출석</th>
+                    <th style="font-size: 8.5pt; letter-spacing: -0.5px; white-space: nowrap;">평의회출석</th>
                     <td id="offCuAtt_priest">-</td>
                     <td id="offCuAtt_proxy">-</td>
                     <td id="offCuAtt_pres">- / -</td>
@@ -598,7 +599,7 @@
             <!-- 회계보고 섹션 -->
             <table class="report-table accounting-table" style="margin-top: -1px;">
                 <tr>
-                    <td rowspan="5" class="vertical-header">회계보고</td>
+                    <td rowspan="5" class="vertical-header" style="text-align: center; padding-left: 0; padding-right: 0; letter-spacing: -0.5px;">회계보고</td>
                     <th style="width:33.3%">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;입</th>
                     <th colspan="2" style="width:66.6%">지&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;출</th>
                 </tr>
