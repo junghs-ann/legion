@@ -412,23 +412,23 @@
                 <tr>
                     <th class="justify-th">보고기간</th>
                     <td colspan="3">
-                        <span id="startYear" class="underline" style="min-width:12mm">-</span>년 <span id="startMonth"
-                            class="underline" style="min-width:8mm">-</span>월 ~
-                        <span id="endYear" class="underline" style="min-width:12mm">-</span>년 <span id="endMonth"
-                            class="underline" style="min-width:8mm">-</span>월 (
-                        <span id="startSess" class="underline" style="min-width:10mm">-</span>)차 ~ (
-                        <span id="endSess" class="underline" style="min-width:10mm">-</span>)차 (
-                        <span id="totalSess" class="underline" style="min-width:8mm">-</span>)주간
+                        <span id="startYear" style="min-width:12mm; display:inline-block; text-align:center;">-</span>년 <span id="startMonth"
+                            style="min-width:8mm; display:inline-block; text-align:center;">-</span>월 ~
+                        <span id="endYear" style="min-width:12mm; display:inline-block; text-align:center;">-</span>년 <span id="endMonth"
+                            style="min-width:8mm; display:inline-block; text-align:center;">-</span>월 (
+                        <span id="startSess" style="min-width:10mm; display:inline-block; text-align:center;">-</span>)차 ~ (
+                        <span id="endSess" style="min-width:10mm; display:inline-block; text-align:center;">-</span>)차 (
+                        <span id="totalSess" style="min-width:8mm; display:inline-block; text-align:center;">-</span>)주간
                     </td>
                 </tr>
                 <tr>
                     <th class="justify-th">주회합</th>
                     <td colspan="3">
-                        <span id="meetingDay" class="underline" style="min-width:15mm">-</span>요일 <span id="meetingHour"
-                            class="underline" style="min-width:10mm">-</span>시 <span id="meetingMin" class="underline"
-                            style="min-width:10mm">-</span>분
-                        &nbsp;&nbsp;&nbsp;&nbsp; 장소: <span id="meetingPlace" class="underline"
-                            style="min-width:60mm">-</span>
+                        <span id="meetingDay" style="min-width:15mm; display:inline-block; text-align:center;">-</span>요일 <span id="meetingHour"
+                            style="min-width:10mm; display:inline-block; text-align:center;">-</span>시 <span id="meetingMin"
+                            style="min-width:10mm; display:inline-block; text-align:center;">-</span>분
+                        &nbsp;&nbsp;&nbsp;&nbsp; 장소: <span id="meetingPlace"
+                            style="min-width:60mm; display:inline-block; text-align:left; padding-left: 1mm;">-</span>
                     </td>
                 </tr>
             </table>
@@ -677,22 +677,22 @@
                     </td>
                 </tr>
                 <tr>
-                    <th style="text-align:left; padding-left:1mm; border-right:none;">
+                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">수입계</span> :</span>
-                            <span id="accInTotal" class="underline"></span>
+                            <span id="accInTotal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
                         </div>
                     </th>
-                    <th style="text-align:left; padding-left:1mm; border-left:none; border-right:none;">
+                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">지출계</span> :</span>
-                            <span id="accOutTotal" class="underline"></span>
+                            <span id="accOutTotal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
                         </div>
                     </th>
-                    <th style="text-align:left; padding-left:1mm; border-left:none;">
+                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">잔액</span> :</span>
-                            <span id="accBal" class="underline"></span>
+                            <span id="accBal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
                         </div>
                     </th>
                 </tr>
@@ -995,8 +995,10 @@
                 style="border: 1px solid #000; min-height: 65mm; padding: 7mm 4mm; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap; background-color: #fff9c4;"
                 placeholder="여기에 쁘레시디움 운영 상황을 직접 입력하세요.">
                 <!-- 사용자가 직접 입력 -->
+            <div style="display:none;">
+                <span id="footChurch"></span>
+                <span id="footPr"></span>
             </div>
-
         </div>
     </div>
 
@@ -2113,15 +2115,43 @@
                     });
 
                     let simpleCount = 0, simpleDetails = [];
-                    if (grpSimple) grpSimple.items.forEach(it => { const c = sumAct(it.name); simpleCount += c; simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${c.toLocaleString()})</span>`); });
+                    if (grpSimple) {
+                        grpSimple.items.forEach(it => {
+                            const c = sumAct(it.name);
+                            simpleCount += c;
+                            const cStr = c.toLocaleString();
+                            simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                        });
+                    }
 
-                    let combinedCount = 0, dItemsStr = '', cItemsStr = '';
-                    if (grpDetail) grpDetail.items.forEach(it => { const c = sumAct(it.name); combinedCount += c; dItemsStr += `${it.name}(${c.toLocaleString()}), `; });
-                    if (grpCharity) grpCharity.items.forEach(it => { const c = sumAct(it.name); combinedCount += c; cItemsStr += `${it.name}(${c.toLocaleString()}), `; });
+                    let combinedCount = 0;
+                    let detailItemsStr = '', charityItemsStr = '';
+
+                    if (grpDetail) {
+                        let dItems = [];
+                        grpDetail.items.forEach(it => {
+                            const c = sumAct(it.name);
+                            combinedCount += c;
+                            const cStr = c.toLocaleString();
+                            dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                        });
+                        if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
+                    }
+
+                    if (grpCharity) {
+                        let cItems = [];
+                        grpCharity.items.forEach(it => {
+                            const c = sumAct(it.name);
+                            combinedCount += c;
+                            const cStr = c.toLocaleString();
+                            cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
+                        });
+                        if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
+                    }
 
                     gCount += (simpleCount + combinedCount);
-                    detailHtml += `<tr><th rowspan="2">기타 활동</th><td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td><td style="text-align:left; padding-left:10px;">${simpleDetails.join(', ')}</td></tr>`;
-                    detailHtml += `<tr><td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td><td style="text-align:left; padding-left:10px; border-left:1px solid #000;">${dItemsStr}${cItemsStr}</td></tr>`;
+                    detailHtml += `<tr><th rowspan="2">기타 활동</th><td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td></tr>`;
+                    detailHtml += `<tr><td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td><td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">${detailItemsStr}${charityItemsStr}</td></tr>`;
 
                     const bodyEl = document.getElementById('activityDetailBody');
                     if (bodyEl) bodyEl.innerHTML = detailHtml;
@@ -2260,9 +2290,10 @@
                                 #accounting_list tr:last-child td {
                                     border-bottom: 0.1pt solid #444 !important;
                                 }
-                                table.report-table.accounting-table tr td#inc_total,
-                                table.report-table.accounting-table tr td#exp_total,
-                                table.report-table.accounting-table tr td#p_balance {
+                                /* [시니어 패치] 불일치하던 ID 수복 (#inc_total -> #accInTotal 등) 및 th 선택자 정적 유지 */
+                                table.report-table.accounting-table tr th:has(#accInTotal),
+                                table.report-table.accounting-table tr th:has(#accOutTotal),
+                                table.report-table.accounting-table tr th:has(#accBal) {
                                     border-top: 0.1pt solid #444 !important;
                                     display: table-cell !important;
                                 }
@@ -2279,17 +2310,31 @@
                                 }
                                 .underline {
                                     border: none !important;
-                                    border-bottom: 0.1pt solid #444 !important;
+                                    border-bottom: 0.1pt solid #000 !important;
                                     display: inline-block !important;
+                                    flex: 1 !important;
+                                    min-height: 1.2em !important;
+                                }
+                                /* 요청 사항: 기타, 초값 항목은 밑줄 수복하되 합계 및 명세 항목은 확실히 제거 (가독성 패치⚖️🌊) */
+                                #accExtra, #expCandle, #expExtra {
+                                    border-bottom: 0.1pt solid #000 !important;
+                                    min-width: 15mm !important;
+                                }
+                                #accInTotal, #accOutTotal, #accBal, 
+                                #startYear, #startMonth, #endYear, #endMonth, #startSess, #endSess, #totalSess,
+                                #meetingDay, #meetingHour, #meetingMin, #meetingPlace {
+                                    border-bottom: none !important;
                                 }
                             `;
                             clonedDoc.head.appendChild(styleNode);
 
-                            // [시니어 최종 패치] 회계보고 테이블의 고집불통 인라인 스타일을 물리적으로 제거 🔨
+                            // [시니어 최종 패치 수정] 전체 스타일 삭제 대신 테두리 간섭만 제거하여 레이아웃 보호
                             const accTable = clonedDoc.querySelector('.accounting-table');
                             if (accTable) {
-                                // 모든 칸의 인라인 스타일(border-top:none 등)을 싹 지움
-                                accTable.querySelectorAll('td, th').forEach(el => el.removeAttribute('style'));
+                                accTable.querySelectorAll('td, th').forEach(el => {
+                                    el.style.borderTop = '';
+                                    el.style.borderBottom = '';
+                                });
                             }
 
                             // [시니어 물리 패치] 합계 바로 윗줄의 바닥 선을 0.1pt로 한 줄만 확실하게 주입 (진해짐 방지)
