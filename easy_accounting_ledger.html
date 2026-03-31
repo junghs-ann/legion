@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입출등록 v3.0 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2e7d32;
+            --secondary-color: #d4a017;
+            --bg-color: #f4f7f6;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .easy-container {
+            max-width: 900px;
+            margin: 60px auto 80px;
+            padding: 10px; /* 패딩 축소 */
+            width: 100%;
+            overflow-x: hidden; /* 가로 스크롤 방지 */
+        }
+
+        .user-info-bar {
+            background: #ffffff;
+            padding: 20px 24px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+            box-shadow: var(--card-shadow);
+            position: relative;
+        }
+
+        .user-info-bar::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20px;
+            bottom: 20px;
+            width: 4px;
+            background: var(--secondary-color);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .info-group {
+            display: flex;
+            flex-direction: column; /* 모바일에서 한 줄씩 */
+            gap: 4px;
+            color: #4a5568;
+            font-weight: 600;
+            padding-right: 40px; /* X 버튼 공간 확실히 확보 */
+        }
+
+        .info-item {
+            font-size: 0.8rem;
+            white-space: normal; /* 긴 이름 대응 */
+        }
+
+        .info-item span {
+            color: #718096;
+            font-size: 0.7rem;
+            margin-right: 4px;
+            min-width: 45px;
+            display: inline-block;
+        }
+
+        .close-x {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.25rem;
+            color: #cbd5e0;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 5px;
+        }
+
+        .close-x:hover {
+            color: #e53e3e;
+        }
+
+        .entry-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* 모바일 우선: 기본 1단 */
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 20px;
+            }
+            .full-width, .balance-display {
+                grid-column: span 2;
+            }
+        }
+
+        .input-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-item label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .input-item input,
+        .input-item select {
+            padding: 10px; /* 패딩 축소 */
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 0.95rem; /* 폰트 약간 축소 */
+            transition: all 0.2s;
+            background-color: #fff;
+            width: 100%; /* 너비 강제 */
+            max-width: 100%;
+        }
+
+        .input-item input:focus,
+        .input-item select:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+        }
+
+        .input-item input[readonly] {
+            background-color: #f8fafc;
+            color: #718096;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .balance-display {
+            background: #fffdf5;
+            border: 1px solid #f6e05e;
+            padding: 8px 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            grid-column: 1 / -1;
+            margin: 0 !important; /* 여백 제거하고 그리드에 맡김 */
+        }
+
+        .balance-label {
+            font-weight: 700;
+            color: #975a16;
+            font-size: 0.8rem; /* 크기 축소 */
+        }
+
+        .balance-value {
+            font-size: 0.95rem; /* 크기 축소 */
+            font-weight: 800;
+            color: #b7791f;
+        }
+
+        .table-section {
+            margin-top: 40px;
+        }
+
+        .entry-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+            table-layout: auto; /* 내용에 따라 자동 조절 */
+        }
+
+        .entry-table th {
+            padding: 12px 8px;
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            border-bottom: 2px solid #cbd5e1;
+            white-space: nowrap;
+            text-align: center; /* 모든 헤더 중앙 정렬 */
+        }
+
+        .entry-table td {
+            padding: 14px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+            white-space: nowrap;
+            vertical-align: middle;
+            text-align: center; /* 모든 데이터 중앙 정렬 */
+        }
+
+        /* 각 컬럼별 고정 너비 또는 최소 너비 설정 (정렬은 중앙으로 통일) */
+        .entry-table th:nth-child(1), .entry-table td:nth-child(1) { width: 60px; min-width: 60px; } /* 구분 */
+        .entry-table th:nth-child(2), .entry-table td:nth-child(2) { min-width: 110px; } /* 항목 */
+        .entry-table th:nth-child(3), .entry-table td:nth-child(3) { width: 90px; min-width: 90px; } /* 금액 */
+        .entry-table th:nth-child(4), .entry-table td:nth-child(4) { width: 100px; min-width: 100px; color: #475569; font-weight: 600; } /* 잔액 */
+        .entry-table th:nth-child(5), .entry-table td:nth-child(5) { min-width: 130px; } /* 적요 */
+        .entry-table th:nth-child(6), .entry-table td:nth-child(6) { width: 50px; min-width: 50px; } /* 삭제 */
+
+        /* [Senior UX] 행 클릭 수정 지원 스타일 */
+        .entry-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .entry-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .entry-table tbody tr:active {
+            background-color: #f1f5f9;
+        }
+
+        .type-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .badge-deposit {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-withdrawal {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .floating-action-bar {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 6px 12px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 8px;
+            z-index: 2000;
+            border: 1.5px solid var(--secondary-color);
+            width: auto;
+            min-width: 180px;
+            max-width: 95%;
+        }
+
+        .btn-action {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            flex: 1;
+            transition: all 0.2s;
+        }
+
+        .btn-save {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+        }
+
+        .btn-save:hover {
+            background: #1b5e20;
+            transform: translateY(-2px);
+        }
+
+        .btn-close {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-close:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+
+        .btn-delete-row {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: transform 0.2s;
+        }
+
+        .btn-delete-row:hover {
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 600px) {
+            .entry-card {
+                padding: 20px 15px;
+            }
+            .user-info-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 15px;
+            }
+            .close-x {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+            }
+            .balance-display {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .balance-value {
+                align-self: flex-end;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Header will be initialized by script or hardcoded if needed -->
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu" id="mainNavMenu">
+            <!-- Menus will be dynamically loaded for consistency -->
+        </ul>
+    </header>
+
+    <div class="easy-container">
+        <!-- User Info & Close X -->
+        <div class="user-info-bar">
+            <div class="info-group">
+                <div class="info-item" id="infoChurch"><span>성당</span> -</div>
+                <div class="info-item" id="infoCuria"><span>꾸리아</span> -</div>
+                <div class="info-item" id="infoPr"><span>쁘레시디움</span> -</div>
+            </div>
+            <i class="fas fa-times close-x" id="btnCloseTop" title="닫기"></i>
+        </div>
+
+        <div class="entry-card">
+            <div class="section-title" style="margin-bottom: 20px;">
+                <i class="fas fa-pen-fancy"></i> 입출등록
+            </div>
+
+            <div class="form-grid">
+                <!-- Date Picker -->
+                <!-- Date & Session -->
+                <div class="input-item">
+                    <label>회합일자</label>
+                    <input type="date" id="meetingDate">
+                    <div id="dateGuide" style="font-size: 0.8rem; color: #718096; margin-top: 5px; padding-left: 2px;">
+                        📅 최근 출결이 등록된 회차가 자동으로 연동됩니다.
+                    </div>
+                </div>
+                <!-- Session Info (Read only) -->
+                <div class="input-item">
+                    <label>회차</label>
+                    <input type="text" id="sessionInfo" readonly placeholder="날짜를 선택하세요" style="font-weight: bold; color: var(--primary-color);">
+                </div>
+
+                <!-- Pre-balance Info (Moved below Date/Session) -->
+                <div class="balance-display">
+                    <div class="balance-label"><i class="fas fa-coins"></i> 전잔액 (이월금)</div>
+                    <div class="balance-value" id="carryForwardBalance">0 원</div>
+                </div>
+
+                <!-- Type Selector -->
+                <div class="input-item">
+                    <label>입출구분</label>
+                    <select id="transType">
+                        <option value="deposit">입금 (+)</option>
+                        <option value="withdrawal">출금 (-)</option>
+                    </select>
+                </div>
+                <!-- Account Item Selector -->
+                <div class="input-item">
+                    <label>항목</label>
+                    <select id="accountItem">
+                        <option value="">항목 선택</option>
+                    </select>
+                </div>
+
+                <!-- Amount -->
+                <div class="input-item">
+                    <label>금액</label>
+                    <input type="text" id="transAmount" placeholder="0" style="text-align: right; font-weight: bold;" inputmode="numeric">
+                </div>
+                <!-- Remarks -->
+                <div class="input-item">
+                    <label>적요</label>
+                    <input type="text" id="transRemarks" placeholder="내용을 입력하세요">
+                </div>
+                
+                <!-- [New] Current Session Total Balance -->
+                <div class="full-width" style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; color: #475569;">
+                        <span style="font-weight: 600;">현재 잔액:</span>
+                        <span id="currentRunningBalance" style="font-size: 1.2rem; font-weight: 800; color: var(--primary-color);">0 원</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction List Table -->
+            <div class="table-section">
+                <div style="font-weight: 700; color: #4a5568; margin-bottom: 15px; font-size: 0.9rem;">
+                    <i class="fas fa-list-ul"></i> 해당 회차 입력 내역
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="entry-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">구분</th>
+                                <th>항목</th>
+                                <th style="width: 90px; text-align: right;">금액</th>
+                                <th style="width: 100px; text-align: right;">잔액</th>
+                                <th>적요</th>
+                                <th style="width: 50px; text-align: center;">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transHistoryBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 30px;">
+                                    날짜를 선택하여 내역을 확인하거나 새로 입력하세요.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Bar -->
+    <div class="floating-action-bar">
+        <button class="btn-action btn-save" id="btnSaveTrans"><i class="fas fa-save"></i> 저장</button>
+        <button class="btn-action btn-close" id="btnCloseBottom"><i class="fas fa-times"></i> 닫기</button>
+    </div>
+
+    <script src="script.js?v=20260307_2253"></script>
+    <script type="module">
+        import { db } from "./firebase-config.js";
+        import {
+            collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, writeBatch, serverTimestamp, setDoc
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+
+        // States
+        let profile = null;
+        let accountItems = [];
+        let curTransactions = [];
+        let sessionInfoMap = new Map(); // date -> session
+        let originalTransactions = []; // For change detection
+        let carryForward = 0;
+
+        // [Senior Utility] 명칭 표준화 함수
+        const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
+
+        // DOMs
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const meetingDate = document.getElementById('meetingDate');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const transType = document.getElementById('transType');
+        const accountItemSelect = document.getElementById('accountItem');
+        const transAmount = document.getElementById('transAmount');
+        const transRemarks = document.getElementById('transRemarks');
+        const transHistoryBody = document.getElementById('transHistoryBody');
+        const carryForwardBalance = document.getElementById('carryForwardBalance');
+        const currentRunningBalance = document.getElementById('currentRunningBalance');
+
+        async function init() {
+            showLoading(true);
+            initAuthObserver(async (user, userProfile) => {
+                if (!user) {
+                    location.href = 'index.html';
+                    return;
+                }
+                profile = userProfile;
+                updateUserInfoDisplay();
+
+                // Initialize Nav Menu
+                if (window.initCommonMenus) {
+                    window.initCommonMenus(profile, () => {
+                        import("./auth.js").then(auth => auth.logoutUser());
+                    });
+                }
+
+                // Load Account Items
+                await loadAccountItems();
+                // Pre-load all sessions for the PR to speed up date picker
+                await loadPrSessions();
+
+                // [Senior UX] 가장 최근 출결 등록 날짜를 기본값으로 설정
+                if (sessionInfoMap.size > 0) {
+                    const sortedDates = Array.from(sessionInfoMap.keys()).sort().reverse();
+                    const latestDate = sortedDates[0];
+                    meetingDate.value = latestDate;
+                    // change 이벤트 수동 발생시켜 데이터 로드
+                    await handleDateChange(latestDate);
+                }
+
+                showLoading(false);
+            }, () => {
+                location.href = 'index.html';
+            });
+        }
+
+        function showLoading(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function updateUserInfoDisplay() {
+            document.getElementById('infoChurch').innerHTML = `<span>성당</span> ${profile.churchName || '-'}`;
+            document.getElementById('infoCuria').innerHTML = `<span>꾸리아</span> ${profile.curiaName || '-'}`;
+            document.getElementById('infoPr').innerHTML = `<span>쁘레시디움</span> ${profile.presidiumName || profile.presidium || '-'}`;
+        }
+
+        async function loadPrSessions() {
+            try {
+                // [Senior Patch] 명칭 표준화(normalizeName)를 적용하여 조회 안정성 확보
+                const q = query(collection(db, 'attendance_list'),
+                    where('churchName', '==', normalizeName(profile.churchName)),
+                    where('presidiumName', '==', normalizeName(profile.presidiumName || profile.presidium))
+                );
+                const snap = await getDocs(q);
+                sessionInfoMap.clear();
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.date && data.session) {
+                        sessionInfoMap.set(data.date, data.session);
+                    }
+                });
+                console.log(`[Sessions] Loaded ${sessionInfoMap.size} sessions for ${profile.presidiumName || profile.presidium}`);
+            } catch (err) {
+                console.error("Error loading sessions:", err);
+            }
+        }
+
+        async function loadAccountItems() {
+            try {
+                // [Senior Patch] 명칭 표준화 적용
+                const q = query(collection(db, 'accounting_items'),
+                    where('churchName', '==', normalizeName(profile.churchName)),
+                    where('curiaName', '==', normalizeName(profile.curiaName)),
+                    where('isActive', '==', true)
+                );
+                const snap = await getDocs(q);
+                accountItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateItemDropdown();
+            } catch (err) {
+                console.error("Error loading items:", err);
+            }
+        }
+
+        function updateItemDropdown() {
+            const type = transType.value;
+            const filtered = accountItems.filter(item => item.type === type);
+            accountItemSelect.innerHTML = '<option value="">항목 선택</option>';
+            filtered.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.name;
+                opt.textContent = item.name;
+                accountItemSelect.appendChild(opt);
+            });
+        }
+
+        // 날짜 변경 핸들러 분리
+        async function handleDateChange(selectedDate) {
+            if (!selectedDate) {
+                sessionInfo.value = '';
+                return;
+            }
+
+            const sess = sessionInfoMap.get(selectedDate);
+            if (sess) {
+                sessionInfo.value = `${sess}회 (출결 연동 완료)`;
+                sessionInfo.style.color = 'var(--primary-color)';
+                await loadDataForDate(selectedDate);
+            } else {
+                // [Senior UX] 유효한 날짜 제안 기능 추가
+                const validDates = Array.from(sessionInfoMap.keys()).sort().reverse().slice(0, 3);
+                let suggestMsg = "";
+                if (validDates.length > 0) {
+                    suggestMsg = `\n\n💡 연동 가능한 최근 날짜:\n${validDates.join('\n')}`;
+                }
+
+                await window.showGlobalAlert(`📅 ${selectedDate}일자의 출결 기록을 찾을 수 없습니다.\n\n출결이 등록된 회차에 대해서만 회계 등록이 가능합니다.${suggestMsg}`, 'warning');
+                meetingDate.value = '';
+                sessionInfo.value = '';
+                sessionInfo.style.color = '#718096';
+                
+                carryForwardBalance.textContent = '0 원';
+                currentRunningBalance.textContent = '0 원';
+                curTransactions = [];
+                renderHistory();
+            }
+        }
+
+        meetingDate.onchange = async () => {
+            await handleDateChange(meetingDate.value);
+        };
+
+        transType.onchange = () => {
+            updateItemDropdown();
+            updateRunningBalanceDisplay(); // 종류 변경 시에도 잔액 갱신
+        };
+
+        // [Senior UX] 현재 입력 중인 금액까지 포함하여 실시간 잔액 표시
+        function updateRunningBalanceDisplay() {
+            let running = carryForward;
+            
+            // 1. 기존 목록 합산
+            curTransactions.forEach(t => {
+                const amt = parseInt(t.amount) || 0;
+                if (t.type === 'deposit') running += amt;
+                else running -= amt;
+            });
+
+            // 2. 현재 입력 필드 금액 합산
+            const currentInputAmt = parseNumber(transAmount.value);
+            if (currentInputAmt > 0) {
+                if (transType.value === 'deposit') running += currentInputAmt;
+                else running -= currentInputAmt;
+            }
+
+            currentRunningBalance.textContent = `${running.toLocaleString()} 원`;
+            
+            // 시각적 강조 (잔액이 바뀌었음을 알림)
+            currentRunningBalance.style.transition = 'color 0.2s';
+            currentRunningBalance.style.color = 'var(--primary-color)';
+        }
+
+        async function loadDataForDate(dateStr) {
+            showLoading(true);
+            try {
+                const targetYear = dateStr.split('-')[0];
+                const church = profile.churchName;
+                const pr = profile.presidiumName || profile.presidium;
+
+                // 1. Calculate Carry Forward (Running balance BEFORE this date)
+                // Search for all transactions in this year or earlier
+                // [Senior Patch] 명칭 표준화(normalizeName) 적용
+                const q = query(collection(db, 'accounting_transactions'),
+                    where('churchName', '==', normalizeName(church)),
+                    where('presidiumName', '==', normalizeName(pr))
+                );
+                const snap = await getDocs(q);
+                
+                let totalBefore = 0;
+                let sessionTransactions = [];
+
+                // Sort by Date/Session manually to find "before" and "current"
+                const allTrans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // Fetch Initial Balance for the target year
+                // [Senior Patch] ID 생성을 위한 명칭 정규화 적용
+                const summaryId = `${targetYear}_${normalizeName(profile.churchName)}_${normalizeName(profile.curiaName)}_${normalizeName(pr)}`;
+                const summaryDoc = await getDocs(query(collection(db, 'accounting_summaries'), where('__name__', '==', summaryId)));
+                let initialBalance = 0;
+                if (!summaryDoc.empty) {
+                    initialBalance = summaryDoc.docs[0].data().initialBalance || 0;
+                } else {
+                    // Fallback to previous year cumulative
+                    const prevYear = (parseInt(targetYear) - 1).toString();
+                    const qPrev = query(collection(db, 'accounting_transactions'),
+                        where('year', '==', prevYear),
+                        where('churchName', '==', normalizeName(church)),
+                        where('presidiumName', '==', normalizeName(pr))
+                    );
+                    const snapPrev = await getDocs(qPrev);
+                    let cumPrev = 0;
+                    snapPrev.forEach(d => {
+                        const t = d.data();
+                        if (t.type === 'deposit') cumPrev += (parseInt(t.amount) || 0);
+                        else cumPrev -= (parseInt(t.amount) || 0);
+                    });
+                    initialBalance = cumPrev;
+                }
+
+                totalBefore = initialBalance;
+                
+                allTrans.forEach(t => {
+                    const tDate = `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
+                    const amt = parseInt(t.amount) || 0;
+                    
+                    if (tDate < dateStr) {
+                        if (t.type === 'deposit') totalBefore += amt;
+                        else totalBefore -= amt;
+                    } else if (tDate === dateStr) {
+                        sessionTransactions.push(t);
+                    }
+                });
+
+                carryForward = totalBefore;
+                carryForwardBalance.textContent = `${carryForward.toLocaleString()} 원`;
+                
+                curTransactions = sessionTransactions;
+                renderHistory();
+            } catch (err) {
+                console.error("Error loading data:", err);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderHistory() {
+            if (curTransactions.length === 0) {
+                transHistoryBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 30px;">기록된 내역이 없습니다. 새로운 내용을 입력해 보세요.</td></tr>';
+                updateRunningBalanceDisplay(); // [Senior Fix]
+                return;
+            }
+
+            let running = carryForward;
+            transHistoryBody.innerHTML = '';
+            
+            // Sort by Session/Type (Deposit first in same session)
+            curTransactions.sort((a,b) => {
+                if (a.type !== b.type) return a.type === 'deposit' ? -1 : 1;
+                return (a.id || '').localeCompare(b.id || '');
+            });
+
+            curTransactions.forEach((t, idx) => {
+                const amt = parseInt(t.amount) || 0;
+                if (t.type === 'deposit') running += amt;
+                else running -= amt;
+
+                const tr = document.createElement('tr');
+                tr.onclick = () => editTransaction(idx); // [Senior UX] 행 클릭 시 수정 모드로 전환
+                
+                tr.innerHTML = `
+                    <td><span class="type-badge ${t.type === 'deposit' ? 'badge-deposit' : 'badge-withdrawal'}">${t.type === 'deposit' ? '입금' : '출금'}</span></td>
+                    <td style="font-weight: 600;">${t.item || '-'}</td>
+                    <td style="text-align: right; font-weight: bold; color: ${t.type === 'deposit' ? '#166534' : '#991b1b'};">
+                        ${t.type === 'deposit' ? '+' : '-'}${amt.toLocaleString()}
+                    </td>
+                    <td style="text-align: right; font-weight: bold; color: #475569;">
+                        ${running.toLocaleString()}
+                    </td>
+                    <td style="color: #64748b; font-size: 0.85rem;">${t.remarks || ''}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-delete-row" data-idx="${idx}" onclick="event.stopPropagation();"><i class="far fa-trash-alt"></i></button>
+                    </td>
+                `;
+                transHistoryBody.appendChild(tr);
+            });
+
+
+            updateRunningBalanceDisplay();
+
+            // Setup delete listeners
+            document.querySelectorAll('.btn-delete-row').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation(); // 행 클릭 이벤트와 겹치지 않게 방지
+                    const idx = e.currentTarget.dataset.idx;
+                    deleteTransaction(idx);
+                };
+            });
+        }
+
+        // [Senior Logic] 수정 모드로 데이터 불러오기 (서버에서도 즉시 임시 삭제)
+        async function editTransaction(idx) {
+            const t = curTransactions[idx];
+            if (!t) return;
+
+            showLoading(true);
+            try {
+                // 1. 이미 저장된 데이터라면 서버에서 먼저 삭제 (수정 후 다시 저장되므로)
+                if (t.id) {
+                    await deleteDoc(doc(db, 'accounting_transactions', t.id));
+                }
+
+                // 2. 입력 필드에 값 채우기
+                transType.value = t.type;
+                updateItemDropdown();
+                accountItemSelect.value = t.item;
+                transAmount.value = formatNumber(t.amount);
+                transRemarks.value = t.remarks || '';
+
+                // 3. 목록에서 제거하고 다시 그리기
+                curTransactions.splice(idx, 1);
+                renderHistory();
+
+                // 4. 입력 필드로 포커스 이동 및 알림
+                transAmount.focus();
+                await window.showGlobalAlert(`✏️ 수정 모드입니다.\n내용을 고치신 후 반드시 하단의 [저장]을 눌러주세요.`, 'info');
+            } catch (err) {
+                console.error("Edit loading error:", err);
+                await window.showGlobalAlert('수정 모드 전환 중 오류가 발생했습니다.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteTransaction(idx) {
+            const t = curTransactions[idx];
+            if (!t) return;
+
+            if (await window.showGlobalConfirm(`[${t.item}] 내역을 삭제하시겠습니까?\n(확인을 누르면 즉시 서버에서 삭제됩니다.)`, 'error')) {
+                showLoading(true);
+                try {
+                    // 1. 이미 저장된 데이터라면 서버에서 즉시 삭제
+                    if (t.id) {
+                        await deleteDoc(doc(db, 'accounting_transactions', t.id));
+                    }
+
+                    // 2. 로컬 목록에서 제거 및 화면 갱신
+                    curTransactions.splice(idx, 1);
+                    renderHistory();
+                    
+                    await window.showGlobalAlert('성공적으로 삭제되었습니다.', 'success');
+                } catch (err) {
+                    console.error("Delete error:", err);
+                    await window.showGlobalAlert('삭제 처리 중 오류가 발생했습니다.', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // [Senior Utility] 천단위 콤마 포맷팅 함수
+        const formatNumber = (val) => {
+            const num = val.toString().replace(/[^0-9]/g, '');
+            return num ? Number(num).toLocaleString() : '';
+        };
+
+        const parseNumber = (val) => {
+            return parseInt(val.toString().replace(/[^0-9]/g, '')) || 0;
+        };
+
+        // 실시간 금액 포맷팅 이벤트 등록
+        transAmount.oninput = (e) => {
+            const cursor = e.target.selectionStart;
+            const originalLength = e.target.value.length;
+            const formatted = formatNumber(e.target.value);
+            e.target.value = formatted;
+            
+            // 커서 위치 보정 (콤마 삽입 시 커서가 뒤로 밀리는 것 방지)
+            const newCursor = cursor + (formatted.length - originalLength);
+            e.target.setSelectionRange(newCursor, newCursor);
+
+            // [Senior UX] 입력 시 실시간 잔액 계산
+            updateRunningBalanceDisplay();
+        };
+
+        document.getElementById('btnSaveTrans').onclick = async () => {
+            const date = meetingDate.value;
+            const sessText = sessionInfo.value;
+            const type = transType.value;
+            const item = accountItemSelect.value;
+            const amount = parseNumber(transAmount.value);
+            const remarks = transRemarks.value;
+
+            if (!date) {
+                await window.showGlobalAlert('날짜를 먼저 선택해 주세요.', 'warning');
+                return;
+            }
+
+            // [Senior Logic] 필수 항목 검증 강화
+            // 1. 입력 필드가 하나라도 채워진 경우 - 모든 필수 항목(항목, 금액)이 있어야 함
+            const isEntryStarted = item || amount > 0 || remarks;
+            if (isEntryStarted) {
+                if (!item) {
+                    await window.showGlobalAlert('회계 항목을 선택해 주세요.', 'warning');
+                    return;
+                }
+                if (amount <= 0) {
+                    await window.showGlobalAlert('금액을 입력해 주세요.', 'warning');
+                    return;
+                }
+            }
+
+            // 2. 현재 입력된 것이 없고 + 기존 목록도 없는 경우
+            if (!isEntryStarted && curTransactions.length === 0) {
+                await window.showGlobalAlert('저장할 내역이 없습니다.\n항목과 금액을 입력해 주세요.', 'info');
+                return;
+            }
+
+            // 3. 입력 필드가 정상적으로 채워진 경우 목록에 추가
+            if (isEntryStarted) {
+                const year = date.split('-')[0];
+                const month = parseInt(date.split('-')[1]);
+                const day = parseInt(date.split('-')[2]);
+                const sessNum = sessText.replace('회', '').trim();
+
+                const newT = {
+                    year: year,
+                    month: month,
+                    day: day,
+                    session: sessNum || '0',
+                    type: type,
+                    item: item,
+                    amount: amount,
+                    remarks: remarks,
+                    churchName: profile.churchName,
+                    curiaName: profile.curiaName,
+                    presidiumName: profile.presidiumName || profile.presidium,
+                    isManual: true // Temporary flag
+                };
+                curTransactions.push(newT);
+                
+                // Clear fields for next entry (if multiple)
+                transAmount.value = '';
+                transRemarks.value = '';
+                accountItemSelect.selectedIndex = 0;
+            }
+
+            showLoading(true);
+            try {
+                const batch = writeBatch(db);
+                
+                // 1. Delete all existing transactions for this date/PR first (to replace)
+                const church = profile.churchName;
+                const pr = profile.presidiumName || profile.presidium;
+                const qExist = query(collection(db, 'accounting_transactions'),
+                    where('churchName', '==', normalizeName(church)),
+                    where('presidiumName', '==', normalizeName(pr)),
+                    where('year', '==', date.split('-')[0]),
+                    where('month', '==', parseInt(date.split('-')[1])),
+                    where('day', '==', parseInt(date.split('-')[2]))
+                );
+                const existSnap = await getDocs(qExist);
+                existSnap.forEach(d => batch.delete(d.ref));
+
+                // 2. Add new/updated transactions
+                curTransactions.forEach(t => {
+                    const cleanT = { ...t };
+                    delete cleanT.id;
+                    delete cleanT.isManual;
+                    const newRef = doc(collection(db, 'accounting_transactions'));
+                    batch.set(newRef, {
+                        ...cleanT,
+                        updatedAt: serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+                await window.showGlobalAlert('정상적으로 저장되었습니다.', 'success');
+                await loadDataForDate(date);
+            } catch (err) {
+                console.error("Save Error:", err);
+                await window.showGlobalAlert('저장 중 오류가 발생했습니다.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        // Navigation
+        document.getElementById('btnCloseTop').onclick = () => location.href = 'dashboard.html';
+        document.getElementById('btnCloseBottom').onclick = () => location.href = 'dashboard.html';
+
+        init();
+    </script>
+</body>
+
+</html>

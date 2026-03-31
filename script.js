@@ -545,6 +545,26 @@ window.initCommonMenus = (profile, logoutUser) => {
                 }
             }
 
+            // [새 기능] '회계' 메뉴를 '입출등록' 화면으로 대체 및 메뉴 단일화 (v16.95)
+            if (navLinkText.includes('등록관리')) {
+                const subMenu = item.querySelector('.sub-menu');
+                if (subMenu) {
+                    // 1. 기존 '회계' 링크를 '간편 입출등록'으로 교체
+                    const oldAccountingLink = subMenu.querySelector('a[href="accounting_ledger.html"]');
+                    if (oldAccountingLink) {
+                        oldAccountingLink.href = "easy_accounting_ledger.html";
+                        oldAccountingLink.innerHTML = "회&nbsp;&nbsp;&nbsp;계(등록)"; // 이름도 명확하게 변경
+                    }
+
+                    // 2. 혹시나 따로 존재하던 '입출등록' 서브 메뉴 아이템 삭제 (중복 제거)
+                    subMenu.querySelectorAll('li').forEach(li => {
+                        if (li.textContent.includes('입출등록')) {
+                            li.remove();
+                        }
+                    });
+                }
+            }
+
             // [권한 제어] 소통 메뉴 내 '긴급/휘발성 공지' 추가
             if (navLinkText.includes('소통')) {
                 const subMenu = item.querySelector('.sub-menu');

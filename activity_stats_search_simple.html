@@ -504,9 +504,13 @@
                 
                 const rolePriority = { '단장': 1, 'president': 1, '부단장': 2, 'vice_president': 2, '서기': 3, 'secretary': 3, '회계': 4, 'treasurer': 4 };
                 
+                // [수정] 간부와 단원 목록 합칠 때 중복 제거 (이미 간부에 포함된 단원은 제외)
+                const officerMemberIds = new Set(officers.map(o => o.memberId));
+                const filteredMembers = members.filter(m => !officerMemberIds.has(m.id));
+
                 const allList = [
                     ...officers.map(o => ({...o, isOfficer: true, uid: o.memberId, sortKey: rolePriority[o.role] || 99})), 
-                    ...members.map(m => ({...m, uid: m.id, sortKey: 100}))
+                    ...filteredMembers.map(m => ({...m, uid: m.id, sortKey: 100}))
                 ];
                 allList.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name));
 
