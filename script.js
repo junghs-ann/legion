@@ -583,7 +583,24 @@ window.initCommonMenus = (profile, logoutUser) => {
             staticLogout.onclick = window.handleLogout;
         }
 
-        // 4. "내 정보" 추가 (중복 체크 후 삽입)
+        // 4. [UX 패치] 등록/조회 메뉴 시각적 구분 및 명칭 보강 (v17.5_experiment)
+        navMenu.querySelectorAll('.nav-item').forEach(item => {
+            const link = item.querySelector('.nav-link');
+            if (!link) return;
+            const text = link.textContent.trim();
+
+            if (text === '등록관리') {
+                link.innerHTML = '등록관리 <span style="font-size: 0.8rem; opacity: 0.8;">(입력)</span>';
+            } else if (text === '각종 장부') {
+                link.innerHTML = '각종 장부 <span style="font-size: 0.8rem; opacity: 0.8;">(조회)</span>';
+                item.classList.add('is-inquiry');
+            } else if (text === '보고서') {
+                link.innerHTML = '보고서 <span style="font-size: 0.8rem; opacity: 0.8;">(조회)</span>';
+                item.classList.add('is-inquiry');
+            }
+        });
+
+        // 5. "내 정보" 추가 (중복 체크 후 삽입)
         if (!navMenu.querySelector('a[href*="my_page"]')) {
             const li = document.createElement('li');
             li.className = 'nav-item injected-nav-item';
@@ -592,7 +609,7 @@ window.initCommonMenus = (profile, logoutUser) => {
             navMenu.appendChild(li);
         }
 
-        // 5. "로그아웃" 추가
+        // 6. "로그아웃" 추가
         const hasLogoutLink = Array.from(navMenu.querySelectorAll('.nav-link')).some(el => el.textContent.includes('로그아웃'));
         if (!staticLogout && !hasLogoutLink) {
             const li = document.createElement('li');

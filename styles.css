@@ -14,6 +14,8 @@
     --input-bg: #f9f9f9;
     --input-text: #333333;
     --border-color: #e0e0e0;
+    --inquiry-color: #1972E6; /* 조회 전용 블루 (v17.5) */
+    --inquiry-hover: #1557B0;
 }
 
 * {
@@ -298,6 +300,27 @@ body {
     border: 1px solid #eee;
     border-top: 3px solid var(--secondary-color);
     visibility: hidden;
+}
+
+/* === Inquiry Menu Theme === */
+.nav-item.is-inquiry .nav-link:hover,
+.nav-item.is-inquiry.active .nav-link,
+.nav-item.is-inquiry.active-menu .nav-link {
+    color: var(--inquiry-color) !important;
+}
+
+.nav-item.is-inquiry.active-menu .sub-menu {
+    border-top-color: var(--inquiry-color) !important;
+    background-color: #f8fbff; /* 연한 블루 배경색 (ㄴ 조회 느낌 강화) */
+}
+
+.nav-item.is-inquiry.active-menu .nav-link::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%231972E6' d='M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z'/%3E%3C/svg%3E") !important;
+}
+
+.nav-item.is-inquiry .sub-menu li a:hover {
+    color: var(--inquiry-color) !important;
+    background-color: #eff6ff;
 }
 
 .nav-item.active-menu .sub-menu {
