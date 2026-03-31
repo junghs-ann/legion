@@ -11,6 +11,7 @@
     <style>
         :root {
             --report-border: #000;
+            --label-col-width: 21mm; /* 사용자 요청에 따른 최적 너비 (v3.1) */
             --report-bg-header: #fff;
             /* 서식 이미지에 맞춰 흰색으로 변경 */
         }
@@ -134,30 +135,74 @@
             text-align: center;
         }
 
+        /* 기초 디자인 시스템 통합 (v3.0) */
         table.report-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 9pt;
-            margin-bottom: 0px;
-            table-layout: fixed;
-            border: 0.5px solid #000; /* 선 색상 및 두께 조정 */
+            table-layout: fixed; /* 수직선 정렬의 핵심 */
+            border: 1px solid #000;
         }
 
-        table.report-table th,
-        table.report-table td {
-            border: 0.5px solid #000; /* 내부 선색 검정 복구 */
-            padding: 1mm 0.5mm;
+        .report-table th,
+        .report-table td {
+            border: 1px solid #000;
+            padding: 1mm 1.5mm;
             text-align: center;
+            box-sizing: border-box;
             word-break: break-all;
-            line-height: 1.2;
         }
 
-        .vertical-header {
-            width: 8mm;
+        .justify-th, .vertical-header {
+            width: var(--label-col-width) !important;
+            min-width: var(--label-col-width) !important;
+            max-width: var(--label-col-width) !important;
             font-weight: bold;
             background: #fff;
-            padding: 2mm 1mm !important;
-            line-height: 1.1;
+            text-align: center;
+            vertical-align: middle;
+            padding: 1mm 1mm !important;
+        }
+
+        /* 회계 및 행사 섹션 세부 정렬 스타일 복구 */
+        .accounting-table td {
+            text-align: left !important;
+            padding: 1.5mm 1mm !important;
+            font-size: 8.5pt;
+        }
+
+        .accounting-cell-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            width: 100%;
+        }
+
+        .accounting-label {
+            display: inline-block;
+            width: 21mm; /* 내부 라벨 너비 고정 (마스터 너비와 일치) */
+            text-align: justify;
+            text-align-last: justify;
+        }
+
+        .accounting-table .underline {
+            border-bottom: 1px solid #000;
+            flex: 1;
+            display: inline-block;
+            text-align: right;
+            margin-left: 4px;
+            padding-right: 2px;
+            min-height: 1.2em;
+        }
+
+        /* 내부 줄선 제거 및 정리 */
+        .accounting-table tr:not(:first-child):not(:last-child) td,
+        .event-table tr:not(:last-child):not(:first-child) td {
+            border-bottom: none !important;
+        }
+        
+        .accounting-table tr+tr:not(:last-child) td {
+            border-top: none !important;
         }
 
         .underline {
@@ -168,12 +213,6 @@
             padding: 0 1mm;
         }
 
-        .justify-th {
-            text-align: justify;
-            text-align-last: justify;
-            padding: 1mm 3mm !important;
-        }
-
         .red-text {
             color: red;
         }
@@ -181,11 +220,6 @@
         /* 특정 섹션별 스타일 */
         .officer-table th {
             background: #fff;
-        }
-
-        .accounting-table td {
-            text-align: left;
-            padding-left: 2mm;
         }
 
         .event-table td {
@@ -562,54 +596,6 @@
 
             <!-- 회계보고 섹션 -->
             <!-- 회계보고 섹션 -->
-            <style>
-                .accounting-table td,
-                .accounting-table th[style*="text-align:left"] {
-                    text-align: left !important;
-                    padding: 1.5mm 1mm !important;
-                    font-size: 8.5pt;
-                    vertical-align: middle;
-                }
-
-                .accounting-cell-content {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: baseline;
-                    width: 100%;
-                }
-
-                .accounting-label {
-                    display: inline-block;
-                    width: 25mm;
-                    /* 라벨 영역 너비 고정 */
-                    text-align: justify;
-                    text-align-last: justify;
-                }
-
-                .accounting-table .underline {
-                    border-bottom: 1px solid #000;
-                    flex: 1;
-                    display: inline-block;
-                    text-align: right;
-                    margin-left: 4px;
-                    padding-right: 2px;
-                    min-height: 1.2em;
-                }
-
-                .accounting-table th {
-                    background: #fdfdfd;
-                }
-
-                /* 내부 가로 줄선 제거 (첫 줄과 마지막 줄은 제외) */
-                .accounting-table tr:not(:first-child):not(:last-child) td,
-                .event-table tr:not(:last-child):not(:first-child) td {
-                    border-bottom: none !important;
-                }
-
-                .accounting-table tr+tr:not(:last-child) td {
-                    border-top: none !important;
-                }
-            </style>
             <table class="report-table accounting-table" style="margin-top: -1px;">
                 <tr>
                     <td rowspan="5" class="vertical-header">회계보고</td>
@@ -810,7 +796,7 @@
             <table class="report-table" style="font-size: 8.5pt;">
                 <thead>
                     <tr>
-                        <th style="width:20%">종 목</th>
+                        <th style="width:21mm">종 목</th>
                         <th style="width:12%">활동횟수</th>
                         <th style="width:68%">활 동 내 용</th>
                     </tr>
