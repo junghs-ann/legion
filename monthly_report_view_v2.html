@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260402_0803">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -851,9 +851,9 @@
                         <td rowspan="2" colspan="2" style="text-align:center; font-weight:bold;">묵 주 기 도</td>
                         <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_rosary">-</span>단</td>
                         <td rowspan="2" style="text-align:center;">1</td>
-                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1; border-bottom:0.1px solid rgba(0,0,0,0.15);">새 가족찾기</td>
-                        <td style="text-align:left; padding-left:5px; font-size:9.5pt; border-bottom:0.1px solid rgba(0,0,0,0.15);">예비자 교리반 입교</td>
-                        <td style="text-align:right; padding-right:5px; border-bottom:0.1px solid rgba(0,0,0,0.15);"><span id="sum_new">-</span> 명</td>
+                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">새 가족찾기</td>
+                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">예비자 교리반 입교</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_new">-</span> 명</td>
                     </tr>
                     <!-- 2행: 쉬는교우회두 (우) -->
                     <tr style="height:8mm;">
@@ -987,16 +987,16 @@
                 <tbody id="activityDetailBody"></tbody>
                 <tfoot id="activityTotalFoot" style="font-weight:bold;">
                     <tr style="height:8mm;">
-                        <th style="border:0.1px solid rgba(0,0,0,0.15); text-align:center;">합 계</th>
-                        <td id="grandTotalCount" style="border:0.1px solid rgba(0,0,0,0.15); text-align:right; padding-right:5px;">-</td>
-                        <td style="border:0.1px solid rgba(0,0,0,0.15);"></td>
+                        <th style="text-align:center;">합 계</th>
+                        <td id="grandTotalCount" style="text-align:right; padding-right:5px;">-</td>
+                        <td></td>
                     </tr>
                 </tfoot>
             <!-- 하단 문구 삭제 (겹침 방지 및 깔끔한 레이아웃을 위해 제거) -->
         </div>
     </div>
 
-    <script src="script.js?v=20260327_V20_FIX"></script>
+    <script src="script.js?v=20260402_0803"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -1192,7 +1192,8 @@
                     const reportMonth = new Date(start).getMonth() + 1;
                     const reportMonthStart = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
                     // 해당 월의 마지막 날짜 구하기
-                    const reportMonthEnd = new Date(reportYear, reportMonth, 0).toISOString().split('T')[0];
+                    const lastDayObj = new Date(reportYear, reportMonth, 0);
+                    const reportMonthEnd = `${lastDayObj.getFullYear()}-${String(lastDayObj.getMonth() + 1).padStart(2, '0')}-${String(lastDayObj.getDate()).padStart(2, '0')}`;
 
                     const leds = transAll.filter(l => {
                         const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
@@ -1600,7 +1601,7 @@
                 setVal('sum_legion', sumAct('월간 성모님의 군단 읽기').toLocaleString());
 
                 setVal('sum_new', sumAct('새 가족 찾기').toLocaleString());
-                setVal('sum_soul', sumAct('냉담 교우 회두').toLocaleString());
+                setVal('sum_soul', '0');
                 // 사랑의 증언활동 개별 집계 (복지시설, 병원.요양원, 기타 사랑봉사)
                 setVal('sum_wel', sumAct('복지시설').toLocaleString());
                 setVal('sum_hosp', sumAct('병원.요양원').toLocaleString());
@@ -1887,7 +1888,7 @@
                 const rosaryMax = Math.max(spec1Val, spec2Val, spec3Val);
 
                 const newFamVal = sumAct('새 가족 찾기');
-                const soulVal = sumAct('냉담 교우 회두');
+                const soulVal = 0;
                 const welVal = sumAct('복지시설');
                 const hospVal = sumAct('병원.요양원');
                 const charityEtcVal = sumAct('기타 사랑봉사');
@@ -1934,14 +1935,14 @@
                                 </td>
                                 <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} 단</td>
                                 <td rowspan="2">1</td>
-                                <th style="font-size:8pt; border-bottom:none;">새 가족찾기</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px; border-bottom:none;">예비자 교리반 입교</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-bottom:none;">${newFamVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt;">새 가족찾기</th>
+                                <td style="font-size:8pt; text-align:left; padding-left:5px;">예비자 교리반 입교</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${newFamVal.toLocaleString()} 명</td>
                             </tr>
                             <tr style="height: 10.0mm;">
-                                <th style="font-size:8pt; border-top:none; line-height:1.2;">쉬는교우<br>회두</th>
-                                <td style="font-size:8pt; border-top:none; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-top:none;">${soulVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt; line-height:1.2;">쉬는교우<br>회두</th>
+                                <td style="font-size:8pt; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${soulVal.toLocaleString()} 명</td>
                             </tr>
 
                             <!-- 3~4행: 평일미사 + 사랑의증언(1,2) -->
@@ -2345,3 +2346,16 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+

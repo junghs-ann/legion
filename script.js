@@ -446,6 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         item.classList.remove('active-menu');
                     } else {
                         item.classList.add('active-menu');
+                        // [UX Patch] Click-based focus clearing for mobile
+                        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                            document.activeElement.blur();
+                        }
                     }
                     
                     // Stop propagation to prevent document click from immediately closing it

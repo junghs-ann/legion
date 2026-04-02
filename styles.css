@@ -269,9 +269,11 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232E7D32' d='M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z'/%3E%3C/svg%3E");
 }
 
-.nav-link:hover {
-    color: var(--primary-color);
-    background-color: rgba(46, 125, 50, 0.05);
+@media (hover: hover) {
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(46, 125, 50, 0.05);
+    }
 }
 
 .nav-item.active .nav-link {
@@ -311,16 +313,28 @@ body {
 
 .nav-item.is-inquiry.active-menu .sub-menu {
     border-top-color: var(--inquiry-color) !important;
-    background-color: #f8fbff; /* 연한 블루 배경색 (ㄴ 조회 느낌 강화) */
+    background-color: #ffffff; /* 흰색으로 원복 (혼동 방지) */
 }
 
 .nav-item.is-inquiry.active-menu .nav-link::after {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%231972E6' d='M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z'/%3E%3C/svg%3E") !important;
 }
 
-.nav-item.is-inquiry .sub-menu li a:hover {
-    color: var(--inquiry-color) !important;
-    background-color: #eff6ff;
+@media (hover: hover) {
+    .nav-item.is-inquiry .sub-menu li a:hover {
+        color: var(--inquiry-color) !important;
+        background-color: transparent;
+    }
+}
+
+/* 방문한 링크가 파란색으로 변하는 현상 방지 및 포커스 상태 고정 */
+.sub-menu li a:visited,
+.sub-menu li a:focus,
+.sub-menu li a:active {
+    color: #222 !important;
+    background-color: transparent !important; /* 배경색 강제 제거 */
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item.active-menu .sub-menu {
@@ -334,23 +348,26 @@ body {
 .sub-menu li a {
     display: block;
     padding: 12px 25px;
-    color: #555;
+    color: #222; /* 회색에서 진한 검정으로 변경 (가독성 향상) */
     text-decoration: none;
     white-space: nowrap;
     transition: all 0.2s;
     font-size: 1.05rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 2px solid #f8f9fa; /* 더 연하고 깔끔한 경계선 */
     text-align: left;
+    background-color: #ffffff; /* 배경을 흰색으로 명시하여 비침 방지 */
 }
 
 .sub-menu li:last-child a {
     border-bottom: none;
 }
 
-.sub-menu li a:hover {
-    background-color: #f5f5f5;
-    color: var(--primary-color);
-    padding-left: 30px;
+@media (hover: hover) {
+    .sub-menu li a:hover {
+        background-color: #f5f5f5;
+        color: var(--primary-color);
+        padding-left: 30px;
+    }
 }
 
 @media (min-width: 1025px) {

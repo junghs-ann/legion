@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260402_0803">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -987,7 +987,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260327_V20_FIX"></script>
+    <script src="script.js?v=20260402_0803"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -1183,7 +1183,8 @@
                     const reportMonth = new Date(start).getMonth() + 1;
                     const reportMonthStart = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
                     // 해당 월의 마지막 날짜 구하기
-                    const reportMonthEnd = new Date(reportYear, reportMonth, 0).toISOString().split('T')[0];
+                    const lastDayObj = new Date(reportYear, reportMonth, 0);
+                    const reportMonthEnd = `${lastDayObj.getFullYear()}-${String(lastDayObj.getMonth() + 1).padStart(2, '0')}-${String(lastDayObj.getDate()).padStart(2, '0')}`;
 
                     const leds = transAll.filter(l => {
                         const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
@@ -2244,3 +2245,16 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+

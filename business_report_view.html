@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260303_1255_fix">
+    <link rel="stylesheet" href="styles.css?v=20260402_0803">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -142,6 +142,7 @@
             font-size: 9pt;
             table-layout: fixed; /* 수직선 정렬의 핵심 */
             border: 1px solid #000;
+            margin-top: -1px; /* 이전 표와 선 겹치기 (단선 법칙) */
         }
 
         .report-table th,
@@ -196,14 +197,24 @@
             min-height: 1.2em;
         }
 
-        /* 내부 줄선 제거 및 정리 */
-        .accounting-table tr:not(:first-child):not(:last-child) td,
-        .event-table tr:not(:last-child):not(:first-child) td {
+        /* 내부 격자 관리: 회계보고는 선을 유지하되, 행사 테이블은 인라인 스타일 및 아래 규칙을 따름 */
+        .accounting-table td {
+            border: 1px solid #000 !important;
+        }
+        .event-table td:not([rowspan]):not(.vertical-header) {
+            border-top: none !important;
             border-bottom: none !important;
         }
-        
-        .accounting-table tr+tr:not(:last-child) td {
-            border-top: none !important;
+        /* 행사 테이블의 제목 행 하단 선만 명시적으로 복구 */
+        .event-table tr:first-child th, 
+        .event-table tr:nth-child(7) th { /* '기타(행사)' 시작 행 (7번째 줄) 보정 */
+            border-bottom: 1px solid #000 !important;
+        }
+
+        /* 단원 수 테이블 세로선 실종 방지 (인쇄/PDF 대응) */
+        .member-count-table th, .member-count-table td {
+            border: 1px solid #000 !important;
+            box-sizing: border-box !important;
         }
 
         .underline {
@@ -225,6 +236,29 @@
 
         .event-table td {
             height: 6mm;
+        }
+
+        /* 테이블 간 테두리 중복 방지 (두꺼운 선 방지 ✨) */
+        .report-page table + table {
+            border-top: none !important;
+            margin-top: 0;
+        }
+        
+        .report-page table + table tr:first-child th,
+        .report-page table + table tr:first-child td {
+            border-top: none !important;
+        }
+
+        /* 첫 표의 상단 마진 예외 처리 */
+        .report-page table:first-of-type {
+            margin-top: 0;
+        }
+        
+        /* 세로선 정렬을 위한 핵심 컬럼 너비 강제 */
+        .vertical-header {
+            width: var(--label-col-width) !important;
+            background: #fff;
+            font-weight: bold;
         }
 
         @page {
@@ -252,8 +286,17 @@
                 page-break-after: always;
             }
 
+            /* 인쇄 시에도 행사 섹션 가로선 제거 규칙 강제 */
+            .event-table td:not([rowspan]):not(.vertical-header) {
+                border-top: none !important;
+                border-bottom: none !important;
+            }
+            .event-table tr:first-child th, 
+            .event-table tr:nth-child(7) th {
+                border-bottom: 1px solid #000 !important;
+            }
+
             [contenteditable="true"] {
-                border: none !important;
                 background-color: transparent !important;
                 outline: none !important;
             }
@@ -526,24 +569,24 @@
             </table>
 
             <!-- 단원 수 섹션 -->
-            <table class="report-table">
+            <table class="report-table member-count-table">
                 <tr>
                     <td rowspan="6" class="vertical-header">단원 수</td>
                     <th rowspan="2" style="width:18%">구분</th>
-                    <th colspan="3">전차 보고시</th>
+                    <th colspan="3">전차 보고 시</th>
                     <th colspan="3">현 재</th>
                     <th colspan="3">증 감</th>
                 </tr>
                 <tr>
-                    <th style="width:8%">남</th>
-                    <th style="width:8%">여</th>
+                    <th style="width:7.5%">남</th>
+                    <th style="width:7.5%">여</th>
                     <th style="width:8%">계</th>
-                    <th style="width:8%">남</th>
-                    <th style="width:8%">여</th>
+                    <th style="width:7.5%">남</th>
+                    <th style="width:7.5%">여</th>
                     <th style="width:8%">계</th>
-                    <th style="width:8%">입단전입</th>
-                    <th style="width:8%">퇴단전출</th>
-                    <th style="width:8%">계</th>
+                    <th style="width:11.3%; font-size:8pt; letter-spacing:-0.4px; white-space:nowrap;">입단전입</th>
+                    <th style="width:11.3%; font-size:8pt; letter-spacing:-0.4px; white-space:nowrap;">퇴단전출</th>
+                    <th style="width:7.9%">계</th>
                 </tr>
                 <tr>
                     <th>행동단원</th>
@@ -597,7 +640,7 @@
 
             <!-- 회계보고 섹션 -->
             <!-- 회계보고 섹션 -->
-            <table class="report-table accounting-table" style="margin-top: -1px;">
+            <table class="report-table accounting-table">
                 <tr>
                     <td rowspan="5" class="vertical-header" style="text-align: center; padding-left: 0; padding-right: 0; letter-spacing: -0.5px;">회계보고</td>
                     <th style="width:33.3%">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;입</th>
@@ -664,19 +707,19 @@
                     </td>
                 </tr>
                 <tr>
-                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
+                    <th style="text-align:left; padding-left:1mm;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">수입계</span> :</span>
                             <span id="accInTotal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
                         </div>
                     </th>
-                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
+                    <th style="text-align:left; padding-left:1mm;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">지출계</span> :</span>
                             <span id="accOutTotal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
                         </div>
                     </th>
-                    <th style="text-align:left; padding-left:1mm; border:1px solid black;">
+                    <th style="text-align:left; padding-left:1mm;">
                         <div class="accounting-cell-content">
                             <span><span class="accounting-label">잔액</span> :</span>
                             <span id="accBal" style="flex:1; display:inline-block; text-align:right; padding-right:2px; min-height:1.2em;"></span>
@@ -686,7 +729,7 @@
             </table>
 
             <!-- 행사 및 교육 섹션 통합 최종 정교화 -->
-            <table class="report-table event-table" style="margin-top: -1px; border-bottom: 1px solid #000;">
+            <table class="report-table event-table">
                 <tr>
                     <td rowspan="6" class="vertical-header" style="height:36mm">행<br><br><br>사</td>
                     <th style="width:23%; border-bottom: 1px solid #000;">내 용</th>
@@ -989,7 +1032,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260304_1525"></script>
+    <script src="script.js?v=20260402_0803"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -2198,7 +2241,7 @@
                     filename:     fileName,
                     image:        { type: 'jpeg', quality: 1.0 },
                     html2canvas:  { 
-                        scale: 2, 
+                        scale: 3, 
                         useCORS: true, 
                         letterRendering: true,
                         scrollY: 0,
@@ -2252,36 +2295,41 @@
                             const styleNode = clonedDoc.createElement('style');
                             styleNode.textContent = `
                                 .report-table {
-                                    border-collapse: separate !important;
-                                    border-spacing: 0 !important;
-                                    border: none !important;
-                                    border-top: 0.1pt solid #444 !important;
-                                    border-left: 0.1pt solid #444 !important;
-                                    margin-top: -1px !important; /* 표 간 장벽 제거 */
+                                    border-collapse: collapse !important;
+                                    border: 0.1pt solid #999 !important;
+                                    margin-top: 1px !important;
+                                    width: 100% !important;
                                 }
                                 .report-table th, .report-table td {
-                                    border: none !important;
-                                    border-right: 0.1pt solid #444 !important;
-                                    border-bottom: 0.1pt solid #444 !important;
+                                    border: 0.1pt solid #999 !important;
                                     box-sizing: border-box !important;
+                                    padding: 1px !important;
                                 }
-                                /* 제목 칸 하단 선 누락 방지 (최강 우선순위) */
-                                table.report-table.event-table tr td.vertical-header {
-                                    border-bottom: 0.1pt solid #444 !important;
+                                /* [행사 섹션] 가로선 선택적 제거 (공식 양식 준수 🖋️) */
+                                .event-table td:not([rowspan]):not(.vertical-header) {
+                                    border-top: none !important;
+                                    border-bottom: none !important;
+                                }
+                                .event-table tr:first-child th, 
+                                table.report-table tr td.vertical-header {
+                                    border-bottom: 0.1pt solid #999 !important;
+                                }
+                                .event-table tr:nth-child(8) th {
+                                    border-bottom: 0.1pt solid #999 !important;
                                 }
                                 /* 중간에 비어 있던 내용, 일자, 참석 윗선 복구 (일직선 정렬) */
                                 .event-table tr td.vertical-header ~ th {
-                                    border-top: 0.1pt solid #444 !important;
+                                    border-top: 0.1pt solid #999 !important;
                                 }
                                 /* 회계보고 합계 행 윗선 복구 (구조적 우회 및 직접 보강) */
                                 #accounting_list tr:last-child td {
-                                    border-bottom: 0.1pt solid #444 !important;
+                                    border-bottom: 0.1pt solid #999 !important;
                                 }
                                 /* [시니어 패치] 불일치하던 ID 수복 (#inc_total -> #accInTotal 등) 및 th 선택자 정적 유지 */
                                 table.report-table.accounting-table tr th:has(#accInTotal),
                                 table.report-table.accounting-table tr th:has(#accOutTotal),
                                 table.report-table.accounting-table tr th:has(#accBal) {
-                                    border-top: 0.1pt solid #444 !important;
+                                    border-top: 0.1pt solid #999 !important;
                                     display: table-cell !important;
                                 }
                                 /* 첫 줄 중복 방지 */
@@ -2289,28 +2337,25 @@
                                     border-top: none !important;
                                 }
                                 .serial-box {
-                                    border: 0.1pt solid #444 !important;
+                                    border: 0.1pt solid #999 !important;
                                 }
                                 .serial-label {
-                                    border: none !important;
-                                    border-bottom: 0.1pt solid #444 !important;
+                                    border-bottom: 0.1pt solid #999 !important;
                                 }
                                 .underline {
-                                    border: none !important;
-                                    border-bottom: 0.1pt solid #000 !important;
+                                    border-bottom: 0.5pt solid #777 !important;
                                     display: inline-block !important;
-                                    flex: 1 !important;
-                                    min-height: 1.2em !important;
                                 }
-                                /* 요청 사항: 기타, 초값 항목은 밑줄 수복하되 합계 및 명세 항목은 확실히 제거 (가독성 패치⚖️🌊) */
-                                #accExtra, #expCandle, #expExtra {
-                                    border-bottom: 0.1pt solid #000 !important;
-                                    min-width: 15mm !important;
+                                /* [시니어 패치] 단원 수 섹션 세로선 탈출 방지 (0.1pt로 확실하게 고정) */
+                                .member-count-table th, .member-count-table td {
+                                    border: 0.1pt solid #999 !important;
+                                    box-sizing: border-box !important;
                                 }
-                                #accInTotal, #accOutTotal, #accBal, 
-                                #startYear, #startMonth, #endYear, #endMonth, #startSess, #endSess, #totalSess,
-                                #meetingDay, #meetingHour, #meetingMin, #meetingPlace {
-                                    border-bottom: none !important;
+                                /* [시니어 패치] 운영상황 박스 테두리 보호 및 배경색 제거 🖋️ */
+                                #managementStatus {
+                                    border: 0.1pt solid #999 !important;
+                                    background-color: transparent !important;
+                                    min-height: 65mm !important;
                                 }
                             `;
                             clonedDoc.head.appendChild(styleNode);
@@ -2328,7 +2373,7 @@
                             const accountingBody = clonedDoc.getElementById('accounting_list');
                             if (accountingBody && accountingBody.lastElementChild) {
                                 Array.from(accountingBody.lastElementChild.cells).forEach(cell => {
-                                    cell.style.setProperty('border-bottom', '0.1pt solid #444', 'important');
+                                    cell.style.setProperty('border-bottom', '0.1pt solid #999', 'important');
                                 });
                             }
                         }
@@ -2354,3 +2399,16 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
