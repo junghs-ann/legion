@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260402_0803">
+    <link rel="stylesheet" href="styles.css?v=20260403_1930">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -101,16 +101,21 @@
         /* 월례보고서 A4 용지 레이아웃 */
         .report-page {
             width: 210mm;
-            height: 297mm; /* A4 정규 높이(297mm)로 복구 */
+            height: 295mm; /* 297mm에서 295mm로 하향하여 3페이지 방지 */
             padding: 10mm 10mm 5mm 10mm;
-            margin: 0 auto 30px auto;
+            margin: 0 auto 20px auto;
             background: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
             position: relative;
             font-family: 'Malgun Gothic', 'Dotum', sans-serif;
             color: #000;
-            overflow: visible; /* 잘림 방지 (hidden 해제) */
+            overflow: hidden; /* 영역 밖 노출 차단 */
+        }
+
+        /* 마지막 페이지 아래 여백 제거 */
+        .report-page:last-child {
+            margin-bottom: 0 !important;
         }
         
         /* 공식 세나뚜스 양식 문구 (하단) */
@@ -150,7 +155,7 @@
             position: absolute;
             right: 0;
             top: 0;
-            border: 0.5px solid #000;
+            border: 0.7px solid #000;
             width: 22mm;
             /* 25mm에서 22mm로 축소 */
             height: 25mm;
@@ -158,7 +163,7 @@
         }
 
         .serial-label {
-            border-bottom: 0.5px solid #000;
+            border-bottom: 0.7px solid #000;
             font-size: 9pt;
             /* 10pt에서 9pt로 축소 */
             padding: 0.5mm 0;
@@ -195,12 +200,12 @@
             margin-bottom: 1.5mm;
             /* 2mm에서 1.5mm로 축소 */
             table-layout: fixed;
-            border: 0.5px solid #000; /* 선 색상 및 두께 복구 */
+            border: 0.7px solid #000; /* 선 색상 및 두께 복구 */
         }
 
         table.report-table th,
         table.report-table td {
-            border: 0.5px solid #000; /* 내부 선색 검정 복구 */
+            border: 0.7px solid #000; /* 내부 선색 검정 복구 */
             padding: 0.5mm 1mm;
             /* 0.8mm에서 0.5mm로 극한 축소 */
             text-align: center;
@@ -438,6 +443,12 @@
         @media screen and (max-width: 768px) {
             body {
                 padding: 140px 10px 20px; /* 고정 헤더에 맞춰 패딩 조정 */
+                overflow-x: auto; /* 모바일에서 옆으로 밀기 허용 */
+                -ms-overflow-style: none; /* 막대기 숨기기 */
+                scrollbar-width: none;
+            }
+            body::-webkit-scrollbar {
+                display: none; /* 크롬/사파리 막대기 숨기기 */
             }
 
             .no-print-zone {
@@ -476,6 +487,7 @@
 </head>
 
 <body>
+    <div class="no-print version-badge">[코드 버전: 18:42]</div>
     <div class="no-print no-print-zone">
         <div class="approval-wrap">
             <span id="reportStatusBadge"
@@ -541,15 +553,26 @@
                     letterRendering: true,
                     scrollY: 0,
                     scrollX: 0,
-                    // [핵심] onclone 콜백을 통한 가상 렌더링 최적화 (좌우 밸런스 수복) 🧪
+                    // [핵심] onclone 콜백을 통한 가상 렌더링 최적화 🧪
                     onclone: (clonedDoc) => {
-                        const originalElement = document.getElementById('reportDisplay');
                         const clonedElement = clonedDoc.getElementById('reportDisplay');
                         
-                        // [사용자 요청] 영점 좌표 비교 로그 기록 🚩
-                        const screenRect = originalElement.getBoundingClientRect();
-                        console.log(`📍 [영점 비교] 화면 시작점(Top): ${Math.round(screenRect.top)}px`);
-                        
+                        // [유령 소탕] 보고서 페이지 외의 모든 불필요한 자식 요소(공백, 줄바꿈 등)를 완전 제거
+                        Array.from(clonedElement.childNodes).forEach(node => {
+                            if (node.nodeType === 3 || (node.nodeType === 1 && !node.classList.contains('report-page'))) {
+                                node.remove();
+                            }
+                        });
+
+                        // [유령 공간 원천 차단] 폰에서 발생하는 미세한 여백 오차를 뿌리부터 해결
+                        clonedDoc.documentElement.style.margin = '0';
+                        clonedDoc.documentElement.style.padding = '0';
+                        clonedDoc.body.style.margin = '0';
+                        clonedDoc.body.style.padding = '0';
+                        clonedDoc.body.style.height = 'auto';
+                        clonedDoc.body.style.minHeight = '0';
+
+                        const originalElement = document.getElementById('reportDisplay');
                         // 1. 가상 도큐먼트 내에서 보고서를 정중앙(Center) 및 상단(Top 0) 고정 (쏠림 및 백지 방지)
                         clonedElement.style.position = 'absolute';
                         clonedElement.style.top = '0';
@@ -567,9 +590,11 @@
                         clonedDoc.documentElement.style.margin = '0';
                         clonedDoc.documentElement.style.padding = '0';
                         
-                        // 3. 보고서 본체 규격 고정 (210mm) 및 3페이지 백지 방지를 위한 2장 높이(594mm) 고정
+                        // 3. 보고서 본체 규격 고정 (210mm) 및 3페이지 백지 방지를 위한 높이 고정 (297+296)
                         clonedElement.style.width = '210mm';
-                        clonedElement.style.height = '594mm'; // 297mm * 2
+                        // [시니어 패치] PDF 전용 강제 캐시 무효화 및 버전 관리
+                        console.log("🚀 [PDF 버전 확인] 20260403_1842 실전 수치 적용 완료!");
+                        clonedElement.style.height = '593mm'; 
                         clonedElement.style.overflow = 'hidden';
                         clonedElement.style.display = 'block';
                         
@@ -577,12 +602,12 @@
                         const pages = clonedElement.querySelectorAll('.report-page');
                         pages.forEach((p, idx) => {
                             p.style.margin = '0';
-                            p.style.padding = '10mm 10mm 5mm 10mm'; // 내부 패딩 수복
+                            p.style.padding = (idx === 0) ? '10mm 10mm 5mm 10mm' : '30mm 10mm 5mm 10mm'; // 2페이지 상단 여백 보강 (20->30)
                             p.style.boxShadow = 'none';
                             p.style.width = '210mm';
-                            p.style.height = '297mm'; // 정확히 A4 1장에 맞춤
-                            p.style.minHeight = '297mm';
-                            p.style.maxHeight = '297mm';
+                            p.style.height = '295mm'; // 297mm에서 295mm로 하향 고정
+                            p.style.minHeight = '295mm';
+                            p.style.maxHeight = '295mm';
                             p.style.overflow = 'hidden';
                             p.style.backgroundColor = '#ffffff';
                             p.style.boxSizing = 'border-box'; // 패딩 포함해서 297mm 유지
@@ -603,25 +628,32 @@
                                 border-collapse: separate !important;
                                 border-spacing: 0 !important;
                                 border: none !important;
-                                border-top: 0.1pt solid #444 !important;
-                                border-left: 0.1pt solid #444 !important;
+                                border-top: 0.01mm solid #000 !important;
+                                border-left: 0.01mm solid #000 !important;
+                                margin-bottom: 1.2mm !important; /* 1페이지 하단 잘림 방지를 위해 간격 미세 압축 */
                             }
                             .report-table th, .report-table td {
                                 border: none !important;
-                                border-right: 0.1pt solid #444 !important;
-                                border-bottom: 0.1pt solid #444 !important;
+                                border-right: 0.01mm solid #000 !important;
+                                border-bottom: 0.01mm solid #000 !important;
+                                box-sizing: border-box !important;
+                                padding: 0.7mm 1mm !important; /* 1페이지 날씬함 유지 */
                                 box-sizing: border-box !important;
                             }
+                            /* [2페이지 정밀 타격] 활동 상세 표만 시원하게 벌려줌 */
+                            #activityDetailBody td {
+                                padding: 3.5mm 2mm !important;
+                            }
                             .serial-box {
-                                border: 0.1pt solid #444 !important;
+                                border: 0.01mm solid #000 !important;
                             }
                             .serial-label {
                                 border: none !important;
-                                border-bottom: 0.1pt solid #444 !important;
+                                border-bottom: 0.01mm solid #000 !important;
                             }
                             .underline {
                                 border: none !important;
-                                border-bottom: 0.1pt solid #444 !important;
+                                border-bottom: 0.01mm solid #000 !important;
                                 display: inline-block !important;
                             }
                         `;
@@ -987,7 +1019,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260402_0803"></script>
+    <script src="script.js?v=20260403_1930"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -2245,6 +2277,13 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
 
 
 

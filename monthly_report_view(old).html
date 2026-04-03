@@ -21,7 +21,6 @@
             padding: 80px 20px 20px;
             /* 상단 헤더 공간 확보 */
             font-family: 'Noto Sans KR', sans-serif;
-            overflow-x: auto; /* 기본적으로 가로 밀어보기 허용 */
         }
 
         /* 컨트롤 패널 (화면용) */
@@ -102,22 +101,16 @@
         /* 월례보고서 A4 용지 레이아웃 */
         .report-page {
             width: 210mm;
-            min-width: 210mm; /* [긴급] 모바일 기기에서 표가 뒤틀리거나 축소되는 것 방지 */
-            height: 295mm;    /* 3페이지 방지를 위해 297mm에서 295mm로 하향 */
+            height: 297mm; /* A4 정규 높이(297mm)로 복구 */
             padding: 10mm 10mm 5mm 10mm;
-            margin: 0 auto 20px auto; /* 화면용 여백을 줄여 스크롤 최소화 */
+            margin: 0 auto 30px auto;
             background: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
             position: relative;
             font-family: 'Malgun Gothic', 'Dotum', sans-serif;
             color: #000;
-            overflow: hidden; /* 영역 밖으로 나가는 것 차단 */
-        }
-
-        /* 마지막 페이지 아래 여백 제거 (3페이지 방지 핵심) */
-        .report-page:last-child {
-            margin-bottom: 0 !important;
+            overflow: visible; /* 잘림 방지 (hidden 해제) */
         }
         
         /* 공식 세나뚜스 양식 문구 (하단) */
@@ -131,7 +124,7 @@
             color: #222;
         }
 
-        /* [검증용] 코드 버전 표시 (우측 하단 고정) */
+        /* [V1 검증용] 코드 버전 표시 (우측 하단 고정) */
         .version-badge {
             position: fixed;
             bottom: 5px;
@@ -139,12 +132,15 @@
             font-size: 8pt;
             color: rgba(0,0,0,0.3);
             z-index: 10001;
+            padding: 2px 5px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 3px;
         }
 
         .report-header {
             text-align: center;
             position: relative;
-            margin-bottom: 2mm;
+            margin-bottom: 5mm;
         }
 
         .title-main {
@@ -167,14 +163,17 @@
             position: absolute;
             right: 0;
             top: 0;
-            border: 1px solid #000; /* [긴급] 0.5px에서 1px로 보강 */
+            border: 0.5px solid #000;
             width: 22mm;
+            /* 25mm에서 22mm로 축소 */
             height: 25mm;
+            /* 30mm에서 25mm로 축소 */
         }
 
         .serial-label {
-            border-bottom: 1px solid rgba(0,0,0,0.5); /* 선명도 보강 */
+            border-bottom: 0.5px solid #000;
             font-size: 9pt;
+            /* 10pt에서 9pt로 축소 */
             padding: 0.5mm 0;
             text-align: center;
         }
@@ -204,29 +203,20 @@
         table.report-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt;
-            /* 9.5pt에서 9pt로 축소 */
-            margin-bottom: 1.5mm;
-            /* 2mm에서 1.5mm로 축소 */
+            font-size: 8.5pt;
+            margin-bottom: 0.5mm;
             table-layout: fixed;
+            border: 1px solid #000 !important;
         }
 
         table.report-table th,
         table.report-table td {
-            border: 1px solid #000;
-            padding: 0.5mm 1mm; 
-            text-align: center; /* [복구] 모든 칸을 기본 가운데 정렬로 원상 복구 */
+            border: 1px solid #000 !important;
+            padding: 0.3mm 0.8mm;
+            text-align: center;
             word-break: break-all;
-            line-height: 1.1;
-            vertical-align: middle;
-        }
-
-        table.report-table th,
-        table.report-table td[width="35"],
-        table.report-table td[width="70"],
-        table.report-table td.center {
-            text-align: center; /* [예외] 헤더, 번호, 수량 칸은 가운데 정렬 유지 */
-            padding: 0.5mm 1mm;
+            line-height: 1.2;
+            /* 1.25에서 1.2로 축소 */
         }
 
         table.report-table th {
@@ -238,14 +228,13 @@
             font-size: 10pt;
             /* 10.5pt에서 10pt로 축소 */
             font-weight: bold;
-            margin: 0.5mm 0;
-            /* 1mm에서 0.5mm로 극소화 */
+            margin: 0.2mm 0;
             display: flex;
             align-items: flex-end;
         }
 
         .underline {
-            border-bottom: 1px solid #000; /* [긴급] 화면에서도 선명하게 보이도록 고정 */
+            border-bottom: 1px solid #000;
             display: inline-block;
             min-width: 15mm;
             text-align: center;
@@ -270,73 +259,27 @@
             color: #666;
         }
 
-        /* [추가] 2페이지 활동 상세 표 전용 가독성 개선 스타일 */
-        #activityDetailBody th {
-            padding: 2.5mm 3mm !important; /* 종목 칸 안쪽 여백 충분히 확보 */
-            line-height: 1.4 !important;    /* 줄바꿈 시 가독성 개선 */
-            text-align: center;             /* 타이틀은 중앙 정렬 */
-            vertical-align: middle;
-        }
-        #activityDetailBody td {
-            vertical-align: middle;
-            padding: 4mm 2mm !important; /* 2페이지만 시원하게 칸 높이 확보 */
-            line-height: 1.5;
-        }
-        /* 2번째 열(활동 횟수) 강제 중앙 정렬 */
-        #activityDetailBody td:nth-child(2) {
-            text-align: center !important;
-        }
-        /* [추가] 3번째 열(활동 내용) 왼쪽 정렬 및 여백 확보 */
-        #activityDetailBody td:nth-child(3) {
-            text-align: left !important;
-            padding-left: 10px !important;
-        }
-        /* [긴급] 이미 저장된 데이터(스냅샷)에서도 기타 활동 정렬을 왼쪽으로 강제 */
-        #activityDetailBody td div {
-            text-align: left !important;
-            padding-left: 0 !important; /* [수정] 부모 td의 10px 패딩과 중복되지 않도록 0으로 조정 (상단 행과 수직 일치) */
-            margin-bottom: 4px;
-            line-height: 1.6;
-        }
-        /* 기타 활동 rowspan 구조 대응 */
-        #activityDetailBody tr td[style*="border-left"] {
-            text-align: center !important; /* rowspan 된 행의 횟수 칸 */
-        }
-
-        /* [추가] 동그라미 숫자 전용 스타일 (선에서 5px 여유 간격 확보) */
-        .circled-item {
-            padding-left: 1.6em !important; /* 내어쓰기 대비 충분한 여백 확보 (약 5px 간격) */
-            text-align: left !important;
-            text-indent: -1.2em !important;
-            line-height: 1.2 !important;
-            display: block !important;
-        }
-
-        /* [긴급/스냅샷 대응] 이미 작성된 보고서의 인라인 스타일을 강제로 덮어써서 정렬 보정 */
-        #activitySummaryBody td div[style*="text-indent: -1.2em"],
-        #activitySummaryBody td[style*="text-indent: -1.2em"] {
-            padding-left: 1.8em !important; /* 선에서 충분히 떨어지도록 강제 고정 */
-            text-indent: -1.2em !important;
-            text-align: left !important;
-            display: block !important;
-        }
-        /* 빨간색 번호가 든 특수 칸 대응 */
-        #activitySummaryBody td[colspan="2"][style*="text-align:left"] {
-            padding-left: 5px !important;
+        .signature-section {
+            margin-top: 2px; /* 여백 축소 */
+            text-align: right;
+            font-size: 10pt;
         }
 
         .page-break {
-            page-break-after: always !important;
+            page-break-before: always !important;
         }
 
         /* 활동 상세 테이블 특화 스타일 */
         #activityDetailBody td {
-            padding: 1.5mm 1mm;
+            padding: 2.5mm 2mm;
+            /* 3.5mm에서 2.5mm로 축소 */
         }
 
         #activityDetailBody th {
             font-size: 10.5pt;
-            padding: 1.5mm 1mm;
+            /* 11pt에서 10.5pt로 축소 */
+            padding: 2.5mm 2mm;
+            /* 3.5mm에서 2.5mm로 축소 */
         }
 
         @page {
@@ -509,54 +452,39 @@
 
         @media screen and (max-width: 768px) {
             body {
-                padding: 120px 0 20px; /* 좌우 여백 제거 */
-                overflow-x: auto; /* 모바일에서 옆으로 밀어보기 허용 */
-                -ms-overflow-style: none; /* 모바일에서 막대기 숨기기 */
-                scrollbar-width: none; 
-            }
-            body::-webkit-scrollbar {
-                display: none; /* 크롬/사파리 모바일에서 막대기 숨기기 */
+                padding: 140px 10px 20px; /* 고정 헤더에 맞춰 패딩 조정 */
             }
 
             .no-print-zone {
-                padding: 6px 10px;
+                padding: 8px;
                 flex-direction: column;
-                gap: 5px;
+                gap: 8px;
                 align-items: center;
-                background: white;
+                max-height: 40vh; /* 화면의 40% 이상 차지하지 않도록 제한 */
+                overflow-y: auto; /* 버튼이 너무 많으면 헤더 내에서 스크롤 */
             }
 
             .approval-wrap {
                 width: 100%;
                 justify-content: center;
-                font-size: 0.8rem;
-                padding: 2px 8px;
+                flex-wrap: wrap;
             }
 
             .action-btns {
                 width: 100%;
                 justify-content: center;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr); /* 3버튼 가로 정렬 */
-                gap: 4px;
             }
 
             .btn-action {
-                padding: 8px 4px; /* 모바일용 크기 조정 */
-                font-size: 0.75rem;
-                min-width: auto;
-                max-width: none;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                flex: 1; /* 너비를 균등하게 하되 최소 너비 유지 */
+                max-width: 150px;
             }
 
-            /* 모바일 보고서 뷰어 최적화 */
-            #reportDisplay {
-                display: inline-block; /* 너비가 늘어나도 배경이 잘리지 않게 함 */
-                padding: 0 10px;
-            }
-
-            .report-page {
-                box-shadow: none; /* 모바일에서는 그림자 제거하여 깔끔하게 */
-                margin-bottom: 10px;
+            #approvalZone {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -578,44 +506,43 @@
             </div>
         </div>
         <div class="action-btns">
-            <button class="btn-action btn-download" id="btnDownloadPDF"><i class="fas fa-file-pdf"></i> 파일 만들기</button>
+            <button class="btn-action btn-download" id="btnDownloadPDF"><i class="fas fa-file-pdf"></i> 🚀 [최종 17:10 수술완료] 파일 만들기</button>
             <button class="btn-action btn-print" onclick="window.handlePrint()"><i class="fas fa-print"></i> 인쇄하기</button>
             <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 창 닫기</button>
         </div>
     </div>
-    <!-- 시각적 버전 확인용 배지 -->
-    <div class="no-print version-badge">[코드 버전: 18:42]</div>
+    <!-- 시각적 버전 확인용 배지 (V1) -->
 
     <script>
         // [강력 처방] 인쇄 시 머리말/꼬리말(사이트 주소)을 숨기기 위한 스크립트
         window.handlePrint = function() {
+            const originalTitle = document.title;
             document.title = ""; // 제목을 비워 상단 주소를 억제
             window.print();
             setTimeout(() => { document.title = originalTitle; }, 500); // 0.5초 후 복구
         };
 
-        // [시니어 패치] PDF 전용 강제 캐시 무효화 및 버전 관리
-        console.log("🚀 [PDF 버전 확인] 20260403_1842 실전 수치 적용 완료!");
-
+        // [최종 안정화: onclone 표준화 방식] 백지 및 여백 문제 해결
         document.getElementById('btnDownloadPDF').addEventListener('click', function() {
-            const original = document.getElementById('reportDisplay');
-            const originalPages = original.querySelectorAll('.report-page');
 
-            // 데이터 정보 추출
-            const serial = (document.getElementById('serialNum').textContent || "").trim();
-            const church = (document.getElementById('footChurch') ? document.getElementById('footChurch').textContent : "").trim();
-            const presidium = (document.getElementById('footPr') ? document.getElementById('footPr').textContent : "").trim();
-            const month = (document.getElementById('repMonth').textContent || "00").trim().padStart(2, '0');
-            const year = (document.getElementById('repYear').textContent || "").trim();
-            const fileName = `${serial}.${church}.${presidium}Pr._${month}월 월례보고서_${year}년.pdf`;
+            const original = document.getElementById('reportDisplay');
+            
+            // 데이터 추출
+            const serial = document.getElementById('serialNum').textContent.trim();
+            const church = document.getElementById('footChurch').textContent.trim();
+            const presidium = document.getElementById('footPr').textContent.trim();
+            const month = document.getElementById('repMonth').textContent.trim().padStart(2, '0');
+            const year = document.getElementById('repYear').textContent.trim();
+            const fileName = `${serial}.${church}.${presidium}Pr._${month}월 월례보고서(${year}년).pdf`;
 
             const btn = this;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중..';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
             btn.disabled = true;
 
-            // [최종 최적화] 스크롤 위치 초기화 및 마진 제거 (캡처 정확도 향상)
-            window.scrollTo(0, 0);
+            // [핵심 해결] html2canvas는 onclone 이전의 **원본 요소** 크기를 기준으로 캔버스를 만듭니다.
+            // 화면상에 있는 30px 마진 때문에 캔버스 길이가 길어져서 빈 3페이지가 나오는 것을 막기 위해 임시로 마진을 제거합니다.
+            const originalPages = original.querySelectorAll('.report-page');
             originalPages.forEach(p => {
                 p.style.margin = '0';
                 p.style.boxShadow = 'none';
@@ -625,113 +552,127 @@
                 margin:       0,
                 filename:     fileName,
                 image:        { type: 'jpeg', quality: 1.0 },
-                html2canvas:  {
-                    scale: 2, // [성능 최적화] 3배에서 2배로 하향 (시스템 멈춤 현상 방지)
-                    useCORS: true,
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true,
                     scrollY: 0,
                     scrollX: 0,
+                    // [핵심] onclone 콜백을 통한 가상 렌더링 최적화 (좌우 밸런스 수복) 🧪
                     onclone: (clonedDoc) => {
+                        const originalElement = document.getElementById('reportDisplay');
                         const clonedElement = clonedDoc.getElementById('reportDisplay');
                         
-                        // [유령 소탕] 보고서 페이지 외의 모든 불필요한 자식 요소(공백, 줄바꿈 등)를 완전 제거
-                        Array.from(clonedElement.childNodes).forEach(node => {
-                            if (node.nodeType === 3 || (node.nodeType === 1 && !node.classList.contains('report-page'))) {
-                                node.remove();
-                            }
-                        });
+                        // [사용자 요청] 영점 좌표 비교 로그 기록 🚩
+                        const screenRect = originalElement.getBoundingClientRect();
+                        console.log(`📍 [영점 비교] 화면 시작점(Top): ${Math.round(screenRect.top)}px`);
+                        
+                        // 1. 가상 도큐먼트 내에서 보고서를 정중앙(Center) 및 상단(Top 0) 고정 (쏠림 및 백지 방지)
+                        clonedElement.style.position = 'absolute';
+                        clonedElement.style.top = '0';
+                        clonedElement.style.left = '50%';
+                        clonedElement.style.transform = 'translateX(-50%)'; // 좌우 중앙 정렬
+                        clonedElement.style.margin = '0';
+                        clonedElement.style.zIndex = '999999';
+                        
+                        console.log(`📍 [영점 비교] 파일 시작점(Top): 0px (상단 영점 및 좌우 밸런스 수복 완료)`);
 
-                        // [유령 공간 원천 차단] 폰에서 발생하는 미세한 여백 오차를 뿌리부터 해결
-                        clonedDoc.documentElement.style.margin = '0';
-                        clonedDoc.documentElement.style.padding = '0';
+                        // 2. 바디 및 도큐먼트 영점 조절
                         clonedDoc.body.style.margin = '0';
                         clonedDoc.body.style.padding = '0';
-                        clonedDoc.body.style.height = 'auto';
-                        clonedDoc.body.style.minHeight = '0';
+                        clonedDoc.body.style.backgroundColor = '#ffffff';
+                        clonedDoc.documentElement.style.margin = '0';
+                        clonedDoc.documentElement.style.padding = '0';
+                        
+                        // 3. 보고서 본체 규격 고정 (210mm) 및 3페이지 백지 방지를 위한 2장 높이(594mm) 고정
+                        clonedElement.style.width = '210mm';
+                        // [최종 패치: V1] 295mm * 2장 = 590mm로 넉넉하게 설정
+                        clonedElement.style.height = '590mm'; 
+                        clonedElement.style.maxHeight = '590mm';
+                        clonedElement.style.overflow = 'hidden'; // 0.1mm 오차로 인한 3페이지 생성을 물리적으로 절단
+                        clonedElement.style.display = 'block';
+                        
+                        // 4. 각 페이지 규격 박제 (A4 정규 사이즈 적용 및 강제 분할 완전 해제)
+                        const pages = clonedElement.querySelectorAll('.report-page');
+                        pages.forEach((p, idx) => {
+                            p.style.margin = '0';
+                            p.style.padding = '10mm 10mm 5mm 10mm'; // 내부 패딩 수복
+                            p.style.boxShadow = 'none';
+                            p.style.width = '210mm';
+                            // [정밀 디버깅: V1] 295mm로 안전하게 설정
+                            const measuredHeight = p.offsetHeight;
+                            const mmHeight = (measuredHeight * 25.4 / 96).toFixed(2);
+                            console.log(`[V1 DEBUG] Page ${idx + 1} Height: ${measuredHeight}px (${mmHeight}mm)`);
+                            
+                            p.style.height = '290mm'; 
+                            p.style.maxHeight = '290mm';
+                            p.style.minHeight = '290mm';
+                            p.style.overflow = 'hidden'; 
+                            p.style.border = 'none';
+                            
+                            // [3페이지 원천 차단] 만약 2페이지를 초과하는 요소가 있다면 강제 삭제 (idx는 0부터 시작)
+                            if (idx >= 2) {
+                                p.remove();
+                                return;
+                            }
+                            p.style.backgroundColor = '#ffffff';
+                            p.style.boxSizing = 'border-box'; 
+                            
+                            // [수각적 디버깅] PDF 우측 하단에 실측 데이터 삽입
+                            const debugText = document.createElement('div');
+                            debugText.style.position = 'absolute';
+                            debugText.style.bottom = '2mm';
+                            debugText.style.right = '2mm';
+                            debugText.style.fontSize = '8pt';
+                            debugText.style.color = 'purple';
+                            debugText.style.zIndex = '9999';
+                            debugText.textContent = `[P${idx+1} Height: ${mmHeight}mm / Build: 16:18]`;
+                            p.appendChild(debugText);
 
+                            // [중요] after가 아닌 before를 사용하여 중복 공백 생성 방지
+                            p.style.pageBreakAfter = 'avoid';
+                            p.style.pageBreakBefore = (idx === 0) ? 'avoid' : 'always';
+                            p.style.pageBreakInside = 'avoid';
+                        });
+                        // 5. 중복 브레이크 태그 완전 제거 (요소를 통째로 삭제하지 않고 클래스만 제거)
+                        clonedDoc.querySelectorAll('.page-break').forEach(el => el.classList.remove('page-break'));
+
+                        console.log("🚀 [PDF 디버그] 상단 영점 및 좌우 중앙 정렬 완료!");
+
+                        // [시니어 패치] PDF 전용 초정밀 '단선 법칙(Single Line Law)' 🖋️
                         const styleNode = clonedDoc.createElement('style');
-                        styleNode.innerHTML = `
-                            /* [본질적 해결: V1 하이라인 완벽 수복 + 블랙 실선] */
-                            .report-page {
-                                height: 295mm !important;    /* 아주 미세한 오차도 허용하지 않도록 295mm 고정 */
-                                min-height: 295mm !important;
-                                padding: 10mm 10mm 5mm 10mm !important; 
+                        styleNode.textContent = `
+                            .report-table {
+                                border-collapse: collapse !important;
+                                border: 1px solid #000 !important;
+                            }
+                            .report-table th, .report-table td {
+                                border: 1px solid #000 !important;
                                 box-sizing: border-box !important;
-                                overflow: hidden !important;
-                                margin-bottom: 0 !important; /* PDF 생성 시 페이지 간 불필요한 여백 완전 제거 */
                             }
-
-                            /* 2페이지 상단 쏠림 방지: 시작 지점을 적절히 조정 */
-                            .report-page:nth-child(2) {
-                                padding-top: 30mm !important; 
+                            .serial-box {
+                                border: 1px solid #000 !important;
                             }
-
-                            .report-header { margin-bottom: -1mm !important; } 
-                            .section-title { margin: 0.1mm 0 !important; font-size: 9.5pt !important; }
-
-                            table.report-table {
-                                border-collapse: separate !important;
-                                border-spacing: 0 !important;
-                                border: none !important;
-                                border-top: 0.01mm solid #000 !important;
-                                border-left: 0.01mm solid #000 !important;
-                                margin-bottom: 0.7mm !important; /* 전체적인 밀착도 유지 */
+                            .serial-label {
+                                border-bottom: 1px solid #000 !important;
                             }
-
-                            table.report-table th, table.report-table td {
-                                border: none !important;
-                                border-right: 0.01mm solid #000 !important;
-                                border-bottom: 0.01mm solid #000 !important;
-                                box-sizing: border-box !important;
-                                padding: 0.6mm 1mm !important; /* 1페이지는 원래대로 날씬하게 복구 */
-                                line-height: 1.05 !important; 
-                                font-size: 9.2pt !important;
-                            }
-                            
-                            /* [정밀 타격] 2페이지만 시원하게 벌려줌 */
-                            #activityDetailBody td {
-                                padding: 3.5mm 2mm !important;
-                            }
-
-                            /* [집중 공략] 8번 주요 활동 요약 칸 대폭 축소 */
-                            #activitySummaryBody td {
-                                padding: 0.3mm 1mm !important; /* 칸 높이 최소화 */
-                                line-height: 1.0 !important;
-                                font-size: 8.8pt !important; /* 글자 크기 미세 축소로 공간 확보 */
-                            }
-                            #activitySummaryBody span[style*="color:red"], 
-                            #activitySummaryBody span[style*="color: red"] {
-                                font-size: 8.5pt !important; /* 붉은색 강조 텍스트 크기 조절 */
-                                line-height: 0.9 !important;
-                            }
-                            /* [시각적 가독성] 줄바꿈 레이블 전용 여유 공간 확보 */
-                            .label-cell {
-                                line-height: 2.0 !important; /* 화면과 동일하게 시원하게 확대 */
-                                white-space: nowrap !important; /* 글자가 옆으로 삐져나가지 않게 고정 */
-                                padding: 0 1px !important;
-                            }
-
-                            .serial-box { border: 0.01mm solid #000 !important; }
-                            .serial-label { border: none !important; border-bottom: 0.01mm solid #000 !important; }
-                            .underline { border: none !important; border-bottom: 0.01mm solid #000 !important; display: inline-block !important; } 
-                            
-                            /* [PDF 전용] 항목 선 침범 완벽 차단 및 정밀 여백 */
-                            #activitySummaryBody .circled-item,
-                            #activitySummaryBody div[style*="text-indent"] {
-                                padding-left: 18px !important;
-                                text-indent: -14px !important;
-                                display: block !important;
+                            .underline {
+                                border-bottom: 1px solid #000 !important;
+                                display: inline-block !important;
+                                min-width: 10px;
                             }
                         `;
                         clonedDoc.head.appendChild(styleNode);
                     }
                 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: 'css' }
+                pagebreak:    { mode: ['css', 'legacy'] } // 가장 안정적인 분할 엔진 사용
             };
 
             html2pdf().set(opt).from(original).save().then(() => {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+                // 마진 원상복구
                 originalPages.forEach(p => {
                     p.style.margin = '';
                     p.style.boxShadow = '';
@@ -741,6 +682,7 @@
                 alert('PDF 생성 중 오류가 발생했습니다.');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+                // 마진 원상복구
                 originalPages.forEach(p => {
                     p.style.margin = '';
                     p.style.boxShadow = '';
@@ -786,8 +728,8 @@
                 &nbsp;&nbsp;&nbsp;&nbsp; 단원 <span id="repAttMem" class="underline">- / -</span>
             </div>
 
-            <div class="section-title">4. 간부 명단 : ( 담당 사제 : <span id="repPriest">-</span> 대리자 : <span
-                    id="repProxy">-</span> )</div>
+            <div class="section-title">4. 간부 명단 : ( 담당 사제 : <span id="repPriest" class="underline">-</span> 대리자 : <span
+                    id="repProxy" class="underline">-</span> )</div>
             <table class="report-table">
                 <thead>
                     <tr>
@@ -861,6 +803,7 @@
                     <tr>
                         <th>입단 및 전입</th>
                         <td id="m_i_m">-</td>
+                        <td id="m_i_f">-</td>
                         <td id="m_i_t">-</td>
                         <td id="p_i">-</td>
                         <td id="a_i_m">-</td>
@@ -904,16 +847,13 @@
                 <span id="acc_out" class="underline">-</span> 잔 액 <span id="acc_bal" class="underline">-</span>
             </div>
             <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
-                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow" class="underline">-</span> (기타) <span id="exp_etc" class="underline">-</span>
+                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow"
+                    class="underline">-</span> (기타)
+                <span id="exp_etc" class="underline">-</span>
             </div>
 
-            <div class="section-title">
-                <span>8. 주요 활동 요약</span>
-                <span id="anniversaryHeader" style="color:red; font-size:9pt; font-weight:bold; letter-spacing: -0.1mm; margin-left: 15px;">
-                    2027년 대전교구 레지오마리애 도입 70주년 '단원 특별활동 실천'(~2027년 12월)
-                </span>
-            </div>
-            <table class="report-table" id="activitySummaryTable">
+            <div class="section-title">8. 주요 활동 요약</div>
+            <table class="report-table" style="width: 185mm; margin: 0 auto; table-layout: fixed;">
                 <colgroup>
                     <col style="width: 10mm;"> <!-- 좌 번호 -->
                     <col style="width: 18mm;"> <!-- 좌 활동 1 (폭 축소) -->
@@ -953,15 +893,15 @@
                     <!-- 3행: 평일미사 시작 / 사랑의 증언 1 -->
                     <tr style="height:8mm;">
                         <td rowspan="8" style="text-align:center;">2</td>
-                        <td rowspan="8" class="label-cell" style="text-align:center; vertical-align:middle; font-weight:bold; overflow:hidden; word-break:keep-all; font-size:9pt;">
+                        <td rowspan="8" style="text-align:center; vertical-align:middle; font-weight:bold; line-height:1.2; overflow:hidden; word-break:keep-all; font-size:9pt; padding:0 1px;">
                             매일미사와<br>말씀과<br>함께하기</td>
                         <td rowspan="2" style="text-align:left; padding-left:5px;">
-                            <div class="circled-item">① 평일미사 참례</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">① 평일미사 참례</div>
                         </td>
                         <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_mass">-</span>회</td>
                         <!-- 우측 2번 사랑의 증언 시작 (3개 행 차지) -->
                         <td rowspan="3" style="text-align:center;">2</td>
-                        <td rowspan="3" class="label-cell" style="text-align:center; vertical-align:middle;">사랑의<br>증언활동</td>
+                        <td rowspan="3" style="text-align:center; vertical-align:middle; line-height:1.2;">사랑의<br>증언활동</td>
                         <td style="text-align:left; padding-left:5px;">
                             <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">① 복지시설</div>
                         </td>
@@ -1038,7 +978,7 @@
             </table>
             <div class="section-title" style="display:flex; align-items:flex-end; gap:5px;">
                 <span style="white-space:nowrap;">9. 기타(질의 및 건의) :</span>
-                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 0.1px solid rgba(0,0,0,0.2);"></span>
+                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 1px solid black;"></span>
             </div>
 
             <div class="footer-sig">
@@ -1046,13 +986,16 @@
                     <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(평의회)</span>
                     <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>직속</b>
                 </div>
-                <div class="sig-line" style="font-weight:bold; font-size:11.5pt; margin-bottom: 1.5mm;">
+                <div class="sig-line" style="font-weight:bold; font-size:12.5pt; margin-bottom: 3.5mm;">
                     <span id="footChurch" class="underline" style="min-width:30mm">-</span>
                     <span id="footPr" class="underline" style="min-width:35mm">-</span> 쁘레시디움 단장
                     <span id="footName" class="underline" style="min-width:30mm">-</span> (인)
                 </div>
+                <div style="font-size: 8.5pt; color: #000; letter-spacing: -0.1mm; font-family: 'Malgun Gothic';">
+                    서울 무염시태 세나뚜스 양식 제6호(2024년12월개정)(대전Re.2024.12)
+                </div>
             </div>
-        </div><!-- 1페이지 끝 -->
+        </div>
 
         <!-- 2페이지 -->
         <div class="report-page">
@@ -1070,14 +1013,14 @@
                     </tr>
                 </thead>
                 <tbody id="activityDetailBody"></tbody>
-                <tfoot id="activityTotalFoot" style="font-weight:bold;">
-                    <tr style="height:8mm;">
-                        <th style="text-align:center;">합 계</th>
-                        <td id="grandTotalCount" style="text-align:right; padding-right:5px;">-</td>
-                        <td></td>
+                <tfoot id="activityTotalFoot">
+                    <tr>
+                        <th>합 계</th>
+                        <td id="grandTotalCount" style="font-weight:bold;">-</td>
+                        <td style="background:#eee;"></td>
                     </tr>
                 </tfoot>
-            </table>
+            <!-- 하단 문구 삭제 (겹침 방지 및 깔끔한 레이아웃을 위해 제거) -->
         </div>
     </div>
 
@@ -1094,7 +1037,6 @@
         let pr = normalize(urlParams.get('presidiumName'));
         let start = normalize(urlParams.get('start'));
         let end = normalize(urlParams.get('end'));
-        const endYear = end ? end.split('-')[0] : new Date().getFullYear();
         const mode = normalize(urlParams.get('mode')) || 'view';
 
         // [디버그] URL 파라미터 수신 확인
@@ -1131,10 +1073,12 @@
 
         window.showCustomConfirm = (message) => {
             return new Promise((resolve) => {
+                console.log("📢 [모달] showCustomConfirm 호출됨:", message);
                 modalMessage.textContent = message;
                 modalCancelBtn.style.display = 'block';
                 modalConfirmBtn.style.maxWidth = '120px';
                 modalOverlay.style.display = 'flex';
+                console.log(" ✅ [모달] overlay.style.display를 flex로 변경함");
 
                 const handleConfirm = () => {
                     modalOverlay.style.display = 'none';
@@ -1172,7 +1116,7 @@
             if (isGenerating) return;
             isGenerating = true;
             try {
-                // [시니어 패치] 공유 변수 스코프 확보 (ReferenceError 방지) 🌊
+                // [시니어 패치] 공유 변수 스코프 확보 (ReferenceError 방지)
                 let offIds = new Set();
                 let officialPresidentId = '';
                 let officialPresidentName = '';
@@ -1184,21 +1128,20 @@
                     window.showCustomAlert('[데이터 무결성 오류]\n필수 매개변수(성당, Pr, 기간)가 누락되었습니다.').then(() => window.close());
                     return;
                 }
-
-                const t = (val) => String(val || '').trim();
-                const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
-                const targetChurchClean = clean(church);
-                const targetPrClean = clean(pr);
-                const isOrgMatch = (churchVal, prVal) => {
-                    const cc = clean(churchVal), cp = clean(prVal);
-                    if (!cc || !cp) return false;
-                    return cp === targetPrClean && cc === targetChurchClean;
-                };
             // [정석화] 꼼수 함수(getField) 제거⚖️🌊
 
             const curiaParam = urlParams.get('curia');
             const ssValue = urlParams.get('ss'), esValue = urlParams.get('es');
 
+            const t = (val) => String(val || '').trim();
+            const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
+            const targetChurchClean = clean(church);
+            const targetPrClean = clean(pr);
+            const isOrgMatch = (churchVal, prVal) => {
+                const cc = clean(churchVal), cp = clean(prVal);
+                if (!cc || !cp) return false;
+                return cp === targetPrClean && cc === targetChurchClean;
+            };
 
             const targetChurch = t(church);
             const targetPr = t(pr);
@@ -1259,7 +1202,7 @@
                     );
 
                     // [추가] 단장 성명 및 ID 추출 (서명 매칭용 - Robust Matching 적용)
-                    let presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
+                    const presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
                     officialPresidentName = presOff.name || '';
                     officialPresidentId = presOff.memberId || '';
 
@@ -1604,7 +1547,7 @@
                             <td>${e.organizer || ''}</td>
                             <td>${e.eventDate || ''}</td>
                             <td>${e.venue || ''}</td>
-                            <td style="text-align:center;">${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
+                            <td>${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
                         </tr>
                     `);
                 }
@@ -1672,7 +1615,7 @@
                 setVal('exp_flow', expFlow.toLocaleString());
                 setVal('exp_etc', expEtc.toLocaleString());
 
-                // [정예화] 오직 표준 명칭(adjs)으로만 활동 실적 합산
+                // [정예화] 오직 표준 명칭으로만 합계 산출
                 const sumAct = (name) => {
                     return recs.reduce((a, c) => {
                         let val = (parseInt(c.counts && c.counts[name]) || 0);
@@ -1686,7 +1629,7 @@
                 setVal('sum_legion', sumAct('월간 성모님의 군단 읽기').toLocaleString());
 
                 setVal('sum_new', sumAct('새 가족 찾기').toLocaleString());
-                setVal('sum_soul', '0');
+                setVal('sum_soul', sumAct('냉담 교우 회두').toLocaleString());
                 // 사랑의 증언활동 개별 집계 (복지시설, 병원.요양원, 기타 사랑봉사)
                 setVal('sum_wel', sumAct('복지시설').toLocaleString());
                 setVal('sum_hosp', sumAct('병원.요양원').toLocaleString());
@@ -1889,42 +1832,40 @@
                     // [시니어 패치] 스냅샷 데이터가 없을 때만 실시간 계산 로직 실행
 
                 // 1. 일반 그룹 처리 및 특수 그룹 분리
-                grpSimple = null; grpDetail = null; grpCharity = null;
-                const filteredSchema = prSchema.filter(group => {
-                    const title = group.title || '';
-                    if (title.includes('기타활동(1)')) { grpSimple = group; return false; }
-                    if (title.includes('기타활동(2)') || title === '기타 활동') { grpDetail = group; return false; }
-                    if (title.includes('사랑의 증언')) { grpCharity = group; return false; }
-                    return true;
-                });
+                prSchema.forEach(group => {
+                    // 특수 그룹은 별도 처리를 위해 저장하고 루프 건너뜀
+                    if (group.id === 'cat_others_simple') { grpSimple = group; return; }
+                    if (group.id === 'cat_others_detail') { grpDetail = group; return; }
+                    if (group.id === 'cat_charity') { grpCharity = group; return; }
 
-                filteredSchema.forEach(group => {
-                    let groupCount = 0;
-                    let groupDetails = [];
-
+                    let groupCount = 0, groupDetails = [];
                     group.items.forEach(it => {
                         const c = sumAct(it.name);
                         groupCount += c;
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         groupDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
 
                     gCount += groupCount;
                     const gTotalStr = groupCount > 0 ? groupCount.toLocaleString() : '-';
-                    detailHtml += `<tr><th>${group.title}</th><td style="text-align:center;">${gTotalStr}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${groupDetails.join(', ')}</td></tr>`;
+                    detailHtml += `<tr><th>${group.title}</th><td>${gTotalStr}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${groupDetails.join(', ')}</td></tr>`;
                 });
 
                 // 2. 기타 활동 병합 처리 (2행 구성)
+                // [1행] 기타활동(1) 내용
                 let simpleCount = 0, simpleDetails = [];
                 if (grpSimple) {
                     grpSimple.items.forEach(it => {
                         const c = sumAct(it.name);
                         simpleCount += c;
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         simpleDetails.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
                 }
 
+                // [2행] 기타활동(2) + 사랑의 증언활동 내용 합산
                 let combinedCount = 0;
                 let detailItemsStr = '', charityItemsStr = '';
 
@@ -1933,10 +1874,11 @@
                     grpDetail.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
-                    if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6; text-align:left; padding-left:10px;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
+                    if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
                 }
 
                 if (grpCharity) {
@@ -1944,169 +1886,29 @@
                     grpCharity.items.forEach(it => {
                         const c = sumAct(it.name);
                         combinedCount += c;
+                        // [수정] 0인 경우에도 (0)이 표시되도록 함
                         const cStr = c.toLocaleString();
                         cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
-                    if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6; text-align:left; padding-left:10px;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
+                    if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
                 }
 
                 gCount += (simpleCount + combinedCount);
 
+                // 기타 활동 헤더 병합 (Rowspan 2)
                 detailHtml += `<tr>
-                    <th rowspan="2">${grpSimple.title}</th>
-                    <td style="text-align:center;">${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
-                    <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
-                </tr>`;
+                <th rowspan="2">기타 활동</th>
+                <td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
+                <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
+            </tr>`;
 
                 detailHtml += `<tr>
-                    <td style="border-left:1px solid #000; text-align:center;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
-                    <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
-                        ${detailItemsStr}
-                        ${charityItemsStr}
-                    </td>
-                </tr>`;
-
-
-                const spec1Val = sumAct('대전교구 레지오마리애 도입 70주년 묵주기도');
-                const spec2Val = sumAct('서울세계청년대회 묵주기도 10억 단 바치기');
-                const spec3Val = sumAct('관평동성당 첫 사제를 위한 영적 예물 바치기');
-                const rosaryMax = Math.max(spec1Val, spec2Val, spec3Val);
-
-                const newFamVal = sumAct('새 가족 찾기');
-                const soulVal = 0;
-                const welVal = sumAct('복지시설');
-                const hospVal = sumAct('병원.요양원');
-                const charityEtcVal = sumAct('기타 사랑봉사');
-                const peaceVal = sumAct('밤9시 주모경 바치기');
-                const enlistVal = sumAct('행동단원 모집') + sumAct('협조단원 모집 및 돌봄');
-                const ecoVal = sumAct('탄소중립 실천하기');
-                const holyReadVal = sumAct('거룩한 독서');
-                const noteVal = 0; // 노트작성 (추후 필요시 연동)
-
-                const massVal = sumAct('평일미사참례');
-                const bibleVal = sumAct('성경읽기') + sumAct('성경쓰기');
-                const mediVal = sumAct('매일미사읽고묵상');
-                const armyVal = sumAct('월간 성모님의 군단 읽기');
-
-                const summaryTable = document.getElementById('activitySummaryTable');
-                if (summaryTable) {
-                    summaryTable.innerHTML = `
-                        <colgroup>
-                            <col style="width: 8mm;">  <!-- 번호1 -->
-                            <col style="width: 18mm;"> <!-- Title1 -->
-                            <col style="width: 51mm;"> <!-- Item1 (추가 조정) -->
-                            <col style="width: 17mm;"> <!-- Value1 (천단위 수치 대비 확대) -->
-                            <col style="width: 8mm;">  <!-- 번호2 -->
-                            <col style="width: 18mm;"> <!-- Title2 -->
-                            <col style="width: 51mm;"> <!-- Item2 (추가 조정) -->
-                            <col style="width: 17mm;"> <!-- Value2 (천단위 수치 대비 확대) -->
-                        </colgroup>
-                        <thead>
-                            <tr style="height: 6.5mm;">
-                                <th>번호</th>
-                                <th colspan="3">기도 및 신심행위 (Se. 및 교구 · Re.)</th>
-                                <th>번호</th>
-                                <th colspan="3">중 점 활 동</th>
-                            </tr>
-                        </thead>
-                        <tbody id="activitySummaryBody">
-                            <!-- 1~2행: 묵주기도 + 새가족/회두 -->
-                            <tr style="height: 10.0mm;">
-                                <td rowspan="2">1</td>
-                                <td rowspan="2" colspan="2" style="text-align:left; padding:1px 5px; line-height:1.1;">
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">① 2027년 대전교구 레지오마리애 도입 70주년 묵주기도 7천만 단 바치기 <span style="white-space:nowrap;">(${spec1Val.toLocaleString()})</span></div>
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">② 서울세계청년대회 묵주기도 10억 단 바치기 <span style="white-space:nowrap;">(${spec2Val.toLocaleString()})</span></div>
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">③ 관평동성당 첫 사제를 위한 묵주기도 100만 단 바치기 <span style="white-space:nowrap;">(${spec3Val.toLocaleString()})</span></div>
-                                </td>
-                                <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} 단</td>
-                                <td rowspan="2">1</td>
-                                <th style="font-size:8pt;">새 가족찾기</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px;">예비자 교리반 입교</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${newFamVal.toLocaleString()} 명</td>
-                            </tr>
-                            <tr style="height: 10.0mm;">
-                                <th style="font-size:8pt; line-height:1.2;">쉬는교우<br>회두</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${soulVal.toLocaleString()} 명</td>
-                            </tr>
-
-                            <!-- 3~4행: 평일미사 + 사랑의증언(1,2) -->
-                            <tr style="height: 10mm;">
-                                <td rowspan="8">2</td>
-                                <td rowspan="8" style="font-weight:bold; font-size:9pt; line-height:1.2;">매일미사<br>와<br>말씀과<br>함께하기</td>
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 평일미사 참례</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${massVal.toLocaleString()} 회</td>
-                                <td rowspan="3">2</td>
-                                <td rowspan="3" style="font-weight:bold; vertical-align:middle;">사랑의<br>증언활동</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 복지시설</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${welVal.toLocaleString()} 회</td>
-                            </tr>
-                            <tr style="height: 7.5mm;">
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 병원, 요양원</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${hospVal.toLocaleString()} 회</td>
-                            </tr>
-
-                            <!-- 5~6행: 성경읽기/쓰기 + 사랑의증언(3) + 밤9시주모경 -->
-                            <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 성경읽기, 쓰기</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${bibleVal.toLocaleString()} 장</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">③ 기타(독거노인 등 소외된 이웃 돌봄)</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${charityEtcVal.toLocaleString()} 회</td>
-                            </tr>
-                            <tr style="height: 7.5mm;">
-                                <td>3</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">한반도 평화를 위한 밤 9시 주모경 바치기</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${peaceVal.toLocaleString()} 회</td>
-                            </tr>
-
-                            <!-- 7~8행: 매일미사 묵상 + 모집/돌봄 + 탄소중립 -->
-                            <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">③ 매일미사 읽고, 묵상</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${mediVal.toLocaleString()} 회</td>
-                                <td>4</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">행동단원, 협조단원 모집 및 돌봄 활동</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${enlistVal.toLocaleString()} 회</td>
-                            </tr>
-                            <tr style="height: 7.5mm;">
-                                <td>5</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">탄소중립 실천하기</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${ecoVal.toLocaleString()} 회</td>
-                            </tr>
-
-                            <!-- 9~10행: 군단읽기 + 거룩한독서 -->
-                            <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">④ 성모님의 군단읽기</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${armyVal.toLocaleString()} 쪽</td>
-                                <td rowspan="2">6</td>
-                                <td rowspan="2" style="font-weight:bold; font-size:8.5pt; line-height:1.2;">거룩한<br>독서</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 말씀 봉독하기(시청,묵상,기도)</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${holyReadVal.toLocaleString()} 회</td>
-                            </tr>
-                            <tr style="height: 7.5mm;">
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 노트작성</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${noteVal.toLocaleString()} 회</td>
-                            </tr>
-                        </tbody>
-                    `;
-                }
+                <td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
+                <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
+                    ${detailItemsStr}
+                    ${charityItemsStr}
+                </td>
+            </tr>`;
 
                 document.getElementById('activityDetailBody').innerHTML = detailHtml || '<tr><td colspan="3">해당 기간의 활동 상세 내역이 없습니다.</td></tr>';
                 setVal('grandTotalCount', gCount.toLocaleString());
@@ -2116,11 +1918,19 @@
                 setVal('footCu', info.curiaName || (userProfile ? userProfile.curiaName : '') || '-');
                 setVal('footPr', pr);
 
-                // [수정] 단장 및 간부 식별 정보 최종 매개변수화 (V18.1 정석화 - Robust Matching)
-                presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
-                officialPresidentName = presOff.name || '';
-                officialPresidentId = presOff.memberId || '';
-                
+                // 단장 성명 찾기 (간부 현황에서 조회 - Robust Match)
+                // const allOfficers = JSON.parse(localStorage.getItem('officers_list') || '[]'); // Replaced by Firestore fetch
+                const today = new Date().toISOString().split('T')[0];
+                const president = offs.find(o =>
+                    isOrgMatch(o.churchName, o.presidiumName) &&
+                    convertToStdRole(o.role) === '단장' &&
+                    (!o.appointmentExpiryDate || o.appointmentExpiryDate >= today)
+                );
+
+                officialPresidentName = president ? president.name : '';
+                officialPresidentId = president ? (president.id || president.memberId || president.uid || '') : '';
+
+
                 setVal('footName', officialPresidentName || (userProfile?.name || '-'));
                 }
 
@@ -2130,9 +1940,7 @@
                 return;
             }
 
-            // [추가] 보고서 결재 관련 유틸리티 함수 (V2 복구)
-            // reportKey, getStatusData, renderStatus 등은 generateReport 스코프 전역에서 사용 가능하도록 이미 상단 혹은 구조적으로 배치됨.
-            // 중복 선언부 제거
+            // --- 보고서 결재 및 워크플로우 로직 추가 ---
 
             async function renderStatus() {
                 try {
@@ -2401,17 +2209,33 @@
                 }
             };
 
-            document.getElementById('btnFinalize').onclick = async () => {
-                if (await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
-                    await saveStatus('Draft');
-                }
-            };
+            console.log("🛠️ [최종단계] 버튼 이벤트 핸들러 등록 시도...");
+            
+            const btnFinalize = document.getElementById('btnFinalize');
+            const btnApprove = document.getElementById('btnApprove');
+            const btnCancelApprove = document.getElementById('btnCancelApprove');
 
-            document.getElementById('btnApprove').onclick = async () => {
-                if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
-                    await saveStatus('Approved', userProfile.name);
-                }
-            };
+            if (btnFinalize) {
+                btnFinalize.onclick = async () => {
+                    console.log("🖱️ [버튼 클릭] 확정/저장 (btnFinalize)");
+                    const confirmed = await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.');
+                    console.log(" 📝 [확인 결과]:", confirmed);
+                    if (confirmed) {
+                        await saveStatus('Draft');
+                    }
+                };
+                console.log(" ✅ btnFinalize 핸들러 등록 완료");
+            }
+
+            if (btnApprove) {
+                btnApprove.onclick = async () => {
+                    console.log("🖱️ [버튼 클릭] 단장 승인 (btnApprove)");
+                    if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
+                        await saveStatus('Approved', userProfile.name);
+                    }
+                };
+                console.log(" ✅ btnApprove 핸들러 등록 완료");
+            }
 
             const deleteStatus = async () => {
                 const reportId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`;
@@ -2425,20 +2249,29 @@
                 }
             };
 
-            document.getElementById('btnCancelApprove').onclick = async () => {
-                const data = await getStatusData();
-                const status = data ? data.status : 'Draft';
-                
-                if (status === 'Approved') {
-                    if (await window.showCustomConfirm('최종 승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
-                        await saveStatus('Draft', null);
+            if (btnCancelApprove) {
+                btnCancelApprove.onclick = async () => {
+                    console.log("🖱️ [버튼 클릭] 승인 취소/확정 취소 (btnCancelApprove)");
+                    const data = await getStatusData();
+                    const status = data ? data.status : 'Draft';
+                    console.log(" - 현재 데이터 상태:", status);
+                    
+                    if (status === 'Approved') {
+                        if (await window.showCustomConfirm('최종 승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
+                            console.log(" 🔄 승인 취소 진행");
+                            await saveStatus('Draft', null);
+                        }
+                    } else if (status === 'Draft') {
+                        if (await window.showCustomConfirm('보고서 확정을 취소하시겠습니까?\n취소 시 단원들이 이 보고서를 조회할 수 없게 됩니다.')) {
+                            console.log(" 🗑️ 확정 취소(데이터 삭제) 진행");
+                            await deleteStatus();
+                        }
                     }
-                } else if (status === 'Draft') {
-                    if (await window.showCustomConfirm('보고서 확정을 취소하시겠습니까?\n취소 시 단원들이 이 보고서를 조회할 수 없게 됩니다.')) {
-                        await deleteStatus();
-                    }
-                }
-            };
+                };
+                console.log(" ✅ btnCancelApprove 핸들러 등록 완료");
+            }
+
+            console.log("🛠️ [최종단계] 모든 버튼 핸들러 등록 완료");
 
             await renderStatus();
             } finally {
@@ -2449,24 +2282,6 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

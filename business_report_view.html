@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260402_0803">
+    <link rel="stylesheet" href="styles.css?v=20260403_1930">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --report-border: #000;
+            --report-border: #222;
             --label-col-width: 21mm; /* 사용자 요청에 따른 최적 너비 (v3.1) */
             --report-bg-header: #fff;
             /* 서식 이미지에 맞춰 흰색으로 변경 */
@@ -21,6 +21,29 @@
             margin: 0;
             padding: 80px 20px 20px;
             /* 상단 헤더 공간 확보 */
+            overflow-x: auto; /* 모바일에서 옆으로 밀기 허용 */
+            -ms-overflow-style: none; /* 인터넷 익스플로러 막대기 숨김 */
+            scrollbar-width: none; /* 파이어폭스 막대기 숨김 */
+        }
+
+        body::-webkit-scrollbar {
+            display: none; /* 크롬/사파리 막대기 숨김 */
+        }
+
+        /* PC (태블릿 이상)에서는 스크롤바가 보이도록 다시 설정 */
+        @media screen and (min-width: 769px) {
+            body {
+                -ms-overflow-style: auto;
+                scrollbar-width: auto;
+            }
+            body::-webkit-scrollbar {
+                display: block;
+                height: 8px;
+            }
+            body::-webkit-scrollbar-thumb {
+                background: #ccc;
+                border-radius: 4px;
+            }
         }
 
         .no-print-zone {
@@ -56,15 +79,21 @@
 
         .report-page {
             width: 210mm;
-            height: 297mm;
+            height: 295mm; /* 297mm에서 295mm로 하향하여 3페이지 방지 (v3.2) */
             padding: 10mm 12mm;
-            margin: 0 auto 30px auto;
+            margin: 0 auto 20px auto; /* 하단 여백 최적화 */
             background: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
             position: relative;
             font-family: 'Malgun Gothic', 'Dotum', sans-serif;
             color: #000;
+            overflow: hidden; /* 영역 밖 노출 차단 */
+        }
+
+        /* 마지막 페이지 아래 여백 제거 */
+        .report-page:last-child {
+            margin-bottom: 0 !important;
         }
 
         .report-header {
@@ -80,7 +109,7 @@
             margin: 1mm 0;
             font-weight: bold;
             display: inline-block;
-            border-bottom: 3px double #000;
+            border-bottom: 2px double #222;
             padding-bottom: 0.5mm;
             width: 140mm;
             /* 명확한 너비 설정으로 박스 침범 방지 */
@@ -91,7 +120,7 @@
             font-size: 11pt;
             margin: 0.5mm 0;
             text-align: center;
-            border-bottom: 1.5px solid #000;
+            border-bottom: 1px solid #222;
             display: inline-block;
             padding-bottom: 0.5mm;
             white-space: nowrap;
@@ -108,7 +137,7 @@
             position: absolute;
             right: 0;
             top: 0;
-            border: 1px solid #000;
+            border: 1px solid #222;
             width: 20mm;
             height: 33mm;
             /* 높이 조정 */
@@ -118,7 +147,7 @@
         }
 
         .serial-label {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid #222;
             font-size: 9pt;
             padding: 1mm 0;
             text-align: center;
@@ -141,13 +170,15 @@
             border-collapse: collapse;
             font-size: 9pt;
             table-layout: fixed; /* 수직선 정렬의 핵심 */
-            border: 1px solid #000;
-            margin-top: -1px; /* 이전 표와 선 겹치기 (단선 법칙) */
+            border: 1px solid var(--report-border);
+            margin-top: -1px; /* 단선 법칙 적용 (v3.3) */
+            border-spacing: 0;
+            border-collapse: collapse;
         }
 
         .report-table th,
         .report-table td {
-            border: 1px solid #000;
+            border: 1px solid var(--report-border);
             padding: 1mm 1.5mm;
             text-align: center;
             box-sizing: border-box;
@@ -188,7 +219,7 @@
         }
 
         .accounting-table .underline {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid var(--report-border);
             flex: 1;
             display: inline-block;
             text-align: right;
@@ -199,7 +230,7 @@
 
         /* 내부 격자 관리: 회계보고는 선을 유지하되, 행사 테이블은 인라인 스타일 및 아래 규칙을 따름 */
         .accounting-table td {
-            border: 1px solid #000 !important;
+            border: 1px solid var(--report-border) !important;
         }
         .event-table td:not([rowspan]):not(.vertical-header) {
             border-top: none !important;
@@ -208,17 +239,17 @@
         /* 행사 테이블의 제목 행 하단 선만 명시적으로 복구 */
         .event-table tr:first-child th, 
         .event-table tr:nth-child(7) th { /* '기타(행사)' 시작 행 (7번째 줄) 보정 */
-            border-bottom: 1px solid #000 !important;
+            border-bottom: 1px solid var(--report-border) !important;
         }
 
         /* 단원 수 테이블 세로선 실종 방지 (인쇄/PDF 대응) */
         .member-count-table th, .member-count-table td {
-            border: 1px solid #000 !important;
+            border: 1px solid var(--report-border) !important;
             box-sizing: border-box !important;
         }
 
         .underline {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid var(--report-border);
             display: inline-block;
             min-width: 10mm;
             text-align: center;
@@ -293,7 +324,7 @@
             }
             .event-table tr:first-child th, 
             .event-table tr:nth-child(7) th {
-                border-bottom: 1px solid #000 !important;
+                border-bottom: 1px solid var(--report-border) !important;
             }
 
             [contenteditable="true"] {
@@ -472,7 +503,7 @@
 
                     <!-- 제출일 라인 (우측 정렬하여 마침표를 제목 끝선에 일치) -->
                     <div style="text-align: right; font-size: 11pt; margin-top: 1.5mm; font-weight: bold; width: 100%;">
-                        <span style="border-bottom: 1.5px solid #000; padding: 0 0 0.5mm 0; display: inline-block;">
+                        <span style="border-bottom: 1px solid #222; padding: 0 0 0.5mm 0; display: inline-block;">
                             제출일: <span id="submitDate">-</span>
                         </span>
                     </div>
@@ -732,14 +763,14 @@
             <table class="report-table event-table">
                 <tr>
                     <td rowspan="6" class="vertical-header" style="height:36mm">행<br><br><br>사</td>
-                    <th style="width:23%; border-bottom: 1px solid #000;">내 용</th>
-                    <th style="width:15%; border-bottom: 1px solid #000;">일 자</th>
-                    <th style="width:10%; border-bottom: 1px solid #000;">참석</th>
+                    <th style="width:23%;">내 용</th>
+                    <th style="width:15%;">일 자</th>
+                    <th style="width:10%;">참석</th>
                     <td rowspan="11" class="vertical-header" style="height:66mm; width:12mm; line-height: 1.6;">
                         교&nbsp;&nbsp;&nbsp;육<br>및<br>피&nbsp;&nbsp;&nbsp;정</td>
-                    <th style="width:23%; border-bottom: 1px solid #000;">내 용</th>
-                    <th style="width:15%; border-bottom: 1px solid #000;">일 자</th>
-                    <th style="width:10%; border-bottom: 1px solid #000;">참석</th>
+                    <th style="width:23%;">내 용</th>
+                    <th style="width:15%;">일 자</th>
+                    <th style="width:10%;">참석</th>
                 </tr>
                 <tr>
                     <td style="text-align:left; border-bottom:none; padding-top:2.2mm;">아치에스</td>
@@ -774,18 +805,18 @@
                     <td id="edu_4_att" style="border-bottom:none; border-top:none;"></td>
                 </tr>
                 <tr>
-                    <td style="text-align:left; border-top:none; border-bottom: 1px solid #000;">토론 대회</td>
-                    <td id="ev_debate_date" style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td id="ev_debate_att" style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td id="edu_5_name" style="text-align:left; border-top:none; border-bottom: none;"></td>
-                    <td id="edu_5_date" style="border-top:none; border-bottom: none;"></td>
-                    <td id="edu_5_att" style="border-top:none; border-bottom: none;"></td>
+                    <td style="text-align:left; border-top:none;">토론 대회</td>
+                    <td id="ev_debate_date" style="border-top:none;"></td>
+                    <td id="ev_debate_att" style="border-top:none;"></td>
+                    <td id="edu_5_name" style="text-align:left; border-top:none;"></td>
+                    <td id="edu_5_date" style="border-top:none;"></td>
+                    <td id="edu_5_att" style="border-top:none;"></td>
                 </tr>
                 <tr>
                     <td rowspan="5" class="vertical-header" style="height:30mm">기<br>타<br>︵<br>행<br>사<br>︶</td>
-                    <th style="width:23%; border-bottom: 1px solid #000;">내 용</th>
-                    <th style="width:15%; border-bottom: 1px solid #000;">일 자</th>
-                    <th style="width:10%; border-bottom: 1px solid #000;">참석</th>
+                    <th style="width:23%;">내 용</th>
+                    <th style="width:15%;">일 자</th>
+                    <th style="width:10%;">참석</th>
                     <td style="border-bottom:none; border-top:none !important;"></td>
                     <td style="border-bottom:none; border-top:none !important;"></td>
                     <td style="border-bottom:none; border-top:none !important;"></td>
@@ -815,12 +846,12 @@
                     <td style="border-bottom:none; border-top:none;"></td>
                 </tr>
                 <tr>
-                    <td id="etc_4_name" style="text-align:left; border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td id="etc_4_date" style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td id="etc_4_att" style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td style="border-top:none; border-bottom: 1px solid #000;"></td>
-                    <td style="border-top:none; border-bottom: 1px solid #000;"></td>
+                    <td id="etc_4_name" style="text-align:left; border-top:none;"></td>
+                    <td id="etc_4_date" style="border-top:none;"></td>
+                    <td id="etc_4_att" style="border-top:none;"></td>
+                    <td style="border-top:none;"></td>
+                    <td style="border-top:none;"></td>
+                    <td style="border-top:none;"></td>
                 </tr>
             </table>
 
@@ -1020,9 +1051,9 @@
                 </tbody>
             </table>
 
-            <div style="font-size: 11pt; font-weight: bold; margin: 5mm 0 1mm 0;">쁘레시디움 운영 상황</div>
+            <div style="font-size: 11pt; font-weight: bold; margin: 2mm 0 1mm 0;">쁘레시디움 운영 상황</div>
             <div id="managementStatus" contenteditable="true"
-                style="border: 1px solid #000; min-height: 65mm; padding: 7mm 4mm; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap; background-color: #fff9c4;"
+                style="border: 1px solid var(--report-border); min-height: 65mm; padding: 7mm 4mm; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap; background-color: #fff9c4;"
                 placeholder="여기에 쁘레시디움 운영 상황을 직접 입력하세요.">
                 <!-- 사용자가 직접 입력 -->
             <div style="display:none;">
@@ -1032,7 +1063,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260402_0803"></script>
+    <script src="script.js?v=20260403_1930"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -2229,7 +2260,6 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
                 btn.disabled = true;
 
-                // 원본 요소 여백 제거
                 const originalPages = original.querySelectorAll('.report-page');
                 originalPages.forEach(p => {
                     p.style.margin = '0';
@@ -2250,7 +2280,6 @@
                             const originalElement = document.getElementById('reportDisplay');
                             const clonedElement = clonedDoc.getElementById('reportDisplay');
                             
-                            // 1. 가상 도큐먼트 내에서 보고서를 정중앙 및 상단 고정
                             clonedElement.style.position = 'absolute';
                             clonedElement.style.top = '0';
                             clonedElement.style.left = '50%';
@@ -2258,10 +2287,10 @@
                             clonedElement.style.margin = '0';
                             clonedElement.style.zIndex = '999999';
                             
-                            // 2. 바디 영점 조절
                             clonedDoc.body.style.margin = '0';
                             clonedDoc.body.style.padding = '0';
                             clonedDoc.body.style.backgroundColor = '#ffffff';
+                            
                             clonedDoc.documentElement.style.margin = '0';
                             clonedDoc.documentElement.style.padding = '0';
                             
@@ -2275,114 +2304,137 @@
                             const pages = clonedElement.querySelectorAll('.report-page');
                             pages.forEach((p, idx) => {
                                 p.style.margin = '0';
-                                p.style.padding = '10mm 12mm'; // 사업보고서 패딩 수복
+                                p.style.padding = (idx === 0) ? '10mm 12mm' : '30mm 12mm 10mm 12mm'; // 2페이지 상단 여백 보강
                                 p.style.boxShadow = 'none';
                                 p.style.width = '210mm';
-                                p.style.height = '297mm'; 
-                                p.style.minHeight = '297mm';
-                                p.style.maxHeight = '297mm';
+                                p.style.height = '295mm'; // 297mm에서 295mm로 고정
+                                p.style.minHeight = '295mm';
+                                p.style.maxHeight = '295mm';
                                 p.style.overflow = 'hidden';
                                 p.style.backgroundColor = '#ffffff';
                                 p.style.boxSizing = 'border-box'; 
-                                p.style.pageBreakAfter = 'avoid';
+                                p.style.pageBreakAfter = (idx === 0) ? 'always' : 'avoid';
                                 p.style.pageBreakBefore = 'avoid';
                                 p.style.pageBreakInside = 'avoid';
                             });
 
                             clonedDoc.querySelectorAll('.page-break').forEach(el => el.classList.remove('page-break'));
 
-                            // [시니어 패치] PDF 전용 초정밀 '단선 법칙(Single Line Law)' 🖋️
+                            // [시니어 패치] PDF 전용 초정밀 '섹션 종결자 (14차 최종)' 수술 🖋️💎
                             const styleNode = clonedDoc.createElement('style');
                             styleNode.textContent = `
                                 .report-table {
-                                    border-collapse: collapse !important;
-                                    border: 0.1pt solid #999 !important;
-                                    margin-top: 1px !important;
+                                    border-collapse: separate !important;
+                                    border-spacing: 0 !important;
+                                    border: none !important;
+                                    border-top: 0.05pt solid #222 !important;
+                                    border-left: 0.05pt solid #222 !important;
+                                    margin-top: -0.05pt !important;
                                     width: 100% !important;
+                                    table-layout: fixed !important;
                                 }
                                 .report-table th, .report-table td {
-                                    border: 0.1pt solid #999 !important;
+                                    border: none !important;
+                                    border-bottom: 0.05pt solid #222 !important;
+                                    border-right: 0.05pt solid #222 !important;
                                     box-sizing: border-box !important;
-                                    padding: 1px !important;
+                                    padding: 1.0mm 1.2mm !important; 
+                                    word-break: break-all !important;
+                                    background-clip: padding-box !important;
+                                    vertical-align: middle !important;
                                 }
-                                /* [행사 섹션] 가로선 선택적 제거 (공식 양식 준수 🖋️) */
-                                .event-table td:not([rowspan]):not(.vertical-header) {
-                                    border-top: none !important;
+                                .report-page table:first-of-type { margin-top: 0 !important; }
+
+                                /* [섹션 종결자] 사용자님의 통찰을 물리적 명령으로 구현 ✨ */
+                                .pdf-section-start {
+                                    border-top: 0.05pt solid #222 !important;
+                                    border-bottom: 0.05pt solid #222 !important;
+                                    background-color: #fcfcfc !important;
+                                    font-weight: bold !important;
+                                    text-align: center !important;
+                                }
+                                .pdf-section-end {
+                                    border-bottom: 0.05pt solid #222 !important;
+                                    font-weight: normal !important;
+                                }
+                                .pdf-vertical-label-start {
+                                    border-top: 0.05pt solid #222 !important;
+                                    border-right: 0.05pt solid #222 !important;
+                                    font-weight: bold !important;
+                                }
+                                .pdf-hide-bottom {
                                     border-bottom: none !important;
                                 }
-                                .event-table tr:first-child th, 
-                                table.report-table tr td.vertical-header {
-                                    border-bottom: 0.1pt solid #999 !important;
-                                }
-                                .event-table tr:nth-child(8) th {
-                                    border-bottom: 0.1pt solid #999 !important;
-                                }
-                                /* 중간에 비어 있던 내용, 일자, 참석 윗선 복구 (일직선 정렬) */
-                                .event-table tr td.vertical-header ~ th {
-                                    border-top: 0.1pt solid #999 !important;
-                                }
-                                /* 회계보고 합계 행 윗선 복구 (구조적 우회 및 직접 보강) */
-                                #accounting_list tr:last-child td {
-                                    border-bottom: 0.1pt solid #999 !important;
-                                }
-                                /* [시니어 패치] 불일치하던 ID 수복 (#inc_total -> #accInTotal 등) 및 th 선택자 정적 유지 */
-                                table.report-table.accounting-table tr th:has(#accInTotal),
-                                table.report-table.accounting-table tr th:has(#accOutTotal),
-                                table.report-table.accounting-table tr th:has(#accBal) {
-                                    border-top: 0.1pt solid #999 !important;
-                                    display: table-cell !important;
-                                }
-                                /* 첫 줄 중복 방지 */
-                                table.report-table.event-table tr:first-child th {
-                                    border-top: none !important;
-                                }
-                                .serial-box {
-                                    border: 0.1pt solid #999 !important;
-                                }
-                                .serial-label {
-                                    border-bottom: 0.1pt solid #999 !important;
-                                }
+                                
+                                .serial-box { border: 0.5pt solid #222 !important; }
+                                .serial-label { border-bottom: 0.5pt solid #222 !important; }
+                                .title-main { border-bottom: 1.5pt double #222 !important; }
+                                .title-sub-org { border-bottom: 0.5pt solid #222 !important; }
+                                
                                 .underline {
-                                    border-bottom: 0.5pt solid #777 !important;
+                                    border-bottom: 0.1pt solid #222 !important;
                                     display: inline-block !important;
                                 }
-                                /* [시니어 패치] 단원 수 섹션 세로선 탈출 방지 (0.1pt로 확실하게 고정) */
-                                .member-count-table th, .member-count-table td {
-                                    border: 0.1pt solid #999 !important;
-                                    box-sizing: border-box !important;
-                                }
-                                /* [시니어 패치] 운영상황 박스 테두리 보호 및 배경색 제거 🖋️ */
                                 #managementStatus {
-                                    border: 0.1pt solid #999 !important;
+                                    border: 0.5pt solid #222 !important;
                                     background-color: transparent !important;
-                                    min-height: 65mm !important;
                                 }
                             `;
                             clonedDoc.head.appendChild(styleNode);
 
-                            // [시니어 최종 패치 수정] 전체 스타일 삭제 대신 테두리 간섭만 제거하여 레이아웃 보호
-                            const accTable = clonedDoc.querySelector('.accounting-table');
-                            if (accTable) {
-                                accTable.querySelectorAll('td, th').forEach(el => {
-                                    el.style.borderTop = '';
-                                    el.style.borderBottom = '';
+                            // [시니어 섹션 종결자 엔진] 사용자님의 겹침 이론을 바탕으로 '선'의 독립권 부여 ✨
+                            clonedDoc.querySelectorAll('.report-table').forEach(table => {
+                                Array.from(table.rows).forEach((row, rIdx) => {
+                                    Array.from(row.cells).forEach(cell => {
+                                        // 1. 테두리 스타일 초기화
+                                        cell.style.removeProperty('border');
+                                        cell.style.removeProperty('border-top');
+                                        cell.style.removeProperty('border-bottom');
+                                        cell.style.removeProperty('border-left');
+                                        cell.style.removeProperty('border-right');
+                                        
+                                        // 2. 섹션 시작 지점 (1행, 7행) - 상/하단 선 독립 사수 (사용자님 말씀하신 그 옆선!)
+                                        if (rIdx === 0 || rIdx === 6) {
+                                            if (cell.tagName === 'TH') {
+                                                cell.classList.add('pdf-section-start');
+                                            } else if (cell.classList.contains('vertical-header')) {
+                                                cell.classList.add('pdf-vertical-label-start');
+                                            }
+                                        }
+                                        
+                                        // 3. 섹션 종료 지점 (6행, 11행) - 하단 선 독립 사수 (사용자님이 말씀하신 그 겹침 실종 사건의 옆선!)
+                                        if (rIdx === 5 || rIdx === 10) {
+                                            cell.classList.add('pdf-section-end');
+                                        }
+                                        
+                                        // 4. [행사 섹션] 본문 구간 가로선만 핀셋 제거
+                                        if (table.classList.contains('event-table')) {                                            
+                                            const skipRows = [1, 2, 3, 4, 7, 8, 9]; // 순수 데이터 행 (종결 행 5, 10 제외)
+                                            if (skipRows.includes(rIdx) && cell.tagName === 'TD' && !cell.classList.contains('vertical-header')) {
+                                                cell.classList.add('pdf-hide-bottom');
+                                            }
+                                        }
+                                    });
                                 });
-                            }
-
-                            // [시니어 물리 패치] 합계 바로 윗줄의 바닥 선을 0.1pt로 한 줄만 확실하게 주입 (진해짐 방지)
-                            const accountingBody = clonedDoc.getElementById('accounting_list');
-                            if (accountingBody && accountingBody.lastElementChild) {
-                                Array.from(accountingBody.lastElementChild.cells).forEach(cell => {
-                                    cell.style.setProperty('border-bottom', '0.1pt solid #999', 'important');
-                                });
-                            }
+                                
+                                // 섹션 간 정밀 접합
+                                if (table.previousElementSibling && table.previousElementSibling.tagName === 'TABLE') {
+                                    table.style.marginTop = '-0.05pt';
+                                }
+                            });
+                            
+                            const p2 = clonedElement.querySelectorAll('.report-page')[1];
+                            if (p2) { p2.style.paddingTop = '15mm'; }
                         }
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: 'avoid-all' }
                 };
 
-                html2pdf().set(opt).from(original).save().then(() => {
+                html2pdf().set({
+                    ...opt,
+                    html2canvas: { ...opt.html2canvas, scale: 3 }
+                }).from(original).save().then(() => {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     originalPages.forEach(p => { p.style.margin = ''; p.style.boxShadow = ''; });
@@ -2399,6 +2451,33 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

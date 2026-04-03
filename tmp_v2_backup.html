@@ -4,11 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>월례 보고서 출력 - 레지오 마리애</title>
+    <title>?붾? 蹂닿퀬??異쒕젰 - ?덉???留덈━??/title>
     <link rel="stylesheet" href="styles.css?v=20260403_1930">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- PDF 생성 라이브러리 추가 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --report-border: #000;
@@ -19,12 +17,11 @@
             background-color: #f0f2f5;
             margin: 0;
             padding: 80px 20px 20px;
-            /* 상단 헤더 공간 확보 */
+            /* ?곷떒 ?ㅻ뜑 怨듦컙 ?뺣낫 */
             font-family: 'Noto Sans KR', sans-serif;
-            overflow-x: auto; /* 기본적으로 가로 밀어보기 허용 */
         }
 
-        /* 컨트롤 패널 (화면용) */
+        /* 而⑦듃濡??⑤꼸 (?붾㈃?? */
         .no-print-zone {
             display: flex;
             justify-content: space-between;
@@ -88,7 +85,6 @@
         .btn-finalize { background: #e67e22; color: white; }
         .btn-approve { background: #27ae60; color: white; }
         .btn-cancel-approve { background: #c0392b; color: white; }
-        .btn-download { background: #0277bd; color: white; } /* 파일 만들기 전용 색상 */
 
         .btn-action:hover {
             transform: translateY(-1.5px);
@@ -99,46 +95,21 @@
             transform: translateY(0);
         }
 
-        /* 월례보고서 A4 용지 레이아웃 */
+        /* ?붾?蹂닿퀬??A4 ?⑹? ?덉씠?꾩썐 */
         .report-page {
             width: 210mm;
-            min-width: 210mm; /* [긴급] 모바일 기기에서 표가 뒤틀리거나 축소되는 것 방지 */
-            height: 295mm;    /* 3페이지 방지를 위해 297mm에서 295mm로 하향 */
-            padding: 10mm 10mm 5mm 10mm;
-            margin: 0 auto 20px auto; /* 화면용 여백을 줄여 스크롤 최소화 */
+            height: 297mm;
+            /* min-height ???height 怨좎젙?쇰줈 ?섏씠吏 ?쇨????좎? */
+            padding: 10mm 10mm 3mm 10mm;
+            /* ?곷떒 ?щ갚??10mm濡??섎━怨??섎떒??3mm濡?異뺤냼 */
+            margin: 0 auto 30px auto;
             background: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
             position: relative;
             font-family: 'Malgun Gothic', 'Dotum', sans-serif;
             color: #000;
-            overflow: hidden; /* 영역 밖으로 나가는 것 차단 */
-        }
-
-        /* 마지막 페이지 아래 여백 제거 (3페이지 방지 핵심) */
-        .report-page:last-child {
-            margin-bottom: 0 !important;
-        }
-        
-        /* 공식 세나뚜스 양식 문구 (하단) */
-        .form-footer {
-            position: absolute;
-            bottom: 3.5mm;
-            width: calc(100% - 20mm);
-            left: 10mm;
-            text-align: center;
-            font-size: 7.5pt;
-            color: #222;
-        }
-
-        /* [검증용] 코드 버전 표시 (우측 하단 고정) */
-        .version-badge {
-            position: fixed;
-            bottom: 5px;
-            right: 5px;
-            font-size: 8pt;
-            color: rgba(0,0,0,0.3);
-            z-index: 10001;
+            overflow: hidden;
         }
 
         .report-header {
@@ -149,42 +120,45 @@
 
         .title-main {
             font-size: 18pt;
-            /* 20pt에서 18pt로 추가 축소 */
+            /* 20pt?먯꽌 18pt濡?異붽? 異뺤냼 */
             font-family: 'Noto Serif KR', serif;
             letter-spacing: 2mm;
             margin: 0.5mm 0;
-            /* 1mm에서 0.5mm로 축소 */
+            /* 1mm?먯꽌 0.5mm濡?異뺤냼 */
         }
 
         .title-sub {
             font-size: 12pt;
-            /* 13pt에서 12pt로 축소 */
+            /* 13pt?먯꽌 12pt濡?異뺤냼 */
             margin-bottom: 2mm;
-            /* 3mm에서 2mm로 축소 */
+            /* 3mm?먯꽌 2mm濡?異뺤냼 */
         }
 
         .serial-box {
             position: absolute;
             right: 0;
             top: 0;
-            border: 1px solid #000; /* [긴급] 0.5px에서 1px로 보강 */
+            border: 1px solid #000;
             width: 22mm;
+            /* 25mm?먯꽌 22mm濡?異뺤냼 */
             height: 25mm;
+            /* 30mm?먯꽌 25mm濡?異뺤냼 */
         }
 
         .serial-label {
-            border-bottom: 1px solid rgba(0,0,0,0.5); /* 선명도 보강 */
+            border-bottom: 1px solid #000;
             font-size: 9pt;
+            /* 10pt?먯꽌 9pt濡?異뺤냼 */
             padding: 0.5mm 0;
             text-align: center;
         }
 
         .serial-value {
             font-size: 16pt;
-            /* 14pt에서 16pt로 한 단계 확대 */
+            /* 14pt?먯꽌 16pt濡????④퀎 ?뺣? */
             font-weight: bold;
             margin-top: 5.5mm;
-            /* 8mm에서 5.5mm로 줄여 반 줄 정도 위로 이동 */
+            /* 8mm?먯꽌 5.5mm濡?以꾩뿬 諛?以??뺣룄 ?꾨줈 ?대룞 */
             text-align: center;
         }
 
@@ -193,7 +167,7 @@
             left: 0;
             top: 0;
             width: 20mm;
-            /* 25mm에서 20mm로 축소 */
+            /* 25mm?먯꽌 20mm濡?異뺤냼 */
         }
 
         .logo-box img {
@@ -205,28 +179,21 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 9pt;
-            /* 9.5pt에서 9pt로 축소 */
+            /* 9.5pt?먯꽌 9pt濡?異뺤냼 */
             margin-bottom: 1.5mm;
-            /* 2mm에서 1.5mm로 축소 */
+            /* 2mm?먯꽌 1.5mm濡?異뺤냼 */
             table-layout: fixed;
         }
 
         table.report-table th,
         table.report-table td {
             border: 1px solid #000;
-            padding: 0.5mm 1mm; 
-            text-align: center; /* [복구] 모든 칸을 기본 가운데 정렬로 원상 복구 */
-            word-break: break-all;
-            line-height: 1.1;
-            vertical-align: middle;
-        }
-
-        table.report-table th,
-        table.report-table td[width="35"],
-        table.report-table td[width="70"],
-        table.report-table td.center {
-            text-align: center; /* [예외] 헤더, 번호, 수량 칸은 가운데 정렬 유지 */
             padding: 0.5mm 1mm;
+            /* 0.8mm?먯꽌 0.5mm濡?洹뱁븳 異뺤냼 */
+            text-align: center;
+            word-break: break-all;
+            line-height: 1.2;
+            /* 1.25?먯꽌 1.2濡?異뺤냼 */
         }
 
         table.report-table th {
@@ -236,16 +203,16 @@
 
         .section-title {
             font-size: 10pt;
-            /* 10.5pt에서 10pt로 축소 */
+            /* 10.5pt?먯꽌 10pt濡?異뺤냼 */
             font-weight: bold;
             margin: 0.5mm 0;
-            /* 1mm에서 0.5mm로 극소화 */
+            /* 1mm?먯꽌 0.5mm濡?洹뱀냼??*/
             display: flex;
             align-items: flex-end;
         }
 
         .underline {
-            border-bottom: 1px solid #000; /* [긴급] 화면에서도 선명하게 보이도록 고정 */
+            border-bottom: 1px solid #000;
             display: inline-block;
             min-width: 15mm;
             text-align: center;
@@ -255,7 +222,7 @@
 
         .footer-sig {
             margin-top: 3mm;
-            /* 5mm에서 3mm로 추가 축소 */
+            /* 5mm?먯꽌 3mm濡?異붽? 異뺤냼 */
             text-align: right;
             padding-right: 5mm;
         }
@@ -270,78 +237,26 @@
             color: #666;
         }
 
-        /* [추가] 2페이지 활동 상세 표 전용 가독성 개선 스타일 */
-        #activityDetailBody th {
-            padding: 2.5mm 3mm !important; /* 종목 칸 안쪽 여백 충분히 확보 */
-            line-height: 1.4 !important;    /* 줄바꿈 시 가독성 개선 */
-            text-align: center;             /* 타이틀은 중앙 정렬 */
-            vertical-align: middle;
-        }
-        #activityDetailBody td {
-            vertical-align: middle;
-            padding: 4mm 2mm !important; /* 2페이지만 시원하게 칸 높이 확보 */
-            line-height: 1.5;
-        }
-        /* 2번째 열(활동 횟수) 강제 중앙 정렬 */
-        #activityDetailBody td:nth-child(2) {
-            text-align: center !important;
-        }
-        /* [추가] 3번째 열(활동 내용) 왼쪽 정렬 및 여백 확보 */
-        #activityDetailBody td:nth-child(3) {
-            text-align: left !important;
-            padding-left: 10px !important;
-        }
-        /* [긴급] 이미 저장된 데이터(스냅샷)에서도 기타 활동 정렬을 왼쪽으로 강제 */
-        #activityDetailBody td div {
-            text-align: left !important;
-            padding-left: 0 !important; /* [수정] 부모 td의 10px 패딩과 중복되지 않도록 0으로 조정 (상단 행과 수직 일치) */
-            margin-bottom: 4px;
-            line-height: 1.6;
-        }
-        /* 기타 활동 rowspan 구조 대응 */
-        #activityDetailBody tr td[style*="border-left"] {
-            text-align: center !important; /* rowspan 된 행의 횟수 칸 */
-        }
-
-        /* [추가] 동그라미 숫자 전용 스타일 (선에서 5px 여유 간격 확보) */
-        .circled-item {
-            padding-left: 1.6em !important; /* 내어쓰기 대비 충분한 여백 확보 (약 5px 간격) */
-            text-align: left !important;
-            text-indent: -1.2em !important;
-            line-height: 1.2 !important;
-            display: block !important;
-        }
-
-        /* [긴급/스냅샷 대응] 이미 작성된 보고서의 인라인 스타일을 강제로 덮어써서 정렬 보정 */
-        #activitySummaryBody td div[style*="text-indent: -1.2em"],
-        #activitySummaryBody td[style*="text-indent: -1.2em"] {
-            padding-left: 1.8em !important; /* 선에서 충분히 떨어지도록 강제 고정 */
-            text-indent: -1.2em !important;
-            text-align: left !important;
-            display: block !important;
-        }
-        /* 빨간색 번호가 든 특수 칸 대응 */
-        #activitySummaryBody td[colspan="2"][style*="text-align:left"] {
-            padding-left: 5px !important;
-        }
-
         .page-break {
-            page-break-after: always !important;
+            page-break-after: always;
         }
 
-        /* 활동 상세 테이블 특화 스타일 */
+        /* ?쒕룞 ?곸꽭 ?뚯씠釉??뱁솕 ?ㅽ???*/
         #activityDetailBody td {
-            padding: 1.5mm 1mm;
+            padding: 2.5mm 2mm;
+            /* 3.5mm?먯꽌 2.5mm濡?異뺤냼 */
         }
 
         #activityDetailBody th {
             font-size: 10.5pt;
-            padding: 1.5mm 1mm;
+            /* 11pt?먯꽌 10.5pt濡?異뺤냼 */
+            padding: 2.5mm 2mm;
+            /* 3.5mm?먯꽌 2.5mm濡?異뺤냼 */
         }
 
         @page {
             size: A4;
-            margin: 0 !important;
+            margin: 0;
         }
 
         @media print {
@@ -360,9 +275,10 @@
                 box-shadow: none;
                 border: none;
                 width: 210mm;
-                /* 인쇄 시에도 정확한 너비 유지 */
-                height: 282mm;
-                /* 브라우저 강제 주소 출력 공간을 위해 297mm보다 넉넉히 작게 설정 */
+                /* ?몄뇙 ?쒖뿉???뺥솗???덈퉬 ?좎? */
+                height: 297mm;
+                /* ?몄뇙 ?쒖뿉???뺥솗???믪씠 ?좎? */
+                page-break-after: always;
             }
 
             .report-page:last-child {
@@ -390,25 +306,25 @@
             z-index: 10;
         }
 
-        /* 서명 이미지 전용 스타일 - 정렬 및 밀착도 보강 */
+        /* ?쒕챸 ?대?吏 ?꾩슜 ?ㅽ???- ?뺣젹 諛?諛李⑸룄 蹂닿컯 */
         .signature-image-container {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 30mm; /* 너비를 줄여 이름 쪽으로 더 붙게 함 */
+            width: 30mm; /* ?덈퉬瑜?以꾩뿬 ?대쫫 履쎌쑝濡???遺숆쾶 ??*/
             height: 14mm;
             vertical-align: middle;
-            margin-left: -18px; /* 이름 밑줄 쪽으로 더 깊게 밀착 */
-            margin-bottom: -2mm; /* 베이스라인에 더 가깝게 내림 */
+            margin-left: -18px; /* ?대쫫 諛묒쨪 履쎌쑝濡???源딄쾶 諛李?*/
+            margin-bottom: -2mm; /* 踰좎씠?ㅻ씪?몄뿉 ??媛源앷쾶 ?대┝ */
             overflow: visible;
             position: relative;
             pointer-events: none;
-            mix-blend-mode: multiply; /* 배경과 자연스럽게 합성 (이미지에 배경이 있을 경우 대비) */
+            mix-blend-mode: multiply; /* 諛곌꼍怨??먯뿰?ㅻ읇寃??⑹꽦 (?대?吏??諛곌꼍???덉쓣 寃쎌슦 ?鍮? */
         }
 
         .signature-image-container img {
             max-width: 100%;
-            max-height: 180%; /* 이미지 크기를 조금 더 키움 */
+            max-height: 180%; /* ?대?吏 ?ш린瑜?議곌툑 ???ㅼ? */
             object-fit: contain;
         }
 
@@ -420,7 +336,7 @@
             width: 100%;
         }
 
-        /* 커스텀 모달 스타일 추가 */
+        /* 而ㅼ뒪? 紐⑤떖 ?ㅽ???異붽? */
         .custom-modal-overlay {
             position: fixed;
             top: 0;
@@ -454,7 +370,7 @@
             color: #333;
             white-space: pre-wrap;
             word-break: keep-all;
-            /* 단어 단위로 줄바꿈하여 어색한 끊김 방지 */
+            /* ?⑥뼱 ?⑥쐞濡?以꾨컮轅덊븯???댁깋???딄? 諛⑹? */
         }
 
         .custom-modal-btns {
@@ -509,54 +425,39 @@
 
         @media screen and (max-width: 768px) {
             body {
-                padding: 120px 0 20px; /* 좌우 여백 제거 */
-                overflow-x: auto; /* 모바일에서 옆으로 밀어보기 허용 */
-                -ms-overflow-style: none; /* 모바일에서 막대기 숨기기 */
-                scrollbar-width: none; 
-            }
-            body::-webkit-scrollbar {
-                display: none; /* 크롬/사파리 모바일에서 막대기 숨기기 */
+                padding: 140px 10px 20px; /* 怨좎젙 ?ㅻ뜑??留욎떠 ?⑤뵫 議곗젙 */
             }
 
             .no-print-zone {
-                padding: 6px 10px;
+                padding: 8px;
                 flex-direction: column;
-                gap: 5px;
+                gap: 8px;
                 align-items: center;
-                background: white;
+                max-height: 40vh; /* ?붾㈃??40% ?댁긽 李⑥??섏? ?딅룄濡??쒗븳 */
+                overflow-y: auto; /* 踰꾪듉???덈Т 留롮쑝硫??ㅻ뜑 ?댁뿉???ㅽ겕濡?*/
             }
 
             .approval-wrap {
                 width: 100%;
                 justify-content: center;
-                font-size: 0.8rem;
-                padding: 2px 8px;
+                flex-wrap: wrap;
             }
 
             .action-btns {
                 width: 100%;
                 justify-content: center;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr); /* 3버튼 가로 정렬 */
-                gap: 4px;
             }
 
             .btn-action {
-                padding: 8px 4px; /* 모바일용 크기 조정 */
-                font-size: 0.75rem;
-                min-width: auto;
-                max-width: none;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                flex: 1; /* ?덈퉬瑜?洹좊벑?섍쾶 ?섎릺 理쒖냼 ?덈퉬 ?좎? */
+                max-width: 150px;
             }
 
-            /* 모바일 보고서 뷰어 최적화 */
-            #reportDisplay {
-                display: inline-block; /* 너비가 늘어나도 배경이 잘리지 않게 함 */
-                padding: 0 10px;
-            }
-
-            .report-page {
-                box-shadow: none; /* 모바일에서는 그림자 제거하여 깔끔하게 */
-                margin-bottom: 10px;
+            #approvalZone {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -566,278 +467,110 @@
     <div class="no-print no-print-zone">
         <div class="approval-wrap">
             <span id="reportStatusBadge"
-                style="padding: 4px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; background: #eee; color: #666;">상태:
-                미작성</span>
+                style="padding: 4px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; background: #eee; color: #666;">?곹깭:
+                誘몄옉??/span>
             <div id="approvalZone" style="display: flex; gap: 8px;">
                 <button id="btnFinalize" class="btn-action btn-finalize" style="display: none;"><i
-                        class="fas fa-save"></i> 확정/저장</button>
+                        class="fas fa-save"></i> ?뺤젙/???/button>
                 <button id="btnApprove" class="btn-action btn-approve" style="display: none;"><i
-                        class="fas fa-check-circle"></i> 단장 승인(직인)</button>
+                        class="fas fa-check-circle"></i> ?⑥옣 ?뱀씤(吏곸씤)</button>
                 <button id="btnCancelApprove" class="btn-action btn-cancel-approve" style="display: none;"><i
-                        class="fas fa-undo"></i> 승인 취소/수정</button>
+                        class="fas fa-undo"></i> ?뱀씤 痍⑥냼/?섏젙</button>
             </div>
         </div>
         <div class="action-btns">
-            <button class="btn-action btn-download" id="btnDownloadPDF"><i class="fas fa-file-pdf"></i> 파일 만들기</button>
-            <button class="btn-action btn-print" onclick="window.handlePrint()"><i class="fas fa-print"></i> 인쇄하기</button>
-            <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 창 닫기</button>
+            <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> ?몄뇙?섍린</button>
+            <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 李??リ린</button>
         </div>
     </div>
-    <!-- 시각적 버전 확인용 배지 -->
-    <div class="no-print version-badge">[코드 버전: 18:42]</div>
 
-    <script>
-        // [강력 처방] 인쇄 시 머리말/꼬리말(사이트 주소)을 숨기기 위한 스크립트
-        window.handlePrint = function() {
-            document.title = ""; // 제목을 비워 상단 주소를 억제
-            window.print();
-            setTimeout(() => { document.title = originalTitle; }, 500); // 0.5초 후 복구
-        };
-
-        // [시니어 패치] PDF 전용 강제 캐시 무효화 및 버전 관리
-        console.log("🚀 [PDF 버전 확인] 20260403_1842 실전 수치 적용 완료!");
-
-        document.getElementById('btnDownloadPDF').addEventListener('click', function() {
-            const original = document.getElementById('reportDisplay');
-            const originalPages = original.querySelectorAll('.report-page');
-
-            // 데이터 정보 추출
-            const serial = (document.getElementById('serialNum').textContent || "").trim();
-            const church = (document.getElementById('footChurch') ? document.getElementById('footChurch').textContent : "").trim();
-            const presidium = (document.getElementById('footPr') ? document.getElementById('footPr').textContent : "").trim();
-            const month = (document.getElementById('repMonth').textContent || "00").trim().padStart(2, '0');
-            const year = (document.getElementById('repYear').textContent || "").trim();
-            const fileName = `${serial}.${church}.${presidium}Pr._${month}월 월례보고서_${year}년.pdf`;
-
-            const btn = this;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중..';
-            btn.disabled = true;
-
-            // [최종 최적화] 스크롤 위치 초기화 및 마진 제거 (캡처 정확도 향상)
-            window.scrollTo(0, 0);
-            originalPages.forEach(p => {
-                p.style.margin = '0';
-                p.style.boxShadow = 'none';
-            });
-
-            const opt = {
-                margin:       0,
-                filename:     fileName,
-                image:        { type: 'jpeg', quality: 1.0 },
-                html2canvas:  {
-                    scale: 2, // [성능 최적화] 3배에서 2배로 하향 (시스템 멈춤 현상 방지)
-                    useCORS: true,
-                    scrollY: 0,
-                    scrollX: 0,
-                    onclone: (clonedDoc) => {
-                        const clonedElement = clonedDoc.getElementById('reportDisplay');
-                        
-                        // [유령 소탕] 보고서 페이지 외의 모든 불필요한 자식 요소(공백, 줄바꿈 등)를 완전 제거
-                        Array.from(clonedElement.childNodes).forEach(node => {
-                            if (node.nodeType === 3 || (node.nodeType === 1 && !node.classList.contains('report-page'))) {
-                                node.remove();
-                            }
-                        });
-
-                        // [유령 공간 원천 차단] 폰에서 발생하는 미세한 여백 오차를 뿌리부터 해결
-                        clonedDoc.documentElement.style.margin = '0';
-                        clonedDoc.documentElement.style.padding = '0';
-                        clonedDoc.body.style.margin = '0';
-                        clonedDoc.body.style.padding = '0';
-                        clonedDoc.body.style.height = 'auto';
-                        clonedDoc.body.style.minHeight = '0';
-
-                        const styleNode = clonedDoc.createElement('style');
-                        styleNode.innerHTML = `
-                            /* [본질적 해결: V1 하이라인 완벽 수복 + 블랙 실선] */
-                            .report-page {
-                                height: 295mm !important;    /* 아주 미세한 오차도 허용하지 않도록 295mm 고정 */
-                                min-height: 295mm !important;
-                                padding: 10mm 10mm 5mm 10mm !important; 
-                                box-sizing: border-box !important;
-                                overflow: hidden !important;
-                                margin-bottom: 0 !important; /* PDF 생성 시 페이지 간 불필요한 여백 완전 제거 */
-                            }
-
-                            /* 2페이지 상단 쏠림 방지: 시작 지점을 적절히 조정 */
-                            .report-page:nth-child(2) {
-                                padding-top: 30mm !important; 
-                            }
-
-                            .report-header { margin-bottom: -1mm !important; } 
-                            .section-title { margin: 0.1mm 0 !important; font-size: 9.5pt !important; }
-
-                            table.report-table {
-                                border-collapse: separate !important;
-                                border-spacing: 0 !important;
-                                border: none !important;
-                                border-top: 0.01mm solid #000 !important;
-                                border-left: 0.01mm solid #000 !important;
-                                margin-bottom: 0.7mm !important; /* 전체적인 밀착도 유지 */
-                            }
-
-                            table.report-table th, table.report-table td {
-                                border: none !important;
-                                border-right: 0.01mm solid #000 !important;
-                                border-bottom: 0.01mm solid #000 !important;
-                                box-sizing: border-box !important;
-                                padding: 0.6mm 1mm !important; /* 1페이지는 원래대로 날씬하게 복구 */
-                                line-height: 1.05 !important; 
-                                font-size: 9.2pt !important;
-                            }
-                            
-                            /* [정밀 타격] 2페이지만 시원하게 벌려줌 */
-                            #activityDetailBody td {
-                                padding: 3.5mm 2mm !important;
-                            }
-
-                            /* [집중 공략] 8번 주요 활동 요약 칸 대폭 축소 */
-                            #activitySummaryBody td {
-                                padding: 0.3mm 1mm !important; /* 칸 높이 최소화 */
-                                line-height: 1.0 !important;
-                                font-size: 8.8pt !important; /* 글자 크기 미세 축소로 공간 확보 */
-                            }
-                            #activitySummaryBody span[style*="color:red"], 
-                            #activitySummaryBody span[style*="color: red"] {
-                                font-size: 8.5pt !important; /* 붉은색 강조 텍스트 크기 조절 */
-                                line-height: 0.9 !important;
-                            }
-                            /* [시각적 가독성] 줄바꿈 레이블 전용 여유 공간 확보 */
-                            .label-cell {
-                                line-height: 2.0 !important; /* 화면과 동일하게 시원하게 확대 */
-                                white-space: nowrap !important; /* 글자가 옆으로 삐져나가지 않게 고정 */
-                                padding: 0 1px !important;
-                            }
-
-                            .serial-box { border: 0.01mm solid #000 !important; }
-                            .serial-label { border: none !important; border-bottom: 0.01mm solid #000 !important; }
-                            .underline { border: none !important; border-bottom: 0.01mm solid #000 !important; display: inline-block !important; } 
-                            
-                            /* [PDF 전용] 항목 선 침범 완벽 차단 및 정밀 여백 */
-                            #activitySummaryBody .circled-item,
-                            #activitySummaryBody div[style*="text-indent"] {
-                                padding-left: 18px !important;
-                                text-indent: -14px !important;
-                                display: block !important;
-                            }
-                        `;
-                        clonedDoc.head.appendChild(styleNode);
-                    }
-                },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: 'css' }
-            };
-
-            html2pdf().set(opt).from(original).save().then(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                originalPages.forEach(p => {
-                    p.style.margin = '';
-                    p.style.boxShadow = '';
-                });
-            }).catch(err => {
-                console.error('PDF 생성 에러:', err);
-                alert('PDF 생성 중 오류가 발생했습니다.');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                originalPages.forEach(p => {
-                    p.style.margin = '';
-                    p.style.boxShadow = '';
-                });
-            });
-        });
-    </script>
-
-    <!-- 커스텀 모달 구조 추가 -->
+    <!-- 而ㅼ뒪? 紐⑤떖 援ъ“ 異붽? -->
     <div id="customModal" class="custom-modal-overlay no-print">
         <div class="custom-modal">
             <div id="modalMessage" class="custom-modal-message"></div>
             <div id="modalBtnGroup" class="custom-modal-btns">
-                <button id="modalConfirmBtn" class="modal-btn btn-confirm">확인</button>
-                <button id="modalCancelBtn" class="modal-btn btn-cancel">취소</button>
+                <button id="modalConfirmBtn" class="modal-btn btn-confirm">?뺤씤</button>
+                <button id="modalCancelBtn" class="modal-btn btn-cancel">痍⑥냼</button>
             </div>
         </div>
     </div>
 
     <div id="reportDisplay">
-        <!-- 1페이지 -->
-        <div class="report-page">
+        <!-- 1?섏씠吏 -->
+        <div class="report-page page-break">
             <div class="report-header">
                 <div class="logo-box"><img src="logo.png" alt="logo"></div>
                 <div class="serial-box">
-                    <div class="serial-label">고유번호</div>
+                    <div class="serial-label">怨좎쑀踰덊샇</div>
                     <div id="serialNum" class="serial-value">-</div>
                 </div>
-                <div style="font-size: 16pt; font-family: 'Noto Serif KR', serif;">레지오 마리애</div>
-                <div class="title-main">쁘레시디움 월례 보고서</div>
+                <div style="font-size: 16pt; font-family: 'Noto Serif KR', serif;">?덉???留덈━??/div>
+                <div class="title-main">?섎젅?쒕뵒? ?붾? 蹂닿퀬??/div>
                 <div class="title-sub">
-                    <span id="repYear" class="underline">2026</span> 년 <span id="repMonth" class="underline">1</span>
-                    월 말 현재 제 <span id="repStartSess" class="underline">-</span> 차 ~ 제 <span id="repEndSess"
-                        class="underline">-</span> 차
-                </div>
+                    <span id="repYear" class="underline">2026</span> ??<span id="repMonth" class="underline">1</span>
+                    ??留??꾩옱 ??<span id="repStartSess" class="underline">-</span> 李?~ ??<span id="repEndSess"
+                        class="underline">-</span> 李?                </div>
             </div>
 
             <div style="font-size: 11pt; font-weight: bold; margin-top: 10mm; margin-bottom: 3mm;">
-                1. 주회합 일시 : 매주 <span id="repDay" class="underline">화</span>요일 <span id="repHour"
-                    class="underline">20</span>시 <span id="repMin" class="underline">20</span>분
-                &nbsp;&nbsp;&nbsp;&nbsp; 2. 장 소 : <span id="repPlace" class="underline">-</span><br>
-                3. 출 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 석 : 간부 <span id="repAttOff" class="underline">- / -</span>
-                &nbsp;&nbsp;&nbsp;&nbsp; 단원 <span id="repAttMem" class="underline">- / -</span>
+                1. 二쇳쉶???쇱떆 : 留ㅼ＜ <span id="repDay" class="underline">??/span>?붿씪 <span id="repHour"
+                    class="underline">20</span>??<span id="repMin" class="underline">20</span>遺?                &nbsp;&nbsp;&nbsp;&nbsp; 2. ????: <span id="repPlace" class="underline">-</span><br>
+                3. 異?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ??: 媛꾨? <span id="repAttOff" class="underline">- / -</span>
+                &nbsp;&nbsp;&nbsp;&nbsp; ?⑥썝 <span id="repAttMem" class="underline">- / -</span>
             </div>
 
-            <div class="section-title">4. 간부 명단 : ( 담당 사제 : <span id="repPriest">-</span> 대리자 : <span
-                    id="repProxy">-</span> )</div>
+            <div class="section-title">4. 媛꾨? 紐낅떒 : ( ?대떦 ?ъ젣 : <span id="repPriest" class="underline">-</span> ?由ъ옄 : <span
+                    id="repProxy" class="underline">-</span> )</div>
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th style="width:12%">직 책</th>
-                        <th style="width:18%">성 명</th>
-                        <th style="width:18%">세 례 명</th>
-                        <th style="width:12%">축 일</th>
-                        <th style="width:15%">임 명 일</th>
-                        <th style="width:25%">비 고</th>
+                        <th style="width:12%">吏?梨?/th>
+                        <th style="width:18%">??紐?/th>
+                        <th style="width:18%">??濡 紐?/th>
+                        <th style="width:12%">異???/th>
+                        <th style="width:15%">??紐???/th>
+                        <th style="width:25%">鍮?怨?/th>
                     </tr>
                 </thead>
                 <tbody id="offTableBody"></tbody>
             </table>
 
-            <div class="section-title">5. 단원 현황</div>
+            <div class="section-title">5. ?⑥썝 ?꾪솴</div>
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th rowspan="2" style="width:14%">구 분</th>
-                        <th colspan="3">행 동 단 원</th>
+                        <th rowspan="2" style="width:14%">援?遺?/th>
+                        <th colspan="3">????????/th>
                         <th rowspan="2" style="width:12%">
                             <div style="display:inline-block; text-align:center;">
-                                쁘레또리움<br>
+                                ?섎젅?먮━?<br>
                                 <div style="display:flex; justify-content:space-between;">
-                                    <span>단</span><span>원</span>
+                                    <span>??/span><span>??/span>
                                 </div>
                             </div>
                         </th>
-                        <th colspan="3">협 조 단 원</th>
+                        <th colspan="3">??議?????/th>
                         <th rowspan="2" style="width:12%">
                             <div style="display:inline-block; text-align:center;">
-                                아듀또리움<br>
+                                ?꾨??먮━?<br>
                                 <div style="display:flex; justify-content:space-between;">
-                                    <span>단</span><span>원</span>
+                                    <span>??/span><span>??/span>
                                 </div>
                             </div>
                         </th>
                     </tr>
                     <tr>
-                        <th style="width:10%">남</th>
-                        <th style="width:10%">여</th>
-                        <th style="width:10%">계</th>
-                        <th style="width:10%">남</th>
-                        <th style="width:10%">여</th>
-                        <th style="width:10%">계</th>
+                        <th style="width:10%">??/th>
+                        <th style="width:10%">??/th>
+                        <th style="width:10%">怨?/th>
+                        <th style="width:10%">??/th>
+                        <th style="width:10%">??/th>
+                        <th style="width:10%">怨?/th>
                     </tr>
                 </thead>
                 <tbody id="memStatBody">
                     <tr>
-                        <th>전 월</th>
+                        <th>????/th>
                         <td id="m_p_m">-</td>
                         <td id="m_p_f">-</td>
                         <td id="m_p_t">-</td>
@@ -848,7 +581,7 @@
                         <td id="aj_p">-</td>
                     </tr>
                     <tr>
-                        <th>금 월</th>
+                        <th>湲???/th>
                         <td id="m_c_m">-</td>
                         <td id="m_c_f">-</td>
                         <td id="m_c_t">-</td>
@@ -859,8 +592,9 @@
                         <td id="aj_c">-</td>
                     </tr>
                     <tr>
-                        <th>입단 및 전입</th>
+                        <th>?낅떒 諛??꾩엯</th>
                         <td id="m_i_m">-</td>
+                        <td id="m_i_f">-</td>
                         <td id="m_i_t">-</td>
                         <td id="p_i">-</td>
                         <td id="a_i_m">-</td>
@@ -869,7 +603,7 @@
                         <td id="aj_i">-</td>
                     </tr>
                     <tr>
-                        <th>퇴단 및 전출</th>
+                        <th>?대떒 諛??꾩텧</th>
                         <td id="m_o_m">-</td>
                         <td id="m_o_f">-</td>
                         <td id="m_o_t">-</td>
@@ -882,202 +616,203 @@
                 </tbody>
             </table>
 
-            <div class="section-title">6. 주요 사항(행사/교육/피정)</div>
+            <div class="section-title">6. 二쇱슂 ?ы빆(?됱궗/援먯쑁/?쇱젙)</div>
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th style="width:10%">구분</th>
-                        <th style="width:30%">제 목</th>
-                        <th style="width:15%">주 관</th>
-                        <th style="width:20%">일 시</th>
-                        <th style="width:15%">장 소</th>
-                        <th style="width:10%">참 석</th>
+                        <th style="width:10%">援щ텇</th>
+                        <th style="width:30%">??紐?/th>
+                        <th style="width:15%">二?愿</th>
+                        <th style="width:20%">????/th>
+                        <th style="width:15%">????/th>
+                        <th style="width:10%">李???/th>
                     </tr>
                 </thead>
                 <tbody id="eventTableBody"></tbody>
             </table>
 
-            <div class="section-title"><span style="display:inline-block; width:20px;">7.</span>회계 보고 : &lt;잔액에 관계없이
-                월말기준&gt;</div>
+            <div class="section-title"><span style="display:inline-block; width:20px;">7.</span>?뚭퀎 蹂닿퀬 : &lt;?붿븸??愿怨꾩뾾??                ?붾쭚湲곗?&gt;</div>
             <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
-                이월금 <span id="acc_prev" class="underline">-</span> 수입 <span id="acc_in" class="underline">-</span> 지출
-                <span id="acc_out" class="underline">-</span> 잔 액 <span id="acc_bal" class="underline">-</span>
+                ?댁썡湲?<span id="acc_prev" class="underline">-</span> ?섏엯 <span id="acc_in" class="underline">-</span> 吏異?                <span id="acc_out" class="underline">-</span> ????<span id="acc_bal" class="underline">-</span>
             </div>
             <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
-                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow" class="underline">-</span> (기타) <span id="exp_etc" class="underline">-</span>
+                以묒슂 吏異??댁뿭 : (?섏뿰湲? <span id="exp_cont" class="underline">-</span> (苑껉컪) <span id="exp_flow" class="underline">-</span> (湲고?) <span id="exp_etc" class="underline">-</span>
             </div>
 
             <div class="section-title">
-                <span>8. 주요 활동 요약</span>
+                <span>8. 二쇱슂 ?쒕룞 ?붿빟</span>
                 <span id="anniversaryHeader" style="color:red; font-size:9pt; font-weight:bold; letter-spacing: -0.1mm; margin-left: 15px;">
-                    2027년 대전교구 레지오마리애 도입 70주년 '단원 특별활동 실천'(~2027년 12월)
+                    2027????꾧탳援??덉??ㅻ쭏由ъ븷 ?꾩엯 70二쇰뀈 '?⑥썝 ?밸퀎?쒕룞 ?ㅼ쿇'(~2027??12??
                 </span>
             </div>
             <table class="report-table" id="activitySummaryTable">
                 <colgroup>
-                    <col style="width: 10mm;"> <!-- 좌 번호 -->
-                    <col style="width: 18mm;"> <!-- 좌 활동 1 (폭 축소) -->
-                    <col style="width: 46mm;"> <!-- 좌 활동 2 (폭 확대 - 줄바꿈 방지) -->
-                    <col style="width: 18mm;"> <!-- 좌 실적 -->
-                    <col style="width: 10mm;"> <!-- 우 번호 -->
-                    <col style="width: 20mm;"> <!-- 우 활동 1 -->
-                    <col style="width: 45mm;"> <!-- 우 활동 2 -->
-                    <col style="width: 18mm;"> <!-- 우 실적 -->
+                    <col style="width: 10mm;"> <!-- 醫?踰덊샇 -->
+                    <col style="width: 18mm;"> <!-- 醫??쒕룞 1 (??異뺤냼) -->
+                    <col style="width: 46mm;"> <!-- 醫??쒕룞 2 (???뺣? - 以꾨컮轅?諛⑹?) -->
+                    <col style="width: 18mm;"> <!-- 醫??ㅼ쟻 -->
+                    <col style="width: 10mm;"> <!-- ??踰덊샇 -->
+                    <col style="width: 20mm;"> <!-- ???쒕룞 1 -->
+                    <col style="width: 45mm;"> <!-- ???쒕룞 2 -->
+                    <col style="width: 18mm;"> <!-- ???ㅼ쟻 -->
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>번호</th>
-                        <th colspan="3">기도 및 신심행위 (Se. 및 교구 · Re.)</th>
-                        <th>번호</th>
-                        <th colspan="3">중 점 활 동</th>
+                        <th>踰덊샇</th>
+                        <th colspan="3">湲곕룄 諛??좎떖?됱쐞 (Se. 諛?援먭뎄 쨌 Re.)</th>
+                        <th>踰덊샇</th>
+                        <th colspan="3">以???????/th>
                     </tr>
                 </thead>
                 <tbody id="activitySummaryBody">
-                    <!-- 1행: 묵주기도 / 새 가족 찾기 -->
+                    <!-- 1?? 臾듭＜湲곕룄 / ??媛議?李얘린 -->
                     <tr style="height:8mm;">
                         <td rowspan="2" style="text-align:center;">1</td>
-                        <td rowspan="2" colspan="2" style="text-align:center; font-weight:bold;">묵 주 기 도</td>
-                        <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_rosary">-</span>단</td>
+                        <td rowspan="2" colspan="2" style="text-align:center; font-weight:bold;">臾?二?湲???/td>
+                        <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_rosary">-</span>??/td>
                         <td rowspan="2" style="text-align:center;">1</td>
-                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">새 가족찾기</td>
-                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">예비자 교리반 입교</td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_new">-</span> 명</td>
+                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">??媛議깆갼湲?/td>
+                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">?덈퉬??援먮━諛??낃탳</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_new">-</span> 紐?/td>
                     </tr>
-                    <!-- 2행: 쉬는교우회두 (우) -->
+                    <!-- 2?? ?щ뒗援먯슦?뚮몢 (?? -->
                     <tr style="height:8mm;">
-                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">쉬는교우<br>회두</td>
-                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">고해성사 및 신부님 면담</td>
-                        <td style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_soul">-</span>명</td>
+                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">?щ뒗援먯슦<br>?뚮몢</td>
+                        <td style="text-align:left; padding-left:5px; font-size:9.5pt;">怨좏빐?깆궗 諛??좊???硫대떞</td>
+                        <td style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_soul">-</span>紐?/td>
                     </tr>
 
-                    <!-- 3행: 평일미사 시작 / 사랑의 증언 1 -->
+                    <!-- 3?? ?됱씪誘몄궗 ?쒖옉 / ?щ옉??利앹뼵 1 -->
                     <tr style="height:8mm;">
                         <td rowspan="8" style="text-align:center;">2</td>
-                        <td rowspan="8" class="label-cell" style="text-align:center; vertical-align:middle; font-weight:bold; overflow:hidden; word-break:keep-all; font-size:9pt;">
-                            매일미사와<br>말씀과<br>함께하기</td>
+                        <td rowspan="8" style="text-align:center; vertical-align:middle; font-weight:bold; line-height:1.2; overflow:hidden; word-break:keep-all; font-size:9pt; padding:0 1px;">
+                            留ㅼ씪誘몄궗?<br>留먯?怨?br>?④퍡?섍린</td>
                         <td rowspan="2" style="text-align:left; padding-left:5px;">
-                            <div class="circled-item">① 평일미사 참례</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">???됱씪誘몄궗 李몃?</div>
                         </td>
-                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_mass">-</span>회</td>
-                        <!-- 우측 2번 사랑의 증언 시작 (3개 행 차지) -->
+                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_mass">-</span>??/td>
+                        <!-- ?곗륫 2踰??щ옉??利앹뼵 ?쒖옉 (3媛???李⑥?) -->
                         <td rowspan="3" style="text-align:center;">2</td>
-                        <td rowspan="3" class="label-cell" style="text-align:center; vertical-align:middle;">사랑의<br>증언활동</td>
+                        <td rowspan="3" style="text-align:center; vertical-align:middle; line-height:1.2;">?щ옉??br>利앹뼵?쒕룞</td>
                         <td style="text-align:left; padding-left:5px;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">① 복지시설</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">??蹂듭??쒖꽕</div>
                         </td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_wel">-</span> 회</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_wel">-</span> ??/td>
                     </tr>
 
-                    <!-- 4행: 평일미사 끝 / 사랑의 증언 2 (Left ① aligns with Right 2-②) -->
+                    <!-- 4?? ?됱씪誘몄궗 ??/ ?щ옉??利앹뼵 2 (Left ??aligns with Right 2-?? -->
                     <tr style="height:8mm;">
                         <td style="text-align:left; padding-left:5px;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">② 병원, 요양원</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">??蹂묒썝, ?붿뼇??/div>
                         </td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_hosp">-</span> 회</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_hosp">-</span> ??/td>
                     </tr>
 
-                    <!-- 5행: 성경 시작 / 사랑의 증언 3 (Right 2 title span ends here) -->
+                    <!-- 5?? ?깃꼍 ?쒖옉 / ?щ옉??利앹뼵 3 (Right 2 title span ends here) -->
                     <tr style="height:8mm;">
                         <td rowspan="2" style="text-align:left; padding-left:5px;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">② 성경읽기, 쓰기</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">???깃꼍?쎄린, ?곌린</div>
                         </td>
-                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_bible">-</span>장</td>
+                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_bible">-</span>??/td>
                         <td style="text-align:left; padding-left:5px;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1; font-size:9pt;">③ 기타(독거노인 등 소외된 이웃 돌봄)</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1; font-size:9pt;">??湲고?(?낃굅?몄씤 ???뚯쇅???댁썐 ?뚮큵)</div>
                         </td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_oth">-</span>회</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_oth">-</span>??/td>
                     </tr>
 
-                    <!-- 6행: 성경 끝 / 9시 주모경 (Left ② aligns with Right 3) -->
+                    <!-- 6?? ?깃꼍 ??/ 9??二쇰え寃?(Left ??aligns with Right 3) -->
                     <tr style="height:8mm;">
                         <td style="text-align:center;">3</td>
-                        <td colspan="2" style="text-align:left; padding-left:5px;">한반도 평화를 위한 밤 9시 주모경 바치기</td>
-                        <td style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_peace">-</span>회</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">?쒕컲???됲솕瑜??꾪븳 諛?9??二쇰え寃?諛붿튂湲?/td>
+                        <td style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_peace">-</span>??/td>
                     </tr>
 
-                    <!-- 7행: 매일미사 묵상 시작 / 특별돌봄 -->
+                    <!-- 7?? 留ㅼ씪誘몄궗 臾듭긽 ?쒖옉 / ?밸퀎?뚮큵 -->
                     <tr style="height:8mm;">
                         <td rowspan="2" style="text-align:left; padding-left:5px;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">③ 매일미사 읽고, 묵상</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">??留ㅼ씪誘몄궗 ?쎄퀬, 臾듭긽</div>
                         </td>
-                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_medi">-</span>회</td>
+                        <td rowspan="2" style="text-align:right; padding-right:5px;"><span id="sum_medi">-</span>??/td>
                         <td style="text-align:center;">4</td>
-                        <td colspan="2" style="text-align:left; padding-left:5px; font-size:9pt; line-height:1.1;">세례성사후 5년이내 쉬는 교우를 찾아<br>특별히 돌보기</td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_care">-</span> 회</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px; font-size:9pt; line-height:1.1;">?몃??깆궗??5?꾩씠???щ뒗 援먯슦瑜?李얠븘<br>?밸퀎???뚮낫湲?/td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_care">-</span> ??/td>
                     </tr>
 
-                    <!-- 8행: 매일미사 묵상 끝 / 탄소중립 (Left ③ aligns with Right 5) -->
+                    <!-- 8?? 留ㅼ씪誘몄궗 臾듭긽 ??/ ?꾩냼以묐┰ (Left ??aligns with Right 5) -->
                     <tr style="height:8mm;">
                         <td style="text-align:center;">5</td>
-                        <td colspan="2" style="text-align:left; padding-left:5px;">탄소중립 실천하기</td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_eco">-</span>회</td>
+                        <td colspan="2" style="text-align:left; padding-left:5px;">?꾩냼以묐┰ ?ㅼ쿇?섍린</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_eco">-</span>??/td>
                     </tr>
 
-                    <!-- 9행: 성모님 군단 시작 / 거룩한 독서 1 -->
+                    <!-- 9?? ?깅え??援곕떒 ?쒖옉 / 嫄곕）???낆꽌 1 -->
                     <tr style="height:8mm;">
                         <td rowspan="2" style="text-align:left; padding-left:5px; vertical-align:middle; font-size:9.5pt;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">④ 성모님의 군단읽기</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">???깅え?섏쓽 援곕떒?쎄린</div>
                         </td>
-                        <td rowspan="2" style="text-align:right; padding-right:5px; vertical-align:middle;"><span id="sum_legion">-</span> 쪽</td>
+                        <td rowspan="2" style="text-align:right; padding-right:5px; vertical-align:middle;"><span id="sum_legion">-</span> 履?/td>
                         <td rowspan="2" style="text-align:center;">6</td>
-                        <td rowspan="2" style="text-align:center; vertical-align:middle; line-height:1.2; font-size:9.5pt;">거룩한<br>독서</td>
+                        <td rowspan="2" style="text-align:center; vertical-align:middle; line-height:1.2; font-size:9.5pt;">嫄곕）??br>?낆꽌</td>
                         <td style="text-align:left; padding-left:5px; font-size:8.5pt;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">① 말씀 봉독하기<br>(시청,묵상,기도)</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">??留먯? 遊됰룆?섍린<br>(?쒖껌,臾듭긽,湲곕룄)</div>
                         </td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_holy">-</span>회</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_holy">-</span>??/td>
                     </tr>
 
-                    <!-- 10행: 성모님 군단 끝 / 거룩한 독서 2 (Left ④ aligns with Right 6-②) -->
+                    <!-- 10?? ?깅え??援곕떒 ??/ 嫄곕）???낆꽌 2 (Left ??aligns with Right 6-?? -->
                     <tr style="height:8mm;">
                         <td style="text-align:left; padding-left:5px; font-size:8.5pt;">
-                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">② 노트작성</div>
+                            <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">???명듃?묒꽦</div>
                         </td>
-                        <td style="text-align:right; padding-right:5px;"><span id="sum_note">-</span> 회</td>
+                        <td style="text-align:right; padding-right:5px;"><span id="sum_note">-</span> ??/td>
                     </tr>
                 </tbody>
             </table>
             <div class="section-title" style="display:flex; align-items:flex-end; gap:5px;">
-                <span style="white-space:nowrap;">9. 기타(질의 및 건의) :</span>
-                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 0.1px solid rgba(0,0,0,0.2);"></span>
+                <span style="white-space:nowrap;">9. 湲고?(吏덉쓽 諛?嫄댁쓽) :</span>
+                <span id="repEtc" class="underline" style="flex-grow:1; border-bottom: 1px solid black;"></span>
             </div>
 
             <div class="footer-sig">
                 <div style="font-size: 11pt; margin-bottom: 2mm;">
-                    <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(평의회)</span>
-                    <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>직속</b>
+                    <span style="font-size: 9pt; font-family: 'Malgun Gothic';">(?됱쓽??</span>
+                    <span id="footCu" class="underline" style="min-width:60mm; font-weight:bold;">-</span> Cu. <b>吏곸냽</b>
                 </div>
                 <div class="sig-line" style="font-weight:bold; font-size:11.5pt; margin-bottom: 1.5mm;">
                     <span id="footChurch" class="underline" style="min-width:30mm">-</span>
-                    <span id="footPr" class="underline" style="min-width:35mm">-</span> 쁘레시디움 단장
-                    <span id="footName" class="underline" style="min-width:30mm">-</span> (인)
+                    <span id="footPr" class="underline" style="min-width:35mm">-</span> ?섎젅?쒕뵒? ?⑥옣
+                    <span id="footName" class="underline" style="min-width:30mm">-</span> (??
+                </div>
+                <div style="font-size: 8.5pt; color: #000; letter-spacing: -0.1mm; font-family: 'Malgun Gothic';">
+                    ?쒖슱 臾댁뿼?쒗깭 ?몃굹?쒖뒪 ?묒떇 ????2024??2?붽컻??(??껽e.2024.12)
                 </div>
             </div>
-        </div><!-- 1페이지 끝 -->
+        </div>
 
-        <!-- 2페이지 -->
+        <!-- 2?섏씠吏 -->
         <div class="report-page">
             <div class="report-header">
-                <div class="title-main" style="font-size:18pt;">활 동 사 항</div>
+                <div class="title-main" style="font-size:18pt;">????????/div>
             </div>
-            <div style="font-size:9pt; margin-bottom:3mm; text-align:center;">활동은 아래 내용을 기준으로 작성하되 필요에 따라서 내용을 수정할 수
-                있습니다.</div>
+            <div style="font-size:9pt; margin-bottom:3mm; text-align:center;">?쒕룞? ?꾨옒 ?댁슜??湲곗??쇰줈 ?묒꽦?섎릺 ?꾩슂???곕씪???댁슜???섏젙????                ?덉뒿?덈떎.</div>
             <table class="report-table">
                 <thead>
                     <tr>
-                        <th style="width:28%">종 목</th>
-                        <th style="width:10%">활동<br>횟수</th>
-                        <th style="width:62%">활 동 내 용</th>
+                        <th style="width:28%">醫?紐?/th>
+                        <th style="width:10%">?쒕룞<br>?잛닔</th>
+                        <th style="width:62%">????????/th>
                     </tr>
                 </thead>
                 <tbody id="activityDetailBody"></tbody>
                 <tfoot id="activityTotalFoot" style="font-weight:bold;">
                     <tr style="height:8mm;">
-                        <th style="text-align:center;">합 계</th>
-                        <td id="grandTotalCount" style="text-align:right; padding-right:5px;">-</td>
-                        <td></td>
+                        <th style="border:1px solid #000; text-align:center;">??怨?/th>
+                        <td id="grandTotalCount" style="border:1px solid #000; text-align:right; padding-right:5px;">-</td>
+                        <td style="border:1px solid #000;"></td>
                     </tr>
                 </tfoot>
             </table>
+            <div class="form-info">?붾?蹂닿퀬??- ?쒕룞 ?곸꽭 ?댁뿭 (Page 2)</div>
         </div>
     </div>
 
@@ -1086,7 +821,7 @@
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
 
-        // URL 파라미터 파싱 및 정문화 (줄바꿈/유령 공백 제거)
+        // URL ?뚮씪誘명꽣 ?뚯떛 諛??뺣Ц??(以꾨컮轅??좊졊 怨듬갚 ?쒓굅)
         const normalize = (val) => String(val || '').replace(/[\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
         const urlParams = new URLSearchParams(window.location.search);
         let church = normalize(urlParams.get('churchName'));
@@ -1097,17 +832,17 @@
         const endYear = end ? end.split('-')[0] : new Date().getFullYear();
         const mode = normalize(urlParams.get('mode')) || 'view';
 
-        // [디버그] URL 파라미터 수신 확인
-        console.log("🔍 [1단계: URL 파라미터 확인]");
-        console.log(" - 성당:", church);
-        console.log(" - 꾸리아:", curia);
-        console.log(" - 쁘레시디움:", pr);
-        console.log(" - 기간:", start, "~", end);
-        console.log(" - 모드:", mode);
+        // [?붾쾭洹? URL ?뚮씪誘명꽣 ?섏떊 ?뺤씤
+        console.log("?뵇 [1?④퀎: URL ?뚮씪誘명꽣 ?뺤씤]");
+        console.log(" - ?깅떦:", church);
+        console.log(" - 袁몃━??", curia);
+        console.log(" - ?섎젅?쒕뵒?:", pr);
+        console.log(" - 湲곌컙:", start, "~", end);
+        console.log(" - 紐⑤뱶:", mode);
 
         let userProfile = null;
 
-        // 커스텀 모달 관련 함수
+        // 而ㅼ뒪? 紐⑤떖 愿???⑥닔
         const modalOverlay = document.getElementById('customModal');
         const modalMessage = document.getElementById('modalMessage');
         const modalConfirmBtn = document.getElementById('modalConfirmBtn');
@@ -1156,14 +891,14 @@
             });
         };
 
-        // [시니어 패치] URL 파라미터 재확인(정규화) 및 초기화 흐름
+        // [?쒕땲???⑥튂] URL ?뚮씪誘명꽣 ?ы솗???뺢퇋?? 諛?珥덇린???먮쫫
 
         initAuthObserver(async (user, profile) => {
             userProfile = profile;
             if (church && pr && start && end) {
                 await generateReport(church, pr, start, end);
             } else {
-                window.showCustomAlert('잘못된 접근입니다.').then(() => window.close());
+                window.showCustomAlert('?섎せ???묎렐?낅땲??').then(() => window.close());
             }
         }, () => { window.close(); });
 
@@ -1172,21 +907,21 @@
             if (isGenerating) return;
             isGenerating = true;
             try {
-                // [시니어 패치] 공유 변수 스코프 확보 (ReferenceError 방지) 🌊
+                // [?쒕땲???⑥튂] 怨듭쑀 蹂???ㅼ퐫???뺣낫 (ReferenceError 諛⑹?) ?뙄
                 let offIds = new Set();
                 let officialPresidentId = '';
                 let officialPresidentName = '';
 
-                // [디버그] 공유 변수 스코프 확보 (ReferenceError 방지)
+                // [?붾쾭洹? 怨듭쑀 蹂???ㅼ퐫???뺣낫 (ReferenceError 諛⑹?)
                 let reportKey = null;
                 let getStatusData = null;
                 if (!church || !pr || !start || !end) {
-                    window.showCustomAlert('[데이터 무결성 오류]\n필수 매개변수(성당, Pr, 기간)가 누락되었습니다.').then(() => window.close());
+                    window.showCustomAlert('[?곗씠??臾닿껐???ㅻ쪟]\n?꾩닔 留ㅺ컻蹂???깅떦, Pr, 湲곌컙)媛 ?꾨씫?섏뿀?듬땲??').then(() => window.close());
                     return;
                 }
 
                 const t = (val) => String(val || '').trim();
-                const clean = (s) => String(s || '').toLowerCase().replace(/성당|쁘레시디움|Pr\.?|꾸리아|Cu\.?|레지아|Re\.?|세나뚜스|Se\.?|\s/g, '').trim();
+                const clean = (s) => String(s || '').toLowerCase().replace(/?깅떦|?섎젅?쒕뵒?|Pr\.?|袁몃━??Cu\.?|?덉???Re\.?|?몃굹?쒖뒪|Se\.?|\s/g, '').trim();
                 const targetChurchClean = clean(church);
                 const targetPrClean = clean(pr);
                 const isOrgMatch = (churchVal, prVal) => {
@@ -1194,7 +929,7 @@
                     if (!cc || !cp) return false;
                     return cp === targetPrClean && cc === targetChurchClean;
                 };
-            // [정석화] 꼼수 함수(getField) 제거⚖️🌊
+            // [?뺤꽍?? 瑗쇱닔 ?⑥닔(getField) ?쒓굅?뽳툘?뙄
 
             const curiaParam = urlParams.get('curia');
             const ssValue = urlParams.get('ss'), esValue = urlParams.get('es');
@@ -1203,7 +938,7 @@
             const targetChurch = t(church);
             const targetPr = t(pr);
 
-                // [수정] 표준 필드(presidiumName)만을 사용하여 데이터 로드 (병합 로직 제거)
+                // [?섏젙] ?쒖? ?꾨뱶(presidiumName)留뚯쓣 ?ъ슜?섏뿬 ?곗씠??濡쒕뱶 (蹂묓빀 濡쒖쭅 ?쒓굅)
                 try {
                     const [
                         presSnap,
@@ -1224,7 +959,7 @@
                         getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'activity_records'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'accounting_transactions'), where('presidiumName', '==', targetPr))),
-                        getDocs(query(collection(db, 'events_list'), where('churchName', '==', targetChurch))),
+                        getDocs(query(collection(db, 'events_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'auxiliary_members_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'praetorium_list'), where('presidiumName', '==', targetPr))),
                         getDocs(query(collection(db, 'adjutorium_members_list'), where('presidiumName', '==', targetPr))),
@@ -1236,18 +971,12 @@
                     const mms = memSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const offsAll = offSnap.docs.map(d => ({ ...d.data(), id: d.id }));
 
-                    // 활동 보고 데이터 로드
+                    // ?쒕룞 蹂닿퀬 ?곗씠??濡쒕뱶
                     const recSnapDocs = recSnap.docs;
                     const recsAll = recSnapDocs.map(d => ({ ...d.data(), id: d.id }));
 
                     const transAll = transSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-                    // [필터링 보강] 해당 꾸리아의 공통 행사 또는 우리 쁘레시디움 행사만 수합
-                    const targetCuria = info.curiaName || curiaParam || '';
-                    const evsAll = eventSnap.docs.map(d => ({ ...d.data(), id: d.id }))
-                                         .filter(e => {
-                                             const eCuria = e.curiaName || '';
-                                             return eCuria === targetCuria && (!e.presidiumName || e.presidiumName === targetPr || e.presidiumName === '전체');
-                                         });
+                    const evsAll = eventSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const ams = auxSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const pts = pretSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                     const adjs = adjSnap.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -1258,38 +987,35 @@
                         (!(o.appointmentExpiryDate) || o.appointmentExpiryDate > end)
                     );
 
-                    // [추가] 단장 성명 및 ID 추출 (서명 매칭용 - Robust Matching 적용)
-                    let presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
+                    // [異붽?] ?⑥옣 ?깅챸 諛?ID 異붿텧 (?쒕챸 留ㅼ묶??- Robust Matching ?곸슜)
+                    let presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '?⑥옣') || {};
                     officialPresidentName = presOff.name || '';
                     officialPresidentId = presOff.memberId || '';
 
                     const recs = recsAll.filter(r => r.date >= start && r.date <= end);
                     
-                    // [디버그] DB 간부 명단 로드 확인
-                    console.log("🔍 [2단계: DB 간부 명단 확인]");
-                    console.log(" - 로드된 전체 간부 수:", offsAll.length);
-                    console.log(" - 해당 Pr. 및 임기내 간부 수:", offs.length);
+                    // [?붾쾭洹? DB 媛꾨? 紐낅떒 濡쒕뱶 ?뺤씤
+                    console.log("?뵇 [2?④퀎: DB 媛꾨? 紐낅떒 ?뺤씤]");
+                    console.log(" - 濡쒕뱶???꾩껜 媛꾨? ??", offsAll.length);
+                    console.log(" - ?대떦 Pr. 諛??꾧린??媛꾨? ??", offs.length);
                     offs.forEach((o, idx) => {
                         console.log(`   [${idx+1}] ${o.role}: ${o.name} (ID: ${o.memberId || o.uid})`);
                     });
 
-                    const reportYear = new Date(start).getFullYear();
-                    const reportMonth = new Date(start).getMonth() + 1;
+                    const reportYear = new Date(end).getFullYear();
+                    const reportMonth = new Date(end).getMonth() + 1;
                     const reportMonthStart = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
-                    // 해당 월의 마지막 날짜 구하기
-                    const lastDayObj = new Date(reportYear, reportMonth, 0);
-                    const reportMonthEnd = `${lastDayObj.getFullYear()}-${String(lastDayObj.getMonth() + 1).padStart(2, '0')}-${String(lastDayObj.getDate()).padStart(2, '0')}`;
+                    // ?대떦 ?붿쓽 留덉?留??좎쭨 援ы븯湲?                    const reportMonthEnd = new Date(reportYear, reportMonth, 0).toISOString().split('T')[0];
 
                     const leds = transAll.filter(l => {
                         const lDate = `${l.year}-${String(l.month).padStart(2, '0')}-${String(l.day).padStart(2, '0')}`;
-                        // [수정] 세션 날짜 기준이 아닌 해당 월 전체 기준(1일~말일)으로 필터링
-                        return lDate >= reportMonthStart && lDate <= reportMonthEnd;
+                        // [?섏젙] ?몄뀡 ?좎쭨 湲곗????꾨땶 ?대떦 ???꾩껜 湲곗?(1??留먯씪)?쇰줈 ?꾪꽣留?                        return lDate >= reportMonthStart && lDate <= reportMonthEnd;
                     });
 
-                    // [수정] 행사 내역도 해당 월 1일 기준으로 필터링 (executedEvs에서 다시 정교하게 처리됨)
+                    // [?섏젙] ?됱궗 ?댁뿭???대떦 ??1??湲곗??쇰줈 ?꾪꽣留?(executedEvs?먯꽌 ?ㅼ떆 ?뺢탳?섍쾶 泥섎━??
                     const evs = evsAll.filter(e => e.eventDate >= reportMonthStart).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
 
-                    // [Fix] 전월 기준일(prevDate) 계산 로직 추가
+                    // [Fix] ?꾩썡 湲곗???prevDate) 怨꾩궛 濡쒖쭅 異붽?
                     const prevAtts = attsAll.filter(a => a.date < start).sort((a, b) => b.date.localeCompare(a.date));
                     const prevDate = prevAtts.length > 0 ? prevAtts[0].date : null;
 
@@ -1297,7 +1023,7 @@
                 const adjHistory = adjs;
                 const prSchema = schemaSnap.exists() ? schemaSnap.data().categories : DEFAULT_SCHEMA;
 
-                // [수정] 공유 변수 할당 (Robust ID 수합: memberId, id, uid 등 모든 후보 포함)
+                // [?섏젙] 怨듭쑀 蹂???좊떦 (Robust ID ?섑빀: memberId, id, uid ??紐⑤뱺 ?꾨낫 ?ы븿)
                 offIds = new Set();
                 offs.filter(o => isOrgMatch(o.churchName, o.presidiumName)).forEach(o => {
                     [o.memberId, o.id, o.uid, o.memberUID, o.UID].forEach(id => {
@@ -1305,9 +1031,9 @@
                     });
                 });
 
-                // 1. 헤더 및 주회합 정보 (기준 월: start 날짜의 월)
-                const endYear = reportYear;
-                const endMonth = reportMonth;
+                // 1. ?ㅻ뜑 諛?二쇳쉶???뺣낫
+                const endYear = new Date(end).getFullYear();
+                const endMonth = new Date(end).getMonth() + 1;
                 document.getElementById('repYear').textContent = endYear;
                 document.getElementById('repMonth').textContent = endMonth;
                 document.getElementById('repStartSess').textContent = ssValue || (atts.length > 0 ? (atts[0].session || '-') : '-');
@@ -1322,11 +1048,11 @@
                 document.getElementById('repPriest').textContent = info.spiritualDirector || '-';
                 if (document.getElementById('repProxy')) document.getElementById('repProxy').textContent = info.spiritualDirectorDeputy || '-';
 
-                // 2. 간부 명단 (Robust Matching 적용)
-                const roles = ['단장', '부단장', '서기', '회계'];
+                // 2. 媛꾨? 紐낅떒 (Robust Matching ?곸슜)
+                const roles = ['?⑥옣', '遺?⑥옣', '?쒓린', '?뚭퀎'];
                 document.getElementById('offTableBody').innerHTML = roles.map(r => {
                     const o = offs.find(of => convertToStdRole(of.role) === r) || {};
-                    // [시니어 패치] 축일 데이터 추출 로직 강화 (명단 및 단원 정보 연동)
+                    // [?쒕땲???⑥튂] 異뺤씪 ?곗씠??異붿텧 濡쒖쭅 媛뺥솕 (紐낅떒 諛??⑥썝 ?뺣낫 ?곕룞)
                     const m = mms.find(mem => mem.id === (o.memberId || o.memberUid || o.member)) || {};
                     const fRaw = o.feastDate || m.feastDate || '';
                     let feast = '';
@@ -1343,7 +1069,7 @@
                     return `<tr><td>${r}</td><td>${o.name || ''}</td><td>${o.baptismalName || ''}</td><td>${feast}</td><td>${o.appointmentDate || ''}</td><td>-</td></tr>`;
                 }).join('');
 
-                // 3. 출석 요약 (누적 합산)
+                // 3. 異쒖꽍 ?붿빟 (?꾩쟻 ?⑹궛)
                 let oA = 0, oC = 0, mA = 0, mC = 0;
                 atts.forEach(a => {
                     const ad = a.attendanceData || {};
@@ -1354,19 +1080,18 @@
                             const status = (typeof item === 'object') ? item.status : item;
                             let role = (typeof item === 'object' && item.role) ? item.role : '';
 
-                            // 역할이 없는 경우offs/mms에서 유추
+                            // ??븷???녿뒗 寃쎌슦offs/mms?먯꽌 ?좎텛
                             if (!role) {
-                                if (offIds.has(String(id))) role = '단장'; // 직책 그룹으로 분류만 되면 됨
-                                else role = '단원';
+                                if (offIds.has(String(id))) role = '?⑥옣'; // 吏곸콉 洹몃９?쇰줈 遺꾨쪟留??섎㈃ ??                                else role = '?⑥썝';
                             }
 
-                            const isOff = ['단장', '부단장', '서기', '회계'].includes(role);
+                            const isOff = ['?⑥옣', '遺?⑥옣', '?쒓린', '?뚭퀎'].includes(role);
                             if (isOff) {
                                 oC++;
-                                if (status === 'P' || status === '출석') oA++;
+                                if (status === 'P' || status === '異쒖꽍') oA++;
                             } else {
                                 mC++;
-                                if (status === 'P' || status === '출석') mA++;
+                                if (status === 'P' || status === '異쒖꽍') mA++;
                             }
                         });
                     } else if (a.summary) {
@@ -1383,7 +1108,7 @@
                 document.getElementById('repAttOff').textContent = `${oA} / ${oC}`;
                 document.getElementById('repAttMem').textContent = `${mA} / ${mC}`;
 
-                // 4. 단원 현황 (시점 및 구분 기준 정밀 집계)
+                // 4. ?⑥썝 ?꾪솴 (?쒖젏 諛?援щ텇 湲곗? ?뺣? 吏묎퀎)
                 const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
                 const norm = (d) => {
@@ -1397,17 +1122,17 @@
                     return s;
                 };
 
-                // 해당 쁘레시디움 소속 단원만 먼저 필터링 (행동단원 전체)
+                // ?대떦 ?섎젅?쒕뵒? ?뚯냽 ?⑥썝留?癒쇱? ?꾪꽣留?(?됰룞?⑥썝 ?꾩껜)
                 const targetMems = mms.filter(m =>
                     m && isOrgMatch(m.churchName, m.presidiumName)
                 );
 
-                // 행동단원(활동단원 포함), 쁘레또리움, 아듀또리움 구분
+                // ?됰룞?⑥썝(?쒕룞?⑥썝 ?ы븿), ?섎젅?먮━?, ?꾨??먮━? 援щ텇
                 const filterByType = (list, types) => list.filter(m => types.includes(t(m.classification)));
 
-                const actionMems = filterByType(targetMems, ['행동단원', '활동단원']);
-                const pretMems = filterByType(targetMems, ['쁘레또리움']);
-                const adjMems = filterByType(targetMems, ['아쥬또리움', '아듀또리움']);
+                const actionMems = filterByType(targetMems, ['?됰룞?⑥썝', '?쒕룞?⑥썝']);
+                const pretMems = filterByType(targetMems, ['?섎젅?먮━?']);
+                const adjMems = filterByType(targetMems, ['?꾩??먮━?', '?꾨??먮━?']);
 
                 const getStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
                     if (!m) return false;
@@ -1435,20 +1160,19 @@
                     return l && isAfterPrev && l <= dEnd;
                 });
 
-                // 쁘레또리움 목록 가져오기 및 필터링
-                // const allPret = JSON.parse(localStorage.getItem('praetorium_list') || '[]'); // Replaced by Firestore fetch
+                // ?섎젅?먮━? 紐⑸줉 媛?몄삤湲?諛??꾪꽣留?                // const allPret = JSON.parse(localStorage.getItem('praetorium_list') || '[]'); // Replaced by Firestore fetch
                 // const pretHistory = allPret.filter(p =>
                 //     isOrgMatch(getField(p, ['churchName', 'church']), getField(p, ['presidiumName', 'presidium']))
                 // );
 
-                // 쁘레또리움 전용 집계 함수 (사용자 요청 로직 반영)
+                // ?섎젅?먮━? ?꾩슜 吏묎퀎 ?⑥닔 (?ъ슜???붿껌 濡쒖쭅 諛섏쁺)
                 const getPretStat = (list, date, isEnd = false, leaveRef = null) => list.filter(m => {
                     if (!m) return false;
                     const j = norm(m.joinDate), l = norm(m.leaveDate);
                     const d = norm(date);
                     const lRef = leaveRef ? norm(leaveRef) : d;
-                    // 전월(isEnd=false): 입단일 < 시작일 && (퇴단일 없음 || 퇴단일 > 전 회차 일자)
-                    // 당월(isEnd=true): 입단일 <= 종료일 && (퇴단일 없음 || 퇴단일 > 종료일)
+                    // ?꾩썡(isEnd=false): ?낅떒??< ?쒖옉??&& (?대떒???놁쓬 || ?대떒??> ???뚯감 ?쇱옄)
+                    // ?뱀썡(isEnd=true): ?낅떒??<= 醫낅즺??&& (?대떒???놁쓬 || ?대떒??> 醫낅즺??
                     const joined = isEnd ? (j <= d) : (j < d);
                     const notLeft = !l || (l > lRef);
                     return joined && notLeft;
@@ -1470,7 +1194,7 @@
                     return l && isAfterPrev && l <= dEnd;
                 });
 
-                // [New] 아듀또리움 전용 집계 (adjutorium_members_list 사용)
+                // [New] ?꾨??먮━? ?꾩슜 吏묎퀎 (adjutorium_members_list ?ъ슜)
                 // const allAdj = JSON.parse(localStorage.getItem('adjutorium_members_list') || '[]'); // Replaced by Firestore fetch
                 // const adjHistory = allAdj.filter(a =>
                 //     isOrgMatch(getField(a, ['churchName', 'church']), getField(a, ['presidiumName', 'presidium']))
@@ -1481,8 +1205,8 @@
                     const j = norm(m.admissionDate), l = norm(m.withdrawalDate);
                     const d = norm(date);
                     const lRef = leaveRef ? norm(leaveRef) : d;
-                    // 전월(isEnd=false): 입단일 < 시작일 && (퇴단일 없음 || 퇴단일 > 전 회차 일자)
-                    // 당월(isEnd=true): 입단일 <= 종료일 && (퇴단일 없음 || 퇴단일 > 종료일)
+                    // ?꾩썡(isEnd=false): ?낅떒??< ?쒖옉??&& (?대떒???놁쓬 || ?대떒??> ???뚯감 ?쇱옄)
+                    // ?뱀썡(isEnd=true): ?낅떒??<= 醫낅즺??&& (?대떒???놁쓬 || ?대떒??> 醫낅즺??
                     const joined = isEnd ? (j <= d) : (j < d);
                     const notLeft = !l || (l > lRef);
                     return joined && notLeft;
@@ -1504,31 +1228,31 @@
                     return l && isAfterPrev && l <= dEnd;
                 });
 
-                // 행동단원 집계 (기본 members_list 기준 유지)
+                // ?됰룞?⑥썝 吏묎퀎 (湲곕낯 members_list 湲곗? ?좎?)
                 const act_p = getStat(actionMems, start, false, prevDate);
                 const act_c = getStat(actionMems, end, true);
                 const act_i = getIntake(actionMems);
                 const act_o = getOutgoing(actionMems, prevDate);
 
                 const fLen = (list, gender) => list.filter(x => x && (x.gender === gender || x.sex === gender)).length;
-                setVal('m_p_m', fLen(act_p, '남')); setVal('m_p_f', fLen(act_p, '여')); setVal('m_p_t', act_p.length);
-                setVal('m_c_m', fLen(act_c, '남')); setVal('m_c_f', fLen(act_c, '여')); setVal('m_c_t', act_c.length);
-                setVal('m_i_m', fLen(act_i, '남')); setVal('m_i_f', fLen(act_i, '여')); setVal('m_i_t', act_i.length);
-                setVal('m_o_m', fLen(act_o, '남')); setVal('m_o_f', fLen(act_o, '여')); setVal('m_o_t', act_o.length);
+                setVal('m_p_m', fLen(act_p, '??)); setVal('m_p_f', fLen(act_p, '??)); setVal('m_p_t', act_p.length);
+                setVal('m_c_m', fLen(act_c, '??)); setVal('m_c_f', fLen(act_c, '??)); setVal('m_c_t', act_c.length);
+                setVal('m_i_m', fLen(act_i, '??)); setVal('m_i_f', fLen(act_i, '??)); setVal('m_i_t', act_i.length);
+                setVal('m_o_m', fLen(act_o, '??)); setVal('m_o_f', fLen(act_o, '??)); setVal('m_o_t', act_o.length);
 
-                // 쁘레또리움 & 아듀또리움 집계 (업데이트된 데이터 소스 및 로직 적용)
+                // ?섎젅?먮━? & ?꾨??먮━? 吏묎퀎 (?낅뜲?댄듃???곗씠???뚯뒪 諛?濡쒖쭅 ?곸슜)
                 setVal('p_p', getPretStat(pretHistory, start, false, prevDate).length);
                 setVal('p_c', getPretStat(pretHistory, end, true).length);
                 setVal('p_i', getPretIntake(pretHistory).length);
                 setVal('p_o', getPretOutgoing(pretHistory, prevDate).length);
 
-                // [Update] 아듀또리움 집계 (신규 전용 로직 적용)
+                // [Update] ?꾨??먮━? 吏묎퀎 (?좉퇋 ?꾩슜 濡쒖쭅 ?곸슜)
                 setVal('aj_p', getAdjStat(adjHistory, start, false, prevDate).length);
                 setVal('aj_c', getAdjStat(adjHistory, end, true).length);
                 setVal('aj_i', getAdjIntake(adjHistory).length);
                 setVal('aj_o', getAdjOutgoing(adjHistory, prevDate).length);
 
-                // 협조단원 집계
+                // ?묒“?⑥썝 吏묎퀎
                 const targetActiveIds = new Set(targetMems.map(m => String(m.id)));
                 const isMatch = (a) => {
                     if (isOrgMatch(a.churchName, a.presidiumName)) return true;
@@ -1563,36 +1287,37 @@
                     return l && isAfterPrev && l <= dEnd;
                 });
 
-                setVal('a_p_m', fLen(aux_p, '남')); setVal('a_p_f', fLen(aux_p, '여')); setVal('a_p_t', aux_p.length);
-                setVal('a_c_m', fLen(aux_c, '남')); setVal('a_c_f', fLen(aux_c, '여')); setVal('a_c_t', aux_c.length);
-                setVal('a_i_m', fLen(aux_i, '남')); setVal('a_i_f', fLen(aux_i, '여')); setVal('a_i_t', aux_i.length);
-                setVal('a_o_m', fLen(aux_o, '남')); setVal('a_o_f', fLen(aux_o, '여')); setVal('a_o_t', aux_o.length);
+                setVal('a_p_m', fLen(aux_p, '??)); setVal('a_p_f', fLen(aux_p, '??)); setVal('a_p_t', aux_p.length);
+                setVal('a_c_m', fLen(aux_c, '??)); setVal('a_c_f', fLen(aux_c, '??)); setVal('a_c_t', aux_c.length);
+                setVal('a_i_m', fLen(aux_i, '??)); setVal('a_i_f', fLen(aux_i, '??)); setVal('a_i_t', aux_i.length);
+                setVal('a_o_m', fLen(aux_o, '??)); setVal('a_o_f', fLen(aux_o, '??)); setVal('a_o_t', aux_o.length);
 
-                // 5. 행사 내역 (주요 사항) - [고도화] DB 카테고리 그대로 표시
-                // 기준 월(당월) 및 익월(다음달) 계산
-                const refYear = reportYear;
-                const refMonth = reportMonth;
+                // 5. ?됱궗 ?댁뿭 (二쇱슂 ?ы빆) - [怨좊룄??
+                // 湲곗? ???뱀썡) 諛??듭썡(?ㅼ쓬?? 怨꾩궛
+                const refYear = endYear;
+                const refMonth = endMonth;
                 const nextYear = refMonth === 12 ? refYear + 1 : refYear;
                 const nextMonth = refMonth === 12 ? 1 : refMonth + 1;
 
                 const curPrefix = `${refYear}-${String(refMonth).padStart(2, '0')}`;
                 const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
-                // [수정] DB 데이터를 있는 그대로 가져오며, 날짜 기준으로만 배분
                 const executedEvs = evsAll.filter(e => {
+                    const cat = e.category || '';
                     const d = e.eventDate || '';
-                    return d.startsWith(curPrefix);
+                    return cat === '?ㅽ뻾' && d.startsWith(curPrefix);
                 });
 
                 const plannedEvs = evsAll.filter(e => {
+                    const cat = e.category || '';
                     const d = e.eventDate || '';
-                    return d.startsWith(nextPrefix);
+                    return (cat === '怨꾪쉷' || cat === '?덉젙') && d.startsWith(nextPrefix);
                 });
 
-                // 합치고 날짜순 정렬
+                // ?⑹튂怨??좎쭨???뺣젹
                 const finalEvs = [...executedEvs, ...plannedEvs].sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
 
-                // 가변 행 유지 (데이터가 있을 때는 그만큼, 없을 때는 최소 1행)
+                // 媛蹂 ???좎? (?곗씠?곌? ?덉쓣 ?뚮뒗 洹몃쭔?? ?놁쓣 ?뚮뒗 理쒖냼 1??
                 const rowCount = Math.max(finalEvs.length, 1);
                 const tableRows = [];
                 for (let i = 0; i < rowCount; i++) {
@@ -1604,22 +1329,22 @@
                             <td>${e.organizer || ''}</td>
                             <td>${e.eventDate || ''}</td>
                             <td>${e.venue || ''}</td>
-                            <td style="text-align:center;">${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
+                            <td>${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
                         </tr>
                     `);
                 }
                 document.getElementById('eventTableBody').innerHTML = tableRows.join('');
 
-                // 6. 회계 보고 (UI상 7번)
+                // 6. ?뚭퀎 蹂닿퀬 (UI??7踰?
                 let totalIn = 0, totalOut = 0;
                 let expCont = 0, expFlow = 0;
 
-                // 당월 거래 내역 집계 로직
+                // ?뱀썡 嫄곕옒 ?댁뿭 吏묎퀎 濡쒖쭅
                 leds.forEach(l => {
                     const amt = parseInt(l.amount) || 0;
                     const isDeposit = (l.type === 'deposit' || l.type === 'income');
                     
-                    // 표준 필드(item, remarks)만 사용
+                    // ?쒖? ?꾨뱶(item, remarks)留??ъ슜
                     const item = String(l.item || '').trim();
                     const remark = String(l.remarks || '').trim();
 
@@ -1627,16 +1352,16 @@
                         totalIn += amt;
                     } else {
                         totalOut += amt;
-                        // 중요 지출 내역 자동 분류 (의연금, 꽃값 감지)
-                        if (item.includes('의연금') || remark.includes('의연금')) {
+                        // 以묒슂 吏異??댁뿭 ?먮룞 遺꾨쪟 (?섏뿰湲? 苑껉컪 媛먯?)
+                        if (item.includes('?섏뿰湲?) || remark.includes('?섏뿰湲?)) {
                             expCont += amt;
-                        } else if (item.includes('꽃값') || item.includes('꽃비') || remark.includes('꽃값')) {
+                        } else if (item.includes('苑껉컪') || item.includes('苑껊퉬') || remark.includes('苑껉컪')) {
                             expFlow += amt;
                         }
                     }
                 });
 
-                // [개선] 이월금 계산: 연초 기초 잔액 + 보고 기간 이전 누적 수지 합계
+                // [媛쒖꽑] ?댁썡湲?怨꾩궛: ?곗큹 湲곗큹 ?붿븸 + 蹂닿퀬 湲곌컙 ?댁쟾 ?꾩쟻 ?섏? ?⑷퀎
                 let initBal = 0;
                 try {
                     const summarySnap = await getDoc(doc(db, 'accounting_summaries', `${endYear}_${church}_${info.curiaName || ''}_${pr}`));
@@ -1644,8 +1369,7 @@
                 } catch (e) { }
 
                 let carryOverIn = 0, carryOverOut = 0;
-                // [수정] 이월금 계산 기준을 '세션 시작일(start)'이 아닌 '해당 월 1일(reportMonthStart)'로 변경
-                const monthStartStr = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
+                // [?섏젙] ?댁썡湲?怨꾩궛 湲곗???'?몄뀡 ?쒖옉??start)'???꾨땶 '?대떦 ??1??reportMonthStart)'濡?蹂寃?                const monthStartStr = `${reportYear}-${String(reportMonth).padStart(2, '0')}-01`;
                 
                 transAll.forEach(l => {
                     if (parseInt(l.year) !== endYear) return;
@@ -1666,127 +1390,126 @@
                 setVal('acc_out', totalOut.toLocaleString());
                 setVal('acc_bal', (accPrev + totalIn - totalOut).toLocaleString());
 
-                // 중요 지출 내역 표시
+                // 以묒슂 吏異??댁뿭 ?쒖떆
                 const expEtc = totalOut - (expCont + expFlow);
                 setVal('exp_cont', expCont.toLocaleString());
                 setVal('exp_flow', expFlow.toLocaleString());
                 setVal('exp_etc', expEtc.toLocaleString());
 
-                // [정예화] 오직 표준 명칭(adjs)으로만 활동 실적 합산
+                // [?뺤삁?? ?ㅼ쭅 ?쒖? 紐낆묶(adjs)?쇰줈留??쒕룞 ?ㅼ쟻 ?⑹궛
                 const sumAct = (name) => {
                     return recs.reduce((a, c) => {
                         let val = (parseInt(c.counts && c.counts[name]) || 0);
                         return a + val;
                     }, 0);
                 };
-                setVal('sum_rosary', sumAct('묵주기도').toLocaleString());
-                setVal('sum_mass', sumAct('평일미사참례').toLocaleString());
-                setVal('sum_bible', (sumAct('성경읽기') + sumAct('성경쓰기')).toLocaleString()); // 성경읽기 + 성경쓰기 합산
-                setVal('sum_medi', sumAct('매일미사읽고묵상').toLocaleString());
-                setVal('sum_legion', sumAct('월간 성모님의 군단 읽기').toLocaleString());
+                setVal('sum_rosary', sumAct('臾듭＜湲곕룄').toLocaleString());
+                setVal('sum_mass', sumAct('?됱씪誘몄궗李몃?').toLocaleString());
+                setVal('sum_bible', (sumAct('?깃꼍?쎄린') + sumAct('?깃꼍?곌린')).toLocaleString()); // ?깃꼍?쎄린 + ?깃꼍?곌린 ?⑹궛
+                setVal('sum_medi', sumAct('留ㅼ씪誘몄궗?쎄퀬臾듭긽').toLocaleString());
+                setVal('sum_legion', sumAct('?붽컙 ?깅え?섏쓽 援곕떒 ?쎄린').toLocaleString());
 
-                setVal('sum_new', sumAct('새 가족 찾기').toLocaleString());
-                setVal('sum_soul', '0');
-                // 사랑의 증언활동 개별 집계 (복지시설, 병원.요양원, 기타 사랑봉사)
-                setVal('sum_wel', sumAct('복지시설').toLocaleString());
-                setVal('sum_hosp', sumAct('병원.요양원').toLocaleString());
-                setVal('sum_oth', sumAct('기타 사랑봉사').toLocaleString());
+                setVal('sum_new', sumAct('??媛議?李얘린').toLocaleString());
+                setVal('sum_soul', sumAct('?됰떞 援먯슦 ?뚮몢').toLocaleString());
+                // ?щ옉??利앹뼵?쒕룞 媛쒕퀎 吏묎퀎 (蹂듭??쒖꽕, 蹂묒썝.?붿뼇?? 湲고? ?щ옉遊됱궗)
+                setVal('sum_wel', sumAct('蹂듭??쒖꽕').toLocaleString());
+                setVal('sum_hosp', sumAct('蹂묒썝.?붿뼇??).toLocaleString());
+                setVal('sum_oth', sumAct('湲고? ?щ옉遊됱궗').toLocaleString());
 
-                setVal('sum_peace', sumAct('밤9시 주모경 바치기').toLocaleString()); // 복구됨
-                setVal('sum_care', sumAct('쉬는 교우(5년이내) 돌봄').toLocaleString());
-                setVal('sum_eco', sumAct('탄소중립 실천하기').toLocaleString()); // 항목 추가
-                setVal('sum_holy', sumAct('거룩한 독서').toLocaleString());     // 복구
-                setVal('sum_note', '0'); // 노트작성 (임시 0)
+                setVal('sum_peace', sumAct('諛???二쇰え寃?諛붿튂湲?).toLocaleString()); // 蹂듦뎄??                setVal('sum_care', sumAct('?щ뒗 援먯슦(5?꾩씠?? ?뚮큵').toLocaleString());
+                setVal('sum_eco', sumAct('?꾩냼以묐┰ ?ㅼ쿇?섍린').toLocaleString()); // ??ぉ 異붽?
+                setVal('sum_holy', sumAct('嫄곕）???낆꽌').toLocaleString());     // 蹂듦뎄
+                setVal('sum_note', '0'); // ?명듃?묒꽦 (?꾩떆 0)
 
-                // 8. 활동 상세
-                // --- 이미지 기반 고도화된 기본 데이터 세트 (activity_register.html과 동일) ---
+                // 8. ?쒕룞 ?곸꽭
+                // --- ?대?吏 湲곕컲 怨좊룄?붾맂 湲곕낯 ?곗씠???명듃 (activity_register.html怨??숈씪) ---
                 const DEFAULT_SCHEMA = [
                     {
-                        id: 'cat_senatus', title: '교구 또는 레지오 세나뚜스 지시 사항', items: [
-                            { name: '밤9시 주모경 바치기', unit: '회' }, { name: '월간 성모님의 군단 읽기', unit: '회' },
-                            { name: '새 가족 찾기', unit: '회' }, { name: '쉬는 교우(5년이내) 돌봄', unit: '회' },
-                            { name: '사목자를 위한 기도', unit: '회' }, { name: '협조단원 행동단원 입단', unit: '회' }
+                        id: 'cat_senatus', title: '援먭뎄 ?먮뒗 ?덉????몃굹?쒖뒪 吏???ы빆', items: [
+                            { name: '諛???二쇰え寃?諛붿튂湲?, unit: '?? }, { name: '?붽컙 ?깅え?섏쓽 援곕떒 ?쎄린', unit: '?? },
+                            { name: '??媛議?李얘린', unit: '?? }, { name: '?щ뒗 援먯슦(5?꾩씠?? ?뚮큵', unit: '?? },
+                            { name: '?щぉ?먮? ?꾪븳 湲곕룄', unit: '?? }, { name: '?묒“?⑥썝 ?됰룞?⑥썝 ?낅떒', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_pastor', title: '본당 사목자 지시 사항', items: [
-                            { name: '거룩한 독서', unit: '회' }, { name: '냉담 교우 회두', unit: '회' }
+                        id: 'cat_pastor', title: '蹂몃떦 ?щぉ??吏???ы빆', items: [
+                            { name: '嫄곕）???낆꽌', unit: '?? }, { name: '?됰떞 援먯슦 ?뚮몢', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_mission', title: '입교 권면', items: [
-                            { name: '외인 입교 권면', unit: '회' }, { name: '교리 중단자 재권면', unit: '회' },
-                            { name: '개종 권면', unit: '회' }, { name: '가두 선교', unit: '회' }, { name: '방문 선교', unit: '회' }
+                        id: 'cat_mission', title: '?낃탳 沅뚮㈃', items: [
+                            { name: '?몄씤 ?낃탳 沅뚮㈃', unit: '?? }, { name: '援먮━ 以묐떒???ш텒硫?, unit: '?? },
+                            { name: '媛쒖쥌 沅뚮㈃', unit: '?? }, { name: '媛???좉탳', unit: '?? }, { name: '諛⑸Ц ?좉탳', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_nonbeliever', title: '예비신자 돌봄', items: [
-                            { name: '교리반 인도 예비신자 돌봄', unit: '회' }, { name: '통신교리자 돌봄', unit: '회' }, { name: '교리반 봉사 또는 협조', unit: '회' }
+                        id: 'cat_nonbeliever', title: '?덈퉬?좎옄 ?뚮큵', items: [
+                            { name: '援먮━諛??몃룄 ?덈퉬?좎옄 ?뚮큵', unit: '?? }, { name: '?듭떊援먮━???뚮큵', unit: '?? }, { name: '援먮━諛?遊됱궗 ?먮뒗 ?묒“', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_care', title: '교우 돌봄', items: [
-                            { name: '새영세자돌봄', unit: '회' }, { name: '전입교우 돌봄', unit: '회' }, { name: '쉬는교우 돌봄', unit: '회' },
-                            { name: '조당(혼인장애)자 안내', unit: '회' }, { name: '성사 권면', unit: '회' }, { name: '유아 세례 권면', unit: '회' },
-                            { name: '첫 영성체', unit: '회' }, { name: '교우 가정 방문', unit: '회' }
+                        id: 'cat_care', title: '援먯슦 ?뚮큵', items: [
+                            { name: '?덉쁺?몄옄?뚮큵', unit: '?? }, { name: '?꾩엯援먯슦 ?뚮큵', unit: '?? }, { name: '?щ뒗援먯슦 ?뚮큵', unit: '?? },
+                            { name: '議곕떦(?쇱씤?μ븷)???덈궡', unit: '?? }, { name: '?깆궗 沅뚮㈃', unit: '?? }, { name: '?좎븘 ?몃? 沅뚮㈃', unit: '?? },
+                            { name: '泥??곸꽦泥?, unit: '?? }, { name: '援먯슦 媛??諛⑸Ц', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_suffering', title: '어려움 겪는 분 돌봄', items: [
-                            { name: '교우 환자 방문', unit: '회' }, { name: '외인 환자 방문', unit: '회' }, { name: '다문화 가정 돌봄', unit: '회' },
-                            { name: '외인 상가 돌봄', unit: '회' }, { name: '교우 상가 돌봄', unit: '회' }, { name: '위령기도[연도]', unit: '회' },
-                            { name: '장례미사', unit: '회' }, { name: '추모미사', unit: '회' }, { name: '입관', unit: '회' }, { name: '장지 수행', unit: '회' }
+                        id: 'cat_suffering', title: '?대젮? 寃る뒗 遺??뚮큵', items: [
+                            { name: '援먯슦 ?섏옄 諛⑸Ц', unit: '?? }, { name: '?몄씤 ?섏옄 諛⑸Ц', unit: '?? }, { name: '?ㅻЦ??媛???뚮큵', unit: '?? },
+                            { name: '?몄씤 ?곴? ?뚮큵', unit: '?? }, { name: '援먯슦 ?곴? ?뚮큵', unit: '?? }, { name: '?꾨졊湲곕룄[?곕룄]', unit: '?? },
+                            { name: '?λ?誘몄궗', unit: '?? }, { name: '異붾え誘몄궗', unit: '?? }, { name: '?낃?', unit: '?? }, { name: '?μ? ?섑뻾', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_expansion', title: '레지오 확장', items: [
-                            { name: '행동단원 모집', unit: '회' }, { name: '협조단원 모집 및 돌봄', unit: '회' }, { name: '소년 레지오 지도', unit: '회' }, { name: '입단권면', unit: '회' }
+                        id: 'cat_expansion', title: '?덉????뺤옣', items: [
+                            { name: '?됰룞?⑥썝 紐⑥쭛', unit: '?? }, { name: '?묒“?⑥썝 紐⑥쭛 諛??뚮큵', unit: '?? }, { name: '?뚮뀈 ?덉???吏??, unit: '?? }, { name: '?낅떒沅뚮㈃', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_special', title: '특별 활동', items: [
-                            { name: '호구조사(호별방문)', unit: '회' }, { name: '재해 및 사고 피해자 돌봄', unit: '회' },
-                            { name: '복지시설 노력 봉사', unit: '회' }, { name: '병원방문 활동', unit: '회' }, { name: '기타 특별활동', unit: '회' }
+                        id: 'cat_special', title: '?밸퀎 ?쒕룞', items: [
+                            { name: '?멸뎄議곗궗(?몃퀎諛⑸Ц)', unit: '?? }, { name: '?ы빐 諛??ш퀬 ?쇳빐???뚮큵', unit: '?? },
+                            { name: '蹂듭??쒖꽕 ?몃젰 遊됱궗', unit: '?? }, { name: '蹂묒썝諛⑸Ц ?쒕룞', unit: '?? }, { name: '湲고? ?밸퀎?쒕룞', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_parish_service', title: '본당 협조', items: [
-                            { name: '행사 준비 및 협조', unit: '회' }, { name: '주일학교 돌봄', unit: '회' },
-                            { name: '청소 미화', unit: '회' }, { name: '미사안내 봉사', unit: '회' }, { name: '기타 본당 협조', unit: '회' }
+                        id: 'cat_parish_service', title: '蹂몃떦 ?묒“', items: [
+                            { name: '?됱궗 以鍮?諛??묒“', unit: '?? }, { name: '二쇱씪?숆탳 ?뚮큵', unit: '?? },
+                            { name: '泥?냼 誘명솕', unit: '?? }, { name: '誘몄궗?덈궡 遊됱궗', unit: '?? }, { name: '湲고? 蹂몃떦 ?묒“', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_community', title: '소공동체 활동', items: [
-                            { name: '소공동체 모임 참석', unit: '회' }, { name: '구역.반장교육 참석', unit: '회' }, { name: '반모임 참석', unit: '회' }, { name: '기타 소공동체', unit: '회' }
+                        id: 'cat_community', title: '?뚭났?숈껜 ?쒕룞', items: [
+                            { name: '?뚭났?숈껜 紐⑥엫 李몄꽍', unit: '?? }, { name: '援ъ뿭.諛섏옣援먯쑁 李몄꽍', unit: '?? }, { name: '諛섎え??李몄꽍', unit: '?? }, { name: '湲고? ?뚭났?숈껜', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_family', title: '가정성화 활동', items: [
-                            { name: '가족이 함께 모여 기도하기', unit: '회' }, { name: '외짝교우 부부 성경 봉독 및 기도', unit: '회' },
-                            { name: '자녀와 함께 미사 참례 및 기도', unit: '회' }, { name: '가족 복지시설 봉사', unit: '회' },
-                            { name: '출가한 자녀 함께 기도 및 미사 참례', unit: '회' }, { name: '영유아와 함께 미사 참례', unit: '회' }
+                        id: 'cat_family', title: '媛?뺤꽦???쒕룞', items: [
+                            { name: '媛議깆씠 ?④퍡 紐⑥뿬 湲곕룄?섍린', unit: '?? }, { name: '?몄쭩援먯슦 遺遺 ?깃꼍 遊됰룆 諛?湲곕룄', unit: '?? },
+                            { name: '?먮?? ?④퍡 誘몄궗 李몃? 諛?湲곕룄', unit: '?? }, { name: '媛議?蹂듭??쒖꽕 遊됱궗', unit: '?? },
+                            { name: '異쒓????먮? ?④퍡 湲곕룄 諛?誘몄궗 李몃?', unit: '?? }, { name: '?곸쑀?꾩? ?④퍡 誘몄궗 李몃?', unit: '?? }
                         ]
                     },
                     {
-                        id: 'cat_others_simple', title: '기타활동(1)', items: [
-                            { name: '출판물 보급', unit: '회', isActive: true }, { name: '탄소중립 실천하기', unit: '회', isActive: true }
+                        id: 'cat_others_simple', title: '湲고??쒕룞(1)', items: [
+                            { name: '異쒗뙋臾?蹂닿툒', unit: '??, isActive: true }, { name: '?꾩냼以묐┰ ?ㅼ쿇?섍린', unit: '??, isActive: true }
                         ]
                     },
                     {
-                        id: 'cat_others_detail', title: '기타활동(2)', items: [
-                            { name: '묵주기도', unit: '단', isActive: true }, { name: '평일미사참례', unit: '회', isActive: true },
-                            { name: '성경읽기', unit: '장', isActive: true }, { name: '성경쓰기', unit: '장', isActive: true },
-                            { name: '매일미사읽고묵상', unit: '회', isActive: true }, { name: '십자가의 길', unit: '회', isActive: true },
-                            { name: '성체조배', unit: '회', isActive: true }, { name: '성시간 참석', unit: '회', isActive: true },
-                            { name: '교본읽기', unit: '쪽', isActive: true }, { name: '신심영상 시청', unit: '회', isActive: true },
-                            { name: '신심서적', unit: '쪽', isActive: true }, { name: '희생', unit: '회', isActive: true },
-                            { name: '피정', unit: '회', isActive: true }, { name: '성지순례', unit: '회', isActive: true },
-                            { name: '화살기도', unit: '회', isActive: true }
+                        id: 'cat_others_detail', title: '湲고??쒕룞(2)', items: [
+                            { name: '臾듭＜湲곕룄', unit: '??, isActive: true }, { name: '?됱씪誘몄궗李몃?', unit: '??, isActive: true },
+                            { name: '?깃꼍?쎄린', unit: '??, isActive: true }, { name: '?깃꼍?곌린', unit: '??, isActive: true },
+                            { name: '留ㅼ씪誘몄궗?쎄퀬臾듭긽', unit: '??, isActive: true }, { name: '??옄媛??湲?, unit: '??, isActive: true },
+                            { name: '?깆껜議곕같', unit: '??, isActive: true }, { name: '?깆떆媛?李몄꽍', unit: '??, isActive: true },
+                            { name: '援먮낯?쎄린', unit: '履?, isActive: true }, { name: '?좎떖?곸긽 ?쒖껌', unit: '??, isActive: true },
+                            { name: '?좎떖?쒖쟻', unit: '履?, isActive: true }, { name: '?ъ깮', unit: '??, isActive: true },
+                            { name: '?쇱젙', unit: '??, isActive: true }, { name: '?깆??쒕?', unit: '??, isActive: true },
+                            { name: '?붿궡湲곕룄', unit: '??, isActive: true }
                         ]
                     },
                     {
-                        id: 'cat_charity', title: '사랑의 증언활동', items: [
-                            { name: '복지시설', unit: '회', isActive: true }, { name: '병원.요양원', unit: '회', isActive: true }, { name: '기타 사랑봉사', unit: '회', isActive: true }
+                        id: 'cat_charity', title: '?щ옉??利앹뼵?쒕룞', items: [
+                            { name: '蹂듭??쒖꽕', unit: '??, isActive: true }, { name: '蹂묒썝.?붿뼇??, unit: '??, isActive: true }, { name: '湲고? ?щ옉遊됱궗', unit: '??, isActive: true }
                         ]
                     }
                 ];
@@ -1797,16 +1520,16 @@
 
                 let grpSimple = null, grpDetail = null, grpCharity = null;
 
-                // [시니어 패치] 보고서 식별키 정의 (스냅샷 매칭용)
+                // [?쒕땲???⑥튂] 蹂닿퀬???앸퀎???뺤쓽 (?ㅻ깄??留ㅼ묶??
                 reportKey = {
                     churchName: church,
-                    curiaName: curia, // [추가] 꾸리아 정보 포함
+                    curiaName: curia, // [異붽?] 袁몃━???뺣낫 ?ы븿
                     presidiumName: pr,
                     startSess: ssValue || (atts.length > 0 ? (atts[0].session || '-') : '-'),
                     endSess: esValue || (atts.length > 0 ? (atts[atts.length - 1].session || '-') : '-')
                 };
 
-                // [시니어 패치] 보고서 데이터 스냅샷 로드 로직
+                // [?쒕땲???⑥튂] 蹂닿퀬???곗씠???ㅻ깄??濡쒕뱶 濡쒖쭅
                 getStatusData = async () => {
                     const reportId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`;
                     const snap = await getDoc(doc(db, 'monthly_report_status', reportId));
@@ -1816,12 +1539,12 @@
                 const statusData = await getStatusData();
                 const currentStatus = statusData ? statusData.status : '';
                 
-                // [시니어 패치] 스냅샷 데이터가 있으면 즉시 렌더링하고 종료
+                // [?쒕땲???⑥튂] ?ㅻ깄???곗씠?곌? ?덉쑝硫?利됱떆 ?뚮뜑留곹븯怨?醫낅즺
                 if (statusData && statusData.reportData) {
-                    console.log("📦 스냅샷 데이터를 로드합니다.");
+                    console.log("?벀 ?ㅻ깄???곗씠?곕? 濡쒕뱶?⑸땲??");
                     const rd = statusData.reportData;
                     
-                    // 1. 기본 정보 및 헤더
+                    // 1. 湲곕낯 ?뺣낫 諛??ㅻ뜑
                     document.getElementById('repYear').textContent = rd.repYear || '';
                     document.getElementById('repMonth').textContent = rd.repMonth || '';
                     document.getElementById('repStartSess').textContent = rd.repStartSess || '';
@@ -1833,12 +1556,12 @@
                     document.getElementById('repPlace').textContent = rd.repPlace || '';
                     document.getElementById('repPriest').textContent = rd.repPriest || '';
                     
-                    // 2. 명단 및 요약
+                    // 2. 紐낅떒 諛??붿빟
                     document.getElementById('offTableBody').innerHTML = rd.offTableBody || '';
                     document.getElementById('repAttOff').textContent = rd.repAttOff || '';
                     document.getElementById('repAttMem').textContent = rd.repAttMem || '';
                     
-                    // 3. 단원 현황 (setVal 대상들)
+                    // 3. ?⑥썝 ?꾪솴 (setVal ??곷뱾)
                     const stats = [
                         'm_p_m', 'm_p_f', 'm_p_t', 'm_c_m', 'm_c_f', 'm_c_t',
                         'm_i_m', 'm_i_f', 'm_i_t', 'm_o_m', 'm_o_f', 'm_o_t',
@@ -1851,7 +1574,7 @@
                         if (el) el.textContent = rd[id] || '0';
                     });
 
-                    // 4. 회계 및 활동 요약 (setVal 대상들 추가)
+                    // 4. ?뚭퀎 諛??쒕룞 ?붿빟 (setVal ??곷뱾 異붽?)
                     const accs = [
                         'acc_prev', 'acc_in', 'acc_out', 'acc_bal', 'exp_cont', 'exp_flow', 'exp_etc',
                         'sum_rosary', 'sum_mass', 'sum_bible', 'sum_medi', 'sum_legion',
@@ -1863,9 +1586,9 @@
                         if (el) el.textContent = rd[id] || '0';
                     });
 
-                    // 5. 기타 및 활동 요약/행사
+                    // 5. 湲고? 諛??쒕룞 ?붿빟/?됱궗
                     document.getElementById('repEtc').textContent = rd.repEtc || '';
-                    // 5-1. 하단 조직 정보 로드 (스냅샷 우선)
+                    // 5-1. ?섎떒 議곗쭅 ?뺣낫 濡쒕뱶 (?ㅻ깄???곗꽑)
                     if (document.getElementById('footChurch')) document.getElementById('footChurch').textContent = rd.footChurch || rd.churchName || '';
                     if (document.getElementById('footCu')) document.getElementById('footCu').textContent = rd.footCu || rd.curiaName || '';
                     if (document.getElementById('footPr')) document.getElementById('footPr').textContent = rd.footPr || rd.presidiumName || '';
@@ -1882,19 +1605,19 @@
                         document.getElementById('grandTotalCount').textContent = rd.grandTotalCount || '0';
                     }
 
-                    // 6. 하단 성명 구역
+                    // 6. ?섎떒 ?깅챸 援ъ뿭
                     officialPresidentName = rd.officialPresidentName || '';
                     officialPresidentId = rd.officialPresidentId || '';
                 } else {
-                    // [시니어 패치] 스냅샷 데이터가 없을 때만 실시간 계산 로직 실행
+                    // [?쒕땲???⑥튂] ?ㅻ깄???곗씠?곌? ?놁쓣 ?뚮쭔 ?ㅼ떆媛?怨꾩궛 濡쒖쭅 ?ㅽ뻾
 
-                // 1. 일반 그룹 처리 및 특수 그룹 분리
+                // 1. ?쇰컲 洹몃９ 泥섎━ 諛??뱀닔 洹몃９ 遺꾨━
                 grpSimple = null; grpDetail = null; grpCharity = null;
                 const filteredSchema = prSchema.filter(group => {
                     const title = group.title || '';
-                    if (title.includes('기타활동(1)')) { grpSimple = group; return false; }
-                    if (title.includes('기타활동(2)') || title === '기타 활동') { grpDetail = group; return false; }
-                    if (title.includes('사랑의 증언')) { grpCharity = group; return false; }
+                    if (title.includes('湲고??쒕룞(1)')) { grpSimple = group; return false; }
+                    if (title.includes('湲고??쒕룞(2)') || title === '湲고? ?쒕룞') { grpDetail = group; return false; }
+                    if (title.includes('?щ옉??利앹뼵')) { grpCharity = group; return false; }
                     return true;
                 });
 
@@ -1911,10 +1634,10 @@
 
                     gCount += groupCount;
                     const gTotalStr = groupCount > 0 ? groupCount.toLocaleString() : '-';
-                    detailHtml += `<tr><th>${group.title}</th><td style="text-align:center;">${gTotalStr}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${groupDetails.join(', ')}</td></tr>`;
+                    detailHtml += `<tr><th>${group.title}</th><td>${gTotalStr}</td><td style="text-align:left; padding-left:10px; line-height:1.6;">${groupDetails.join(', ')}</td></tr>`;
                 });
 
-                // 2. 기타 활동 병합 처리 (2행 구성)
+                // 2. 湲고? ?쒕룞 蹂묓빀 泥섎━ (2??援ъ꽦)
                 let simpleCount = 0, simpleDetails = [];
                 if (grpSimple) {
                     grpSimple.items.forEach(it => {
@@ -1936,7 +1659,7 @@
                         const cStr = c.toLocaleString();
                         dItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
-                    if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6; text-align:left; padding-left:10px;"><span style="text-decoration:underline;">기도 및 신심행위</span> : ` + dItems.join(', ') + `</div>`;
+                    if (dItems.length > 0) detailItemsStr = `<div style="margin-bottom:4px; line-height:1.6;"><span style="text-decoration:underline;">湲곕룄 諛??좎떖?됱쐞</span> : ` + dItems.join(', ') + `</div>`;
                 }
 
                 if (grpCharity) {
@@ -1947,19 +1670,19 @@
                         const cStr = c.toLocaleString();
                         cItems.push(`<span style="white-space:nowrap;">${it.name} (${cStr})</span>`);
                     });
-                    if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6; text-align:left; padding-left:10px;"><span style="text-decoration:underline;">사랑의 증언활동</span> : ` + cItems.join(', ') + `</div>`;
+                    if (cItems.length > 0) charityItemsStr = `<div style="line-height:1.6;"><span style="text-decoration:underline;">?щ옉??利앹뼵?쒕룞</span> : ` + cItems.join(', ') + `</div>`;
                 }
 
                 gCount += (simpleCount + combinedCount);
 
                 detailHtml += `<tr>
-                    <th rowspan="2">${grpSimple.title}</th>
-                    <td style="text-align:center;">${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
+                    <th rowspan="2">湲고? ?쒕룞</th>
+                    <td>${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
                     <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
                 </tr>`;
 
                 detailHtml += `<tr>
-                    <td style="border-left:1px solid #000; text-align:center;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
+                    <td style="border-left:1px solid #000;">${combinedCount > 0 ? combinedCount.toLocaleString() : '-'}</td>
                     <td style="text-align:left; padding-left:10px; vertical-align:top; border-left:1px solid #000;">
                         ${detailItemsStr}
                         ${charityItemsStr}
@@ -1967,157 +1690,139 @@
                 </tr>`;
 
 
-                const spec1Val = sumAct('대전교구 레지오마리애 도입 70주년 묵주기도');
-                const spec2Val = sumAct('서울세계청년대회 묵주기도 10억 단 바치기');
-                const spec3Val = sumAct('관평동성당 첫 사제를 위한 영적 예물 바치기');
+                const spec1Val = sumAct('??꾧탳援??덉??ㅻ쭏由ъ븷 ?꾩엯 70二쇰뀈 臾듭＜湲곕룄');
+                const spec2Val = sumAct('?쒖슱?멸퀎泥?뀈???臾듭＜湲곕룄 10????諛붿튂湲?);
+                const spec3Val = sumAct('愿?됰룞?깅떦 泥??ъ젣瑜??꾪븳 ?곸쟻 ?덈Ъ 諛붿튂湲?);
                 const rosaryMax = Math.max(spec1Val, spec2Val, spec3Val);
 
-                const newFamVal = sumAct('새 가족 찾기');
-                const soulVal = 0;
-                const welVal = sumAct('복지시설');
-                const hospVal = sumAct('병원.요양원');
-                const charityEtcVal = sumAct('기타 사랑봉사');
-                const peaceVal = sumAct('밤9시 주모경 바치기');
-                const enlistVal = sumAct('행동단원 모집') + sumAct('협조단원 모집 및 돌봄');
-                const ecoVal = sumAct('탄소중립 실천하기');
-                const holyReadVal = sumAct('거룩한 독서');
-                const noteVal = 0; // 노트작성 (추후 필요시 연동)
+                const newFamVal = sumAct('??媛議?李얘린');
+                const soulVal = sumAct('?됰떞 援먯슦 ?뚮몢');
+                const welVal = sumAct('蹂듭??쒖꽕');
+                const hospVal = sumAct('蹂묒썝.?붿뼇??);
+                const charityEtcVal = sumAct('湲고? ?щ옉遊됱궗');
+                const peaceVal = sumAct('諛???二쇰え寃?諛붿튂湲?);
+                const enlistVal = sumAct('?됰룞?⑥썝 紐⑥쭛') + sumAct('?묒“?⑥썝 紐⑥쭛 諛??뚮큵');
+                const ecoVal = sumAct('?꾩냼以묐┰ ?ㅼ쿇?섍린');
+                const holyReadVal = sumAct('嫄곕）???낆꽌');
+                const noteVal = 0; // ?명듃?묒꽦 (異뷀썑 ?꾩슂???곕룞)
 
-                const massVal = sumAct('평일미사참례');
-                const bibleVal = sumAct('성경읽기') + sumAct('성경쓰기');
-                const mediVal = sumAct('매일미사읽고묵상');
-                const armyVal = sumAct('월간 성모님의 군단 읽기');
+                const massVal = sumAct('?됱씪誘몄궗李몃?');
+                const bibleVal = sumAct('?깃꼍?쎄린') + sumAct('?깃꼍?곌린');
+                const mediVal = sumAct('留ㅼ씪誘몄궗?쎄퀬臾듭긽');
+                const armyVal = sumAct('?붽컙 ?깅え?섏쓽 援곕떒 ?쎄린');
 
                 const summaryTable = document.getElementById('activitySummaryTable');
                 if (summaryTable) {
                     summaryTable.innerHTML = `
                         <colgroup>
-                            <col style="width: 8mm;">  <!-- 번호1 -->
+                            <col style="width: 8mm;">  <!-- 踰덊샇1 -->
                             <col style="width: 18mm;"> <!-- Title1 -->
-                            <col style="width: 51mm;"> <!-- Item1 (추가 조정) -->
-                            <col style="width: 17mm;"> <!-- Value1 (천단위 수치 대비 확대) -->
-                            <col style="width: 8mm;">  <!-- 번호2 -->
+                            <col style="width: 51mm;"> <!-- Item1 (異붽? 議곗젙) -->
+                            <col style="width: 17mm;"> <!-- Value1 (泥쒕떒???섏튂 ?鍮??뺣?) -->
+                            <col style="width: 8mm;">  <!-- 踰덊샇2 -->
                             <col style="width: 18mm;"> <!-- Title2 -->
-                            <col style="width: 51mm;"> <!-- Item2 (추가 조정) -->
-                            <col style="width: 17mm;"> <!-- Value2 (천단위 수치 대비 확대) -->
+                            <col style="width: 51mm;"> <!-- Item2 (異붽? 議곗젙) -->
+                            <col style="width: 17mm;"> <!-- Value2 (泥쒕떒???섏튂 ?鍮??뺣?) -->
                         </colgroup>
                         <thead>
                             <tr style="height: 6.5mm;">
-                                <th>번호</th>
-                                <th colspan="3">기도 및 신심행위 (Se. 및 교구 · Re.)</th>
-                                <th>번호</th>
-                                <th colspan="3">중 점 활 동</th>
+                                <th>踰덊샇</th>
+                                <th colspan="3">湲곕룄 諛??좎떖?됱쐞 (Se. 諛?援먭뎄 쨌 Re.)</th>
+                                <th>踰덊샇</th>
+                                <th colspan="3">以???????/th>
                             </tr>
                         </thead>
                         <tbody id="activitySummaryBody">
-                            <!-- 1~2행: 묵주기도 + 새가족/회두 -->
+                            <!-- 1~2?? 臾듭＜湲곕룄 + ?덇?議??뚮몢 -->
                             <tr style="height: 10.0mm;">
                                 <td rowspan="2">1</td>
-                                <td rowspan="2" colspan="2" style="text-align:left; padding:1px 5px; line-height:1.1;">
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">① 2027년 대전교구 레지오마리애 도입 70주년 묵주기도 7천만 단 바치기 <span style="white-space:nowrap;">(${spec1Val.toLocaleString()})</span></div>
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">② 서울세계청년대회 묵주기도 10억 단 바치기 <span style="white-space:nowrap;">(${spec2Val.toLocaleString()})</span></div>
-                                    <div class="circled-item" style="color:red; font-weight:bold; word-break: keep-all;">③ 관평동성당 첫 사제를 위한 묵주기도 100만 단 바치기 <span style="white-space:nowrap;">(${spec3Val.toLocaleString()})</span></div>
+                                <td rowspan="2" colspan="2" style="text-align:left; font-size:7.5pt; padding:1px 5px; line-height:1.1;">
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">??2027????꾧탳援??덉??ㅻ쭏由ъ븷 ?꾩엯 70二쇰뀈 臾듭＜湲곕룄 7泥쒕쭔 ??諛붿튂湲?<span style="white-space:nowrap;">(${spec1Val.toLocaleString()})</span></div>
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">???쒖슱?멸퀎泥?뀈???臾듭＜湲곕룄 10????諛붿튂湲?<span style="white-space:nowrap;">(${spec2Val.toLocaleString()})</span></div>
+                                    <div style="color:red; font-weight:bold; padding-left:1.2em; text-indent:-1.2em; word-break: keep-all;">??愿?됰룞?깅떦 泥??ъ젣瑜??꾪븳 臾듭＜湲곕룄 100留???諛붿튂湲?<span style="white-space:nowrap;">(${spec3Val.toLocaleString()})</span></div>
                                 </td>
-                                <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} 단</td>
+                                <td rowspan="2" style="font-weight:bold; text-align:right; padding-right:5px; font-size:10pt; color:red;">${rosaryMax.toLocaleString()} ??/td>
                                 <td rowspan="2">1</td>
-                                <th style="font-size:8pt;">새 가족찾기</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px;">예비자 교리반 입교</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${newFamVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt; border-bottom:0.5pt solid #000;">??媛議깆갼湲?/th>
+                                <td style="font-size:8pt; text-align:left; padding-left:5px; border-bottom:0.5pt solid #000;">?덈퉬??援먮━諛??낃탳</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-bottom:0.5pt solid #000;">${newFamVal.toLocaleString()} 紐?/td>
                             </tr>
                             <tr style="height: 10.0mm;">
-                                <th style="font-size:8pt; line-height:1.2;">쉬는교우<br>회두</th>
-                                <td style="font-size:8pt; text-align:left; padding-left:5px;">고해성사 및 신부님 면담</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${soulVal.toLocaleString()} 명</td>
+                                <th style="font-size:8pt; border-top:1px solid #000; line-height:1.2;">?щ뒗援먯슦<br>?뚮몢</th>
+                                <td style="font-size:8pt; border-top:1px solid #000; text-align:left; padding-left:5px;">怨좏빐?깆궗 諛??좊???硫대떞</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold; border-top:1px solid #000;">${soulVal.toLocaleString()} 紐?/td>
                             </tr>
 
-                            <!-- 3~4행: 평일미사 + 사랑의증언(1,2) -->
+                            <!-- 3~4?? ?됱씪誘몄궗 + ?щ옉?섏쬆??1,2) -->
                             <tr style="height: 10mm;">
                                 <td rowspan="8">2</td>
-                                <td rowspan="8" style="font-weight:bold; font-size:9pt; line-height:1.2;">매일미사<br>와<br>말씀과<br>함께하기</td>
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 평일미사 참례</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${massVal.toLocaleString()} 회</td>
+                                <td rowspan="8" style="font-weight:bold; font-size:9pt; line-height:1.2;">留ㅼ씪誘몄궗<br>?<br>留먯?怨?br>?④퍡?섍린</td>
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">???됱씪誘몄궗 李몃?</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${massVal.toLocaleString()} ??/td>
                                 <td rowspan="3">2</td>
-                                <td rowspan="3" style="font-weight:bold; vertical-align:middle;">사랑의<br>증언활동</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 복지시설</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${welVal.toLocaleString()} 회</td>
+                                <td rowspan="3" style="font-weight:bold;">?щ옉??br>利앹뼵?쒕룞</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">??蹂듭??쒖꽕</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${welVal.toLocaleString()} ??/td>
                             </tr>
                             <tr style="height: 7.5mm;">
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 병원, 요양원</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${hospVal.toLocaleString()} 회</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">??蹂묒썝, ?붿뼇??/td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${hospVal.toLocaleString()} ??/td>
                             </tr>
 
-                            <!-- 5~6행: 성경읽기/쓰기 + 사랑의증언(3) + 밤9시주모경 -->
+                            <!-- 5~6?? ?깃꼍?쎄린/?곌린 + ?щ옉?섏쬆??3) + 諛??쒖＜紐④꼍 -->
                             <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 성경읽기, 쓰기</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${bibleVal.toLocaleString()} 장</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">③ 기타(독거노인 등 소외된 이웃 돌봄)</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${charityEtcVal.toLocaleString()} 회</td>
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">???깃꼍?쎄린, ?곌린</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${bibleVal.toLocaleString()} ??/td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">??湲고?(?낃굅?몄씤 ???뚯쇅???댁썐 ?뚮큵)</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${charityEtcVal.toLocaleString()} ??/td>
                             </tr>
                             <tr style="height: 7.5mm;">
                                 <td>3</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">한반도 평화를 위한 밤 9시 주모경 바치기</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${peaceVal.toLocaleString()} 회</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">?쒕컲???됲솕瑜??꾪븳 諛?9??二쇰え寃?諛붿튂湲?/td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${peaceVal.toLocaleString()} ??/td>
                             </tr>
 
-                            <!-- 7~8행: 매일미사 묵상 + 모집/돌봄 + 탄소중립 -->
+                            <!-- 7~8?? 留ㅼ씪誘몄궗 臾듭긽 + 紐⑥쭛/?뚮큵 + ?꾩냼以묐┰ -->
                             <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">③ 매일미사 읽고, 묵상</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${mediVal.toLocaleString()} 회</td>
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">??留ㅼ씪誘몄궗 ?쎄퀬, 臾듭긽</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${mediVal.toLocaleString()} ??/td>
                                 <td>4</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">행동단원, 협조단원 모집 및 돌봄 활동</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${enlistVal.toLocaleString()} 회</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">?됰룞?⑥썝, ?묒“?⑥썝 紐⑥쭛 諛??뚮큵 ?쒕룞</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${enlistVal.toLocaleString()} ??/td>
                             </tr>
                             <tr style="height: 7.5mm;">
                                 <td>5</td>
-                                <td colspan="2" style="text-align:left; padding-left:10px;">탄소중립 실천하기</td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${ecoVal.toLocaleString()} 회</td>
+                                <td colspan="2" style="text-align:left; padding-left:10px;">?꾩냼以묐┰ ?ㅼ쿇?섍린</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${ecoVal.toLocaleString()} ??/td>
                             </tr>
 
-                            <!-- 9~10행: 군단읽기 + 거룩한독서 -->
+                            <!-- 9~10?? 援곕떒?쎄린 + 嫄곕）?쒕룆??-->
                             <tr style="height: 7.5mm;">
-                                <td rowspan="2" style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">④ 성모님의 군단읽기</div>
-                                </td>
-                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${armyVal.toLocaleString()} 쪽</td>
+                                <td rowspan="2" style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">???깅え?섏쓽 援곕떒?쎄린</td>
+                                <td rowspan="2" style="text-align:right; padding-right:5px; font-weight:bold;">${armyVal.toLocaleString()} 履?/td>
                                 <td rowspan="2">6</td>
-                                <td rowspan="2" style="font-weight:bold; font-size:8.5pt; line-height:1.2;">거룩한<br>독서</td>
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">① 말씀 봉독하기(시청,묵상,기도)</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${holyReadVal.toLocaleString()} 회</td>
+                                <td rowspan="2" style="font-weight:bold; font-size:8.5pt; line-height:1.2;">嫄곕）??br>?낆꽌</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">??留먯? 遊됰룆?섍린(?쒖껌,臾듭긽,湲곕룄)</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${holyReadVal.toLocaleString()} ??/td>
                             </tr>
                             <tr style="height: 7.5mm;">
-                                <td style="text-align:left; padding-left:5px;">
-                                    <div class="circled-item">② 노트작성</div>
-                                </td>
-                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${noteVal.toLocaleString()} 회</td>
+                                <td style="text-align:left; padding-left:5px; padding-left:1.2em; text-indent:-1.2em;">???명듃?묒꽦</td>
+                                <td style="text-align:right; padding-right:5px; font-weight:bold;">${noteVal.toLocaleString()} ??/td>
                             </tr>
                         </tbody>
                     `;
                 }
 
-                document.getElementById('activityDetailBody').innerHTML = detailHtml || '<tr><td colspan="3">해당 기간의 활동 상세 내역이 없습니다.</td></tr>';
+                document.getElementById('activityDetailBody').innerHTML = detailHtml || '<tr><td colspan="3">?대떦 湲곌컙???쒕룞 ?곸꽭 ?댁뿭???놁뒿?덈떎.</td></tr>';
                 setVal('grandTotalCount', gCount.toLocaleString());
 
-                // 9. 푸터
+                // 9. ?명꽣
                 setVal('footChurch', church);
                 setVal('footCu', info.curiaName || (userProfile ? userProfile.curiaName : '') || '-');
                 setVal('footPr', pr);
 
-                // [수정] 단장 및 간부 식별 정보 최종 매개변수화 (V18.1 정석화 - Robust Matching)
-                presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '단장') || {};
+                // [?섏젙] ?⑥옣 諛?媛꾨? ?앸퀎 ?뺣낫 理쒖쥌 留ㅺ컻蹂?섑솕 (V18.1 ?뺤꽍??- Robust Matching)
+                presOff = offs.find(o => isOrgMatch(o.churchName, o.presidiumName) && convertToStdRole(o.role) === '?⑥옣') || {};
                 officialPresidentName = presOff.name || '';
                 officialPresidentId = presOff.memberId || '';
                 
@@ -2126,13 +1831,13 @@
 
             } catch (error) {
                 console.error("Error generating report:", error);
-                window.showCustomAlert('데이터 로드 중 오류가 발생했습니다.');
+                window.showCustomAlert('?곗씠??濡쒕뱶 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
                 return;
             }
 
-            // [추가] 보고서 결재 관련 유틸리티 함수 (V2 복구)
-            // reportKey, getStatusData, renderStatus 등은 generateReport 스코프 전역에서 사용 가능하도록 이미 상단 혹은 구조적으로 배치됨.
-            // 중복 선언부 제거
+            // [異붽?] 蹂닿퀬??寃곗옱 愿???좏떥由ы떚 ?⑥닔 (V2 蹂듦뎄)
+            // reportKey, getStatusData, renderStatus ?깆? generateReport ?ㅼ퐫???꾩뿭?먯꽌 ?ъ슜 媛?ν븯?꾨줉 ?대? ?곷떒 ?뱀? 援ъ“?곸쑝濡?諛곗튂??
+            // 以묐났 ?좎뼵遺 ?쒓굅
 
             async function renderStatus() {
                 try {
@@ -2140,34 +1845,34 @@
                     const data = await getStatusData();
                     const status = data ? data.status : 'Draft';
 
-                    // [보강] 권한 확인을 위한 사용자 정보 추출 (FallBack 제거 및 DB 명단 대조)
+                    // [蹂닿컯] 沅뚰븳 ?뺤씤???꾪븳 ?ъ슜???뺣낫 異붿텧 (FallBack ?쒓굅 諛?DB 紐낅떒 ?議?
                     const profile = userProfile || {};
                     const stdRole = convertToStdRole(profile.role);
-                    const isSystemAdmin = stdRole === '관리자';
+                    const isSystemAdmin = stdRole === '愿由ъ옄';
                     
-                    // [핵심] DB 명단(offIds) 기반 권한 체크 (모든 ID 후보군 대조)
+                    // [?듭떖] DB 紐낅떒(offIds) 湲곕컲 沅뚰븳 泥댄겕 (紐⑤뱺 ID ?꾨낫援??議?
                     const profileIds = [profile.memberId, profile.id, profile.uid, profile.memberUID, profile.UID];
                     const isOfficerDB = profileIds.some(pid => pid && offIds.has(String(pid).trim()));
 
                     const currentUserName = String(profile.name || '').replace(/\s/g, '');
                     const targetPresName = String(officialPresidentName || '').replace(/\s/g, '');
 
-                    // 1. 단장 권한 (Approval) - [Robust] 직책 매칭과 성명 매칭을 모두 포괄
+                    // 1. ?⑥옣 沅뚰븳 (Approval) - [Robust] 吏곸콉 留ㅼ묶怨??깅챸 留ㅼ묶??紐⑤몢 ?ш큵
                     const isPresident = isSystemAdmin || 
-                        (stdRole === '단장') || 
+                        (stdRole === '?⑥옣') || 
                         (currentUserName !== '' && targetPresName !== '' && currentUserName === targetPresName);
 
-                    // 2. 간부 권한 (Preparation/Edit)
-                    const officerRoles = ['단장', '부단장', '서기', '회계'];
+                    // 2. 媛꾨? 沅뚰븳 (Preparation/Edit)
+                    const officerRoles = ['?⑥옣', '遺?⑥옣', '?쒓린', '?뚭퀎'];
                     const isOfficer = isSystemAdmin || isOfficerDB || officerRoles.includes(stdRole) || isPresident;
 
-                    // [디버그] 권한 체크 결과 확인
-                    console.log("🔍 [3단계: 로그인 사용자 권한 확인]");
-                    console.log(" - 현재 로그인 사용자:", profile.name, `(${stdRole})`);
-                    console.log(" - DB 간부 명단 포함 여부:", isOfficerDB ? "✅ 매칭 성공" : "❌ 매칭 실패");
-                    console.log(" - 단장 권한(isPresident):", isPresident ? "✅ YES" : "❌ NO");
-                    console.log(" - 간부 권한(isOfficer):", isOfficer ? "✅ YES" : "❌ NO");
-                    console.log(" - 현재 보고서 상태:", status);
+                    // [?붾쾭洹? 沅뚰븳 泥댄겕 寃곌낵 ?뺤씤
+                    console.log("?뵇 [3?④퀎: 濡쒓렇???ъ슜??沅뚰븳 ?뺤씤]");
+                    console.log(" - ?꾩옱 濡쒓렇???ъ슜??", profile.name, `(${stdRole})`);
+                    console.log(" - DB 媛꾨? 紐낅떒 ?ы븿 ?щ?:", isOfficerDB ? "??留ㅼ묶 ?깃났" : "??留ㅼ묶 ?ㅽ뙣");
+                    console.log(" - ?⑥옣 沅뚰븳(isPresident):", isPresident ? "??YES" : "??NO");
+                    console.log(" - 媛꾨? 沅뚰븳(isOfficer):", isOfficer ? "??YES" : "??NO");
+                    console.log(" - ?꾩옱 蹂닿퀬???곹깭:", status);
 
                     console.log("Debug Auth - RawRole:", profile.role, "StdRole:", stdRole, "IsOffDB:", isOfficerDB, "isPresident:", isPresident, "isOfficer:", isOfficer, "offIdsCount:", offIds.size);
 
@@ -2185,62 +1890,60 @@
                     return;
                 }
 
-                // 1. 상태 배지 업데이트
+                // 1. ?곹깭 諛곗? ?낅뜲?댄듃
                 if (status === 'Approved') {
-                    badge.textContent = '상태: 단장 승인 완료';
+                    badge.textContent = '?곹깭: ?⑥옣 ?뱀씤 ?꾨즺';
                     badge.style.background = '#27ae60';
                     badge.style.color = 'white';
                 } else if (data) {
-                    badge.textContent = '상태: 검토 중 (미승인)';
+                    badge.textContent = '?곹깭: 寃??以?(誘몄듅??';
                     badge.style.background = '#e67e22';
                     badge.style.color = 'white';
                 } else {
-                    badge.textContent = '상태: 미작성';
+                    badge.textContent = '?곹깭: 誘몄옉??;
                     badge.style.background = '#eee';
                     badge.style.color = '#666';
                 }
 
-                // [추가] 단장 승인 시(Approved)에만 2페이지 활동 사항 합계행 숨기기
-                if (totalFoot) {
+                // [異붽?] ?⑥옣 ?뱀씤 ??Approved)?먮쭔 2?섏씠吏 ?쒕룞 ?ы빆 ?⑷퀎???④린湲?                if (totalFoot) {
                     totalFoot.style.display = (status === 'Approved') ? 'none' : 'table-footer-group';
                 }
 
-                // 2. 버튼 가시성 제어 (로직 완화: 간부라면 모드와 무관하게 미승인 상태에서 버튼 노출)
+                // 2. 踰꾪듉 媛?쒖꽦 ?쒖뼱 (濡쒖쭅 ?꾪솕: 媛꾨??쇰㈃ 紐⑤뱶? 臾닿??섍쾶 誘몄듅???곹깭?먯꽌 踰꾪듉 ?몄텧)
                 console.log("Permission Check - isOfficer:", isOfficer, "status:", status, "mode:", mode);
                 const canFinalize = (isOfficer && status !== 'Approved') || (mode === 'create');
                 btnFin.style.display = canFinalize ? 'block' : 'none';
                 
-                // 승인 버튼은 단장에게만 노출 (조회/생성 모드 관계없이 승인 전이면 노출)
+                // ?뱀씤 踰꾪듉? ?⑥옣?먭쾶留??몄텧 (議고쉶/?앹꽦 紐⑤뱶 愿怨꾩뾾???뱀씤 ?꾩씠硫??몄텧)
                 btnApp.style.display = (isPresident && status !== 'Approved') ? 'block' : 'none';
                 
-                // 승인 취소 / 확정 취소 버튼 가권한 로직 보강
-                // - 승인 완료(Approved) 상태: 단장 이상만 취소 가능 (기존 유지)
-                // - 확정(Draft) 상태: 간부 이상 누구나 "확정 취소" 가능 (신규)
+                // ?뱀씤 痍⑥냼 / ?뺤젙 痍⑥냼 踰꾪듉 媛沅뚰븳 濡쒖쭅 蹂닿컯
+                // - ?뱀씤 ?꾨즺(Approved) ?곹깭: ?⑥옣 ?댁긽留?痍⑥냼 媛??(湲곗〈 ?좎?)
+                // - ?뺤젙(Draft) ?곹깭: 媛꾨? ?댁긽 ?꾧뎄??"?뺤젙 痍⑥냼" 媛??(?좉퇋)
                 const canCancel = (isPresident && status === 'Approved') || (isOfficer && status === 'Draft');
                 btnCan.style.display = canCancel ? 'block' : 'none';
                 
                 if (status === 'Draft') {
-                    btnCan.innerHTML = '<i class="fas fa-undo"></i> 확정 취소';
-                    btnCan.title = "보고서 확정을 취소하고 미작성 상태로 되돌립니다.";
+                    btnCan.innerHTML = '<i class="fas fa-undo"></i> ?뺤젙 痍⑥냼';
+                    btnCan.title = "蹂닿퀬???뺤젙??痍⑥냼?섍퀬 誘몄옉???곹깭濡??섎룎由쎈땲??";
                 } else if (status === 'Approved') {
-                    btnCan.innerHTML = '<i class="fas fa-undo"></i> 승인 취소/수정';
-                    btnCan.title = "최종 승인을 취소하고 수정 가능한 상태로 되돌립니다.";
+                    btnCan.innerHTML = '<i class="fas fa-undo"></i> ?뱀씤 痍⑥냼/?섏젙';
+                    btnCan.title = "理쒖쥌 ?뱀씤??痍⑥냼?섍퀬 ?섏젙 媛?ν븳 ?곹깭濡??섎룎由쎈땲??";
                 }
 
-                // 3. 서명(직인) 및 성명 렌더링
-                if (!footNameArea) return; // 하단 성명란이 없으면 종료
+                // 3. ?쒕챸(吏곸씤) 諛??깅챸 ?뚮뜑留?                if (!footNameArea) return; // ?섎떒 ?깅챸????놁쑝硫?醫낅즺
 
                 const signMark = footNameArea.nextSibling;
                 if (status === 'Approved' && data) {
-                    // 성함: 공식 단장 이름 우선, 없으면 서명자 이름 표시
+                    // ?깊븿: 怨듭떇 ?⑥옣 ?대쫫 ?곗꽑, ?놁쑝硫??쒕챸???대쫫 ?쒖떆
                     footNameArea.textContent = officialPresidentName || data.signer || '-';
 
-                    // [개선] 서명 이미지 조회 (복합 인덱스 오류 방지를 위해 쿼리 단순화)
+                    // [媛쒖꽑] ?쒕챸 ?대?吏 議고쉶 (蹂듯빀 ?몃뜳???ㅻ쪟 諛⑹?瑜??꾪빐 荑쇰━ ?⑥닚??
                     let signatureImg = null;
                     try {
-                        // [개선] 이름 대신 고유 ID(UID)로 직접 조회하여 동명이인 문제 원천 차단
+                        // [媛쒖꽑] ?대쫫 ???怨좎쑀 ID(UID)濡?吏곸젒 議고쉶?섏뿬 ?숇챸?댁씤 臾몄젣 ?먯쿇 李⑤떒
                         let matchedProfile = null;
-                        // 1. 최우선: 보고서 작성(결재) 당시 기록된 실제 서명자의 UID로 조회
+                        // 1. 理쒖슦?? 蹂닿퀬???묒꽦(寃곗옱) ?뱀떆 湲곕줉???ㅼ젣 ?쒕챸?먯쓽 UID濡?議고쉶
                         if (data.signerUid) {
                             const pSnap = await getDoc(doc(db, 'users', data.signerUid));
                             if (pSnap.exists()) {
@@ -2248,8 +1951,7 @@
                             }
                         }
                         
-                        // 2. 차선책: signerUid가 누락된 구형 데이터의 경우, 현재 단장의 'memberId'로 users 컬렉션 검색
-                        if (!matchedProfile && officialPresidentId) {
+                        // 2. 李⑥꽑梨? signerUid媛 ?꾨씫??援ы삎 ?곗씠?곗쓽 寃쎌슦, ?꾩옱 ?⑥옣??'memberId'濡?users 而щ젆??寃??                        if (!matchedProfile && officialPresidentId) {
                             const pQuery = query(collection(db, 'users'), where('memberId', '==', officialPresidentId));
                             const pSnap = await getDocs(pQuery);
                             if (!pSnap.empty) {
@@ -2257,7 +1959,7 @@
                             }
                         }
                         
-                        // [V18.0] 엄격한 ID 기반 연결 의무화에 따라 이름 기반 Fallback 로직 일괄 삭제
+                        // [V18.0] ?꾧꺽??ID 湲곕컲 ?곌껐 ?섎Т?붿뿉 ?곕씪 ?대쫫 湲곕컲 Fallback 濡쒖쭅 ?쇨큵 ??젣
                         if (!matchedProfile) {
                             console.warn("Signature fetch failed: No matching profile found by ID.");
                         }
@@ -2267,8 +1969,7 @@
                         }
                     } catch (e) { console.warn("Signature fetch failed:", e); }
 
-                    // 서명(직인) 렌더링
-                    if (signMark && signMark.nodeType === 3 && signMark.textContent.includes('(인)')) {
+                    // ?쒕챸(吏곸씤) ?뚮뜑留?                    if (signMark && signMark.nodeType === 3 && signMark.textContent.includes('(??')) {
                         const isValidSign = signatureImg && (signatureImg.startsWith('data:image') || signatureImg.length > 20);
                         
                         if (isValidSign) {
@@ -2288,8 +1989,7 @@
                     } else {
                         const existingStamp = footNameArea.parentNode.querySelector('.digital-stamp');
                         if (existingStamp) {
-                            // [보강] 가변 서명 데이터 대응
-                            const isValidSign = signatureImg && (signatureImg.startsWith('data:image') || signatureImg.length > 20);
+                            // [蹂닿컯] 媛蹂 ?쒕챸 ?곗씠?????                            const isValidSign = signatureImg && (signatureImg.startsWith('data:image') || signatureImg.length > 20);
                             
                             if (isValidSign) {
                                 const newStamp = document.createElement('span');
@@ -2307,14 +2007,14 @@
                         }
                     }
                 } else {
-                    // 미승인(Draft 등): 현재 단장 혹은 내 이름 표시 (원래 로직 유지)
+                    // 誘몄듅??Draft ??: ?꾩옱 ?⑥옣 ?뱀? ???대쫫 ?쒖떆 (?먮옒 濡쒖쭅 ?좎?)
                     const currentPres = officialPresidentName || (userProfile ? userProfile.name : '-');
                     footNameArea.textContent = currentPres;
 
-                    // 승인 취소 시 서명(이미지 또는 텍스트 직인) 제거하고 (인) 복구
+                    // ?뱀씤 痍⑥냼 ???쒕챸(?대?吏 ?먮뒗 ?띿뒪??吏곸씤) ?쒓굅?섍퀬 (?? 蹂듦뎄
                     const stamp = footNameArea.parentNode.querySelector('.digital-stamp, .signature-image-container');
                     if (stamp) {
-                        const text = document.createTextNode(' (인)');
+                        const text = document.createTextNode(' (??');
                         footNameArea.parentNode.replaceChild(text, stamp);
                     }
                 }
@@ -2323,10 +2023,10 @@
                 }
             };
 
-            // [시니어 패치] 현재 화면의 모든 데이터를 객체로 수합
+            // [?쒕땲???⑥튂] ?꾩옱 ?붾㈃??紐⑤뱺 ?곗씠?곕? 媛앹껜濡??섑빀
             const collectReportData = () => {
                 const rd = {};
-                // 기본 텍스트 필드
+                // 湲곕낯 ?띿뒪???꾨뱶
                 const textIds = [
                     'repYear', 'repMonth', 'repStartSess', 'repEndSess', 'serialNum',
                     'repDay', 'repHour', 'repMin', 'repPlace', 'repPriest',
@@ -2341,14 +2041,14 @@
                     'sum_new', 'sum_soul', 'sum_wel', 'sum_hosp', 'sum_oth',
                     'sum_peace', 'sum_care', 'sum_eco', 'sum_holy', 'sum_note',
                     'repEtc', 'grandTotalCount',
-                    'footChurch', 'footCu', 'footPr' // [추가] 하단 조직 정보 스냅샷 포함
+                    'footChurch', 'footCu', 'footPr' // [異붽?] ?섎떒 議곗쭅 ?뺣낫 ?ㅻ깄???ы븿
                 ];
                 textIds.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) rd[id] = el.textContent;
                 });
 
-                // HTML 필드 (테이블 바디 등)
+                // HTML ?꾨뱶 (?뚯씠釉?諛붾뵒 ??
                 rd.offTableBody = document.getElementById('offTableBody').innerHTML;
                 if (document.getElementById('activitySummaryBody')) {
                     rd.activitySummaryBody = document.getElementById('activitySummaryBody').innerHTML;
@@ -2360,9 +2060,8 @@
                     rd.eventTableBody = document.getElementById('eventTableBody').innerHTML;
                 }
 
-                // 매칭용 메타데이터 (undefined 방지)
-                rd.officialPresidentName = officialPresidentName || '';
-                rd.officialPresidentId = officialPresidentId || '';
+                // 留ㅼ묶??硫뷀??곗씠??                rd.officialPresidentName = officialPresidentName;
+                rd.officialPresidentId = officialPresidentId;
 
                 return rd;
             };
@@ -2371,44 +2070,44 @@
                 const reportId = `${reportKey.churchName}_${reportKey.presidiumName}_${reportKey.startSess}_${reportKey.endSess}`;
                 const data = await getStatusData();
 
-                // [시니어 패치] 확정/승인 시점에 데이터 스냅샷 생성
+                // [?쒕땲???⑥튂] ?뺤젙/?뱀씤 ?쒖젏???곗씠???ㅻ깄???앹꽦
                 const reportSnapshot = (status === 'Draft' || status === 'Approved') ? collectReportData() : null;
 
                 const newData = {
                     ...reportKey,
                     status: status,
-                    signer: signer || (data ? data.signer : null) || null,
-                    signerUid: (status === 'Approved' && userProfile) ? (userProfile.UID || userProfile.uid || userProfile.id || null) : (data ? (data.signerUid || null) : null),
-                    signDate: signer ? new Date().toISOString() : (data ? (data.signDate || null) : null),
+                    signer: signer || (data ? data.signer : null),
+                    signerUid: (status === 'Approved' && userProfile) ? (userProfile.UID || userProfile.uid || userProfile.id || null) : (data ? data.signerUid : null),
+                    signDate: signer ? new Date().toISOString() : (data ? data.signDate : null),
                     updatedAt: new Date().toISOString(),
-                    reportData: reportSnapshot || (data ? (data.reportData || null) : null)
+                    reportData: reportSnapshot || (data ? data.reportData : null)
                 };
 
                 try {
                     await setDoc(doc(db, 'monthly_report_status', reportId), newData);
                     
-                    // 승인 시점에 스냅샷이 저장되었으므로 다시 로드하여 UI 갱신 (또는 수동 갱신)
+                    // ?뱀씤 ?쒖젏???ㅻ깄?룹씠 ??λ릺?덉쑝誘濡??ㅼ떆 濡쒕뱶?섏뿬 UI 媛깆떊 (?먮뒗 ?섎룞 媛깆떊)
                     if (status === 'Approved') {
-                        window.showCustomAlert('보고서가 최종 승인되었습니다.').then(() => location.reload());
+                        window.showCustomAlert('蹂닿퀬?쒓? 理쒖쥌 ?뱀씤?섏뿀?듬땲??').then(() => location.reload());
                     } else if (status === 'Draft' && !signer) {
-                        window.showCustomAlert('보고서가 생성(저장)되었습니다. 이제 단원들이 조회할 수 있습니다.').then(() => location.reload());
+                        window.showCustomAlert('蹂닿퀬?쒓? ?앹꽦(????섏뿀?듬땲?? ?댁젣 ?⑥썝?ㅼ씠 議고쉶?????덉뒿?덈떎.').then(() => location.reload());
                     } else {
-                        window.showCustomAlert('승인이 취소되었습니다. 다시 실시간 데이터로 수정이 가능합니다.').then(() => location.reload());
+                        window.showCustomAlert('?뱀씤??痍⑥냼?섏뿀?듬땲?? ?ㅼ떆 ?ㅼ떆媛??곗씠?곕줈 ?섏젙??媛?ν빀?덈떎.').then(() => location.reload());
                     }
                 } catch (e) {
                     console.error("Error saveStatus:", e);
-                    window.showCustomAlert('상태 저장 중 오류가 발생했습니다.');
+                    window.showCustomAlert('?곹깭 ???以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
                 }
             };
 
             document.getElementById('btnFinalize').onclick = async () => {
-                if (await window.showCustomConfirm('현재 내용으로 보고서 작성을 확정하시겠습니까?\n이후 단장님 승인 전까지 단원들이 이 내용을 조회할 수 있습니다.')) {
+                if (await window.showCustomConfirm('?꾩옱 ?댁슜?쇰줈 蹂닿퀬???묒꽦???뺤젙?섏떆寃좎뒿?덇퉴?\n?댄썑 ?⑥옣???뱀씤 ?꾧퉴吏 ?⑥썝?ㅼ씠 ???댁슜??議고쉶?????덉뒿?덈떎.')) {
                     await saveStatus('Draft');
                 }
             };
 
             document.getElementById('btnApprove').onclick = async () => {
-                if (await window.showCustomConfirm('이 보고서를 최종 승인하시겠습니까?\n승인 시 단장님의 직인이 찍히며 수정이 제한됩니다.')) {
+                if (await window.showCustomConfirm('??蹂닿퀬?쒕? 理쒖쥌 ?뱀씤?섏떆寃좎뒿?덇퉴?\n?뱀씤 ???⑥옣?섏쓽 吏곸씤??李랁엳硫??섏젙???쒗븳?⑸땲??')) {
                     await saveStatus('Approved', userProfile.name);
                 }
             };
@@ -2418,10 +2117,10 @@
                 try {
                     await deleteDoc(doc(db, 'monthly_report_status', reportId));
                     await renderStatus();
-                    window.showCustomAlert('보고서 확정이 취소되어 미작성 상태로 변경되었습니다.');
+                    window.showCustomAlert('蹂닿퀬???뺤젙??痍⑥냼?섏뼱 誘몄옉???곹깭濡?蹂寃쎈릺?덉뒿?덈떎.');
                 } catch (e) {
                     console.error("Error deleteStatus:", e);
-                    window.showCustomAlert('상태 삭제 중 오류가 발생했습니다.');
+                    window.showCustomAlert('?곹깭 ??젣 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
                 }
             };
 
@@ -2430,11 +2129,11 @@
                 const status = data ? data.status : 'Draft';
                 
                 if (status === 'Approved') {
-                    if (await window.showCustomConfirm('최종 승인을 취소하고 수정한 후 다시 생성하시겠습니까?')) {
+                    if (await window.showCustomConfirm('理쒖쥌 ?뱀씤??痍⑥냼?섍퀬 ?섏젙?????ㅼ떆 ?앹꽦?섏떆寃좎뒿?덇퉴?')) {
                         await saveStatus('Draft', null);
                     }
                 } else if (status === 'Draft') {
-                    if (await window.showCustomConfirm('보고서 확정을 취소하시겠습니까?\n취소 시 단원들이 이 보고서를 조회할 수 없게 됩니다.')) {
+                    if (await window.showCustomConfirm('蹂닿퀬???뺤젙??痍⑥냼?섏떆寃좎뒿?덇퉴?\n痍⑥냼 ???⑥썝?ㅼ씠 ??蹂닿퀬?쒕? 議고쉶?????녾쾶 ?⑸땲??')) {
                         await deleteStatus();
                     }
                 }
@@ -2449,31 +2148,6 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
