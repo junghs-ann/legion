@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260403_1930">
+    <link rel="stylesheet" href="styles.css?v=20260404_1022">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -236,9 +236,20 @@
             border-top: none !important;
             border-bottom: none !important;
         }
-        /* 행사 테이블의 제목 행 하단 선만 명시적으로 복구 */
-        .event-table tr:first-child th, 
-        .event-table tr:nth-child(7) th { /* '기타(행사)' 시작 행 (7번째 줄) 보정 */
+        /* [v5.0] 가로선 중복 제거 및 단일 Divider 원칙 적용 */
+        .report-page .accounting-table tr:last-child th,
+        .report-page .accounting-table .vertical-header {
+            border-bottom: 1px solid var(--report-border) !important;
+        }
+        .report-page .event-table tr:nth-child(6) td {
+            border-bottom: 1px solid var(--report-border) !important;
+        }
+        .report-page .event-table tr:nth-child(7) th { 
+            border-bottom: 1px solid var(--report-border) !important;
+        }
+        /* 표 맨 하단선 복구 (강제성 부여) */
+        .report-page .event-table tr:last-child td,
+        .report-page .event-table .vertical-header {
             border-bottom: 1px solid var(--report-border) !important;
         }
 
@@ -317,13 +328,23 @@
                 page-break-after: always;
             }
 
-            /* 인쇄 시에도 행사 섹션 가로선 제거 규칙 강제 */
-            .event-table td:not([rowspan]):not(.vertical-header) {
+            /* 인쇄 시에도 가로선 중복 제거 및 단일 Divider 원칙 적용 (v5.0) */
+            .report-page .accounting-table tr:last-child th,
+            .report-page .accounting-table .vertical-header {
+                border-bottom: 1px solid var(--report-border) !important;
+            }
+            .report-page .event-table tr:nth-child(6) td {
+                border-bottom: 1px solid var(--report-border) !important;
+            }
+            .report-page .event-table td:not([rowspan]):not(.vertical-header) {
                 border-top: none !important;
                 border-bottom: none !important;
             }
-            .event-table tr:first-child th, 
-            .event-table tr:nth-child(7) th {
+            .report-page .event-table tr:nth-child(7) th {
+                border-bottom: 1px solid var(--report-border) !important;
+            }
+            .report-page .event-table tr:last-child td,
+            .report-page .event-table .vertical-header {
                 border-bottom: 1px solid var(--report-border) !important;
             }
 
@@ -563,7 +584,7 @@
                     <td id="offName_vice">-</td>
                     <td id="offName_sec">-</td>
                     <td id="offName_trea">-</td>
-                    <td id="memAttRate" rowspan="3" style="font-size:12pt;">- / -</td>
+                    <td id="memAttRate" rowspan="4" style="font-size:12pt;">- / -</td>
                 </tr>
                 <tr>
                     <th>Pr. 출석</th>
@@ -591,7 +612,6 @@
                     <td id="offAppDate_vice">-</td>
                     <td id="offAppDate_sec">-</td>
                     <td id="offAppDate_trea">-</td>
-                    <td></td>
                 </tr>
                 <tr>
                     <th>간부이동</th>
@@ -1063,7 +1083,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260403_1930"></script>
+    <script src="script.js?v=20260404_1022"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -2451,6 +2471,8 @@
 </body>
 
 </html>
+
+
 
 
 
