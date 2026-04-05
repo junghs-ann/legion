@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -279,8 +279,8 @@
         }
         #activityDetailBody td {
             vertical-align: middle;
-            padding: 4mm 2mm !important; /* 2페이지만 시원하게 칸 높이 확보 */
-            line-height: 1.5;
+            padding: 2.3mm 2mm !important; /* 4mm에서 2.3mm로 축소하여 하단 여유 공간 확보 */
+            line-height: 1.4;               /* 가독성을 위해 기타활동(1)과 동일하게 1.4로 통일 */
         }
         /* 2번째 열(활동 횟수) 강제 중앙 정렬 */
         #activityDetailBody td:nth-child(2) {
@@ -294,9 +294,9 @@
         /* [긴급] 이미 저장된 데이터(스냅샷)에서도 기타 활동 정렬을 왼쪽으로 강제 */
         #activityDetailBody td div {
             text-align: left !important;
-            padding-left: 0 !important; /* [수정] 부모 td의 10px 패딩과 중복되지 않도록 0으로 조정 (상단 행과 수직 일치) */
-            margin-bottom: 4px;
-            line-height: 1.6;
+            padding-left: 0 !important; 
+            margin-bottom: 2px;             /* 4px에서 2px로 축소 */
+            line-height: 1.4;               /* 1.6에서 1.4로 축소 */
         }
         /* 기타 활동 rowspan 구조 대응 */
         #activityDetailBody tr td[style*="border-left"] {
@@ -687,9 +687,10 @@
                                 font-size: 9.2pt !important;
                             }
                             
-                            /* [정밀 타격] 2페이지만 시원하게 벌려줌 */
+                            /* [정밀 타격] 2페이지만 시원하게 벌려줌 (잘림 방지를 위해 2.3mm로 최적화) */
                             #activityDetailBody td {
-                                padding: 3.5mm 2mm !important;
+                                padding: 2.3mm 2mm !important;
+                                line-height: 1.4 !important; /* 기타활동(1)과 동일한 가독성 확보 */
                             }
 
                             /* [집중 공략] 8번 주요 활동 요약 칸 대폭 축소 */
@@ -861,6 +862,7 @@
                     <tr>
                         <th>입단 및 전입</th>
                         <td id="m_i_m">-</td>
+                        <td id="m_i_f">-</td>
                         <td id="m_i_t">-</td>
                         <td id="p_i">-</td>
                         <td id="a_i_m">-</td>
