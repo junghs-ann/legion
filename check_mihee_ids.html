@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미희 단원 ID 정밀 진단 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260417_1620">
+    <style>
+        body { padding: 20px; font-family: sans-serif; background: #f0f2f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
+        h2 { margin-top: 30px; color: #333; font-size: 1.2rem; background: #e8f0fe; padding: 10px; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        .id-highlight { font-family: monospace; font-weight: bold; color: #d93025; background: #feefee; padding: 2px 6px; border-radius: 4px; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .status-retired { background: #fce8e6; color: #d93025; }
+        .status-active { background: #e6ffed; color: #1e8e3e; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 이미희 단원 데이터 정밀 진단</h1>
+        <p>기록이 꼬인 원인을 찾기 위해 DB에 저장된 실제 ID들을 대조합니다. (읽기 전용)</p>
+
+        <!-- 1. 단원 명부 상태 -->
+        <h2>1. 단원 명부 기준 (members_list)</h2>
+        <div id="member-loading" class="loading">데이터를 불러오는 중...</div>
+        <table id="member-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>고유 ID (시스템 키)</th>
+                    <th>이름</th>
+                    <th>세례명</th>
+                    <th>상태</th>
+                    <th>퇴단/전출일</th>
+                </tr>
+            </thead>
+            <tbody id="member-body"></tbody>
+        </table>
+
+        <!-- 2. 1월 13일 출석부 저장 확인 -->
+        <h2>2. 1월 13일 출석부 기록 (attendance_list)</h2>
+        <div id="attendance-loading" class="loading">데이터를 불러오는 중...</div>
+        <table id="attendance-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>저장된 멤버 ID</th>
+                    <th>기록된 이름</th>
+                    <th>출결 상태</th>
+                    <th>문서 ID</th>
+                </tr>
+            </thead>
+            <tbody id="attendance-body"></tbody>
+        </table>
+
+        <!-- 3. 활동 내역 저장 확인 -->
+        <h2>3. 활동 내역 기록 (activity_records)</h2>
+        <div id="activity-loading" class="loading">데이터를 불러오는 중...</div>
+        <table id="activity-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>날짜</th>
+                    <th>고유 ID (기록 시점)</th>
+                    <th>활동 내용 유무</th>
+                </tr>
+            </thead>
+            <tbody id="activity-body"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, query, where } from "./firebase-config.js";
+
+        async function diagnose() {
+            try {
+                // 1. 단원 명부 조회
+                const memSnap = await getDocs(query(collection(db, 'members_list'), where('name', '==', '이미희')));
+                const mBody = document.getElementById('member-body');
+                document.getElementById('member-loading').style.display = 'none';
+                document.getElementById('member-table').style.display = 'table';
+                
+                memSnap.forEach(doc => {
+                    const data = doc.data();
+                    const tr = document.createElement('tr');
+                    const isOld = data.status === '퇴단' || data.status === '전출';
+                    tr.innerHTML = `
+                        <td><span class="id-highlight">${doc.id}</span></td>
+                        <td>${data.name}</td>
+                        <td>${data.baptismalName || '-'}</td>
+                        <td><span class="status-badge ${isOld ? 'status-retired' : 'status-active'}">${data.status}</span></td>
+                        <td>${data.leaveDate || '-'}</td>
+                    `;
+                    mBody.appendChild(tr);
+                });
+
+                // 2. 1월 13일 출석부 조회
+                const attSnap = await getDocs(query(collection(db, 'attendance_list'), 
+                    where('date', '==', '2026-01-13'),
+                    where('presidiumName', '==', '천사의 모후')
+                ));
+                const aBody = document.getElementById('attendance-body');
+                document.getElementById('attendance-loading').style.display = 'none';
+                document.getElementById('attendance-table').style.display = 'table';
+
+                attSnap.forEach(doc => {
+                    const data = doc.data();
+                    const attData = data.attendanceData || {};
+                    // '이미희'라는 이름이 포함된 모든 키 찾기
+                    Object.entries(attData).forEach(([id, val]) => {
+                        if (val.name === '이미희') {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="id-highlight">${id}</span></td>
+                                <td>${val.name}</td>
+                                <td>${val.status === 'P' ? '✅ 출석' : '❌ 결석'}</td>
+                                <td>${doc.id}</td>
+                            `;
+                            aBody.appendChild(tr);
+                        }
+                    });
+                });
+
+                // 3. 활동 내역 조회
+                const actSnap = await getDocs(query(collection(db, 'activity_records'), 
+                    where('memberName', '==', '이미희')
+                ));
+                const acBody = document.getElementById('activity-body');
+                document.getElementById('activity-loading').style.display = 'none';
+                document.getElementById('activity-table').style.display = 'table';
+
+                actSnap.forEach(doc => {
+                    const data = doc.data();
+                    // 1월 기록만 필터링
+                    if (data.date && data.date.startsWith('2026-01')) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${data.memberName}</td>
+                            <td>${data.date}</td>
+                            <td><span class="id-highlight">${data.memberId || '없음(이름만 저장됨)'}</span></td>
+                            <td>${Object.keys(data.counts || {}).length > 0 ? '📊 활동 수치 있음' : '텅 비었음'}</td>
+                        `;
+                        acBody.appendChild(tr);
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                alert("데이터를 가져오는 중 오류가 발생했습니다: " + err.message);
+            }
+        }
+
+        diagnose();
+    </script>
+</body>
+</html>
+
+
+
+

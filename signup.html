@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260405_0952">
+    <link rel="stylesheet" href="styles.css?v=20260417_1620">
     <style>
         /* Specific styles for signup to match login theme */
         .signup-container {
@@ -307,7 +307,7 @@
             <button class="modal-btn" onclick="location.href='index.html'">확 인</button>
         </div>
     </div>
-    <script src="script.js?v=20260405_0952"></script>
+    <script src="script.js?v=20260417_1620"></script>
     <script type="module">
         import { db, collection, query, where, getDocs } from "./firebase-config.js?v=20260303_1210";
         import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
@@ -425,86 +425,69 @@
             try {
                 console.log(`🔍 [${prName}] 단원 및 간부 목록 조회 시작...`);
                 
-                // [정석화] 오직 표준 필드(`presidiumName`)만 사용하여 조회합니다. (꼼수 제거)
-                const qMem = query(collection(db, 'members_list'), where('presidiumName', '==', prName));
-                const qOff = query(collection(db, 'officers_list'), where('presidiumName', '==', prName));
-                const qUsers = query(collection(db, 'users'), where('presidiumName', '==', prName));
-
-                const [snapMem, snapOff, snapUsers] = await Promise.all([
-                    getDocs(qMem),
-                    getDocs(qOff),
-                    getDocs(qUsers)
-                ]);
-
+                // [시니어 패치] 가장 직관적이고 심플한 단일 소스 필터링 원칙 적용
+                // 1. 가입 완료된 단원 ID 세트 구축
                 const registeredMemberIds = new Set();
+                const qUsers = query(collection(db, 'users'), where('presidiumName', '==', prName));
+                const snapUsers = await getDocs(qUsers);
                 snapUsers.forEach(docSnap => {
                     const d = docSnap.data();
-                    if (d.memberId) registeredMemberIds.add(d.memberId);
+                    if (d.memberId) registeredMemberIds.add(String(d.memberId).trim());
                 });
 
-                const mergedMembers = new Map();
+                // 2. 단원 명부(Source of Truth)에서만 활동 단원을 가져옴 (간부 명부 합병 로직 삭제)
+                const qMem = query(collection(db, 'members_list'), where('presidiumName', '==', prName));
+                const snapMem = await getDocs(qMem);
+                
+                const finalMembers = [];
+                snapMem.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const memberId = docSnap.id;
+                    const name = (data.name || '').trim();
+                    const currentStatus = (data.status || '').trim();
+                    
+                    // [심플 조건] 퇴단/전출이 아니고 + 아직 가입하지 않은 단원만 통과
+                    const isActive = !['퇴단', '전출'].includes(currentStatus);
+                    const isNotRegistered = !registeredMemberIds.has(String(memberId).trim());
 
-                const processSnap = (snap, isOfficerSnap = false) => {
-                    snap.forEach(docSnap => {
-                        const data = docSnap.data();
-                        const id = docSnap.id;
-                        const name = data.name;
-                        // Filter out 'retired/transferred' only if status field exists
-                        const isRetired = ['퇴단', '전출'].includes(data.status);
-                        
-                        // [개선] 이름 대신 고유 ID(memberId)로 가입 여부 체크하여 동명이인 가입 허용
-                        if (name && !registeredMemberIds.has(id) && !isRetired) {
-                            if (!mergedMembers.has(name) || (!mergedMembers.get(name).gender && data.gender)) {
-                                mergedMembers.set(name, {
-                                    id: docSnap.id,
-                                    name: name,
-                                    baptismalName: data.baptismalName || '',
-                                    gender: data.gender || '',
-                                    role: data.role || 'member'
-                                });
-                            }
-                        }
-                    });
-                };
+                    if (name && isActive && isNotRegistered) {
+                        finalMembers.push({
+                            id: memberId,
+                            name: name,
+                            baptismalName: (data.baptismalName || '').trim(),
+                            gender: (data.gender || '').trim()
+                        });
+                    }
+                });
 
-                [snapMem, snapOff].forEach(s => processSnap(s, false));
-
-                const finalMembers = Array.from(mergedMembers.values());
-
+                // UI 렌더링
+                memberSelect.innerHTML = '<option value="">단원 선택 (성명)</option>';
+                
                 if (finalMembers.length === 0) {
-                    memberSelect.innerHTML = '<option value="">선택 가능한 단원이 없습니다.</option>';
+                    memberSelect.innerHTML = '<option value="">가입 가능한 활동 단원이 없습니다.</option>';
                     memberSelect.disabled = true;
-                    console.log("⚠️ 선택 가능한 단원이 없습니다. (모두 가입되었거나 등록된 정보 없음)");
                     return;
                 }
 
-                memberSelect.innerHTML = '<option value="">단원 선택 (성명)</option>';
+                // 가나다순 정렬 후 목록 추가
                 finalMembers.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
                     const option = document.createElement('option');
                     option.value = m.id;
-                    option.textContent = m.name;
-                    option.dataset.memberInfo = JSON.stringify({
-                        name: m.name,
-                        baptismalName: m.baptismalName,
-                        gender: m.gender
-                    });
+                    option.textContent = `${m.name} (${m.baptismalName || '세례명미상'})`;
+                    option.dataset.memberInfo = JSON.stringify(m);
                     memberSelect.appendChild(option);
                 });
+                
                 memberSelect.disabled = false;
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.textContent = '가입하기';
                 }
-                console.log(`✅ 통합 단원 목록 로드 완료: ${finalMembers.length}명`);
+                console.log(`✅ 단일 소스 목록 로드 완료: ${finalMembers.length}명`);
             } catch (error) {
                 console.error("단원 목록 로드 중 오류 발생:", error);
                 memberSelect.innerHTML = '<option value="">단원 로드 오류</option>';
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.style.opacity = '1';
-                    submitBtn.textContent = '가입하기';
-                }
             }
         });
 
@@ -517,7 +500,7 @@
                 baptismalNameInput.value = info.baptismalName || '';
                 genderSelect.value = info.gender || '';
                 
-                // Auto-detect role potentially
+                // [시니어 패치] 단원 선택 시 즉시 직책 자동 감지 실행
                 autoDetectRole();
                 checkRoleConflict();
             } else {
@@ -640,18 +623,15 @@
 
         // --- 3.5.2 Auto Detect Role from Officers List (Refined with Firestore) ---
         async function autoDetectRole() {
-            const role = roleSelect.value;
-            if (role === 'admin') return; // Admin is manual
-
-            const name = nameInput.value.trim();
+            const selectedMemberId = memberSelect.value;
             const church = churchSelect.value;
             const presidiumName = presidiumSelect.options[presidiumSelect.selectedIndex]?.text || '';
 
-            if (name && church && presidiumName && presidiumName !== '쁘레지디움(Pr.) 선택') {
+            if (selectedMemberId && church && presidiumName && presidiumName !== '쁘레지디움(Pr.) 선택') {
                 try {
-                    // [Refine] Prefer Firestore for real-time accuracy
+                    // [시니어 패치] 이름 대신 memberId로 정확히 쿼리합니다.
                     const q = query(collection(db, 'officers_list'), 
-                        where('name', '==', name),
+                        where('memberId', '==', selectedMemberId),
                         where('churchName', '==', church),
                         where('presidiumName', '==', presidiumName)
                     );
@@ -660,19 +640,24 @@
                     const matchedOfficers = [];
                     qSnap.forEach(docSnap => matchedOfficers.push(docSnap.data()));
                     
-                    // Sort by appointment date descending
-                    matchedOfficers.sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
-
-                    const found = matchedOfficers[0];
+                    // 1. 현재 활동 중인(만료되지 않은) 기록만 필터링
                     const today = new Date().toISOString().split('T')[0];
+                    const activeRecords = matchedOfficers.filter(o => 
+                        !o.appointmentExpiryDate || o.appointmentExpiryDate >= today
+                    );
+                    
+                    if (activeRecords.length > 0) {
+                        // 2. 활동 중인 기록이 있다면 최신 임명일 순으로 정렬
+                        activeRecords.sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
+                        const found = activeRecords[0];
 
-                    if (found && (!found.appointmentExpiryDate || found.appointmentExpiryDate >= today)) {
                         console.log("📍 실시간 간부 정보 매칭 완료:", found.role);
                         const roleMap = { '단장': 'president', '부단장': 'vice_president', '서기': 'secretary', '회계': 'treasurer' };
                         const engRole = roleMap[found.role];
+                        
                         if (engRole) {
                             roleSelect.value = engRole;
-                            roleSelect.disabled = true; // Lock for officers
+                            roleSelect.disabled = true; // 간부는 직책 고정
                             adminNotice.style.display = 'block';
                             adminNotice.textContent = `✅ 공식 간부 정보(${found.role})가 확인되어 직급이 고정되었습니다.`;
                             adminNotice.style.color = 'green';
@@ -680,10 +665,10 @@
                         }
                     }
                     
-                    // If not found or not active officer, default to 'member'
-                    console.log("📍 일반 단원으로 감지되었습니다.");
+                    // 3. 활동 중인 간부 기록이 없으면 일반 단원으로 처리
+                    console.log("📍 일반 단원(또는 만료된 간부)으로 감지되었습니다.");
                     roleSelect.value = 'member';
-                    roleSelect.disabled = false; // Allow manual change if needed, though usually 'member'
+                    roleSelect.disabled = false;
                     adminNotice.style.display = 'none';
 
                 } catch (error) {
@@ -944,6 +929,13 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
 
 
 

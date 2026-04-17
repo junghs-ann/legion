@@ -8,7 +8,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메인 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260405_0952">
+    <link rel="stylesheet" href="styles.css?v=20260417_1620">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -213,7 +213,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260405_0952"></script>
+    <script src="script.js?v=20260417_1620"></script>
     <script type="module">
         import { db, auth } from "./firebase-config.js?v=20260308_0430";
         import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -285,23 +285,37 @@
 
                     if (notice.displayType === 'popup') {
                         // 팝업 노출 (이미 본 게 아닐 때만)
-                        await window.showGlobalAlert(`<div style="text-align:left; font-weight:normal;">${notice.content}</div>`, 'info');
+                        await window.showGlobalAlert(`<div style="font-weight:normal;">${notice.content.replace(/\n/g, '<br>')}</div>`, 'info');
                         // 확인 버튼 누르면 seenBy 업데이트
                         await markAsSeen(noticeId, uid);
                     } 
                     else if (notice.displayType === 'banner') {
-                        // 배너 노출
+                        // [Safety Patch] 따옴표 충돌 방지를 위해 요소 생성 방식으로 리팩토링
                         const banner = document.createElement('div');
                         banner.className = 'volatile-banner';
-                        banner.innerHTML = `
-                            <div class="banner-content" onclick="window.showGlobalAlert('${notice.content.replace(/\n/g, '<br>')}', 'info')">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <span>${notice.title}</span>
-                            </div>
-                            <button class="banner-close" onclick="closeBanner(this, '${noticeId}', '${uid}')">
-                                <i class="fas fa-times"></i>
-                            </button>
+                        
+                        // 내용 영역 생성
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'banner-content';
+                        contentDiv.innerHTML = `
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>${notice.title}</span>
                         `;
+                        
+                        // 클릭 이벤트 바인딩 (따옴표 오류 원천 차단)
+                        contentDiv.onclick = () => {
+                            const htmlContent = `<div style="font-weight:normal;">${notice.content.replace(/\n/g, '<br>')}</div>`;
+                            window.showGlobalAlert(htmlContent, 'info');
+                        };
+
+                        // 닫기 버튼 생성
+                        const closeBtn = document.createElement('button');
+                        closeBtn.className = 'banner-close';
+                        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        closeBtn.onclick = () => window.closeBanner(closeBtn, noticeId, uid);
+
+                        banner.appendChild(contentDiv);
+                        banner.appendChild(closeBtn);
                         bannerArea.appendChild(banner);
                     }
                 });
@@ -334,6 +348,10 @@
 </body>
 
 </html>
+
+
+
+
 
 
 

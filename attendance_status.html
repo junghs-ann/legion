@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출석 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260405_0952">
+    <link rel="stylesheet" href="styles.css?v=20260417_1620">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -750,7 +750,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260405_0952"></script>
+    <script src="script.js?v=20260417_1620"></script>
     <script type="module">
         import { db } from "./firebase-config.js";
         import {
@@ -1339,9 +1339,12 @@
                 const currentOfficerIds = new Set(officers.map(o => o.memberId));
 
                 const members = membersList.filter(m => {
-                    const isRetired = m.status === '퇴단' || m.status === '전출' || m.status === 'retire' || m.status === 'transfer';
+                    // [약속된 로직] 퇴단/전출일이 주회일보다 같거나 이전인 경우만 제외
                     const hasLeftBefore = m.leaveDate && m.leaveDate <= filterDate;
-                    return !isRetired && !hasLeftBefore && !currentOfficerIds.has(m.id);
+                    // [약속된 로직] 입단일이 주회일보다 같거나 크면 제외
+                    const notYetJoined = m.probationaryDate && m.probationaryDate >= filterDate;
+                    
+                    return !hasLeftBefore && !notYetJoined && !currentOfficerIds.has(m.id);
                 }).sort((a, b) => (a.probationaryDate || '').localeCompare(b.probationaryDate || ''));
 
                 renderTable(officers, members);
@@ -1627,6 +1630,10 @@
 </body>
 
 </html>
+
+
+
+
 
 
 

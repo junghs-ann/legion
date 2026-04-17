@@ -67,6 +67,8 @@ console.log("Legion Script Loaded: 20260315_V16_CLEAN_DUAL");
             font-weight: 600;
             line-height: 1.5;
             word-break: keep-all;
+            text-align: left; /* [UX Patch] 공지사항 등 긴 텍스트 가독성을 위해 왼쪽 정렬 */
+            width: 100%;
         }
         .global-custom-modal-buttons {
             display: flex;
