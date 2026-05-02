@@ -1,0 +1,487 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 카테고리 관리 - 레지오 마리애</title>
+    <link rel="stylesheet" href="styles.css?v=20260502_1525">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .register-container {
+            max-width: 800px;
+            margin: 120px auto 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .church-selector {
+            background: #f1f3f5;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .category-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .category-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .category-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .category-label {
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        .category-name {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: #f8f9fa;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-action.btn-delete:hover {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* 상단 우측 X 버튼 */
+        .btn-close-x {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: #adb5bd;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .btn-close-x:hover {
+            color: #495057;
+            transform: scale(1.1);
+        }
+
+        .register-header {
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .register-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .register-header p {
+            margin: 5px 0 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .btn-sticky-group {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px 30px;
+            display: flex;
+            gap: 12px;
+            z-index: 5000;
+            justify-content: center;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-sticky-save, .btn-sticky-close {
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+        .btn-sticky-save {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+        }
+
+        .btn-sticky-close {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .add-category-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px dashed #ccc;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .add-category-box input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-add {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .register-container {
+                margin-top: 80px;
+                padding: 15px;
+            }
+            .btn-sticky-group {
+                padding: 10px 15px 25px;
+            }
+            .btn-sticky-save, .btn-sticky-close {
+                flex: 1;
+                padding: 12px 10px;
+                justify-content: center;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+        <ul class="nav-menu" id="navMenu">
+            <!-- JS로 채워짐 -->
+        </ul>
+    </header>
+
+    <div class="register-container">
+        <div class="register-header">
+            <h2>게시판 카테고리 관리</h2>
+            <p>게시판 상단 탭의 이름과 순서를 성당별로 관리합니다.</p>
+            <button onclick="location.href='board_management.html'" class="btn-close-x" title="닫기">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="church-selector">
+            <label style="font-weight: bold;"><i class="fas fa-church"></i> 성당 선택:</label>
+            <select id="churchSelect" style="padding: 8px 15px; border-radius: 4px; border: 1px solid #ddd; flex: 1;"></select>
+            <button id="btnReset" class="btn-action" style="width: auto; padding: 0 15px;" title="초기화">
+                <i class="fas fa-undo"></i> 기본값 초기화
+            </button>
+        </div>
+
+        <ul id="categoryList" class="category-list">
+            <!-- JS로 렌더링 -->
+        </ul>
+
+        <div class="add-category-box">
+            <input type="text" id="newCategoryLabel" placeholder="표시 이름 (예: 특강 자료)">
+            <input type="text" id="newCategoryName" placeholder="내부 코드 (예: special)">
+            <button class="btn-add" onclick="addCategory()">
+                <i class="fas fa-plus"></i> 추가
+            </button>
+        </div>
+        
+        <div style="margin-top: 15px; font-size: 0.8rem; color: #888;">
+            * 내부 코드는 한글/영문 모두 가능하며, 게시물 필터링의 기준이 됩니다.
+        </div>
+    </div>
+
+    <div class="btn-sticky-group">
+        <button id="btnSave" class="btn-sticky-save">
+            <i class="fas fa-save"></i> <span id="targetChurchName">...</span> 설정 저장
+        </button>
+        <button onclick="location.href='board_management.html'" class="btn-sticky-close">
+            <i class="fas fa-times"></i> 취소 및 닫기
+        </button>
+    </div>
+
+    <script src="script.js?v=20260502_1525"></script>
+    <script type="module">
+        import { initAuthObserver } from "./auth.js";
+        import { db, doc, getDoc, setDoc, collection, getDocs } from "./firebase-config.js";
+        import { getChurches, fetchPresidiaList } from "./data.js";
+
+        let currentChurch = "";
+        let categories = [];
+        let profileData = null;
+
+        const DEFAULT_CATEGORIES = [
+            { id: 'all', name: '전체', label: '전체' },
+            { id: 'meeting', name: '월례회의', label: '월례회의 자료' },
+            { id: 'monthly', name: '월례보고서', label: '월례보고서' },
+            { id: 'business', name: '사업보고서', label: '사업보고서' },
+            { id: 'etc', name: '기타', label: '기타' }
+        ];
+
+        initAuthObserver(async (user, profile) => {
+            profileData = profile;
+            if (window.initCommonMenus) {
+                window.initCommonMenus(profile, () => {
+                    import("./auth.js").then(auth => auth.logoutUser());
+                });
+            }
+
+            // 관리자 권한 체크
+            const role = (profile.role || '').toLowerCase();
+            const isAdmin = role.includes('admin') || role.includes('관리자');
+            if (!isAdmin) {
+                await window.showGlobalAlert("관리자 권한이 필요합니다.", "error");
+                location.href = 'board_management.html';
+                return;
+            }
+
+            await setupChurches(profile);
+            await loadCategories();
+        }, () => {
+            location.href = 'index.html';
+        });
+
+        async function setupChurches(profile) {
+            await fetchPresidiaList();
+            const churches = getChurches();
+            const select = document.getElementById('churchSelect');
+
+            churches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                select.appendChild(opt);
+            });
+
+            select.value = profile.churchName || churches[0];
+            currentChurch = select.value;
+            document.getElementById('targetChurchName').textContent = currentChurch;
+
+            select.onchange = async (e) => {
+                currentChurch = e.target.value;
+                document.getElementById('targetChurchName').textContent = currentChurch;
+                await loadCategories();
+            };
+        }
+
+        async function loadCategories() {
+            try {
+                const docRef = doc(db, 'board_category_schemas', currentChurch);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    categories = docSnap.data().categories || [];
+                } else {
+                    categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+                }
+                renderCategories();
+            } catch (error) {
+                console.error("Error loading categories:", error);
+                categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+                renderCategories();
+            }
+        }
+
+        function renderCategories() {
+            const list = document.getElementById('categoryList');
+            list.innerHTML = '';
+
+            categories.forEach((cat, index) => {
+                const li = document.createElement('li');
+                li.className = 'category-item';
+                li.innerHTML = `
+                    <div class="category-info">
+                        <div class="category-label">${cat.label}</div>
+                        <div class="category-name">코드: ${cat.name}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-action" onclick="moveUp(${index})" ${index === 0 ? 'disabled' : ''} title="위로">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button class="btn-action" onclick="moveDown(${index})" ${index === categories.length - 1 ? 'disabled' : ''} title="아래로">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button class="btn-action" onclick="editCategory(${index})" title="수정">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deleteCategory(${index})" title="삭제">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        window.moveUp = (index) => {
+            if (index > 0) {
+                [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
+                renderCategories();
+            }
+        };
+
+        window.moveDown = (index) => {
+            if (index < categories.length - 1) {
+                [categories[index + 1], categories[index]] = [categories[index], categories[index + 1]];
+                renderCategories();
+            }
+        };
+
+        window.addCategory = () => {
+            const labelInput = document.getElementById('newCategoryLabel');
+            const nameInput = document.getElementById('newCategoryName');
+            const label = labelInput.value.trim();
+            const name = nameInput.value.trim();
+
+            if (!label || !name) {
+                window.showToast("이름과 코드를 모두 입력해 주세요.", "warning");
+                return;
+            }
+
+            categories.push({
+                id: 'cat_' + Date.now(),
+                name: name,
+                label: label
+            });
+
+            labelInput.value = '';
+            nameInput.value = '';
+            renderCategories();
+        };
+
+        window.editCategory = async (index) => {
+            const cat = categories[index];
+            const newLabel = await window.showGlobalPrompt("표시 이름을 수정하세요:", cat.label);
+            if (newLabel && newLabel.trim()) {
+                const newName = await window.showGlobalPrompt("내부 코드를 수정하세요\n(가급적 기존 값을 유지하세요):", cat.name);
+                if (newName && newName.trim()) {
+                    cat.label = newLabel.trim();
+                    cat.name = newName.trim();
+                    renderCategories();
+                }
+            }
+        };
+
+        window.deleteCategory = async (index) => {
+            if (await window.showGlobalConfirm(`'${categories[index].label}' 카테고리를 삭제하시겠습니까?`, "error")) {
+                categories.splice(index, 1);
+                renderCategories();
+            }
+        };
+
+        document.getElementById('btnReset').onclick = async () => {
+            if (await window.showGlobalConfirm("기본 카테고리 구성으로 초기화하시겠습니까?\n(저장 버튼을 눌러야 최종 반영됩니다.)", "warning")) {
+                categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+                renderCategories();
+            }
+        };
+
+        document.getElementById('btnSave').onclick = async () => {
+            if (categories.length === 0) {
+                await window.showGlobalAlert("최소 한 개 이상의 카테고리가 필요합니다.", "warning");
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'board_category_schemas', currentChurch);
+                await setDoc(docRef, {
+                    categories: categories,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: profileData.name
+                });
+                
+                await window.showGlobalAlert("성공적으로 저장되었습니다!", "success");
+                location.href = 'board_management.html';
+            } catch (error) {
+                console.error("Error saving categories:", error);
+                await window.showGlobalAlert("저장 중 오류가 발생했습니다\n" + error.message, "error");
+            }
+        };
+    </script>
+</body>
+
+</html>
+
+
+
+
+

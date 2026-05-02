@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례보고서 생성 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260417_1620">
+    <link rel="stylesheet" href="styles.css?v=20260502_1525">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .selection-container {
@@ -429,7 +429,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260417_1620"></script>
+    <script src="script.js?v=20260502_1525"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -627,6 +627,20 @@
             if (!c || !p || !s || !e) { window.showCustomAlert('모든 항목을 채워주세요.'); return; }
             if (s > e) { window.showCustomAlert('날짜 범위를 확인해주세요.'); return; }
 
+            // 별도의 인쇄 화면을 위한 창 크기 및 위치 설정
+            const width = 1200; const height = 900;
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+            
+            // 💡 [해결책 A 적용] 클릭 즉시 빈 창을 먼저 띄워 팝업 차단 우회
+            const reportWindow = window.open('', 'MonthlyReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+            
+            // 혹시라도 브라우저 설정상 빈 창조차 강제 차단된 경우를 대비한 예외 처리
+            if (!reportWindow) {
+                window.showCustomAlert('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+                return;
+            }
+
             // 보고서 상태 체크 (복구된 부분)
             let found = null;
             try {
@@ -637,11 +651,15 @@
                 }
             } catch (error) {
                 console.error("Error checking report status:", error);
+                reportWindow.close(); // 오류 발생 시 띄워둔 빈 창 닫기
+                window.showCustomAlert('보고서 상태 확인 중 오류가 발생했습니다.');
+                return;
             }
 
             // '생성 및 수정' 모드일 때 승인 여부 체크
             if (mode === 'create') {
                 if (found && found.status === 'Approved') {
+                    reportWindow.close(); // 조건 불만족 시 띄워둔 빈 창 닫기
                     window.showCustomAlert('해당 회차의 보고서는 이미 단장 승인이 완료되었습니다.\n수정하시려면 먼저 [최종본 조회] 모드에서 보고서를 열어 [승인 취소]를 진행해주세요.');
                     return;
                 }
@@ -650,28 +668,30 @@
             // '조회' 모드일 때 생성 여부 체크
             if (mode === 'view') {
                 if (!found) {
+                    reportWindow.close(); // 조건 불만족 시 띄워둔 빈 창 닫기
                     window.showCustomAlert('해당 회차의 보고서가 아직 생성(저장)되지 않았습니다.\n간부님께 확인을 요청해주세요.');
                     return;
                 }
             }
 
-            // 별도의 인쇄 화면 열기
-            const width = 1200; const height = 900;
-            const left = (window.screen.width / 2) - (width / 2);
-            const top = (window.screen.height / 2) - (height / 2);
-
+            // 조건 통과 시, 미리 띄워둔 빈 창의 주소를 실제 보고서 URL로 변경
             let baseUrl = version === 'v2' ? 'monthly_report_view_v2.html' : 'monthly_report_view.html';
             let url = `${baseUrl}?churchName=${encodeURIComponent(c)}&curiaName=${encodeURIComponent(curiaSelect.value)}&presidiumName=${encodeURIComponent(p)}&start=${s}&end=${e}&mode=${mode}&version=${version}`;
             if (ss) url += `&ss=${ss}`;
             if (es) url += `&es=${es}`;
 
-            window.open(url, 'MonthlyReportWindow', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+            reportWindow.location.href = url;
         });
 
     </script>
 </body>
 
 </html>
+
+
+
+
+
 
 
 

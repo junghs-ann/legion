@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>소통 게시판 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260417_1620">
+    <link rel="stylesheet" href="styles.css?v=20260502_1525">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260308_0215">
     <style>
@@ -80,15 +80,12 @@
 
         .category-tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 12px;
+            gap: 8px;
             overflow-x: auto;
-            /* 가로 스크롤 추가 */
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
+            flex: 1; /* 가용 공간 차지 */
         }
 
         .category-tabs::-webkit-scrollbar {
@@ -691,19 +688,20 @@
                 </div>
             </div>
 
-            <div class="category-tabs" id="categoryTabs" style="border-bottom: 1px solid #eee; margin-bottom: 15px;">
-                <div class="category-tab active" data-category="전체">전체</div>
-                <div class="category-tab" data-category="월례회의">월례회의 자료</div>
-                <div class="category-tab" data-category="월례보고서">월례보고서</div>
-                <div class="category-tab" data-category="사업보고서">사업보고서</div>
-                <div class="category-tab" data-category="기타">기타</div>
-            </div>
+            <!-- 카테고리와 버튼을 한 줄로 배치 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; flex-wrap: wrap;">
+                <div class="category-tabs" id="categoryTabs">
+                    <!-- JS로 동적 렌더링 -->
+                </div>
 
-            <!-- 1순위: 등록 버튼 (위쪽으로 이동) -->
-            <div class="btn-action-row" style="margin-bottom: 10px;">
-                <button id="btnOpenWrite" class="btn-write" style="display: none; padding: 10px 25px;">
-                    <i class="fas fa-edit"></i> 등 록
-                </button>
+                <div class="btn-action-row" style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <button id="btnOpenWrite" class="btn-write" style="display: none; padding: 10px 25px;">
+                        <i class="fas fa-edit"></i> 등 록
+                    </button>
+                    <button id="btnSetupCategory" class="btn-write" style="display: none; background: #6c757d; padding: 10px 20px;">
+                        <i class="fas fa-cog"></i> 설정
+                    </button>
+                </div>
             </div>
 
             <!-- 2순위: 제목 검색 (등록 버튼 아래, 테이블 바로 위) -->
@@ -764,10 +762,7 @@
                 <div class="form-group">
                     <label>카테고리</label>
                     <select id="postCategory" required>
-                        <option value="월례회의">월례회의 자료</option>
-                        <option value="월례보고서">월례보고서</option>
-                        <option value="사업보고서">사업보고서</option>
-                        <option value="기타">기타</option>
+                        <!-- JS로 동적 렌더링 -->
                     </select>
                 </div>
                 <div class="form-group">
@@ -802,40 +797,24 @@
 
     <!-- 미리보기 팝업 제거 (직통 링크 시스템으로 전환) -->
 
-    <!-- [NEW] Custom Status Modal (Success/Alert) -->
-    <div id="statusModal" class="custom-modal-overlay">
-        <div class="custom-modal">
-            <div id="statusIcon" class="modal-icon-success">
-                <i class="fas fa-check"></i>
-            </div>
-            <h3 id="statusTitle">완료되었습니다!</h3>
-            <p id="statusMsg"></p>
-            <button class="modal-footer-btn" onclick="closeStatusModal()">확 인</button>
-        </div>
-    </div>
 
-    <script src="script.js?v=20260417_1620"></script>
+
+    <script src="script.js?v=20260502_1525"></script>
     <script type="module">
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260308_0430";
         import { fetchPresidiaList } from "./data.js?v=20260303_1210";
-        import { db, collection, addDoc, onSnapshot, query, where, orderBy, doc, deleteDoc, updateDoc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
+        import { db, collection, addDoc, onSnapshot, query, where, orderBy, doc, deleteDoc, updateDoc, serverTimestamp, getDoc } from "./firebase-config.js?v=20260303_1210";
 
         let currentUser = null;
         let posts = [];
         let currentFilter = '전체';
+        let categories = []; // 동적 카테고리 저장
         let searchQuery = '';
         let orgFilter = { church: '', curia: '', presidium: '' };
         let unsubscribe = null;
+        let unsubscribeCategories = null;
 
-        // --- Custom Modal Helper ---
-        window.showStatusModal = (title, msg) => {
-            document.getElementById('statusTitle').innerText = title;
-            document.getElementById('statusMsg').innerText = msg;
-            document.getElementById('statusModal').style.display = 'flex';
-        };
-        window.closeStatusModal = () => {
-            document.getElementById('statusModal').style.display = 'none';
-        };
+
 
         // 미리보기 팝업 관련 헬퍼 함수 제거 (불필요한 에러 방지)
         const categoryTabs = document.getElementById('categoryTabs');
@@ -858,6 +837,7 @@
             await loadPresidiaList();
             initOrgLogic(profile);
             setupPermissions();
+            syncCategories(); // 카테고리 실시간 동기화 시작
             startPostsSync();
 
             if (window.initCommonMenus) {
@@ -871,6 +851,90 @@
             presidiaList = await fetchPresidiaList();
         }
         let presidiaList = [];
+
+        function syncCategories() {
+            if (unsubscribeCategories) unsubscribeCategories();
+            
+            // 현재 필터링된 성당이 있으면 그것을 우선, 없으면 로그인 유저의 소속 성당 사용
+            let targetChurch = (orgFilter.church || (currentUser && currentUser.churchName) || '').trim();
+            
+            // [UX 패치] 만약 관리자가 아무 성당도 선택하지 않았고 소속 성당 정보도 없다면 첫 번째 성당을 자동으로 선택 시도
+            if (!targetChurch && filterChurch && filterChurch.options.length > 1) {
+                targetChurch = filterChurch.options[1].value;
+                filterChurch.value = targetChurch;
+                orgFilter.church = targetChurch;
+            }
+
+            if (!targetChurch) {
+                // 정말 아무 정보도 없을 때만 기본값 표시
+                categories = [
+                    { id: 'all', name: '전체', label: '전체' },
+                    { id: 'meeting', name: '월례회의', label: '월례회의 자료' },
+                    { id: 'monthly', name: '월례보고서', label: '월례보고서' },
+                    { id: 'business', name: '사업보고서', label: '사업보고서' },
+                    { id: 'etc', name: '기타', label: '기타' }
+                ];
+                renderCategoryUI();
+                renderPosts();
+                return;
+            }
+
+            const docRef = doc(db, "board_category_schemas", targetChurch);
+            unsubscribeCategories = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    categories = docSnap.data().categories || [];
+                } else {
+                    // 기본값 설정
+                    categories = [
+                        { id: 'all', name: '전체', label: '전체' },
+                        { id: 'meeting', name: '월례회의', label: '월례회의 자료' },
+                        { id: 'monthly', name: '월례보고서', label: '월례보고서' },
+                        { id: 'business', name: '사업보고서', label: '사업보고서' },
+                        { id: 'etc', name: '기타', label: '기타' }
+                    ];
+                }
+                renderCategoryUI();
+                renderPosts(); // 카테고리 배치 후 게시물 다시 그리기
+            });
+        }
+
+        function renderCategoryUI() {
+            if (categories.length === 0) return;
+
+            // [시니어 패치] 현재 필터가 유효하지 않으면 첫 번째 카테고리를 기본값으로 시도
+            const exists = categories.some(cat => cat.name === currentFilter);
+            if (!exists && categories.length > 0) {
+                currentFilter = categories[0].name;
+            }
+
+            // 탭 렌더링
+            categoryTabs.innerHTML = '';
+            categories.forEach((cat, index) => {
+                const tab = document.createElement('div');
+                // 현재 필터와 정확히 일치하거나, 초기 로딩 시 첫 번째 탭을 활성화
+                const isActive = (currentFilter === cat.name);
+                
+                tab.className = `category-tab ${isActive ? 'active' : ''}`;
+                tab.dataset.category = cat.name;
+                tab.textContent = cat.label;
+                categoryTabs.appendChild(tab);
+            });
+
+            // 드롭다운 렌더링 (쓰기 모달용)
+            const postCategorySelect = document.getElementById('postCategory');
+            if (postCategorySelect) {
+                postCategorySelect.innerHTML = '<option value="">카테고리 선택</option>';
+                
+                categories.forEach(cat => {
+                    // '전체'는 글을 쓸 때 분류로 사용하지 않으므로 제외
+                    if (cat.name === '전체' || cat.label === '전체') return; 
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.textContent = cat.label;
+                    postCategorySelect.appendChild(opt);
+                });
+            }
+        }
 
         function startPostsSync() {
             if (unsubscribe) unsubscribe();
@@ -917,8 +981,20 @@
                 loadSelectOptions(postPresidium, presidiaList.filter(p => p.churchName === orgFilter.church && p.curiaName === orgFilter.curia).map(p => p.presidiumName).sort(), orgFilter.presidium);
                 postPresidium.disabled = true;
             } else {
+                // [시니어 패치] 관리자도 기본적으로 본인 소속 성당이 선택되어 있도록 초기화
+                const myChurch = (profile.churchName || '').trim();
+                if (myChurch) {
+                    filterChurch.value = myChurch;
+                    orgFilter.church = myChurch;
+                    
+                    const curiae = [...new Set(presidiaList.filter(p => (p.churchName || '').trim() === myChurch).map(p => (p.curiaName || '').trim()))].sort();
+                    loadSelectOptions(filterCuria, curiae);
+                    filterCuria.disabled = false;
+                }
+
                 setupAdminSelect(filterChurch, filterCuria, filterPresidium, (church, curia, presidium) => {
                     orgFilter = { church, curia, presidium };
+                    syncCategories(); // 성당 바뀌면 카테고리도 다시 동기화
                     renderPosts();
                 });
                 setupAdminSelect(postChurch, postCuria, postPresidium);
@@ -978,6 +1054,11 @@
                 btnOpenWrite.style.display = 'flex';
                 manageCol.style.display = 'table-cell';
             }
+            if (isAdmin) {
+                const btnSetup = document.getElementById('btnSetupCategory');
+                btnSetup.style.display = 'flex';
+                btnSetup.onclick = () => location.href = 'board_category_register.html';
+            }
         }
 
         function renderPosts() {
@@ -1031,12 +1112,11 @@
         }
 
         function getBadgeClass(cat) {
-            switch (cat) {
-                case '월례회의': return 'badge-meeting';
-                case '월례보고서': return 'badge-monthly';
-                case '사업보고서': return 'badge-business';
-                default: return 'badge-etc';
-            }
+            // 동적으로 매칭되도록 개선
+            if (cat.includes('회의')) return 'badge-meeting';
+            if (cat.includes('월례')) return 'badge-monthly';
+            if (cat.includes('사업')) return 'badge-business';
+            return 'badge-etc';
         }
 
         categoryTabs.addEventListener('click', (e) => {
@@ -1056,6 +1136,17 @@
         btnOpenWrite.onclick = () => {
             boardForm.reset();
             document.getElementById('postId').value = '';
+            
+            // [UX 패치] 현재 게시판의 필터 카테고리를 글쓰기 창에 자동 반영
+            const postCategorySelect = document.getElementById('postCategory');
+            // '전체'라는 이름의 필터이거나 '전체' 코드를 가진 특수 필터인 경우
+            const isTotalFilter = currentFilter === '전체' || categories.find(c => c.name === currentFilter)?.label === '전체';
+            
+            if (isTotalFilter) {
+                postCategorySelect.value = ''; // '카테고리 선택' 표시
+            } else {
+                postCategorySelect.value = currentFilter;
+            }
             
             const isAdmin = (currentUser.role || '').toLowerCase().includes('admin');
             
@@ -1115,7 +1206,7 @@
             const fileUrl = document.getElementById('postFileUrl').value;
 
             if (!fileUrl) {
-                alert('파일 공유 링크를 입력해 주세요.');
+                window.showToast('파일 공유 링크를 입력해 주세요.', 'warning');
                 return;
             }
 
@@ -1128,7 +1219,12 @@
                 const title = (document.getElementById('postTitle').value || '').trim();
 
                 if (!church || !curia) {
-                    alert('성당과 꾸리아 정보는 반드시 선택해야 합니다.');
+                    window.showGlobalAlert('성당과 꾸리아 정보는 반드시 선택해야 합니다.', 'warning');
+                    return;
+                }
+
+                if (!category) {
+                    window.showToast('카테고리를 선택해 주세요.', 'warning');
                     return;
                 }
 
@@ -1153,10 +1249,10 @@
                 }
 
                 closeModal();
-                showStatusModal('저장 완료', '게시물이 실시간으로 저장되었습니다.');
+                window.showGlobalAlert('게시물이 실시간으로 저장되었습니다.', 'success');
             } catch (err) {
                 console.error("Save Error:", err);
-                alert('저장 중 오류가 발생했습니다: ' + err.message);
+                window.showGlobalAlert('저장 중 오류가 발생했습니다\n' + err.message, 'error');
             }
         };
 
@@ -1187,11 +1283,10 @@
             if (await window.showGlobalConfirm('정말 이 게시물을 삭제하시겠습니까? 게시되지 말아야 할 자료라면 삭제가 권장됩니다.', 'error')) {
                 try {
                     await deleteDoc(doc(db, "board_posts", id));
-                    // [시니어 패치] showStatusModal 대신 더 세련된 showToast 사용 제안 (또는 기존 유지)
-                    showStatusModal('삭제 완료', '게시물이 안전하게 삭제되었습니다.');
+                    window.showToast('게시물이 안전하게 삭제되었습니다.', 'success');
                 } catch (err) {
                     console.error("Delete Error:", err);
-                    alert('삭제 중 오류가 발생했습니다: ' + err.message);
+                    window.showGlobalAlert('삭제 중 오류가 발생했습니다\n' + err.message, 'error');
                 }
             }
         };
@@ -1199,6 +1294,11 @@
 </body>
 
 </html>
+
+
+
+
+
 
 
 

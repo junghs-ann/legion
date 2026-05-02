@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 돌봄 관리 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260417_1620">
+    <link rel="stylesheet" href="styles.css?v=20260502_1525">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @media (max-width: 768px) {
@@ -454,7 +454,7 @@
                 <button type="button" id="btnDelete" class="btn-submit btn-delete" style="display: none;">삭제</button>
             </div>
     <div class="summary-bar" style="display: none;"></div> <!-- dummy for script.js compatibility if needed -->
-    <script src="script.js?v=20260417_1620"></script>
+    <script src="script.js?v=20260502_1525"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser, convertToStdRole } from "./auth.js?v=20260303_1210";
@@ -664,6 +664,7 @@
                 if (!sessionNum) {
                     dateInput.value = '';
                     tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                    document.getElementById('totalAuxCount').textContent = '0';
                     btnDelete.style.display = 'none';
                     updateCaredCount();
                     return;
@@ -736,6 +737,7 @@
                 sessionInput.value = '';
                 dateInput.value = '';
                 tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                document.getElementById('totalAuxCount').textContent = '0';
                 btnDelete.style.display = 'none';
                 updateCaredCount();
             } catch (error) {
@@ -939,25 +941,6 @@
                 return;
             }
 
-            const careData = {};
-            const careDataSnapshot = [];
-
-            tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
-                const status = cb.checked ? 'checked' : 'none';
-                careData[cb.dataset.auxId] = status;
-
-                careDataSnapshot.push({
-                    auxId: cb.dataset.auxId,
-                    name: cb.dataset.auxName,
-                    baptismalName: cb.dataset.auxBaptismal,
-                    gender: cb.dataset.auxGender,
-                    activeMemberId: cb.dataset.activeId,
-                    activeMemberName: cb.dataset.activeName,
-                    activeMemberBaptismalName: cb.dataset.activeBaptismal,
-                    checked: status
-                });
-            });
-
             try {
                 // Find if existing record needs update
                 const q = query(collection(db, 'auxiliary_care_list'),
@@ -965,9 +948,43 @@
                     where('session', '==', String(session)));
                 const querySnapshot = await getDocs(q);
                 let docId = `care_${pr}_${session}`; // Predictable ID
+                
+                let existingCareData = {};
+                let existingSnapshot = [];
+
                 if (!querySnapshot.empty) {
+                    const docData = querySnapshot.docs[0].data();
                     docId = querySnapshot.docs[0].id;
+                    // [안전장치] Firebase 참조 문제를 방지하기 위해 완벽한 복제본(Clone) 생성
+                    existingCareData = docData.careData ? JSON.parse(JSON.stringify(docData.careData)) : {};
+                    existingSnapshot = docData.careDataSnapshot ? JSON.parse(JSON.stringify(docData.careDataSnapshot)) : [];
                 }
+
+                // Merge new data into existing data
+                tableBody.querySelectorAll('.care-checkbox').forEach(cb => {
+                    const status = cb.checked ? 'checked' : 'none';
+                    const auxId = cb.dataset.auxId;
+                    
+                    existingCareData[auxId] = status;
+
+                    const existingSnapIndex = existingSnapshot.findIndex(s => s.auxId === auxId);
+                    const newSnapItem = {
+                        auxId: auxId,
+                        name: cb.dataset.auxName,
+                        baptismalName: cb.dataset.auxBaptismal,
+                        gender: cb.dataset.auxGender,
+                        activeMemberId: cb.dataset.activeId,
+                        activeMemberName: cb.dataset.activeName,
+                        activeMemberBaptismalName: cb.dataset.activeBaptismal,
+                        checked: status
+                    };
+
+                    if (existingSnapIndex > -1) {
+                        existingSnapshot[existingSnapIndex] = newSnapItem;
+                    } else {
+                        existingSnapshot.push(newSnapItem);
+                    }
+                });
 
                 const church = churchSelect.value;
                 const curia = curiaSelect.value;
@@ -978,8 +995,8 @@
                     date: date,
                     churchName: church,
                     curiaName: curia,
-                    careData: careData,
-                    careDataSnapshot: careDataSnapshot,
+                    careData: existingCareData,
+                    careDataSnapshot: existingSnapshot,
                     updatedAt: serverTimestamp()
                 };
 
@@ -991,6 +1008,7 @@
                 sessionInput.value = '';
                 dateInput.value = '';
                 tableBody.innerHTML = '<tr><td colspan="5" style="color: #999; padding: 40px;">회차를 선택하면 대상 목록이 표시됩니다.</td></tr>';
+                document.getElementById('totalAuxCount').textContent = '0';
                 updateCaredCount();
                 btnDelete.style.display = 'none';
                 sessionInput.focus();
@@ -1002,6 +1020,11 @@
 </body>
 
 </html>
+
+
+
+
+
 
 
 
