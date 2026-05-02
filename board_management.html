@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>소통 게시판 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260502_1525">
+    <link rel="stylesheet" href="styles.css?v=20260502_1743">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260308_0215">
     <style>
@@ -795,11 +795,36 @@
         </div>
     </div>
 
-    <!-- 미리보기 팝업 제거 (직통 링크 시스템으로 전환) -->
+    <!-- Image Viewer Modal (이미지 카드 뷰어) -->
+    <div id="imageViewerModal" class="custom-modal-overlay" onclick="closeViewer()">
+        <div class="custom-modal" style="max-width: 90vw; max-height: 90vh; padding: 0; background: transparent; box-shadow: none;" onclick="event.stopPropagation()">
+            <div style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                <!-- 하단 중앙 버튼 그룹 -->
+                <div style="position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 10001; display: flex; gap: 12px; align-items: center;" onclick="event.stopPropagation()">
+                    <!-- 다운로드 버튼 -->
+                    <a id="viewerDownloadBtn" href="#" target="_blank" style="color: white; font-size: 1.05rem; font-weight: 600; text-decoration: none; cursor: pointer; background: rgba(46, 125, 50, 0.9); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(5px); white-space: nowrap; min-width: 120px;">
+                        <i class="fas fa-download" style="font-size: 1.1rem;"></i> 다운로드
+                    </a>
+                    <!-- 닫기 버튼 -->
+                    <div onclick="closeViewer()" style="color: white; font-size: 1.05rem; font-weight: 600; cursor: pointer; background: rgba(0,0,0,0.8); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(5px); white-space: nowrap; min-width: 120px;">
+                        <i class="fas fa-times" style="font-size: 1.1rem;"></i> 닫기
+                    </div>
+                </div>
+                <!-- 로딩 표시기 -->
+                <div id="viewerLoading" style="position: absolute; color: white; font-size: 1.2rem; display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> 불러오는 중...
+                </div>
+                <!-- 실제 이미지 표시 -->
+                <img id="viewerImage" src="" style="max-width: 100%; max-height: 85vh; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: none; object-fit: contain; background: white;">
+                <!-- PDF 등 대체 표시용 iframe -->
+                <iframe id="viewerIframe" src="" style="width: 100%; height: 85vh; min-width: 320px; border: none; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); background: white; display: none;"></iframe>
+            </div>
+        </div>
+    </div>
 
 
 
-    <script src="script.js?v=20260502_1525"></script>
+    <script src="script.js?v=20260502_1743"></script>
     <script type="module">
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260308_0430";
         import { fetchPresidiaList } from "./data.js?v=20260303_1210";
@@ -1094,14 +1119,18 @@
 
                 let fileIcon = '';
                 if (p.fileUrl) {
-                    // [시니어 패치] 복잡한 팝업 에러 대신, 100% 확실하게 열리는 새 창(새 탭) 방식 채택
-                    fileIcon = `<i class="fas fa-file-alt file-icon" onclick="window.open('${p.fileUrl}', '_blank')" title="파일 보기 (새 창)"></i>`;
+                    fileIcon = `<i class="fas fa-file-alt file-icon" onclick="window.openViewer('${p.fileUrl}')" title="자료 뷰어 열기"></i>`;
                 }
+
+                // 제목에도 링크 적용 (클릭 유도 스타일 추가)
+                const titleHtml = p.fileUrl 
+                    ? `<td class="title" style="cursor:pointer; color:var(--primary-color); font-weight:bold; transition:color 0.2s;" onclick="window.openViewer('${p.fileUrl}')" onmouseover="this.style.color='#d4a017'" onmouseout="this.style.color='var(--primary-color)'">${p.title}</td>`
+                    : `<td class="title">${p.title}</td>`;
 
                 tr.innerHTML = `
                     <td>${filtered.length - index}</td>
                     <td><span class="badge ${badgeClass}">${p.category}</span></td>
-                    <td class="title">${p.title}</td>
+                    ${titleHtml}
                     <td>${p.author || '관리자'}</td>
                     <td>${dateStr}</td>
                     <td>${fileIcon}</td>
@@ -1200,6 +1229,52 @@
 
         window.closeModal = () => { writeModal.style.display = 'none'; };
 
+        window.openViewer = (url) => {
+            if (!url) return;
+            const viewerModal = document.getElementById('imageViewerModal');
+            const viewerImage = document.getElementById('viewerImage');
+            const viewerIframe = document.getElementById('viewerIframe');
+            const viewerLoading = document.getElementById('viewerLoading');
+            
+            viewerImage.style.display = 'none';
+            viewerIframe.style.display = 'none';
+            viewerLoading.style.display = 'block';
+            viewerModal.style.display = 'flex';
+
+            const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                const fileId = match[1];
+                const imgUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                
+                const btnDownload = document.getElementById('viewerDownloadBtn');
+                if (btnDownload) btnDownload.href = downloadUrl;
+                
+                viewerImage.onload = () => {
+                    viewerLoading.style.display = 'none';
+                    viewerImage.style.display = 'block';
+                };
+                
+                viewerImage.onerror = () => {
+                    viewerLoading.style.display = 'none';
+                    viewerImage.style.display = 'none';
+                    viewerIframe.style.display = 'block';
+                    viewerIframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
+                };
+                
+                viewerImage.src = imgUrl;
+            } else {
+                viewerModal.style.display = 'none';
+                window.open(url, '_blank');
+            }
+        };
+
+        window.closeViewer = () => {
+            document.getElementById('imageViewerModal').style.display = 'none';
+            document.getElementById('viewerImage').src = '';
+            document.getElementById('viewerIframe').src = '';
+        };
+
         boardForm.onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('postId').value;
@@ -1294,6 +1369,11 @@
 </body>
 
 </html>
+
+
+
+
+
 
 
 
