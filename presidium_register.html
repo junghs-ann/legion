@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쁘레시디움 기본정보 관리 - 레지오 마리애 관리시스템</title>
     <!-- UI Update: 2026-03-13_1450 (Presidium Name Input Resized) -->
-    <link rel="stylesheet" href="styles.css?v=20260502_1743">
+    <link rel="stylesheet" href="styles.css?v=20260505_1711">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Form specific styles */
@@ -453,6 +453,7 @@
                 <span class="nav-link">관리자</span>
                 <ul class="sub-menu">
                     <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="clergy_info_management.html">성직자/수도자 정보관리</a></li>
                     <li><a href="activity_register.html">활동항목 관리</a></li>
                     <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
                     <li><a href="member_management.html">회원가입정보 관리</a></li>
@@ -597,7 +598,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260502_1743"></script>
+    <script src="script.js?v=20260505_1711"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
@@ -1141,6 +1142,8 @@
 </body>
 
 </html>
+
+
 
 
 

@@ -529,17 +529,30 @@ window.initCommonMenus = (profile, logoutUser) => {
             if (navLinkText.includes('관리자')) {
                 item.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
                 
-                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 표준화 진단' 링크 동적 주입
                 const subMenu = item.querySelector('.sub-menu');
+
+                // [새 기능] 성직자/수도자 정보 관리 메뉴 추가
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="clergy_info_management"]')) {
+                    const presidiumLink = subMenu.querySelector('a[href*="presidium_register.html"]');
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="clergy_info_management.html">성직자/수도자 정보관리</a>';
+                    if (presidiumLink && presidiumLink.parentElement.nextSibling) {
+                        subMenu.insertBefore(li, presidiumLink.parentElement.nextSibling);
+                    } else {
+                        subMenu.appendChild(li);
+                    }
+                }
+
+                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 표준화 진단' 링크 동적 주입
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_data"]')) {
                     const li = document.createElement('li');
-                    li.innerHTML = '<a href="diagnose_data.html" style="color: #2e7d32; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">🔍 데이터 표준화 진단</a>';
+                    li.innerHTML = '<a href="diagnose_data.html">데이터 표준화 진단</a>';
                     subMenu.appendChild(li);
                 }
                 // 기존 데이터 일괄 정리가 있다면 유지하되 아래에 배치 (필요시)
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="data_cleanup"]')) {
                     const li = document.createElement('li');
-                    li.innerHTML = '<a href="data_cleanup.html" style="color: #ef4444; font-size: 0.85rem;">⚠️ 데이터 일괄 정리(구)</a>';
+                    li.innerHTML = '<a href="data_cleanup.html">데이터 일괄 정리(구)</a>';
                     subMenu.appendChild(li);
                 }
 
@@ -547,6 +560,16 @@ window.initCommonMenus = (profile, logoutUser) => {
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="event_type_register"]')) {
                     const li = document.createElement('li');
                     li.innerHTML = '<a href="event_type_register.html" style="color: #6a1b9a; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">📋 행사 종류 관리</a>';
+                    subMenu.appendChild(li);
+                }
+            }
+
+            // [새 기능] '각종 장부' 메뉴 하단에 '성직자/수도자 조회' 추가
+            if (navLinkText.includes('각종 장부')) {
+                const subMenu = item.querySelector('.sub-menu');
+                if (subMenu && !subMenu.querySelector('a[href*="clergy_info_search"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="clergy_info_search.html" style="border-top: 1px solid #eee; margin-top: 5px; padding-top: 5px;">성직자/수도자 조회</a>';
                     subMenu.appendChild(li);
                 }
             }

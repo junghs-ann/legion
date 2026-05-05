@@ -348,14 +348,15 @@ body {
 .sub-menu li a {
     display: block;
     padding: 12px 25px;
-    color: #222; /* 회색에서 진한 검정으로 변경 (가독성 향상) */
+    color: #222;
     text-decoration: none;
     white-space: nowrap;
     transition: all 0.2s;
     font-size: 1.05rem;
-    border-bottom: 2px solid #f8f9fa; /* 더 연하고 깔끔한 경계선 */
+    font-weight: 600; /* 하위 메뉴 전체를 진하게 설정 */
+    border-bottom: 2px solid #f8f9fa;
     text-align: left;
-    background-color: #ffffff; /* 배경을 흰색으로 명시하여 비침 방지 */
+    background-color: #ffffff;
 }
 
 .sub-menu li:last-child a {

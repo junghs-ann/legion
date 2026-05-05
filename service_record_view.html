@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>복무 기록부 출력 - 레지오 마리애</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* A4 가로 규격 강제 및 최적화 */
         @page {
@@ -36,9 +37,21 @@
             position: relative;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
             overflow: hidden;
-            page-break-after: always;
             margin: 0 auto 20px;
-            /* 중앙 정렬 및 하단 간격 */
+        }
+
+        @media print {
+            .print-page {
+                margin: 0 !important;
+                page-break-after: always;
+            }
+        }
+
+        @media print {
+            .print-page {
+                margin: 0 !important;
+                page-break-after: always;
+            }
         }
 
         .record-title {
@@ -60,9 +73,9 @@
         /* 2단 메인 컨테이너 */
         .main-horizontal-split {
             display: flex;
-            gap: 2mm;
+            gap: 0;
             width: 100%;
-            border: 0.5mm solid #000;
+            border: 0.3mm solid #000;
             height: calc(210mm - 48mm);
         }
 
@@ -70,7 +83,7 @@
             flex: 0 0 42%;
             display: flex;
             flex-direction: column;
-            border-right: 0.5mm solid #000;
+            border-right: 4.5px double #000;
         }
 
         .right-column {
@@ -83,6 +96,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
+            border-style: hidden;
         }
 
         th,
@@ -92,29 +106,35 @@
             font-size: 9pt;
             text-align: center;
             height: 25px;
+            box-sizing: border-box;
             overflow: hidden;
         }
 
         .section-title {
-            background-color: #f8f8f8;
+            background-color: transparent;
             font-weight: bold;
             font-size: 10.5pt;
             height: 30px;
             letter-spacing: 5px;
+            border-bottom: 4.5px double #000 !important;
+        }
+
+        .col-header th {
+            border-bottom: 4.5px double #000 !important;
         }
 
         .label-bg {
-            background-color: #f2f2f2;
+            background-color: transparent;
             font-weight: bold;
             width: 70px;
         }
 
         .personal-info {
-            border-bottom: 0.5mm solid #000;
+            border-bottom: 4.5px double #000;
         }
 
         .move-history {
-            border-bottom: 0.5mm solid #000;
+            border-bottom: 4.5px double #000;
         }
 
         .career-history {
@@ -122,13 +142,21 @@
             overflow: hidden;
         }
 
+        .career-history table {
+            height: 100%;
+        }
+
         .education-history {
             flex: 1;
             overflow: hidden;
         }
 
+        .education-history table {
+            height: 100%;
+        }
+
         .notes-section {
-            border-top: 0.5mm solid #000;
+            border-top: 4.5px double #000;
             padding: 8px 12px;
             height: 35mm;
             box-sizing: border-box;
@@ -181,6 +209,11 @@
             color: white;
         }
 
+        .btn-download {
+            background-color: #34a853; /* 구글 그린 */
+            color: white;
+        }
+
         .btn-close {
             background-color: #333;
             color: white;
@@ -208,6 +241,7 @@
 
 <body>
     <div class="print-btn-overlay">
+        <button class="btn-action btn-download" id="btnDownloadPDF"><i class="fas fa-file-pdf"></i> 파일로 저장</button>
         <button class="btn-action btn-print" onclick="window.print()"><i class="fas fa-print"></i> 인쇄하기</button>
         <button class="btn-action btn-close" onclick="window.close()"><i class="fas fa-times"></i> 닫기</button>
     </div>
@@ -218,7 +252,7 @@
         import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
 
-        const PAGE_LIMITS = { move: 5, career: 10, education: 19 };
+        const PAGE_LIMITS = { move: 5, career: 8, education: 16 };
 
         async function init() {
             const params = new URLSearchParams(window.location.search);
@@ -259,8 +293,8 @@
                     const attendeeList = data.attendees || [];
                     // Check if attendee
                     const isAttendee = attendeeList.some(a => (a.uid === member.id || a.id === member.id));
-                    // Filter only 'Education' (교육) and 'Retreat' (피정) as requested
-                    const isValidType = data.type === '교육' || data.type === '피정';
+                    // Filter only 'Education' (교육) and 'Retreat' (피정) and exclude '계획' (Planned)
+                    const isValidType = (data.type === '교육' || data.type === '피정') && data.category !== '계획';
                     
                     if (isAttendee && isValidType) {
                         allEvents.push(data);
@@ -310,14 +344,14 @@
                             <div class="move-history">
                                 <table>
                                     <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">쁘레시디움 이동 현황</th></tr>
-                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:25%;">쁘레시디움 명</th><th style="width:25%;">평의회 명</th><th style="width:20%;">본당 명</th><th style="width:30%;">기 간</th></tr>
+                                    <tr class="col-header" style="height:25px;"><th style="width:25%;">쁘레시디움 명</th><th style="width:25%;">평의회 명</th><th style="width:20%;">본당 명</th><th style="width:30%;">기 간</th></tr>
                                     ${renderMoveRows(i === 0 ? moveData : [])}
                                 </table>
                             </div>
                             <div class="career-history">
                                 <table>
                                     <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">간부 경력 사항</th></tr>
-                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:25%;">소 속</th><th style="width:20%;">직 책</th><th style="width:20%;">본당 명</th><th style="width:35%;">기 간</th></tr>
+                                    <tr class="col-header" style="height:25px;"><th style="width:25%;">소 속</th><th style="width:20%;">직 책</th><th style="width:20%;">본당 명</th><th style="width:35%;">기 간</th></tr>
                                     ${renderCareerRows(careerSlice, member)}
                                 </table>
                             </div>
@@ -326,7 +360,7 @@
                             <div class="education-history">
                                 <table>
                                     <tr><th colspan="4" class="section-title" style="letter-spacing:5px; height:30px;">주요 교육 및 피정 참석 현황</th></tr>
-                                    <tr style="height:25px; background-color:#f9f9f9;"><th style="width:20%;">소 속</th><th style="width:22%;">일 자(기 간)</th><th style="width:38%;">내 용</th><th style="width:20%;">주 관</th></tr>
+                                    <tr class="col-header" style="height:25px;"><th style="width:20%;">소 속</th><th style="width:22%;">일 자(기 간)</th><th style="width:38%;">내 용</th><th style="width:20%;">주 관</th></tr>
                                     ${renderEduRows(eduSlice, member)}
                                 </table>
                             </div>
@@ -342,6 +376,163 @@
             }
 
             setTimeout(applyTextFitting, 200);
+
+            // PDF 다운로드 버튼 이벤트 리스너 연결
+            const btnDownload = document.getElementById('btnDownloadPDF');
+            if (btnDownload) {
+                btnDownload.addEventListener('click', function() {
+                    const original = document.getElementById('pageContainer');
+                    const fileName = `${member.name}_복무기록부.pdf`;
+                    const btn = this;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+                    btn.disabled = true;
+
+                    // 인쇄 최적화를 위해 임시 스타일 제거
+                    const originalPages = original.querySelectorAll('.print-page');
+                    originalPages.forEach(p => {
+                        p.style.margin = '0';
+                        p.style.boxShadow = 'none';
+                    });
+
+                    window.scrollTo(0, 0); // 화면 스크롤로 인한 캡처 짤림 방지
+
+                    const opt = {
+                        margin:       0,
+                        filename:     fileName,
+                        image:        { type: 'jpeg', quality: 1.0 },
+                        html2canvas:  { 
+                            scale: 3, 
+                            useCORS: true,
+                            scrollY: 0,
+                            scrollX: 0,
+                            onclone: (clonedDoc) => {
+                                // 1. 유령 노드 제거
+                                const clonedElement = clonedDoc.getElementById('pageContainer');
+                                Array.from(clonedElement.childNodes).forEach(node => {
+                                    if (node.nodeType === 3 || (node.nodeType === 1 && !node.classList.contains('print-page'))) {
+                                        node.remove();
+                                    }
+                                });
+
+                                // 2. 바디 및 최상위 요소 초기화 (클론 문서)
+                                const d = clonedDoc.documentElement;
+                                const b = clonedDoc.body;
+                                [d, b].forEach(el => {
+                                    el.style.margin = '0';
+                                    el.style.padding = '0';
+                                    el.style.width = '297mm';
+                                    el.style.background = '#fff';
+                                });
+
+                                // 3. CSS 주입 (클론 문서 전용 스타일)
+                                const styleNode = clonedDoc.createElement('style');
+                                styleNode.textContent = `
+                                    #pageContainer {
+                                        width: 297mm !important;
+                                        margin: 0 !important;
+                                        padding: 0 !important;
+                                        overflow: hidden !important;
+                                    }
+
+                                    #pageContainer .print-page {
+                                        width: 297mm !important;
+                                        height: 207mm !important; /* 여유 있게 207mm로 설정하여 백지 원천 봉쇄 */
+                                        padding: 10mm 12mm !important;
+                                        margin: 0 !important;
+                                        box-sizing: border-box !important;
+                                        background: #fff !important;
+                                        box-shadow: none !important;
+                                        border: none !important;
+                                        overflow: hidden !important;
+                                        page-break-after: avoid !important;
+                                        page-break-before: avoid !important;
+                                        page-break-inside: avoid !important;
+                                    }
+
+                                    /* 1. 모든 요소의 기본 테두리 초기화 */
+                                    #pageContainer * { border: none !important; box-shadow: none !important; }
+
+                                    /* 2. 외곽 프레임 및 구분선 (이중선 시뮬레이션) */
+                                    .main-horizontal-split {
+                                        border: 0.1px solid #555 !important;
+                                        display: flex !important;
+                                        background-color: #fff !important;
+                                    }
+                                    .left-column {
+                                        border-right: 3px double #000 !important;
+                                    }
+                                    .personal-info, .move-history {
+                                        border-bottom: 3px double #000 !important;
+                                    }
+                                    .section-title, .col-header th {
+                                        border-bottom: 3px double #000 !important;
+                                    }
+                                    .notes-section {
+                                        border-top: 3px double #000 !important;
+                                    }
+
+                                    /* 3. [혁신] 테두리 대신 배경색 격자 방식 사용 (선 굵기 문제 완전 해결) */
+                                    table {
+                                        border-collapse: separate !important;
+                                        border-spacing: 0.3px !important; /* 이 간격이 선의 두께가 됩니다 */
+                                        background-color: #555 !important; /* 선의 색상 */
+                                        width: 100% !important;
+                                    }
+                                    th, td {
+                                        background-color: #fff !important; /* 칸의 배경색 */
+                                        padding: 3px 6px !important;
+                                        font-size: 8.5pt !important;
+                                        text-align: center !important;
+                                        height: auto !important;
+                                    }
+
+                                    /* 표의 바깥쪽 테두리가 겹치지 않도록 조정 */
+                                    .personal-info table, .move-history table, .career-history table, .education-history table {
+                                        border: none !important;
+                                    }
+                                `;
+                                clonedDoc.head.appendChild(styleNode);
+                            }
+                        },
+                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                        pagebreak:    { mode: 'avoid' }
+                    };
+
+                    // [긴급] 모바일 뷰포트 찌그러짐 방지를 위해 실제 DOM 일시 수정
+                    const bodyOriginalWidth = document.body.style.width;
+                    const containerOriginalWidth = original.style.width;
+                    document.body.style.width = '297mm';
+                    original.style.width = '297mm';
+
+                    const targetElement = document.querySelector('.print-page');
+                    html2pdf().set(opt).from(targetElement).save().then(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        
+                        // 원상 복구
+                        document.body.style.width = bodyOriginalWidth;
+                        original.style.width = containerOriginalWidth;
+                        originalPages.forEach(p => {
+                            p.style.margin = '';
+                            p.style.boxShadow = '';
+                        });
+                    }).catch(err => {
+                        console.error('PDF 생성 에러:', err);
+                        alert('PDF 생성 중 오류가 발생했습니다: ' + err.message);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        
+                        // 에러 시에도 원상 복구
+                        document.body.style.width = bodyOriginalWidth;
+                        original.style.width = containerOriginalWidth;
+                        originalPages.forEach(p => {
+                            p.style.margin = '';
+                            p.style.boxShadow = '';
+                        });
+                    });
+                });
+            }
         }
 
         function renderMoveRows(data) {
@@ -408,10 +599,12 @@
             }
         }, () => { window.close(); });
     </script>
-    <script src="script.js?v=20260502_1743"></script>
+    <script src="script.js?v=20260505_1711"></script>
 </body>
 
 </html>
+
+
 
 
 
