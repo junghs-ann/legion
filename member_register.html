@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단원 등록 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260505_1711">
+    <link rel="stylesheet" href="styles.css?v=20260508_0333">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Reuse styles from presidium_register.html for consistency */
@@ -376,6 +376,10 @@
                         <label>연락처</label>
                         <input type="tel" name="phone" placeholder="010-0000-0000">
                     </div>
+                    <div class="form-group">
+                        <label>이메일</label>
+                        <input type="email" name="email" placeholder="example@email.com">
+                    </div>
 
                     <div class="form-group form-full-width">
                         <label>주소</label>
@@ -439,7 +443,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260505_1711"></script>
+    <script src="script.js?v=20260508_0333"></script>
     <script type="module">
         import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy, deleteField } from './firebase-config.js';
         import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from './data.js';
@@ -546,7 +550,13 @@
                     (p.churchName || '').trim() === selectedChurch &&
                     (p.curiaName || '').trim() === selectedCuria
                 );
-                currentPresidia = [...new Set(filtered.map(p => (p.presidiumName || '').trim()).filter(Boolean))].sort();
+                // 고유번호(uniqueNumber) 기준 숫자 오름차순 정렬
+                filtered.sort((a, b) => {
+                    const numA = parseInt(a.uniqueNumber || 9999);
+                    const numB = parseInt(b.uniqueNumber || 9999);
+                    return numA - numB;
+                });
+                currentPresidia = [...new Set(filtered.map(p => (p.presidiumName || '').trim()).filter(Boolean))];
                 presidiumInput.disabled = false;
                 presidiumInput.style.backgroundColor = 'white';
             });
@@ -963,6 +973,7 @@
                 confirmationDate: member.confirmationDate || '',
                 birthDate: member.birthDate || '',
                 phone: member.phone || '',
+                email: member.email || '',
                 address: member.address || '',
                 status: member.status || '',
                 classification: member.classification || '행동단원',
@@ -1289,6 +1300,7 @@
 </body>
 
 </html>
+
 
 
 

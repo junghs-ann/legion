@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쁘레시디움 데이터 ID 진단 및 정비 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260508_0333">
+    <style>
+        body { padding: 20px; font-family: 'Pretendard', sans-serif; background: #f8fafc; color: #334155; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 25px rgba(0,0,0,0.05); }
+        h1 { color: #0f172a; font-size: 1.5rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .summary-card { background: #eff6ff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #dbeafe; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 0.85rem; color: #64748b; margin-bottom: 5px; }
+        .stat-value { font-size: 1.25rem; font-weight: 700; color: #1e40af; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        th { background-color: #f1f5f9; color: #475569; font-weight: 600; }
+        tr:hover { background-color: #f8fafc; }
+        
+        .id-badge { font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+        .id-doc { background: #f1f5f9; color: #475569; }
+        .id-field-empty { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .id-field-exists { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        
+        .btn-action { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-fix-all { background: #2563eb; color: white; margin-bottom: 20px; }
+        .btn-fix-all:hover { background: #1d4ed8; }
+        .btn-fix-single { background: #3b82f6; color: white; padding: 5px 10px; font-size: 0.8rem; }
+        
+        .log-container { margin-top: 30px; padding: 15px; background: #0f172a; color: #10b981; border-radius: 8px; font-family: monospace; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 쁘레시디움 데이터 ID 진단 및 정비</h1>
+        <p>DB 문서 내부에 불필요하게 저장된 <code>id</code> 필드를 찾아내고 정리합니다.</p>
+
+        <div class="summary-card">
+            <div class="summary-grid">
+                <div class="stat-item">
+                    <div class="stat-label">전체 레코드</div>
+                    <div id="stat-total" class="stat-value">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">내부 id 필드 존재</div>
+                    <div id="stat-has-id" class="stat-value">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">비어있는 id 필드</div>
+                    <div id="stat-empty-id" class="stat-value">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">정상 (깨끗함)</div>
+                    <div id="stat-clean" class="stat-value">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="btnRefresh" class="btn-action" style="background: #64748b; color: white;">새로고침</button>
+            <button id="btnFixAll" class="btn-action btn-fix-all" style="display: none;">모든 문제 항목 정비하기</button>
+        </div>
+
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>성당 명</th>
+                    <th>쁘레시디움 명</th>
+                    <th>실제 문서 ID (Real)</th>
+                    <th>내부 id 필드 값 (Internal)</th>
+                    <th>상태</th>
+                    <th>조치</th>
+                </tr>
+            </thead>
+            <tbody id="result-body">
+                <tr><td colspan="6" style="text-align:center; padding: 40px;">데이터를 불러오는 중...</td></tr>
+            </tbody>
+        </table>
+
+        <div id="log" class="log-container" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc, deleteField } from "./firebase-config.js";
+
+        const resultBody = document.getElementById('result-body');
+        const btnFixAll = document.getElementById('btnFixAll');
+        const logContainer = document.getElementById('log');
+
+        let targetDocs = [];
+
+        function addLog(msg) {
+            logContainer.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.textContent = `> ${new Date().toLocaleTimeString()}: ${msg}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function runDiagnosis() {
+            targetDocs = [];
+            resultBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">데이터 분석 중...</td></tr>';
+            
+            try {
+                const snapshot = await getDocs(collection(db, 'presidia_list'));
+                const allData = [];
+                let hasIdCount = 0;
+                let emptyIdCount = 0;
+                let cleanCount = 0;
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const realId = docSnap.id;
+                    const internalId = data.id; // Check if 'id' field exists in data
+                    
+                    const hasInternalId = 'id' in data;
+                    const isEmpty = hasInternalId && (internalId === "" || internalId === null || internalId === undefined);
+                    
+                    if (hasInternalId) {
+                        hasIdCount++;
+                        if (isEmpty) emptyIdCount++;
+                        targetDocs.push({ id: realId, data });
+                    } else {
+                        cleanCount++;
+                    }
+
+                    allData.push({
+                        realId,
+                        internalId: hasInternalId ? (internalId || '(empty)') : '없음',
+                        church: data.churchName || data.church || '-',
+                        pr: data.presidiumName || data.presidium || '-',
+                        hasInternalId,
+                        isEmpty
+                    });
+                });
+
+                // Update Stats
+                document.getElementById('stat-total').textContent = snapshot.size;
+                document.getElementById('stat-has-id').textContent = hasIdCount;
+                document.getElementById('stat-empty-id').textContent = emptyIdCount;
+                document.getElementById('stat-clean').textContent = cleanCount;
+
+                if (hasIdCount > 0) {
+                    btnFixAll.style.display = 'block';
+                    btnFixAll.textContent = `${hasIdCount}개의 항목 정비하기`;
+                } else {
+                    btnFixAll.style.display = 'none';
+                }
+
+                // Render Table
+                resultBody.innerHTML = '';
+                allData.sort((a, b) => b.hasInternalId - a.hasInternalId).forEach(item => {
+                    const tr = document.createElement('tr');
+                    let statusHtml = '';
+                    let actionHtml = '';
+
+                    if (item.hasInternalId) {
+                        if (item.isEmpty) {
+                            statusHtml = '<span class="id-badge id-field-empty">⚠️ 빈 ID 필드 존재</span>';
+                        } else {
+                            statusHtml = '<span class="id-badge id-field-exists">❓ 내부 필드 중복</span>';
+                        }
+                        actionHtml = `<button class="btn-action btn-fix-single" onclick="window.fixSingle('${item.realId}')">정비</button>`;
+                    } else {
+                        statusHtml = '<span class="status-badge" style="color:#10b981">✅ 정상</span>';
+                        actionHtml = '-';
+                    }
+
+                    tr.innerHTML = `
+                        <td>${item.church}</td>
+                        <td>${item.pr}</td>
+                        <td><span class="id-badge id-doc">${item.realId}</span></td>
+                        <td><span class="id-badge ${item.hasInternalId ? 'id-field-exists' : ''}">${item.internalId}</span></td>
+                        <td>${statusHtml}</td>
+                        <td>${actionHtml}</td>
+                    `;
+                    resultBody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error(err);
+                resultBody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">오류: ${err.message}</td></tr>`;
+            }
+        }
+
+        window.fixSingle = async (realId) => {
+            if (!confirm('해당 문서의 내부 id 필드를 제거하시겠습니까?')) return;
+            try {
+                // Use field deletion to completely remove 'id' key from the document
+                const { deleteField: df } = await import("./firebase-config.js");
+                await updateDoc(doc(db, 'presidia_list', realId), {
+                    id: deleteField()
+                });
+                addLog(`성공: [${realId}] 문서의 내부 id 필드를 제거했습니다.`);
+                runDiagnosis();
+            } catch (err) {
+                addLog(`실패: [${realId}] ${err.message}`);
+            }
+        };
+
+        btnFixAll.onclick = async () => {
+            if (!confirm(`${targetDocs.length}개의 문서에서 내부 id 필드를 일괄 제거하시겠습니까?`)) return;
+            addLog('일괄 정비를 시작합니다...');
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const item of targetDocs) {
+                try {
+                    await updateDoc(doc(db, 'presidia_list', item.id), {
+                        id: deleteField()
+                    });
+                    successCount++;
+                } catch (err) {
+                    console.error(err);
+                    failCount++;
+                    addLog(`실패: [${item.id}] ${err.message}`);
+                }
+            }
+            addLog(`작업 완료: 성공 ${successCount}건, 실패 ${failCount}건`);
+            alert(`정비 완료! 성공: ${successCount}건 / 실패: ${failCount}건`);
+            runDiagnosis();
+        };
+
+        document.getElementById('btnRefresh').onclick = runDiagnosis;
+        runDiagnosis();
+    </script>
+</body>
+</html>
+

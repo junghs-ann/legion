@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쁘레시디움 기본정보 관리 - 레지오 마리애 관리시스템</title>
     <!-- UI Update: 2026-03-13_1450 (Presidium Name Input Resized) -->
-    <link rel="stylesheet" href="styles.css?v=20260505_1711">
+    <link rel="stylesheet" href="styles.css?v=20260508_0333">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Form specific styles */
@@ -574,7 +574,7 @@
                     </div>
                 </div>
                 <!-- Hidden inputs for validation or future use -->
-                <input type="hidden" name="id" id="recordId">
+                <input type="hidden" id="recordId">
 
                 <div class="btn-sticky-group">
                     <button type="submit" class="btn-premium btn-premium-save"><i class="fas fa-save"></i>저 장</button>
@@ -598,7 +598,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260505_1711"></script>
+    <script src="script.js?v=20260508_0333"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
@@ -612,7 +612,7 @@
 
             // Firestore real-time sync for presidia_list
             onSnapshot(collection(db, 'presidia_list'), (snapshot) => {
-                presidia_list = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                presidia_list = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id }));
                 updateChurchSelect();
             });
             window.showCustomAlert = (message) => {
@@ -750,7 +750,16 @@
                         filtered = filtered.filter(p => (p.curiaName || '').trim() === selectedCuria);
                     }
 
-                    let presidiumNames = filtered.map(p => p.presidiumName);
+                    // 고유번호(uniqueNumber) 기준 숫자 오름차순 정렬 후 이름 추출
+                    let presidiumNames = filtered
+                        .sort((a, b) => {
+                            const numA = parseInt(a.uniqueNumber || 9999);
+                            const numB = parseInt(b.uniqueNumber || 9999);
+                            if (numA !== numB) return numA - numB;
+                            return (a.presidiumName || '').localeCompare(b.presidiumName || '');
+                        })
+                        .map(p => p.presidiumName);
+                    
                     presidiumNames = [...new Set(presidiumNames)];
 
                     if (filterText) {
@@ -785,7 +794,7 @@
                     }
 
                     let curiaNames = filtered.map(p => p.curiaName);
-                    curiaNames = [...new Set(curiaNames)].filter(n => n);
+                    curiaNames = [...new Set(curiaNames)].filter(n => n).sort();
 
                     if (filterText) {
                         curiaNames = curiaNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
@@ -845,7 +854,7 @@
                         } else {
                             filteredData = presidia_list.map(p => p[dataKey]);
                         }
-                        filteredData = [...new Set(filteredData)].filter(item => item);
+                        filteredData = [...new Set(filteredData)].filter(item => item).sort();
 
                         if (filterText) {
                             filteredData = filteredData.filter(item => item.toLowerCase().includes(filterText.toLowerCase()));
@@ -992,36 +1001,61 @@
                         return;
                     }
 
+                    // ID 필드는 데이터 내부가 아닌 문서 키로만 사용되도록 정리
+                    delete data.id;
+
                     try {
+                        // 1. 현재 폼에 로드된 ID 확인
                         const currentId = document.getElementById('recordId').value || form.dataset.currentId;
                         let targetId = currentId;
 
-                        // ID가 없으면 이름으로 매칭 시도 (기존 방식 유지하되 후순위)
+                        // 2. ID가 없으면 이름으로 매칭 시도 (기존 방식 유지하되 후순위)
                         if (!targetId) {
                             const existing = presidia_list.find(p => {
-                                const pChurch = (p.churchName || '').toString().trim();
-                                const pPr = (p.presidiumName || '').toString().trim();
+                                const pChurch = (p.churchName || p.church || '').toString().trim();
+                                const pPr = (p.presidiumName || p.presidium || '').toString().trim();
                                 return pChurch === (data.churchName || '').trim() && pPr === (data.presidiumName || '').trim();
                             });
                             if (existing) targetId = existing.id;
                         }
 
                         if (targetId) {
+                            // [수정 모드]
+                            // 이름이 변경된 경우, 변경하려는 이름이 이미 다른 문서에서 사용 중인지 체크
+                            const isNameChanged = presidia_list.some(p => p.id === targetId && (
+                                (p.churchName || p.church || '').trim() !== (data.churchName || '').trim() ||
+                                (p.presidiumName || p.presidium || '').trim() !== (data.presidiumName || '').trim()
+                            ));
+
+                            if (isNameChanged) {
+                                const duplicate = presidia_list.find(p => 
+                                    p.id !== targetId &&
+                                    (p.churchName || p.church || '').trim() === (data.churchName || '').trim() &&
+                                    (p.presidiumName || p.presidium || '').trim() === (data.presidiumName || '').trim()
+                                );
+                                if (duplicate) {
+                                    window.showCustomAlert('변경하려는 성당/쁘레시디움 명이 이미 다른 기록에서 사용 중입니다.');
+                                    return;
+                                }
+                            }
+
                             await updateDoc(doc(db, 'presidia_list', targetId), {
                                 ...data,
                                 updatedAt: serverTimestamp()
                             });
                             window.showCustomAlert('정보가 수정되었습니다.');
                         } else {
+                            // [신규 등록 모드]
                             data.createdAt = serverTimestamp();
                             data.updatedAt = serverTimestamp();
-                            // Check for existing record by churchName/church and presidiumName/presidium before adding
+                            
+                            // 이름 중복 체크
                             const churchName = (data.churchName || '').trim();
                             const presidiumName = (data.presidiumName || '').trim();
 
                             const existingRecord = presidia_list.find(p =>
-                                (p.churchName || '').trim() === churchName &&
-                                (p.presidiumName || '').trim() === presidiumName
+                                (p.churchName || p.church || '').trim() === churchName &&
+                                (p.presidiumName || p.presidium || '').trim() === presidiumName
                             );
 
                             if (existingRecord) {
@@ -1032,6 +1066,8 @@
                             await addDoc(collection(db, 'presidia_list'), data);
                             window.showCustomAlert('성공적으로 등록되었습니다.');
                             form.reset();
+                            document.getElementById('recordId').value = '';
+                            delete form.dataset.currentId;
                             if (!isDirectInput) {
                                 churchSelect.value = '';
                                 churchNameInput.value = '';
@@ -1142,6 +1178,7 @@
 </body>
 
 </html>
+
 
 
 

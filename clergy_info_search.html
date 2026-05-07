@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=20260505_1711">
+    <link rel="stylesheet" href="styles.css?v=20260508_0333">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -121,8 +121,8 @@
         .record-table th {
             background-color: #f8f9fa;
             color: #4a5568;
-            padding: 15px 12px;
-            text-align: left;
+            padding: 12px 10px; /* 패딩 약간 축소 */
+            text-align: center; /* 항목명 가운데 정렬 */
             position: sticky;
             top: 0;
             z-index: 10;
@@ -131,10 +131,11 @@
         }
 
         .record-table td {
-            padding: 15px 12px;
+            padding: 12px 10px;
             border-bottom: 1px solid #edf2f7;
             vertical-align: middle;
-            white-space: nowrap; /* 내용 줄바꿈 방지 */
+            white-space: nowrap;
+            text-align: center; /* 모든 셀 가운데 정렬로 통일 */
         }
 
         .record-table tr:hover {
@@ -156,6 +157,92 @@
             .form-grid { grid-template-columns: 1fr; }
             .date-range-group { flex-direction: column; align-items: stretch; }
             .date-range-group span { display: none; }
+        }
+
+        /* 상세 정보 모달 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            animation: modalFadeUp 0.3s ease-out;
+        }
+
+        @keyframes modalFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .btn-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #cbd5e0;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .btn-modal-close:hover {
+            color: #4a5568;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 12px;
+            font-size: 0.95rem;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #718096;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .detail-value {
+            color: #2d3748;
+            padding: 5px 0;
+            line-height: 1.5;
+            word-break: break-all;
+            white-space: pre-wrap; /* 줄바꿈 허용 */
         }
     </style>
 </head>
@@ -301,14 +388,28 @@
         </div>
     </div>
 
+    <!-- 상세 정보 모달 -->
+    <div id="detailModal" class="modal-overlay" onclick="closeDetailModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">성직자/수도자 상세 정보</div>
+                <button class="btn-modal-close" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="detail-grid" id="modalDetailContent">
+                <!-- JS에서 동적으로 채워짐 -->
+            </div>
+        </div>
+    </div>
+
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260505_1711"></script>
+    <script src="script.js?v=20260508_0333"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
 
         let currentUserProfile = null;
         let isAdmin = false;
+        let searchResults = []; // 상세 조회를 위해 검색 결과 저장
 
         // 인증 상태 감시 및 초기화
         initAuthObserver(async (user, profile) => {
@@ -353,7 +454,6 @@
                 <th>성명(세례명)</th>
                 <th>축일</th>
                 <th>재직기간</th>
-                <th>특이 및 참고사항</th>
             `;
             tableHead.innerHTML = headHtml;
         }
@@ -428,6 +528,7 @@
                     return (b.appointmentDate || '').localeCompare(a.appointmentDate || '');
                 });
 
+                searchResults = results;
                 renderResults(results);
             } catch (err) {
                 console.error("조회 중 오류:", err);
@@ -459,16 +560,60 @@
                 rowHtml += `
                     <td><span class="tag-position ${posClass}">${item.position}</span></td>
                     <td>${item.generation || ''}</td>
-                    <td><span style="font-weight: 600;">${item.name}</span> <span style="color: #718096; font-size: 0.85rem;">(${item.baptismalName || ''})</span></td>
-                    <td style="color: #d69e2e;">${item.feastDay || ''}</td>
+                    <td>
+                        <span style="font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: none;" 
+                              onclick="showDetail('${item.id}')">
+                            ${item.name}
+                        </span> 
+                        <span style="color: #718096; font-size: 0.85rem;">(${item.baptismalName || ''})</span>
+                    </td>
+                    <td style="color: #d69e2e; font-weight: bold;">${item.feastDay || ''}</td>
                     <td style="font-size: 0.85rem; color: #4a5568; white-space: nowrap;">${range}</td>
-                    <td style="font-size: 0.85rem; color: #718096;">${item.notes || ''}</td>
                 </tr>`;
                 return rowHtml;
             }).join('');
         }
+
+        // --- 상세 정보 모달 제어 ---
+        window.showDetail = (id) => {
+            const item = searchResults.find(r => r.id === id);
+            if (!item) return;
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalDetailContent');
+            
+            // 날짜 포맷팅
+            const formatD = (d) => d ? d.replace(/-/g, '.') : '-';
+
+            let html = `
+                <div class="detail-label">성당명</div><div class="detail-value">${item.churchName || '-'}</div>
+                <div class="detail-label">직책</div><div class="detail-value">${item.position || '-'} (${item.generation || ''})</div>
+                <div class="detail-label">성명</div><div class="detail-value"><b>${item.name}</b> (${item.baptismalName || '-'})</div>
+                <div class="detail-label">축일</div><div class="detail-value">${item.feastDay || '-'}</div>
+                <div class="detail-label">연락처</div><div class="detail-value">${item.contact || '-'}</div>
+                <div class="detail-label">임명일</div><div class="detail-value">${formatD(item.appointmentDate)}</div>
+                <div class="detail-label">전임지</div><div class="detail-value">${item.preAssignment || '-'}</div>
+                <div class="detail-label">만료일</div><div class="detail-value">${formatD(item.expiryDate) === '-' ? '재직 중' : formatD(item.expiryDate)}</div>
+                <div class="detail-label">신임지</div><div class="detail-value">${item.postAssignment || '-'}</div>
+                <div class="detail-label">재직기간</div><div class="detail-value">${!item.expiryDate ? '<span style="color: var(--primary-color); font-weight: bold;">현재 재직 중</span>' : (item.tenure || '-')}</div>
+                <div class="detail-label" style="grid-column: span 2; margin-top: 10px;">특이 및 참고사항</div>
+                <div class="detail-value" style="grid-column: span 2; background: #fffaf0; padding: 15px; border-radius: 10px; border: 1px dashed #f6e05e;">
+                    ${item.remarks || item.notes || '내용 없음'}
+                </div>
+            `;
+            
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
+        };
+
+        window.closeDetailModal = () => {
+            document.getElementById('detailModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        };
     </script>
 </body>
 
 </html>
+
 

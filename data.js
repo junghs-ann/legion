@@ -67,8 +67,14 @@ export function getPresidia(churchName, curiaName) {
         })
         .map(p => ({
             id: p.id,
-            name: (p.presidiumName || '').toString().trim()
+            name: (p.presidiumName || '').toString().trim(),
+            uniqueNumber: p.uniqueNumber
         }))
         .filter(p => p.name && p.name !== '쁘레시디움 선택')
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => {
+            const numA = parseInt(a.uniqueNumber || 9999);
+            const numB = parseInt(b.uniqueNumber || 9999);
+            if (numA !== numB) return numA - numB;
+            return a.name.localeCompare(b.name);
+        });
 }

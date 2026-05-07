@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성직자/수도자 정보관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260505_1711">
+    <link rel="stylesheet" href="styles.css?v=20260508_0333">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* 성직자/수도자 관리 전용 스타일 */
@@ -348,6 +348,14 @@
                         <label>재직기간</label>
                         <input type="text" name="tenure" placeholder="예: 2022.01 ~ 2024.01">
                     </div>
+                    <div class="form-group">
+                        <label>전임지</label>
+                        <input type="text" name="preAssignment" placeholder="임명 전 근무지">
+                    </div>
+                    <div class="form-group">
+                        <label>신임지</label>
+                        <input type="text" name="postAssignment" placeholder="이동(발령) 예정 근무지">
+                    </div>
                     <div class="form-group span-2">
                         <label>특이 및 참고사항</label>
                         <textarea name="remarks" rows="3" placeholder="참고사항을 입력하세요"></textarea>
@@ -395,7 +403,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260505_1711"></script>
+    <script src="script.js?v=20260508_0333"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -558,6 +566,7 @@
             if (!item) return;
 
             const form = document.getElementById('clergyForm');
+            form.reset(); // 버그 수정: 새 데이터를 불러오기 전에 기존 입력값 초기화
             document.getElementById('recordId').value = item.id;
 
             // 폼 필드 채우기
@@ -677,3 +686,4 @@
 </body>
 
 </html>
+
