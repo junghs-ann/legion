@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성직자/수도자 정보관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260508_0333">
+    <link rel="stylesheet" href="styles.css?v=20260508_0941">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* 성직자/수도자 관리 전용 스타일 */
@@ -337,11 +337,11 @@
                         <input type="tel" name="contact" placeholder="010-0000-0000">
                     </div>
                     <div class="form-group">
-                        <label>임명일</label>
+                        <label>부임일</label>
                         <input type="date" name="appointmentDate" required>
                     </div>
                     <div class="form-group">
-                        <label>임명 만료일</label>
+                        <label>부임 만료일</label>
                         <input type="date" name="expiryDate">
                     </div>
                     <div class="form-group">
@@ -403,7 +403,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260508_0333"></script>
+    <script src="script.js?v=20260508_0941"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -647,7 +647,7 @@
             const end = endDateVal ? new Date(endDateVal) : new Date();
 
             if (end < start) {
-                tenureInput.value = '날짜 입력 오류 (만료일이 임명일보다 빠름)';
+                tenureInput.value = '날짜 입력 오류 (만료일이 부임일보다 빠름)';
                 return;
             }
 
@@ -686,4 +686,5 @@
 </body>
 
 </html>
+
 

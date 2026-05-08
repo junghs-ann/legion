@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=20260508_0333">
+    <link rel="stylesheet" href="styles.css?v=20260508_0941">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -402,7 +402,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260508_0333"></script>
+    <script src="script.js?v=20260508_0941"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -518,7 +518,7 @@
                     });
                 }
 
-                // 정렬: 성당명 -> 직책(주임->보좌->원장->수녀) -> 임명일(최신순)
+                // 정렬: 성당명 -> 직책(주임->보좌->원장->수녀) -> 부임일(최신순)
                 const posOrder = { "주임신부": 1, "보좌신부": 2, "원장수녀": 3, "수녀": 4 };
                 results.sort((a, b) => {
                     if (a.churchName !== b.churchName) return (a.churchName || '').localeCompare(b.churchName || '');
@@ -591,9 +591,9 @@
                 <div class="detail-label">성명</div><div class="detail-value"><b>${item.name}</b> (${item.baptismalName || '-'})</div>
                 <div class="detail-label">축일</div><div class="detail-value">${item.feastDay || '-'}</div>
                 <div class="detail-label">연락처</div><div class="detail-value">${item.contact || '-'}</div>
-                <div class="detail-label">임명일</div><div class="detail-value">${formatD(item.appointmentDate)}</div>
+                <div class="detail-label">부임일</div><div class="detail-value">${formatD(item.appointmentDate)}</div>
                 <div class="detail-label">전임지</div><div class="detail-value">${item.preAssignment || '-'}</div>
-                <div class="detail-label">만료일</div><div class="detail-value">${formatD(item.expiryDate) === '-' ? '재직 중' : formatD(item.expiryDate)}</div>
+                <div class="detail-label">부임 만료일</div><div class="detail-value">${formatD(item.expiryDate) === '-' ? '재직 중' : formatD(item.expiryDate)}</div>
                 <div class="detail-label">신임지</div><div class="detail-value">${item.postAssignment || '-'}</div>
                 <div class="detail-label">재직기간</div><div class="detail-value">${!item.expiryDate ? '<span style="color: var(--primary-color); font-weight: bold;">현재 재직 중</span>' : (item.tenure || '-')}</div>
                 <div class="detail-label" style="grid-column: span 2; margin-top: 10px;">특이 및 참고사항</div>
@@ -615,5 +615,6 @@
 </body>
 
 </html>
+
 
 
