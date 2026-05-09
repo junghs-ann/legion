@@ -564,13 +564,22 @@ window.initCommonMenus = (profile, logoutUser) => {
                 }
             }
 
-            // [새 기능] '각종 장부' 메뉴 하단에 '성직자/수도자 조회' 추가
+            // [새 기능] '각종 장부' 메뉴 하단에 '쁘레시디움 정보 조회' 및 '성직자/수도자 조회' 추가
             if (navLinkText.includes('각종 장부')) {
                 const subMenu = item.querySelector('.sub-menu');
-                if (subMenu && !subMenu.querySelector('a[href*="clergy_info_search"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="clergy_info_search.html" style="border-top: 1px solid #eee; margin-top: 5px; padding-top: 5px;">성직자/수도자 조회</a>';
-                    subMenu.appendChild(li);
+                if (subMenu) {
+                    // 쁘레시디움 정보 조회 추가
+                    if (!subMenu.querySelector('a[href*="presidium_info_search"]')) {
+                        const li = document.createElement('li');
+                        li.innerHTML = '<a href="presidium_info_search.html" style="border-top: 1px solid #eee; margin-top: 5px; padding-top: 5px; color: #2e7d32; font-weight: bold;">쁘레시디움 정보 조회</a>';
+                        subMenu.appendChild(li);
+                    }
+                    // 성직자/수도자 조회 추가
+                    if (!subMenu.querySelector('a[href*="clergy_info_search"]')) {
+                        const li = document.createElement('li');
+                        li.innerHTML = '<a href="clergy_info_search.html">성직자/수도자 조회</a>';
+                        subMenu.appendChild(li);
+                    }
                 }
             }
 
