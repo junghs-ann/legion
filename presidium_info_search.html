@@ -12,7 +12,7 @@
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=20260509_1634">
+    <link rel="stylesheet" href="styles.css?v=20260509_1645">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -390,7 +390,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260509_1634"></script>
+    <script src="script.js?v=20260509_1645"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -767,41 +767,71 @@
             }
 
             const churchSel = document.getElementById('churchSelect');
+            const curiaSel = document.getElementById('curiaSelect');
             const churchStat = document.getElementById('churchStatic');
-            const churchName = (churchSel && churchSel.value) || (churchStat && churchStat.value) || '전체';
+            const curiaStat = document.getElementById('curiaStatic');
+            const churchVal = (churchSel && churchSel.value) || (churchStat && churchStat.value) || '전체';
+            const curiaVal = (curiaSel && curiaSel.value) || (curiaStat && curiaStat.value) || '전체';
             const baseDate = document.getElementById('baseDate').value;
-            const filename = `쁘레시디움_정보_조회_${churchName}_${baseDate}.xlsx`;
+
+            const filename = `쁘레시디움_정보_조회_${churchVal}_${baseDate}.xlsx`;
 
             try {
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet('쁘레시디움 정보');
 
+                // 상단 요약 정보 추가 (B열부터 시작)
+                const startCol = 2; // B열
+                const baseStartRow = 2; // 2행
+
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 3);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = '쁘레시디움(Pr.) 정보 조회 결과';
+                titleCell.font = { size: 14, bold: true };
+                titleCell.alignment = { horizontal: 'left' };
+
+                worksheet.getCell(baseStartRow + 1, startCol).value = `성당 명: ${churchVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아 명(Cu.): ${curiaVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 2).value = `기준일자: ${baseDate}`;
+                
+                const summaryCells = [
+                    worksheet.getCell(baseStartRow + 1, startCol),
+                    worksheet.getCell(baseStartRow + 1, startCol + 1),
+                    worksheet.getCell(baseStartRow + 1, startCol + 2)
+                ];
+                summaryCells.forEach(cell => {
+                    cell.font = { bold: true };
+                    cell.alignment = { horizontal: 'left' };
+                });
+
+                const startRow = baseStartRow + 3; // 테이블 헤더가 시작될 행 (B5)
                 const occupiedCells = {};
 
                 for (let r = 0; r < table.rows.length; r++) {
                     const htmlRow = table.rows[r];
-                    let excelCol = 1;
+                    let excelCol = startCol;
+                    const excelRowNum = r + startRow;
 
                     for (let c = 0; c < htmlRow.cells.length; c++) {
                         const htmlCell = htmlRow.cells[c];
 
-                        while (occupiedCells[`${r + 1},${excelCol}`]) {
+                        while (occupiedCells[`${excelRowNum},${excelCol}`]) {
                             excelCol++;
                         }
 
-                        const excelCell = worksheet.getRow(r + 1).getCell(excelCol);
+                        const excelCell = worksheet.getRow(excelRowNum).getCell(excelCol);
                         const rowSpan = htmlCell.rowSpan || 1;
                         const colSpan = htmlCell.colSpan || 1;
 
                         if (rowSpan > 1 || colSpan > 1) {
-                            worksheet.mergeCells(r + 1, excelCol, r + rowSpan, excelCol + colSpan - 1);
+                            worksheet.mergeCells(excelRowNum, excelCol, excelRowNum + rowSpan - 1, excelCol + colSpan - 1);
                             for (let i = 0; i < rowSpan; i++) {
                                 for (let j = 0; j < colSpan; j++) {
-                                    occupiedCells[`${r + 1 + i},${excelCol + j}`] = true;
+                                    occupiedCells[`${excelRowNum + i},${excelCol + j}`] = true;
                                 }
                             }
                         } else {
-                            occupiedCells[`${r + 1},${excelCol}`] = true;
+                            occupiedCells[`${excelRowNum},${excelCol}`] = true;
                         }
 
                         // 값 입력
@@ -822,7 +852,7 @@
                         };
                         excelCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
 
-                        // 헤더 스타일 (첫 번째 행)
+                        // 테이블 헤더 스타일
                         if (r === 0) {
                             excelCell.fill = {
                                 type: 'pattern',
@@ -836,11 +866,14 @@
                     }
                 }
 
-                // 컬럼 너비 설정
-                worksheet.columns.forEach((column, i) => {
-                    column.width = 15;
-                    if (i === 0 || i === 1) column.width = 20; // 성당, 꾸리아
-                    if (i === 3) column.width = 25; // 쁘레시디움 명
+                // 컬럼 너비 설정 (B열부터 시작하므로 index 조정)
+                // A열 (비워둠)
+                worksheet.getColumn(1).width = 3; 
+
+                // B열부터 데이터 컬럼
+                const colWidths = [20, 20, 10, 25, 12, 12, 12, 12, 15, 15, 15, 15, 15, 15];
+                colWidths.forEach((w, i) => {
+                    worksheet.getColumn(startCol + i).width = w;
                 });
 
                 const buffer = await workbook.xlsx.writeBuffer();
@@ -864,4 +897,5 @@
 </body>
 
 </html>
+
 
