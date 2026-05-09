@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260509_1846">
+    <link rel="stylesheet" href="styles.css?v=20260510_0056">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -890,8 +890,8 @@
                     <tr>
                         <th style="width:10%">구분</th>
                         <th style="width:30%">제 목</th>
-                        <th style="width:15%">주 관</th>
-                        <th style="width:20%">일 시</th>
+                        <th style="width:23%">주 관</th>
+                        <th style="width:12%">일 시</th>
                         <th style="width:15%">장 소</th>
                         <th style="width:10%">참 석</th>
                     </tr>
@@ -1083,7 +1083,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260509_1846"></script>
+    <script src="script.js?v=20260510_0056"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -1581,14 +1581,17 @@
                 const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
                 // [수정] DB 데이터를 있는 그대로 가져오며, 날짜 기준으로만 배분
+                // [수정] 기타행사는 사업보고서 전용이므로 월례보고서에서는 제외
                 const executedEvs = evsAll.filter(e => {
                     const d = e.eventDate || '';
-                    return d.startsWith(curPrefix);
+                    const isNotEtc = (e.type || '') !== '기타행사';
+                    return d.startsWith(curPrefix) && isNotEtc;
                 });
 
                 const plannedEvs = evsAll.filter(e => {
                     const d = e.eventDate || '';
-                    return d.startsWith(nextPrefix);
+                    const isNotEtc = (e.type || '') !== '기타행사';
+                    return d.startsWith(nextPrefix) && isNotEtc;
                 });
 
                 // 합치고 날짜순 정렬
@@ -1599,13 +1602,25 @@
                 const tableRows = [];
                 for (let i = 0; i < rowCount; i++) {
                     const e = finalEvs[i] || {};
+                    // [Text Fitting] 긴 글자가 들어가는 셀에 자동 축소 스타일 적용
+                    const fitStyle = `white-space: nowrap; overflow: hidden; text-overflow: clip; font-size: 9pt;`;
+                    const getFitAttr = (text) => {
+                        if (!text) return '';
+                        // 글자 길이에 따른 대략적인 폰트 크기 추정 (JS로 정밀 측정 대신 CSS clamp 효과)
+                        const len = String(text).length;
+                        let fontSize = '9pt';
+                        if (len > 15) fontSize = '8pt';
+                        if (len > 20) fontSize = '7pt';
+                        return `style="${fitStyle} font-size: ${fontSize};"`;
+                    };
+
                     tableRows.push(`
                         <tr>
                             <td style="height:8mm">${e.category || ''}</td>
-                            <td style="text-align:left;">${e.eventName || ''}</td>
-                            <td>${e.organizer || ''}</td>
+                            <td style="text-align:left;" ${getFitAttr(e.eventName)}>${e.eventName || ''}</td>
+                            <td ${getFitAttr(e.organizer)}>${e.organizer || ''}</td>
                             <td>${e.eventDate || ''}</td>
-                            <td>${e.venue || ''}</td>
+                            <td ${getFitAttr(e.venue)}>${e.venue || ''}</td>
                             <td style="text-align:center;">${e.attendanceCount !== undefined ? e.attendanceCount : ''}</td>
                         </tr>
                     `);
@@ -2451,6 +2466,7 @@
 </body>
 
 </html>
+
 
 
 
