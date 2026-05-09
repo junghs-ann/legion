@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -245,24 +245,30 @@
         </div>
         <ul class="nav-menu">
             <li class="nav-item">
-                <span class="nav-link">등록관리</span>
+                <span class="nav-link">등록관리 (입력)</span>
                 <ul class="sub-menu">
                     <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
-                    <li><a href="easy_activity_report.html">활동보고(등록)</a></li>
-                    <li><a href="easy_accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계(등록)</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="easy_accounting_ledger.html">&nbsp;&nbsp;ㄴ 입출등록</a></li>
                     <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
                     <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
                     <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
                     <li><a href="member_register.html">단원관리</a></li>
                     <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
                 </ul>
             </li>
             <li class="nav-item">
-                <span class="nav-link">각종 장부</span>
+                <span class="nav-link">각종 장부 (조회)</span>
                 <ul class="sub-menu">
                     <li><a href="service_record.html">복무기록부</a></li>
                     <li><a href="attendance_history.html">출결내역</a></li>
                     <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_search_simple.html">활동내역 조회(간편)</a></li>
                     <li><a href="activity_stats_total.html">활동 내역</a></li>
                     <li><a href="event_history.html">행사관리내역</a></li>
                     <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
@@ -306,7 +312,14 @@
                     <li><a href="activity_register.html">활동항목 관리</a></li>
                     <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
                     <li><a href="member_management.html">회원가입정보 관리</a></li>
+                    <li><a href="data_cleanup.html" style="color: #ef4444; font-weight: bold;">⚠️ 데이터 일괄 정리</a></li>
                 </ul>
+            </li>
+            <li class="nav-item">
+                <a href="my_page.html" class="nav-link"><i class="fas fa-user-circle"></i> 내 정보</a>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link" id="static-logout-btn" style="cursor:pointer;" onclick="window.handleLogout()"><i class="fas fa-sign-out-alt"></i> 로그아웃</span>
             </li>
         </ul>
     </header>
@@ -337,15 +350,15 @@
                         <input type="date" id="baseDate" name="baseDate" required>
                     </div>
                 </div>
-                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                    <button type="submit" class="btn-search">
-                        <i class="fas fa-search"></i> 조 회
+                <div style="display: flex; gap: 8px; justify-content: center; margin-top: 25px; flex-wrap: nowrap;">
+                    <button type="submit" class="btn-search" style="margin: 0; flex: 1; padding: 12px 10px; white-space: nowrap; justify-content: center;">
+                        <i class="fas fa-search"></i> 조회
                     </button>
-                    <button type="button" class="btn-search" id="btnExcel" style="background-color: #2e7d32;">
+                    <button type="button" id="btnExcel" class="btn-search" style="background-color: #2e7d32; margin: 0; flex: 1.5; padding: 12px 10px; white-space: nowrap; justify-content: center;">
                         <i class="fas fa-file-excel"></i> 엑셀내려받기
                     </button>
-                    <button type="button" class="btn-search" style="background-color: #718096;" onclick="location.href='dashboard.html'">
-                        <i class="fas fa-times"></i> 닫 기
+                    <button type="button" class="btn-search" style="background-color: #718096; margin: 0; flex: 1; padding: 12px 10px; white-space: nowrap; justify-content: center;" onclick="location.href='dashboard.html'">
+                        <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
             </form>
@@ -372,7 +385,7 @@
             </div>
         </div>
 
-        <!-- 상세 정보 모달 -->
+        <!-- 쁘레시디움 상세 정보 모달 -->
         <div id="detailModal" class="modal-overlay">
             <div class="modal-content">
                 <div class="modal-header">
@@ -384,6 +397,22 @@
                 </div>
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn-search" onclick="closeDetailModal()">닫 기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 성직자 상세 정보 모달 -->
+        <div id="clergyModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-user-tie"></i> 성직자/수도자 상세정보</h3>
+                    <button class="btn-close-x" style="position: static;" onclick="closeClergyModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="clergyDetailContent" class="detail-grid">
+                    <!-- JS에서 동적으로 채워짐 -->
+                </div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn-search" onclick="closeClergyModal()">닫 기</button>
                 </div>
             </div>
         </div>
@@ -649,6 +678,38 @@
                     return (a.presidiumName || '').localeCompare(b.presidiumName || '');
                 });
 
+                // [추가] 해당 성당의 원장수녀, 수녀 정보 가져오기 (기준일자 기준)
+                const churchNames = [...new Set(results.map(r => r.churchName))];
+                let sistersMap = {}; // { churchName: { superior: [], general: [] } }
+
+                if (churchNames.length > 0) {
+                    const clergySnap = await getDocs(collection(db, 'clergy_info'));
+                    clergySnap.forEach(doc => {
+                        const c = doc.data();
+                        // 기준일자에 재직 중인지 확인
+                        const isAppointed = c.appointmentDate && c.appointmentDate <= baseDate;
+                        const isNotExpired = !c.expiryDate || c.expiryDate >= baseDate;
+                        
+                        if (isAppointed && isNotExpired && churchNames.includes(c.churchName)) {
+                            if (!sistersMap[c.churchName]) {
+                                sistersMap[c.churchName] = { superior: [], general: [] };
+                            }
+                            if (c.position === '원장수녀') {
+                                sistersMap[c.churchName].superior.push({ name: `${c.name}(${c.baptismalName || ''})` });
+                            } else if (c.position === '수녀') {
+                                sistersMap[c.churchName].general.push({ name: `${c.name}(${c.baptismalName || ''})` });
+                            }
+                        }
+                    });
+                }
+
+                // 결과에 수녀 정보 매핑
+                results.forEach(r => {
+                    const s = sistersMap[r.churchName] || { superior: [], general: [] };
+                    r.superiorSisters = s.superior;
+                    r.sisters = s.general;
+                });
+
                 renderResults(results, searchChurch, searchCuria);
             } catch (err) {
                 console.error("조회 중 오류:", err);
@@ -680,6 +741,8 @@
                 <th>회 계</th>
                 <th>영적지도자</th>
                 <th>대리자</th>
+                <th>원장수녀</th>
+                <th>수녀</th>
             </tr>`;
             tableHead.innerHTML = headHtml;
 
@@ -703,8 +766,10 @@
                     <td>${item.vp}</td>
                     <td>${item.secretary}</td>
                     <td>${item.treasurer}</td>
-                    <td>${item.spiritualDirector}</td>
-                    <td>${item.deputy}</td>
+                    <td><span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${item.spiritualDirector}', '${item.churchName}')">${item.spiritualDirector}</span></td>
+                    <td><span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${item.deputy}', '${item.churchName}')">${item.deputy}</span></td>
+                    <td>${(item.superiorSisters || []).map(s => `<span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${s.name}', '${item.churchName}')">${s.name}</span>`).join(', ') || '-'}</td>
+                    <td>${(item.sisters || []).map(s => `<span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${s.name}', '${item.churchName}')">${s.name}</span>`).join(', ') || '-'}</td>
                 </tr>`;
                 return rowHtml;
             }).join('');
@@ -746,6 +811,64 @@
 
         window.closeDetailModal = () => {
             document.getElementById('detailModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        };
+
+        // --- 성직자 상세 정보 모달 제어 ---
+        window.showClergyDetail = async (name, churchName) => {
+            if (!name || name === '-' || name === 'null' || name.trim() === '') return;
+            
+            // 이름에서 (세례명) 부분 제거하여 검색 (데이터베이스는 이름 필드 따로 존재)
+            const pureName = name.split('(')[0].trim();
+            
+            try {
+                // 해당 성당의 성직자 정보를 이름으로 검색
+                const q = query(collection(db, 'clergy_info'), 
+                               where('name', '==', pureName),
+                               where('churchName', '==', churchName));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    if (window.showGlobalAlert) {
+                        window.showGlobalAlert(`'${pureName}' 성직자/수도자의 상세 정보를 찾을 수 없습니다.\n성직자 정보 관리 메뉴에서 등록 여부를 확인해 주세요.`, 'info');
+                    } else {
+                        alert('정보를 찾을 수 없습니다.');
+                    }
+                    return;
+                }
+                
+                const item = snap.docs[0].data();
+                const modal = document.getElementById('clergyModal');
+                const content = document.getElementById('clergyDetailContent');
+                
+                const formatD = (d) => d ? d.replace(/-/g, '.') : '-';
+                
+                content.innerHTML = `
+                    <div class="detail-item"><strong>성당명</strong><span>${item.churchName || '-'}</span></div>
+                    <div class="detail-item"><strong>직책</strong><span>${item.position || '-'} (${item.generation || ''})</span></div>
+                    <div class="detail-item span-2"><strong>성명</strong><span><b>${item.name}</b> (${item.baptismalName || '-'})</span></div>
+                    <div class="detail-item"><strong>축일</strong><span>${item.feastDay || '-'}</span></div>
+                    <div class="detail-item"><strong>연락처</strong><span>${item.contact || '-'}</span></div>
+                    <div class="detail-item"><strong>부임일</strong><span>${formatD(item.appointmentDate)}</span></div>
+                    <div class="detail-item"><strong>전임지</strong><span>${item.preAssignment || '-'}</span></div>
+                    <div class="detail-item"><strong>부임 만료일</strong><span>${formatD(item.expiryDate) === '-' ? '재직 중' : formatD(item.expiryDate)}</span></div>
+                    <div class="detail-item"><strong>신임지</strong><span>${item.postAssignment || '-'}</span></div>
+                    <div class="detail-item span-2"><strong>재직기간</strong><span>${!item.expiryDate ? '<span style="color: var(--primary-color); font-weight: bold;">현재 재직 중</span>' : (item.tenure || '-')}</span></div>
+                    <div class="detail-item span-2" style="background: #fffaf0;"><strong>특이 및 참고사항</strong>
+                        <div style="margin-top: 5px; font-size: 0.9rem; line-height: 1.5; color: #4a5568;">${item.remarks || item.notes || '내용 없음'}</div>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } catch (err) {
+                console.error("성직자 정보 조회 실패:", err);
+            }
+        };
+
+        window.closeClergyModal = () => {
+            document.getElementById('clergyModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
         };
 
         document.getElementById('btnExcel').onclick = exportToExcel;
@@ -870,8 +993,8 @@
                 // A열 (비워둠)
                 worksheet.getColumn(1).width = 3; 
 
-                // B열부터 데이터 컬럼
-                const colWidths = [20, 20, 10, 25, 12, 12, 12, 12, 15, 15, 15, 15, 15, 15];
+                // B열부터 데이터 컬럼 (원장수녀, 수녀 추가됨)
+                const colWidths = [20, 20, 10, 25, 12, 12, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15];
                 colWidths.forEach((w, i) => {
                     worksheet.getColumn(startCol + i).width = w;
                 });
@@ -888,14 +1011,19 @@
 
         // 모달 바깥 클릭 시 닫기
         window.onclick = function(event) {
-            const modal = document.getElementById('detailModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
+            const detailModal = document.getElementById('detailModal');
+            const clergyModal = document.getElementById('clergyModal');
+            if (event.target == detailModal) {
+                detailModal.style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
+            if (event.target == clergyModal) {
+                clergyModal.style.display = "none";
+                document.body.style.overflow = 'auto';
             }
         };
     </script>
 </body>
 
-</html>
 
 
