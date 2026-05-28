@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>활동 중인 간부 중 UID 누락 현황 진단 및 정비</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background-color: #f8f9fa; }
+        h1 { color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; }
+        h2 { color: #495057; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
+        th { background-color: #f1f3f5; }
+        tr:hover { background-color: #f8f9fa; }
+        .loading { font-size: 1.2rem; color: #666; font-weight: bold; }
+        .no-data { color: #2e7d32; font-weight: bold; font-size: 1.1rem; }
+        .badge-error { background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #f5c6cb; }
+        .badge-ok { background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #c3e6cb; }
+        .btn-repair { background-color: #28a745; color: white; border: none; padding: 12px 24px; font-size: 1.1rem; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: all 0.2s; }
+        .btn-repair:hover { background-color: #218838; transform: translateY(-1px); }
+        .log-box { background: #343a40; color: #f8f9fa; padding: 15px; border-radius: 6px; font-family: monospace; max-height: 250px; overflow-y: auto; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+    <h1>🔍 활동 중인 간부 중 UID(회원 계정) 누락 현황 진단 및 자동 정비</h1>
+    <div id="authStatus" class="loading">사용자 로그인 인증 확인 중...</div>
+
+    <div id="resultSection" style="display: none;">
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 20px; color: #856404;">
+            <strong>💡 데이터 정비 가이드:</strong><br>
+            아래 [자동 데이터 정비 실행] 버튼을 클릭하면, 간부 정보에 등록된 회원 UID 정보를 바탕으로 <strong>단원 정보(members_list)에 누락된 UID 필드를 자동으로 찾아 매핑 및 업데이트</strong>해 줍니다.
+            <br>
+            <button id="btnRepair" class="btn-repair">🔧 누락된 UID 자동 데이터 정비 실행</button>
+            <div id="repairLog" class="log-box"></div>
+        </div>
+
+        <h2>📋 진단 대상: 현재 활동 중인 간부 목록 (만료되지 않은 간부)</h2>
+        <div id="diagnosticsResult">데이터를 가져오고 분석하는 중...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, query, doc, updateDoc } from "./firebase-config.js?v=20260313_1515";
+        import { initAuthObserver } from "./auth.js?v=20260303_1210";
+
+        let currentActiveList = [];
+
+        initAuthObserver(async (user, profile) => {
+            document.getElementById('authStatus').innerHTML = `✅ 인증 완료: <strong>${profile.name || user.email}</strong> 님 로그인 중 (권한: ${profile.role})`;
+            document.getElementById('resultSection').style.display = 'block';
+            await runDiagnostics();
+        }, () => {
+            document.getElementById('authStatus').innerHTML = `❌ 로그인되어 있지 않습니다. <a href="index.html">로그인 페이지</a>로 이동하여 로그인 후 다시 접속해 주세요.`;
+        });
+
+        async function runDiagnostics() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+
+                // 1. 모든 간부 목록(officers_list) 가져오기
+                const officersSnap = await getDocs(collection(db, 'officers_list'));
+                const allOfficers = [];
+                officersSnap.forEach(doc => allOfficers.push({ id: doc.id, ...doc.data() }));
+
+                // 2. 모든 단원 목록(members_list) 가져오기
+                const membersSnap = await getDocs(collection(db, 'members_list'));
+                const allMembers = [];
+                membersSnap.forEach(doc => allMembers.push({ id: doc.id, ...doc.data() }));
+
+                // 3. 현재 활동 중인 간부 필터링 (임명 만료일이 없거나, 오늘 이후인 경우)
+                const activeOfficers = allOfficers.filter(o => {
+                    return !o.appointmentExpiryDate || o.appointmentExpiryDate >= today;
+                });
+
+                // 4. 매핑 상태 분석
+                currentActiveList = [];
+
+                activeOfficers.forEach(o => {
+                    const mId = o.memberId || o.memberUid || o.member || "";
+                    
+                    // 단원 목록에서 매칭 시도
+                    // 매칭 기준: 단원 문서의 ID(13자리 숫자)가 mId와 일치하거나, 단원 문서 내 UID가 mId와 일치하는 경우
+                    // 혹은 이름이 완전히 똑같은 단원 찾기 (복구용)
+                    let matchedMember = allMembers.find(m => m.id === mId || (m.UID && m.UID === mId));
+                    let isIdMismatch = false;
+
+                    // 만약 ID로 매치되지 않는다면 이름으로 매치 복구 대상인지 확인
+                    if (!matchedMember && o.name) {
+                        matchedMember = allMembers.find(m => m.name === o.name && m.presidiumName === o.presidiumName);
+                        if (matchedMember) {
+                            isIdMismatch = true;
+                        }
+                    }
+
+                    let hasError = false;
+                    let reason = "";
+
+                    if (!matchedMember) {
+                        hasError = true;
+                        reason = "단원 정보를 보관함에서 아예 찾을 수 없음";
+                    } else if (isIdMismatch && !matchedMember.UID) {
+                        hasError = true;
+                        reason = "회원 UID(JzL7...)가 단원 정보에 연결되지 않음 (ID 불일치 발생)";
+                    } else if (!matchedMember.UID) {
+                        hasError = true;
+                        reason = "단원 정보 내에 '회원 ID (UID)' 필드가 비어있음 (계정 미연동)";
+                    }
+
+                    currentActiveList.push({
+                        officer: o,
+                        member: matchedMember,
+                        hasError: hasError,
+                        reason: reason,
+                        isIdMismatch: isIdMismatch
+                    });
+                });
+
+                // 5. 결과 테이블 렌더링
+                renderTable(currentActiveList);
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('diagnosticsResult').innerHTML = `<div style="color:red; font-weight:bold;">진단 중 오류 발생: ${err.message}</div>`;
+            }
+        }
+
+        function renderTable(list) {
+            const container = document.getElementById('diagnosticsResult');
+            
+            // 오류가 있는 대상만 추리기
+            const errorList = list.filter(item => item.hasError);
+
+            if (errorList.length === 0) {
+                container.innerHTML = '<div class="no-data">🎉 축하합니다! 현재 활동 중인 모든 간부의 단원 정보에 회원 ID(UID)가 정상적으로 연결되어 있습니다.</div>';
+                document.getElementById('btnRepair').style.display = 'none';
+                return;
+            }
+
+            let html = `<p style="color: #666; font-weight: bold;">총 ${list.length}명의 활동 중인 간부 중, <span style="color: #dc3545; font-size: 1.1rem;">${errorList.length}명</span>의 단원 정보에서 회원 ID(UID) 연결 누락/불일치가 발견되었습니다.</p>`;
+            html += `<table>
+                <thead>
+                    <tr>
+                        <th>소속 (성당/쁘레시디움)</th>
+                        <th>간부 직급</th>
+                        <th>간부명</th>
+                        <th>세례명</th>
+                        <th>간부에 적힌 회원 ID (UID)</th>
+                        <th>단원 명부 문서 ID</th>
+                        <th>진단 결과 및 원인</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            errorList.forEach(item => {
+                const o = item.officer;
+                const m = item.member;
+                
+                const orgText = `${o.churchName || o.church || '-'} > ${o.presidiumName || o.presidium || '-'}`;
+                const roleName = {
+                    'admin': '관리자', 'president': '단장', 'vice_president': '부단장',
+                    'vicePresident': '부단장', 'secretary': '서기', 'treasurer': '회계',
+                    'member': '단원'
+                }[(o.role || '').toLowerCase().trim()] || o.role;
+
+                html += `<tr>
+                    <td>${orgText}</td>
+                    <td style="font-weight: bold;">${roleName}</td>
+                    <td style="color: #dc3545; font-weight: bold;">${o.name || '-'}</td>
+                    <td>${o.baptismalName || '-'}</td>
+                    <td><code>${o.memberId || o.memberUid || o.member || '누락'}</code></td>
+                    <td><code>${m ? m.id : '단원 없음'}</code></td>
+                    <td><span class="badge-error">${item.reason}</span></td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            
+            // 정상 매핑된 간부 목록도 요약 정보로 하단에 출력
+            const okList = list.filter(item => !item.hasError);
+            if (okList.length > 0) {
+                html += `<h2>✅ 정상 매핑된 간부 목록 (${okList.length}명)</h2>`;
+                html += `<table>
+                    <thead>
+                        <tr>
+                            <th>소속</th>
+                            <th>직급</th>
+                            <th>간부명</th>
+                            <th>세례명</th>
+                            <th>매핑된 회원 ID (UID)</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                okList.forEach(item => {
+                    const o = item.officer;
+                    const orgText = `${o.churchName || o.church || '-'} > ${o.presidiumName || o.presidium || '-'}`;
+                    const roleName = {
+                        'admin': '관리자', 'president': '단장', 'vice_president': '부단장',
+                        'vicePresident': '부단장', 'secretary': '서기', 'treasurer': '회계',
+                        'member': '단원'
+                    }[(o.role || '').toLowerCase().trim()] || o.role;
+
+                    html += `<tr>
+                        <td>${orgText}</td>
+                        <td>${roleName}</td>
+                        <td>${o.name || '-'}</td>
+                        <td>${o.baptismalName || '-'}</td>
+                        <td><code>${o.memberId || '-'}</code></td>
+                        <td><span class="badge-ok">정상 연결됨</span></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // --- 자동 데이터 정비(Repair) 버튼 이벤트 바인딩 ---
+        document.getElementById('btnRepair').addEventListener('click', async () => {
+            const logBox = document.getElementById('repairLog');
+            logBox.style.display = 'block';
+            logBox.innerHTML = "⏳ 데이터 정비를 시작합니다...\n";
+
+            const errorItems = currentActiveList.filter(item => item.hasError);
+            let successCount = 0;
+            let skipCount = 0;
+
+            for (const item of errorItems) {
+                const o = item.officer;
+                const m = item.member;
+
+                // 1. 단원 매칭 자체가 안 되는 경우는 정비할 수 없음 (수동 삭제 필요)
+                if (!m) {
+                    logBox.innerHTML += `❌ [실패] ${o.name} (${o.role}): 연결할 단원 데이터가 존재하지 않아 건너뜁니다.\n`;
+                    skipCount++;
+                    continue;
+                }
+
+                // 2. 단원 정보에 연결할 회원 UID 값 확인
+                const targetUID = o.memberId || o.memberUid || o.member || "";
+                
+                if (!targetUID || targetUID.startsWith('off_') || !isNaN(targetUID)) {
+                    logBox.innerHTML += `⚠️ [건너뜀] ${o.name} (${o.role}): 간부 데이터에 올바른 회원 UID 형식이 존재하지 않습니다.\n`;
+                    skipCount++;
+                    continue;
+                }
+
+                try {
+                    // 3. 단원 문서(members_list)의 UID 필드 업데이트 수행
+                    logBox.innerHTML += `⏳ [진행] ${o.name} 단원(문서 ID: ${m.id})에 회원 UID(${targetUID}) 업데이트 중...\n`;
+                    
+                    const memberDocRef = doc(db, 'members_list', m.id);
+                    await updateDoc(memberDocRef, {
+                        UID: targetUID
+                    });
+
+                    logBox.innerHTML += `✅ [성공] ${o.name} 단원 데이터 복구 완료!\n`;
+                    successCount++;
+                } catch (err) {
+                    console.error(err);
+                    logBox.innerHTML += `❌ [에러] ${o.name} 데이터 업데이트 실패: ${err.message}\n`;
+                }
+            }
+
+            logBox.innerHTML += `\n🎉 데이터 정비 완료! (성공: ${successCount}건, 보류/건너뜀: ${skipCount}건)\n`;
+            logBox.innerHTML += `🔄 잠시 후 화면을 새로고침하여 최신 상태를 확인합니다...\n`;
+
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

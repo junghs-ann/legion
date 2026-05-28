@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>단원 명부 전체 조회 및 삭제 툴</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 40px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2e7d32;
+            border-bottom: 2px solid #d4a017;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .grid-header {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 3fr 2.5fr 1.5fr;
+            background-color: #2e7d32;
+            color: white;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 3fr 2.5fr 1.5fr;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .grid-row:hover {
+            background-color: #f1f3f5;
+        }
+        .id-badge {
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #333;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover {
+            background-color: #bd2130;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>단원 명부 전체 조회 및 삭제 도구</h2>
+        <p style="color: #666; font-size: 0.9rem; line-height: 1.5;">
+            * 이 화면은 파이어베이스의 단원 명부(<code>members_list</code>)에 수록된 전체 데이터를 실시간으로 보여줍니다.<br>
+            * 예전에 AI가 생성했던 가짜 테스트 단원을 찾으신 후, 오른쪽의 <strong>[삭제]</strong> 버튼을 누르면 파이어베이스 데이터베이스에서 즉각 영구 삭제됩니다.
+        </p>
+        <div id="loading" style="padding: 20px; text-align: center; font-weight: bold; color: #666;">데이터를 불러오는 중입니다...</div>
+        <div id="table-container" style="display: none;">
+            <div class="grid-header">
+                <div>성명</div>
+                <div>세례명</div>
+                <div>소속 조직</div>
+                <div>문서 고유 ID</div>
+                <div style="text-align: center;">관리</div>
+            </div>
+            <div id="list-body"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, deleteDoc, doc } from "./firebase-config.js?v=20260324_2345";
+
+        async function run() {
+            try {
+                const snap = await getDocs(collection(db, "members_list"));
+                const loadingDiv = document.getElementById("loading");
+                const containerDiv = document.getElementById("table-container");
+                const bodyDiv = document.getElementById("list-body");
+
+                let members = [];
+                snap.forEach(docSnap => {
+                    members.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                // 성명 기준 가나다 정렬
+                members.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                let html = "";
+                members.forEach(m => {
+                    html += `
+                        <div class="grid-row">
+                            <div style="font-weight: bold;">${m.name || '-'}</div>
+                            <div>${m.baptismalName || '-'}</div>
+                            <div style="font-size: 0.8rem; color: #555;">${m.churchName || '-'} ➡️ ${m.presidiumName || '-'}</div>
+                            <div><span class="id-badge">${m.id}</span></div>
+                            <div style="text-align: center;">
+                                <button class="btn-delete" onclick="deleteMember('${m.id}', '${m.name}')">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                bodyDiv.innerHTML = html;
+                loadingDiv.style.display = "none";
+                containerDiv.style.display = "block";
+            } catch (e) {
+                document.getElementById("loading").innerHTML = "<span style='color:red;'>에러 발생:</span> " + e.message;
+            }
+        }
+
+        // 전역 범위에 deleteMember 노출
+        window.deleteMember = async function(id, name) {
+            if (confirm(`⚠️ 경고! 단원 명부에서 [${name}] 단원의 정보를 영구 삭제하시겠습니까?\n이 작업은 파이어베이스 데이터베이스에서 직접 삭제하므로 되돌릴 수 없습니다.`)) {
+                try {
+                    await deleteDoc(doc(db, "members_list", id));
+                    alert(`[${name}] 단원의 데이터가 완전히 삭제되었습니다.`);
+                    location.reload(); // 목록 새로고침
+                } catch (e) {
+                    alert("삭제 중 오류가 발생했습니다: " + e.message);
+                }
+            }
+        };
+
+        run();
+    </script>
+</body>
+</html>

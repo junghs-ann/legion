@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Firestore 모든 컬렉션 생짜 덤프 (Raw Dump)</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 40px;
+            background-color: #f4f7f6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h2 {
+            color: #d32f2f;
+            border-bottom: 2px solid #343a40;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .status-box {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Firestore 모든 데이터 생짜 덤프 (Raw Dump)</h2>
+        <div id="status" class="status-box">데이터베이스에서 원본 문서를 통째로 긁어오는 중입니다...</div>
+        <pre id="output">로딩 중...</pre>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from "./firebase-config.js?v=20260324_2345";
+        
+        async function run() {
+            try {
+                const output = document.getElementById("output");
+                const status = document.getElementById("status");
+                let log = "";
+
+                // 1. members_list
+                log += "=========================================\n";
+                log += "📁 [1] members_list (단원 명부 원본)\n";
+                log += "=========================================\n";
+                const snapMem = await getDocs(collection(db, "members_list"));
+                let mCount = 0;
+                snapMem.forEach(d => {
+                    log += `문서ID: ${d.id} ➡️ 데이터: ${JSON.stringify(d.data())}\n`;
+                    mCount++;
+                });
+                log += `👉 총 단원 수: ${mCount}명\n\n`;
+
+                // 2. users
+                log += "=========================================\n";
+                log += "📁 [2] users (회원 가입 계정 원본)\n";
+                log += "=========================================\n";
+                const snapUsers = await getDocs(collection(db, "users"));
+                let uCount = 0;
+                snapUsers.forEach(d => {
+                    log += `문서ID: ${d.id} ➡️ 데이터: ${JSON.stringify(d.data())}\n`;
+                    uCount++;
+                });
+                log += `👉 총 가입 계정 수: ${uCount}개\n\n`;
+
+                // 3. presidia_list
+                log += "=========================================\n";
+                log += "📁 [3] presidia_list (쁘레시디움 목록 원본)\n";
+                log += "=========================================\n";
+                const snapPres = await getDocs(collection(db, "presidia_list"));
+                let pCount = 0;
+                snapPres.forEach(d => {
+                    log += `문서ID: ${d.id} ➡️ 데이터: ${JSON.stringify(d.data())}\n`;
+                    pCount++;
+                });
+                log += `👉 총 쁘레시디움 수: ${pCount}개\n\n`;
+
+                // 4. officers_list
+                log += "=========================================\n";
+                log += "📁 [4] officers_list (간부 임기 이력 원본)\n";
+                log += "=========================================\n";
+                const snapOff = await getDocs(collection(db, "officers_list"));
+                let oCount = 0;
+                snapOff.forEach(d => {
+                    log += `문서ID: ${d.id} ➡️ 데이터: ${JSON.stringify(d.data())}\n`;
+                    oCount++;
+                });
+                log += `👉 총 간부 이력 수: ${oCount}개\n`;
+
+                output.textContent = log;
+                status.className = "status-box";
+                status.style.backgroundColor = "#d4edda";
+                status.style.color = "#155724";
+                status.innerHTML = `✅ 원본 데이터 조회 완료! (성공적으로 ${mCount + uCount + pCount + oCount}건 로드) <br> 키보드에서 <strong>Ctrl + F</strong>를 누르고 찾으시는 단원명(예: 성종식, 장명주) 또는 쁘레시디움(예: 하늘의 문)을 검색해 보세요!`;
+            } catch (e) {
+                status.style.backgroundColor = "#f8d7da";
+                status.style.color = "#721c24";
+                status.textContent = "🚨 에러 발생: " + e.message;
+            }
+        }
+        run();
+    </script>
+</body>
+</html>

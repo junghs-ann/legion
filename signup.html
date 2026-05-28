@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260512_1624">
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
     <style>
         /* Specific styles for signup to match login theme */
         .signup-container {
@@ -307,9 +307,10 @@
             <button class="modal-btn" onclick="location.href='index.html'">확 인</button>
         </div>
     </div>
-    <script src="script.js?v=20260512_1624"></script>
+    <script src="script.js?v=20260526_1856"></script>
     <script type="module">
-        import { db, collection, query, where, getDocs } from "./firebase-config.js?v=20260303_1210";
+        import { auth, db, collection, query, where, getDocs, updateDoc, doc } from "./firebase-config.js?v=20260303_1210";
+        import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
         import { registerUser, logoutUser } from "./auth.js?v=20260308_0345";
 
@@ -912,7 +913,26 @@
             console.log("Attempting Signup with:", userData);
 
             try {
-                await registerUser(email, password, userData);
+                // 1. 회원가입 실행 (성공 시 계정 정보가 담긴 userCredential을 반환받습니다)
+                const userCredential = await registerUser(email, password, userData);
+                const registeredUid = userCredential.user.uid;
+
+                // 2. [원천 차단 패치] 단원 명부(members_list)에 회원 가입된 UID 정보를 즉시 자동으로 기록하여 매핑을 완성시킵니다.
+                if (userData.memberId) {
+                    const memberDocRef = doc(db, 'members_list', userData.memberId);
+                    await updateDoc(memberDocRef, {
+                        UID: registeredUid
+                    });
+                    console.log("✅ 회원가입 시 단원 명부 UID 자동 동기화 성공:", registeredUid);
+                }
+
+                // 3. [안전 장치 추가] 가입 후 세션 강제 로그아웃 (자동 로그인 방지)
+                // Firebase의 자동 로그인 특성으로 인해 대시보드로 즉시 자동 리다이렉트되어
+                // 화면이 프리징되는 현상을 방지하고자, 모달을 띄우기 전에 인증 세션을 명시적으로 끊어줍니다.
+                await signOut(auth);
+                localStorage.removeItem('currentUser');
+                console.log("✅ 자동 로그인 방지를 위한 세션 초기화 완료");
+
                 // [Stylized Custom Modal]
                 document.getElementById('successMsg').innerHTML = `<b>${name}</b> 단원님, 환영합니다!<br>회원가입이 완료되어<br>즉시 서비스를 이용하실 수 있습니다.`;
                 document.getElementById('successModal').style.display = 'flex';
@@ -929,6 +949,7 @@
 </body>
 
 </html>
+
 
 
 

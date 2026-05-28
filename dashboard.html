@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -8,7 +8,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메인 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260512_1624">
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -210,13 +210,33 @@
                 <div class="card-title">일정 보기</div>
                 <p class="card-desc">레지오의 일정을 확인하세요</p>
             </a>
+
+            <!-- 5. 임시: 회계 입출등록 (배포하지 않고 로컬 테스트용) -->
+            <!-- 이 메뉴를 완전히 감추고 싶을 때는 아래 <a> 태그 전체를 드래그한 후 주석(기호형태)으로 감싸면 됩니다. -->
+            <a href="easy_accounting_ledger.html" class="menu-card">
+                <div class="card-icon-circle icon-blue">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="card-title">회계 입출등록</div>
+                <p class="card-desc">간편하게 회계 내역을 등록하세요</p>
+            </a>
+
+            <!-- 6. 임시: 행사 관리 (배포하지 않고 로컬 테스트용) -->
+            <!-- 이 메뉴도 감추고 싶을 때는 마찬가지로 <a> 태그를 주석으로 감싸면 됩니다. -->
+            <a href="event_management.html" class="menu-card">
+                <div class="card-icon-circle icon-green">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="card-title">행사 관리</div>
+                <p class="card-desc">행사, 교육, 피정을 관리하세요</p>
+            </a>
         </div>
         <div class="footer-credit">
             © 2026. Designed & Developed by Agnes jhs<br>(Gwanpyeong-dong Catholic Church)
         </div>
     </div>
 
-    <script src="script.js?v=20260512_1624"></script>
+    <script src="script.js?v=20260526_1856"></script>
     <script type="module">
         import { db, auth } from "./firebase-config.js?v=20260308_0430";
         import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -351,6 +371,7 @@
 </body>
 
 </html>
+
 
 
 

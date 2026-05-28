@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Firestore 통합 데이터 조회 및 삭제 툴</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 40px;
+            background-color: #f4f7f6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h2 {
+            color: #2e7d32;
+            border-bottom: 2px solid #d4a017;
+            padding-bottom: 15px;
+            margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* Tab Styles */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            color: #495057;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-button:hover {
+            background-color: #e9ecef;
+        }
+        .tab-button.active {
+            background-color: #2e7d32;
+            color: white;
+            border-color: #2e7d32;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Table Styles */
+        .grid-header {
+            display: grid;
+            grid-template-columns: 2fr 2fr 3fr 1.5fr;
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .grid-row {
+            display: grid;
+            grid-template-columns: 2fr 2fr 3fr 1.5fr;
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            align-items: center;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+        .grid-row:hover {
+            background-color: #f8f9fa;
+        }
+        .id-badge {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #495057;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            width: 80px;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover {
+            background-color: #bd2130;
+        }
+        .loading-text {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>
+            Firestore 만능 통합 조회 및 삭제 도구
+            <span style="font-size: 0.9rem; color: #666; font-weight: normal;">* 로컬/개발용 진단 페이지</span>
+        </h2>
+        
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.5;">
+            파이어베이스의 주요 4대 서랍(컬렉션)의 모든 문서를 조건 필터링 없이 <strong>전체 100% 조회</strong>합니다.<br>
+            여기에서 AI가 예전에 생성해 두었던 <strong>생소한 쁘레시디움 정보</strong>나 <strong>테스트용 단원/계정</strong>을 직접 찾아 원클릭으로 즉시 영구 삭제할 수 있습니다.
+        </p>
+
+        <!-- Tabs Menu -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('presidia_list')">1. 쁘레시디움 목록 (presidia_list)</button>
+            <button class="tab-button" onclick="switchTab('members_list')">2. 단원 명부 (members_list)</button>
+            <button class="tab-button" onclick="switchTab('users')">3. 회원 가입 계정 (users)</button>
+            <button class="tab-button" onclick="switchTab('officers_list')">4. 간부 임기 이력 (officers_list)</button>
+        </div>
+
+        <!-- 1. 쁘레시디움 목록 -->
+        <div id="tab-presidia_list" class="tab-content active">
+            <div class="grid-header">
+                <div>쁘레시디움 명칭</div>
+                <div>소속 성당 / 꾸리아</div>
+                <div>문서 고유 ID</div>
+                <div style="text-align: center;">삭제 관리</div>
+            </div>
+            <div id="body-presidia_list" class="loading-text">데이터를 불러오는 중입니다...</div>
+        </div>
+
+        <!-- 2. 단원 명부 -->
+        <div id="tab-members_list" class="tab-content">
+            <div class="grid-header">
+                <div>단원 성명</div>
+                <div>세례명 / 상태</div>
+                <div>소속 성당 & 쁘레시디움</div>
+                <div style="text-align: center;">삭제 관리</div>
+            </div>
+            <div id="body-members_list" class="loading-text">데이터를 불러오는 중입니다...</div>
+        </div>
+
+        <!-- 3. 회원 가입 계정 -->
+        <div id="tab-users" class="tab-content">
+            <div class="grid-header">
+                <div>가입자 성명</div>
+                <div>역할 / 이메일</div>
+                <div>소속 성당 & 쁘레시디움</div>
+                <div style="text-align: center;">삭제 관리</div>
+            </div>
+            <div id="body-users" class="loading-text">데이터를 불러오는 중입니다...</div>
+        </div>
+
+        <!-- 4. 간부 임기 이력 -->
+        <div id="tab-officers_list" class="tab-content">
+            <div class="grid-header">
+                <div>성명</div>
+                <div>임명 직급</div>
+                <div>소속 성당 & 쁘레시디움</div>
+                <div style="text-align: center;">삭제 관리</div>
+            </div>
+            <div id="body-officers_list" class="loading-text">데이터를 불러오는 중입니다...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, deleteDoc, doc } from "./firebase-config.js?v=20260324_2345";
+
+        // 전역 함수로 탭 변경 바인딩
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const activeBtn = Array.from(document.querySelectorAll('.tab-button')).find(btn => btn.getAttribute('onclick').includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const activeContent = document.getElementById(`tab-${tabId}`);
+            if (activeContent) activeContent.classList.add('active');
+        };
+
+        // 전역 함수로 원격 삭제 바인딩
+        window.deleteDocument = async function(collectionName, docId, displayName) {
+            if (confirm(`🚨 경고!\n[${collectionName}] 컬렉션에서 [${displayName}] 데이터를 정말로 파이어베이스에서 영구 삭제하시겠습니까?\n이 작업은 어떠한 경우에도 복구할 수 없습니다.`)) {
+                try {
+                    await deleteDoc(doc(db, collectionName, docId));
+                    alert(`[${displayName}] 데이터가 성공적으로 지워졌습니다.`);
+                    location.reload();
+                } catch (e) {
+                    alert("삭제 오류 발생: " + e.message);
+                }
+            }
+        };
+
+        async function init() {
+            try {
+                // 4대 컬렉션 병렬 일괄 로딩
+                const [presidiaSnap, membersSnap, usersSnap, officersSnap] = await Promise.all([
+                    getDocs(collection(db, "presidia_list")),
+                    getDocs(collection(db, "members_list")),
+                    getDocs(collection(db, "users")),
+                    getDocs(collection(db, "officers_list"))
+                ]);
+
+                // 1. 쁘레시디움 목록 렌더링
+                let presidia = [];
+                presidiaSnap.forEach(d => presidia.push({ id: d.id, ...d.data() }));
+                presidia.sort((a,b) => (a.presidiumName || '').localeCompare(b.presidiumName || ''));
+                
+                let htmlPresidia = "";
+                presidia.forEach(p => {
+                    htmlPresidia += `
+                        <div class="grid-row">
+                            <div style="font-weight: bold; color: #2e7d32;">${p.presidiumName || '-'}</div>
+                            <div>${p.churchName || '-'} / ${p.curiaName || '-'}</div>
+                            <div><span class="id-badge">${p.id}</span></div>
+                            <div style="text-align: center;">
+                                <button class="btn-delete" onclick="deleteDocument('presidia_list', '${p.id}', '${p.presidiumName}')">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('body-presidia_list').innerHTML = htmlPresidia || '<div style="padding:20px; text-align:center;">데이터가 없습니다.</div>';
+
+                // 2. 단원 명부 렌더링
+                let members = [];
+                membersSnap.forEach(d => members.push({ id: d.id, ...d.data() }));
+                members.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+                let htmlMembers = "";
+                members.forEach(m => {
+                    htmlMembers += `
+                        <div class="grid-row">
+                            <div style="font-weight: bold;">${m.name || '-'}</div>
+                            <div>${m.baptismalName || '-'} (${m.status || '-'})</div>
+                            <div style="font-size:0.85rem; color:#555;">${m.churchName || '-'} ➡️ ${m.presidiumName || '-'}</div>
+                            <div style="text-align: center;">
+                                <button class="btn-delete" onclick="deleteDocument('members_list', '${m.id}', '${m.name}')">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('body-members_list').innerHTML = htmlMembers || '<div style="padding:20px; text-align:center;">데이터가 없습니다.</div>';
+
+                // 3. 회원 가입 계정 렌더링
+                let users = [];
+                usersSnap.forEach(d => users.push({ id: d.id, ...d.data() }));
+                users.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+                let htmlUsers = "";
+                users.forEach(u => {
+                    htmlUsers += `
+                        <div class="grid-row">
+                            <div style="font-weight: bold;">${u.name || '-'}</div>
+                            <div>${u.role || '-'} (${u.email || '-'})</div>
+                            <div style="font-size:0.85rem; color:#555;">${u.churchName || '-'} ➡️ ${u.presidiumName || '-'}</div>
+                            <div style="text-align: center;">
+                                <button class="btn-delete" onclick="deleteDocument('users', '${u.id}', '${u.name}')">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('body-users').innerHTML = htmlUsers || '<div style="padding:20px; text-align:center;">데이터가 없습니다.</div>';
+
+                // 4. 간부 임기 이력 렌더링
+                let officers = [];
+                officersSnap.forEach(d => officers.push({ id: d.id, ...d.data() }));
+                officers.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+                let htmlOfficers = "";
+                officers.forEach(o => {
+                    htmlOfficers += `
+                        <div class="grid-row">
+                            <div style="font-weight: bold;">${o.name || '-'}</div>
+                            <div>${o.role || '-'}</div>
+                            <div style="font-size:0.85rem; color:#555;">${o.churchName || '-'} ➡️ ${o.presidiumName || '-'}</div>
+                            <div style="text-align: center;">
+                                <button class="btn-delete" onclick="deleteDocument('officers_list', '${o.id}', '${o.name}')">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('body-officers_list').innerHTML = htmlOfficers || '<div style="padding:20px; text-align:center;">데이터가 없습니다.</div>';
+
+            } catch (e) {
+                alert("초기 데이터 로드 중 치명적 오류: " + e.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

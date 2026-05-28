@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>비정상 쁘레시디움 데이터 진단 및 클리닝 도구</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 40px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2e7d32;
+            border-bottom: 2px solid #d4a017;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h3 {
+            color: #d32f2f;
+            margin-top: 30px;
+            border-left: 4px solid #d32f2f;
+            padding-left: 10px;
+        }
+        .info-box {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .grid-header {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 2fr 2.5fr 1fr;
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 2fr 2.5fr 1fr;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .grid-row:hover {
+            background-color: #f8d7da; /* 경고 유도 호버 색상 */
+        }
+        .id-badge {
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #495057;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover {
+            background-color: #bd2130;
+        }
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #2e7d32;
+            font-weight: bold;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>비정상 쁘레시디움 데이터 정밀 진단 및 클리닝</h2>
+        <div class="info-box">
+            정상적인 쁘레시디움 기본정보(<code>presidia_list</code>)에 등록되어 있지 않은 <strong>처음 보는 생소한 쁘레시디움 명칭</strong>이 기록된 가짜 단원 및 계정 정보를 자동으로 진단합니다.<br>
+            여기에서 AI가 예전에 임의로 생성했던 테스트 데이터를 즉각 찾아 <strong>[삭제]</strong>하실 수 있습니다.
+        </div>
+
+        <div id="loading" style="padding: 30px; text-align: center; font-weight: bold; color: #666;">데이터베이스를 정밀 진단 분석하는 중입니다...</div>
+        
+        <div id="results-area" style="display: none;">
+            <!-- 1. 비정상 단원 목록 -->
+            <h3>⚠️ 미등록/가짜 쁘레시디움 소속 단원 (members_list)</h3>
+            <div id="members-table-container">
+                <div class="grid-header">
+                    <div>성명</div>
+                    <div>세례명</div>
+                    <div>감지된 쁘레시디움명</div>
+                    <div>문서 고유 ID</div>
+                    <div style="text-align: center;">삭제 관리</div>
+                </div>
+                <div id="members-list-body"></div>
+            </div>
+
+            <!-- 2. 비정상 회원 계정 목록 -->
+            <h3>⚠️ 미등록/가짜 쁘레시디움 소속 회원 계정 (users)</h3>
+            <div id="users-table-container">
+                <div class="grid-header">
+                    <div>성명</div>
+                    <div>세례명</div>
+                    <div>감지된 쁘레시디움명</div>
+                    <div>문서 고유 ID</div>
+                    <div style="text-align: center;">삭제 관리</div>
+                </div>
+                <div id="users-list-body"></div>
+            </div>
+
+            <!-- 3. 비정상 간부 임명 정보 목록 -->
+            <h3>⚠️ 미등록/가짜 쁘레시디움 소속 간부 정보 (officers_list)</h3>
+            <div id="officers-table-container">
+                <div class="grid-header">
+                    <div>성명</div>
+                    <div>직급</div>
+                    <div>감지된 쁘레시디움명</div>
+                    <div>문서 고유 ID</div>
+                    <div style="text-align: center;">삭제 관리</div>
+                </div>
+                <div id="officers-list-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, deleteDoc, doc } from "./firebase-config.js?v=20260324_2345";
+        import { fetchPresidiaList } from "./data.js?v=20260324_2345";
+
+        async function run() {
+            try {
+                // 1. 기본 쁘레시디움 목록 조회
+                const presidiaSnap = await fetchPresidiaList();
+                const validPresidiaNames = new Set(presidiaSnap.map(p => (p.presidiumName || '').trim()));
+
+                // 2. 각 컬렉션 전체 조회
+                const [membersSnap, usersSnap, officersSnap] = await Promise.all([
+                    getDocs(collection(db, "members_list")),
+                    getDocs(collection(db, "users")),
+                    getDocs(collection(db, "officers_list"))
+                ]);
+
+                // 3. 비정상 데이터 필터링
+                const invalidMembers = [];
+                membersSnap.forEach(d => {
+                    const data = d.data();
+                    const pName = (data.presidiumName || '').trim();
+                    // 정상 목록에 없고, 빈 값이 아닌 경우 비정상으로 감지
+                    if (pName && !validPresidiaNames.has(pName)) {
+                        invalidMembers.push({ id: d.id, ...data });
+                    }
+                });
+
+                const invalidUsers = [];
+                usersSnap.forEach(d => {
+                    const data = d.data();
+                    const pName = (data.presidiumName || '').trim();
+                    if (pName && !validPresidiaNames.has(pName)) {
+                        invalidUsers.push({ id: d.id, ...data });
+                    }
+                });
+
+                const invalidOfficers = [];
+                officersSnap.forEach(d => {
+                    const data = d.data();
+                    const pName = (data.presidiumName || '').trim();
+                    if (pName && !validPresidiaNames.has(pName)) {
+                        invalidOfficers.push({ id: d.id, ...data });
+                    }
+                });
+
+                // 4. 테이블 렌더링
+                renderList("members-list-body", invalidMembers, "members_list");
+                renderList("users-list-body", invalidUsers, "users");
+                renderList("officers-list-body", invalidOfficers, "officers_list");
+
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("results-area").style.display = "block";
+
+            } catch (e) {
+                document.getElementById("loading").innerHTML = "<span style='color:red;'>진단 중 에러 발생:</span> " + e.message;
+            }
+        }
+
+        function renderList(targetId, list, collectionName) {
+            const body = document.getElementById(targetId);
+            if (list.length === 0) {
+                body.parentNode.innerHTML = '<div class="no-data">✔️ 감지된 비정상 데이터가 없습니다. (정상 상태)</div>';
+                return;
+            }
+
+            let html = "";
+            list.forEach(item => {
+                const subValue = item.baptismalName || item.role || '-';
+                html += `
+                    <div class="grid-row">
+                        <div style="font-weight: bold;">${item.name || '-'}</div>
+                        <div>${subValue}</div>
+                        <div style="color: #d32f2f; font-weight: bold;">${item.presidiumName || '-'}</div>
+                        <div><span class="id-badge">${item.id}</span></div>
+                        <div style="text-align: center;">
+                            <button class="btn-delete" onclick="deleteTarget('${collectionName}', '${item.id}', '${item.name}')">삭제</button>
+                        </div>
+                    </div>
+                `;
+            });
+            body.innerHTML = html;
+        }
+
+        // 전역 함수로 삭제 로직 바인딩
+        window.deleteTarget = async function(collectionName, id, name) {
+            if (confirm(`⚠️ 경고! [${collectionName}] 컬렉션에서 [${name}] 단원의 정보를 파이어베이스에서 영구 삭제하시겠습니까?\n이 작업은 복구할 수 없습니다.`)) {
+                try {
+                    await deleteDoc(doc(db, collectionName, id));
+                    alert("성공적으로 삭제되었습니다.");
+                    location.reload();
+                } catch (e) {
+                    alert("삭제 실패: " + e.message);
+                }
+            }
+        };
+
+        run();
+    </script>
+</body>
+</html>

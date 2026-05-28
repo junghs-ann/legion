@@ -582,6 +582,15 @@ body {
         width: 100%;
         color: #333;
         font-size: 1.1rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .nav-link:active {
+        background-color: rgba(46, 125, 50, 0.08) !important;
+    }
+
+    .nav-item.is-inquiry .nav-link:active {
+        background-color: rgba(25, 114, 230, 0.08) !important;
     }
 
     /* Mobile Arrow Visibility */

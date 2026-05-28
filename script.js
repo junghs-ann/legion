@@ -549,6 +549,27 @@ window.initCommonMenus = (profile, logoutUser) => {
                     li.innerHTML = '<a href="diagnose_data.html">데이터 표준화 진단</a>';
                     subMenu.appendChild(li);
                 }
+
+                // [새 기능] 단원 UID 누락 정비 링크 동적 주입
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_members_uid"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="diagnose_members_uid.html">단원 UID 누락 정비</a>';
+                    subMenu.appendChild(li);
+                }
+
+                // [새 기능] 간부 UID 누락 정비 링크 동적 주입
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_officers_uid"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="diagnose_officers_uid.html">간부 UID 누락 정비</a>';
+                    subMenu.appendChild(li);
+                }
+
+                // [새 기능] 쁘레시디움 ID 진단 및 정비 링크 동적 주입 (어제 완료 건)
+                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_empty_ids"]')) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<a href="diagnose_empty_ids.html">쁘레시디움 ID 진단 및 정비</a>';
+                    subMenu.appendChild(li);
+                }
                 // 기존 데이터 일괄 정리가 있다면 유지하되 아래에 배치 (필요시)
                 if (subMenu && isAdmin && !subMenu.querySelector('a[href*="data_cleanup"]')) {
                     const li = document.createElement('li');

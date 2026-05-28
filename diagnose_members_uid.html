@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단원 UID 누락 진단 및 정비 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { 
+            padding: 0; 
+            margin: 0;
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .header-bar {
+            background: #2e7d32;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 2px solid #D4AF37;
+        }
+        .header-title { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            margin-bottom: 25px; 
+            border: 1px solid #eef2f1; 
+        }
+        
+        /* Stats Summary Grid */
+        .summary-card { background: #eff6ff; border: 1px solid #dbeafe; }
+        .summary-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            gap: 20px; 
+        }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 0.85rem; color: #64748b; margin-bottom: 5px; }
+        .stat-value { font-size: 1.4rem; font-weight: 700; color: #1e40af; }
+        .stat-value.red-text { color: #b91c1c; }
+        .stat-value.green-text { color: #15803d; }
+        
+        /* Actions button group */
+        .action-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .btn-premium {
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .btn-blue { background: #2563eb; color: white; }
+        .btn-blue:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-green { background: #16a34a; color: white; }
+        .btn-green:hover { background: #15803d; transform: translateY(-1px); }
+        .btn-grey { background: #64748b; color: white; }
+        .btn-grey:hover { background: #475569; }
+        .btn-dashboard { background: #D4AF37; color: white; }
+        .btn-dashboard:hover { background: #c5a028; transform: translateY(-1px); }
+        .btn-table-action {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-table-fix { background-color: #2563eb; color: white; }
+        .btn-table-fix:hover { background-color: #1d4ed8; }
+
+        /* Table design */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #eef2f1; padding: 12px; text-align: left; font-size: 0.9rem; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; }
+        tr:hover { background-color: #f8fafc; }
+        
+        .id-badge { font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; background: #f1f5f9; color: #475569; }
+        .badge-status { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
+        .badge-need-fix { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .badge-waiting { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+        /* Log console */
+        .log-area { 
+            background: #1e293b; 
+            color: #4ade80; 
+            padding: 15px; 
+            border-radius: 8px; 
+            height: 250px; 
+            overflow-y: auto; 
+            font-family: 'Fira Code', monospace; 
+            font-size: 0.85rem; 
+            border: 1px solid #334155; 
+            line-height: 1.5; 
+            white-space: pre-wrap;
+        }
+        
+        .loading { font-size: 1.1rem; color: #666; text-align: center; padding: 30px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h1 class="header-title"><i class="fas fa-user-shield"></i> 단원 UID 누락 진단 및 정비</h1>
+        <button onclick="window.safeNavigate ? window.safeNavigate('dashboard.html') : location.href='dashboard.html'" class="btn-premium btn-dashboard">
+            <i class="fas fa-home"></i> 대시보드 이동
+        </button>
+    </div>
+
+    <div class="container">
+        <div id="authStatus" class="loading">사용자 로그인 권한 확인 중...</div>
+
+        <div id="mainSection" style="display: none;">
+            <!-- Stats Cards -->
+            <div class="card summary-card">
+                <div class="summary-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">현재 활동 단원</div>
+                        <div id="stat-active" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">UID 정상 매핑</div>
+                        <div id="stat-normal" class="stat-value green-text">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">정비 대상 (가입완료)</div>
+                        <div id="stat-missing" class="stat-value red-text">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">미가입 대기자</div>
+                        <div id="stat-waiting" class="stat-value">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card" style="text-align: center;">
+                <p style="margin-top: 0; color: #666; font-size: 1rem;">
+                    회원가입은 마쳤으나 명부에 회원 UID 연결이 빠져 있는 단원들을 진단하고 강제 동기화합니다.
+                </p>
+                <div class="action-container">
+                    <button id="btnScan" class="btn-premium btn-blue"><i class="fas fa-sync-alt"></i> 교차 진단 시작</button>
+                    <button id="btnRepairAll" class="btn-premium btn-green" style="display: none;"><i class="fas fa-magic"></i> 누락 UID 일괄 정비</button>
+                </div>
+            </div>
+
+            <!-- Result Table -->
+            <div class="card" id="resultsCard" style="display: none;">
+                <h3>📋 진단 결과 및 정정 대상 목록</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>소속 (성당 / 쁘레시디움)</th>
+                                <th>성명 (세례명)</th>
+                                <th>단원 명부 문서 ID</th>
+                                <th>상태 진단</th>
+                                <th>매핑할 가입 UID</th>
+                                <th>정비 작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result-body">
+                            <!-- JS Inject -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div class="card">
+                <h3>🖥️ 정비 작업 로그</h3>
+                <div id="logArea" class="log-area">> 진단 시작 버튼을 눌러주세요.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260526_1856"></script>
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./firebase-config.js?v=20260313_1515";
+        import { initAuthObserver } from "./auth.js?v=20260308_0345";
+
+        const authStatus = document.getElementById('authStatus');
+        const mainSection = document.getElementById('mainSection');
+        const logArea = document.getElementById('logArea');
+        const btnScan = document.getElementById('btnScan');
+        const btnRepairAll = document.getElementById('btnRepairAll');
+        const resultBody = document.getElementById('result-body');
+        const resultsCard = document.getElementById('resultsCard');
+
+        let membersList = [];
+        let usersList = [];
+        let missingUidTargets = []; // 정비가 가능한 타겟 목록 저장
+
+        // --- 1. 권한 체크 및 초기화 ---
+        initAuthObserver((user, profile) => {
+            const role = profile.role || '';
+            const isAdmin = role.toLowerCase().includes('admin') || role.includes('관리자');
+
+            if (!isAdmin) {
+                alert("🚨 접근 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                location.href = "dashboard.html";
+                return;
+            }
+
+            authStatus.style.display = 'none';
+            mainSection.style.display = 'block';
+            addLog("✅ 관리자 권한 확인 완료. 시스템 대기 중.");
+        }, () => {
+            alert("❌ 로그인 상태가 아닙니다. 로그인 페이지로 이동합니다.");
+            location.href = "index.html";
+        });
+
+        // --- 2. 로그 메커니즘 ---
+        function addLog(msg, type = '') {
+            const time = new Date().toLocaleTimeString();
+            let styleColor = '';
+            if (type === 'error') styleColor = 'color: #ef4444;';
+            if (type === 'success') styleColor = 'color: #4ade80; font-weight: bold;';
+            
+            const line = `> [${time}] ${msg}\n`;
+            logArea.innerText += line;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // --- 3. 데이터 교차 스캔 및 진단 ---
+        async function runScan() {
+            btnScan.disabled = true;
+            btnScan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중...';
+            btnRepairAll.style.display = 'none';
+            resultsCard.style.display = 'none';
+            resultBody.innerHTML = '';
+            logArea.innerText = '';
+            missingUidTargets = [];
+            
+            addLog("🚀 회원 정보 및 단원 명부 전수 교차 분석 시작...");
+
+            try {
+                // DB에서 두 컬렉션 병렬로 로드
+                addLog("⏳ Firestore에서 단원 명부(members_list)를 가져오는 중...");
+                const mSnap = await getDocs(collection(db, 'members_list'));
+                membersList = [];
+                mSnap.forEach(docSnap => {
+                    membersList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                addLog(`✅ 단원 명부 로드 완료 (총 ${membersList.length}명)`);
+
+                addLog("⏳ Firestore에서 가입자 정보(users)를 가져오는 중...");
+                const uSnap = await getDocs(collection(db, 'users'));
+                usersList = [];
+                uSnap.forEach(docSnap => {
+                    usersList.push({ uid: docSnap.id, ...docSnap.data() });
+                });
+                addLog(`✅ 가입자 정보 로드 완료 (총 ${usersList.length}명)`);
+
+                // 분석 필터 적용
+                let totalActive = 0;
+                let normalMapCount = 0;
+                let waitingCount = 0;
+                let scanResultHtml = '';
+
+                const norm = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
+
+                membersList.forEach(m => {
+                    const status = m.status || '';
+                    const isActive = status !== '퇴단' && status !== '전출';
+
+                    if (isActive) {
+                        totalActive++;
+                        const uidVal = m.UID;
+                        const hasUid = uidVal && String(uidVal).trim() !== '';
+
+                        if (hasUid) {
+                            normalMapCount++;
+                        } else {
+                            // UID가 없는 단원 ➔ users 컬렉션에서 교차 조회하여 매핑 확인
+                            const mName = norm(m.name);
+                            const mBaptismal = norm(m.baptismalName);
+                            const mChurch = norm(m.churchName);
+
+                            // 이름 + 세례명 + 성당명이 완벽히 매칭되거나 memberId가 등록된 유저 검색
+                            const matchedUser = usersList.find(u => {
+                                const isIdMatch = u.memberId && String(u.memberId).trim() === String(m.id).trim();
+                                const isProfileMatch = norm(u.name) === mName && norm(u.baptismalName) === mBaptismal && norm(u.churchName) === mChurch;
+                                return isIdMatch || isProfileMatch;
+                            });
+
+                            let statusText = '';
+                            let badgeClass = '';
+                            let mappedUid = 'N/A';
+                            let actionHtml = '';
+
+                            if (matchedUser) {
+                                statusText = '정비 대상 (가입완료)';
+                                badgeClass = 'badge-need-fix';
+                                mappedUid = matchedUser.uid;
+                                
+                                missingUidTargets.push({
+                                    memberId: m.id,
+                                    name: m.name,
+                                    uid: matchedUser.uid
+                                });
+
+                                actionHtml = `<button class="btn-table-action btn-table-fix" onclick="window.fixSingleMembersUid('${m.id}', '${matchedUser.uid}', '${m.name}')"><i class="fas fa-link"></i> UID 연동</button>`;
+                            } else {
+                                statusText = '미가입 대기자';
+                                badgeClass = 'badge-waiting';
+                                waitingCount++;
+                                actionHtml = '<span style="color:#888; font-size:0.85rem;"><i class="fas fa-hourglass-half"></i> 가입대기</span>';
+                            }
+
+                            const orgText = `${m.churchName || '성당미상'} / ${m.presidiumName || 'Pr.미상'}`;
+
+                            scanResultHtml += `
+                                <tr>
+                                    <td>${orgText}</td>
+                                    <td><strong>${m.name}</strong> (${m.baptismalName || '성명미상'})</td>
+                                    <td><span class="id-badge">${m.id}</span></td>
+                                    <td><span class="badge-status ${badgeClass}">${statusText}</span></td>
+                                    <td><code>${mappedUid}</code></td>
+                                    <td>${actionHtml}</td>
+                                </tr>
+                            `;
+                        }
+                    }
+                });
+
+                // 통계 업데이트
+                document.getElementById('stat-active').textContent = `${totalActive}명`;
+                document.getElementById('stat-normal').textContent = `${normalMapCount}명`;
+                document.getElementById('stat-missing').textContent = `${missingUidTargets.length}명`;
+                document.getElementById('stat-waiting').textContent = `${waitingCount}명`;
+
+                // 테이블 노출 설정
+                if (missingUidTargets.length > 0 || waitingCount > 0) {
+                    resultBody.innerHTML = scanResultHtml;
+                    resultsCard.style.display = 'block';
+                }
+
+                if (missingUidTargets.length > 0) {
+                    btnRepairAll.style.display = 'inline-flex';
+                    btnRepairAll.innerHTML = `<i class="fas fa-magic"></i> 누락 UID 일괄 정비 (${missingUidTargets.length}건)`;
+                    addLog(`🚨 진단 결과: 즉시 복구가 가능한 계정 연동 누락자가 ${missingUidTargets.length}명 발견되었습니다!`, "error");
+                } else {
+                    addLog("🎉 진단 완료: 현재 가입된 활동 단원들의 모든 UID가 완벽히 매핑되어 있습니다.", "success");
+                }
+
+            } catch (error) {
+                console.error(error);
+                addLog(`🚨 에러 발생: ${error.message}`, "error");
+            } finally {
+                btnScan.disabled = false;
+                btnScan.innerHTML = '<i class="fas fa-sync-alt"></i> 교차 진단 시작';
+            }
+        }
+
+        // --- 4. 단일 복구 및 일괄 복구 기능 구현 ---
+        window.fixSingleMembersUid = async function(memberId, targetUid, name) {
+            if (!confirm(`[${name}] 단원의 명부 문서에 가입 UID(${targetUid})를 강제 연결하시겠습니까?`)) return;
+
+            addLog(`⏳ [${name}] 단원 문서(ID: ${memberId})에 UID 연결 시도 중...`);
+            try {
+                const docRef = doc(db, 'members_list', memberId);
+                await updateDoc(docRef, {
+                    UID: targetUid
+                });
+                addLog(`✅ [${name}] 단원 UID 연동 성공!`, "success");
+                alert(`[${name}] 단원 명부의 UID가 성공적으로 연동되었습니다.`);
+                runScan(); // 화면 갱신
+            } catch (err) {
+                console.error(err);
+                addLog(`🚨 [${name}] 연동 실패: ${err.message}`, "error");
+                alert("🚨 연동 중 오류가 발생했습니다: " + err.message);
+            }
+        }
+
+        btnRepairAll.onclick = async () => {
+            if (!confirm(`발견된 ${missingUidTargets.length}명의 누락된 UID를 일괄적으로 강제 연결하시겠습니까?\n이 작업은 데이터베이스를 직접 수정합니다.`)) {
+                return;
+            }
+
+            btnRepairAll.disabled = true;
+            btnScan.disabled = true;
+            addLog("⚡ [일괄 UID 누락 정비 시작]");
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const target of missingUidTargets) {
+                try {
+                    addLog(`⏳ [${target.name}] 연결 중...`);
+                    const docRef = doc(db, 'members_list', target.memberId);
+                    await updateDoc(docRef, {
+                        UID: target.uid
+                    });
+                    successCount++;
+                } catch (err) {
+                    failCount++;
+                    addLog(`❌ [${target.name}] 연결 실패: ${err.message}`, "error");
+                }
+            }
+
+            addLog(`\n🎉 일괄 정비 종료: 성공 ${successCount}건, 실패 ${failCount}건`, successCount > 0 ? "success" : "error");
+            alert(`일괄 정비 완료!\n성공: ${successCount}건 / 실패: ${failCount}건`);
+            
+            btnRepairAll.disabled = false;
+            btnScan.disabled = false;
+            runScan(); // 화면 새로 갱신
+        };
+
+        btnScan.onclick = runScan;
+        
+        // 페이지 로드 시 자동 1회 스캔 실행
+        setTimeout(runScan, 300);
+    </script>
+</body>
+</html>

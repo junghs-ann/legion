@@ -12,7 +12,7 @@
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=20260512_1624">
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -419,7 +419,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260512_1624"></script>
+    <script src="script.js?v=20260526_1856"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -427,6 +427,9 @@
         let currentUserProfile = null;
         let isAdmin = false;
         let allPresidia = [];
+        let currentResults = []; // 엑셀 다운로드용 전역 저장소
+        let lastSelectedChurch = ''; 
+        let lastSelectedCuria = ''; 
 
         // 초기화
         initAuthObserver(async (user, profile) => {
@@ -602,7 +605,10 @@
                         m.probationaryDate <= baseDate && 
                         (!m.leaveDate || m.leaveDate > baseDate)
                     );
-                    const activeCount = prMembers.filter(m => !m.classification || m.classification === '행동단원').length;
+                    const activeMembers = prMembers.filter(m => !m.classification || m.classification === '행동단원');
+                    const activeCount = activeMembers.length;
+                    const activeMaleCount = activeMembers.filter(m => (m.gender || m.sex) === '남').length;
+                    const activeFemaleCount = activeMembers.filter(m => (m.gender || m.sex) === '여').length;
 
                     // 협조단원 수 집계
                     const prAuxiliaries = allAuxiliaries.filter(a => 
@@ -612,6 +618,8 @@
                         (!a.withdrawalDate || a.withdrawalDate > baseDate)
                     );
                     const auxCount = prAuxiliaries.length;
+                    const auxMaleCount = prAuxiliaries.filter(a => (a.gender || a.sex) === '남').length;
+                    const auxFemaleCount = prAuxiliaries.filter(a => (a.gender || a.sex) === '여').length;
 
                     // 쁘레또리움 수 집계
                     const praeCount = allPraetorium.filter(r => 
@@ -656,7 +664,11 @@
                     return {
                         ...pr,
                         activeCount,
+                        activeMaleCount,
+                        activeFemaleCount,
                         auxCount,
+                        auxMaleCount,
+                        auxFemaleCount,
                         praeCount,
                         adjCount,
                         president: getOfficerName('단장'),
@@ -667,6 +679,11 @@
                         deputy: getClergyName('보좌신부')
                     };
                 });
+
+                // 전역 데이터 캐시 업데이트 (엑셀 다운로드 시 사용)
+                currentResults = results;
+                lastSelectedChurch = searchChurch;
+                lastSelectedCuria = searchCuria;
 
                 // 정렬: 성당 -> 꾸리아 -> 고유번호 -> 쁘레시디움명
                 results.sort((a, b) => {
@@ -758,8 +775,12 @@
                 rowHtml += `
                     <td style="color: #718096; font-size: 0.85rem;">${item.uniqueNumber || '-'}</td>
                     <td style="font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showPresidiumDetail('${item.id}')">${item.presidiumName}</td>
-                    <td style="font-weight: bold; color: #2e7d32;">${item.activeCount}</td>
-                    <td style="font-weight: bold; color: #1976d2;">${item.auxCount}</td>
+                    <td style="font-weight: bold; color: #2e7d32;">
+                        ${item.activeCount} <span style="font-size: 0.8rem; font-weight: normal; color: #666;">(남${item.activeMaleCount}/여${item.activeFemaleCount})</span>
+                    </td>
+                    <td style="font-weight: bold; color: #1976d2;">
+                        ${item.auxCount} <span style="font-size: 0.8rem; font-weight: normal; color: #666;">(남${item.auxMaleCount}/여${item.auxFemaleCount})</span>
+                    </td>
                     <td style="font-weight: bold; color: #6a1b9a;">${item.praeCount}</td>
                     <td style="font-weight: bold; color: #8d6e63;">${item.adjCount}</td>
                     <td>${item.president}</td>
@@ -874,13 +895,7 @@
         document.getElementById('btnExcel').onclick = exportToExcel;
 
         async function exportToExcel() {
-            const table = document.getElementById('resultTable');
-            // 헤더 외에 데이터 행이 있는지 확인 (tbody 내의 첫 번째 tr이 안내 문구인 경우도 고려)
-            const resultBody = document.getElementById('resultBody');
-            const hasData = resultBody && resultBody.rows.length > 0 && 
-                           !resultBody.rows[0].cells[0].textContent.includes('조회 버튼');
-
-            if (!hasData) {
+            if (!currentResults || currentResults.length === 0) {
                 if (window.showGlobalAlert) {
                     window.showGlobalAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
                 } else {
@@ -928,75 +943,151 @@
                 });
 
                 const startRow = baseStartRow + 3; // 테이블 헤더가 시작될 행 (B5)
-                const occupiedCells = {};
+                
+                const showChurchCol = !lastSelectedChurch;
+                const showCuriaCol = !lastSelectedCuria;
 
-                for (let r = 0; r < table.rows.length; r++) {
-                    const htmlRow = table.rows[r];
-                    let excelCol = startCol;
-                    const excelRowNum = r + startRow;
+                // 컬럼 정의 리스트 구성
+                const columns = [];
+                if (showChurchCol) columns.push({ key: 'churchName', label: '성당 명', width: 20 });
+                if (showCuriaCol) columns.push({ key: 'curiaName', label: '꾸리아 명(Cu.)', width: 20 });
+                columns.push({ key: 'uniqueNumber', label: '고유번호', width: 10 });
+                columns.push({ key: 'presidiumName', label: '쁘레시디움 명(Pr.)', width: 25 });
+                
+                // 행동단원 수 (세분화)
+                columns.push({ key: 'activeMaleCount', label: '남', width: 8, parentLabel: '행동단원 수', isNumeric: true });
+                columns.push({ key: 'activeFemaleCount', label: '여', width: 8, parentLabel: '행동단원 수', isNumeric: true });
+                columns.push({ key: 'activeCount', label: '계', width: 8, parentLabel: '행동단원 수', isNumeric: true });
+                
+                // 협조단원 수 (세분화)
+                columns.push({ key: 'auxMaleCount', label: '남', width: 8, parentLabel: '협조단원 수', isNumeric: true });
+                columns.push({ key: 'auxFemaleCount', label: '여', width: 8, parentLabel: '협조단원 수', isNumeric: true });
+                columns.push({ key: 'auxCount', label: '계', width: 8, parentLabel: '협조단원 수', isNumeric: true });
 
-                    for (let c = 0; c < htmlRow.cells.length; c++) {
-                        const htmlCell = htmlRow.cells[c];
+                columns.push({ key: 'praeCount', label: '쁘레또리움 수', width: 12, isNumeric: true });
+                columns.push({ key: 'adjCount', label: '아듀또리움 수', width: 12, isNumeric: true });
+                columns.push({ key: 'president', label: '단 장', width: 15 });
+                columns.push({ key: 'vp', label: '부단장', width: 15 });
+                columns.push({ key: 'secretary', label: '서 기', width: 15 });
+                columns.push({ key: 'treasurer', label: '회 계', width: 15 });
+                columns.push({ key: 'spiritualDirector', label: '영적지도자', width: 15 });
+                columns.push({ key: 'deputy', label: '대리자', width: 15 });
+                columns.push({ key: 'superiorSisters', label: '원장수녀', width: 15 });
+                columns.push({ key: 'sisters', label: '수녀', width: 15 });
 
-                        while (occupiedCells[`${excelRowNum},${excelCol}`]) {
-                            excelCol++;
-                        }
+                // 헤더 1행 (r1), 2행 (r2) 쓰기 및 병합
+                const r1 = startRow;
+                const r2 = startRow + 1;
+                
+                let currentGroupLabel = null;
+                let groupStartCol = null;
 
-                        const excelCell = worksheet.getRow(excelRowNum).getCell(excelCol);
-                        const rowSpan = htmlCell.rowSpan || 1;
-                        const colSpan = htmlCell.colSpan || 1;
-
-                        if (rowSpan > 1 || colSpan > 1) {
-                            worksheet.mergeCells(excelRowNum, excelCol, excelRowNum + rowSpan - 1, excelCol + colSpan - 1);
-                            for (let i = 0; i < rowSpan; i++) {
-                                for (let j = 0; j < colSpan; j++) {
-                                    occupiedCells[`${excelRowNum + i},${excelCol + j}`] = true;
-                                }
+                columns.forEach((col, idx) => {
+                    const excelCol = startCol + idx;
+                    const cell1 = worksheet.getRow(r1).getCell(excelCol);
+                    const cell2 = worksheet.getRow(r2).getCell(excelCol);
+                    
+                    if (col.parentLabel) {
+                        cell1.value = col.parentLabel;
+                        cell2.value = col.label;
+                        
+                        if (currentGroupLabel !== col.parentLabel) {
+                            if (currentGroupLabel !== null) {
+                                worksheet.mergeCells(r1, groupStartCol, r1, excelCol - 1);
                             }
-                        } else {
-                            occupiedCells[`${excelRowNum},${excelCol}`] = true;
+                            currentGroupLabel = col.parentLabel;
+                            groupStartCol = excelCol;
                         }
-
-                        // 값 입력
-                        const val = htmlCell.textContent.trim().replace(/,/g, '');
-                        if (val !== "" && !isNaN(val) && r >= 1) {
-                            excelCell.value = Number(val);
-                            excelCell.numFmt = '#,##0';
-                        } else {
-                            excelCell.value = htmlCell.textContent.trim();
+                    } else {
+                        if (currentGroupLabel !== null) {
+                            worksheet.mergeCells(r1, groupStartCol, r1, excelCol - 1);
+                            currentGroupLabel = null;
+                            groupStartCol = null;
                         }
+                        
+                        cell1.value = col.label;
+                        worksheet.mergeCells(r1, excelCol, r2, excelCol);
+                    }
+                });
 
-                        // 스타일 적용
-                        excelCell.border = {
+                if (currentGroupLabel !== null) {
+                    worksheet.mergeCells(r1, groupStartCol, r1, startCol + columns.length - 1);
+                }
+
+                // 헤더 스타일 적용
+                for (let r = r1; r <= r2; r++) {
+                    const row = worksheet.getRow(r);
+                    for (let idx = 0; idx < columns.length; idx++) {
+                        const excelCol = startCol + idx;
+                        const cell = row.getCell(excelCol);
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFEBF4FF' } // 연파랑 배경
+                        };
+                        cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 9 };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        cell.border = {
                             top: { style: 'thin' },
                             left: { style: 'thin' },
                             bottom: { style: 'thin' },
                             right: { style: 'thin' }
                         };
-                        excelCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-
-                        // 테이블 헤더 스타일
-                        if (r === 0) {
-                            excelCell.fill = {
-                                type: 'pattern',
-                                pattern: 'solid',
-                                fgColor: { argb: 'FFEBF4FF' } // 연파랑 배경
-                            };
-                            excelCell.font = { bold: true, color: { argb: 'FF2D3748' } };
-                        }
-
-                        excelCol += colSpan;
                     }
                 }
 
-                // 컬럼 너비 설정 (B열부터 시작하므로 index 조정)
-                // A열 (비워둠)
+                // 데이터 셀 채우기
+                let currentRowNum = r2 + 1;
+
+                currentResults.forEach(item => {
+                    const row = worksheet.getRow(currentRowNum);
+                    
+                    columns.forEach((col, idx) => {
+                        const excelCol = startCol + idx;
+                        const cell = row.getCell(excelCol);
+                        
+                        let val = item[col.key];
+                        
+                        // 원장수녀, 수녀 객체 가공
+                        if (col.key === 'superiorSisters' || col.key === 'sisters') {
+                            val = (val || []).map(s => s.name).join(', ');
+                        }
+                        
+                        if (val === undefined || val === null) {
+                            val = '-';
+                        }
+                        
+                        if (col.isNumeric) {
+                            const numVal = Number(String(val).replace(/,/g, ''));
+                            if (!isNaN(numVal)) {
+                                cell.value = numVal;
+                                cell.numFmt = '#,##0';
+                            } else {
+                                cell.value = val;
+                            }
+                        } else {
+                            cell.value = val;
+                        }
+                        
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        cell.font = { size: 9 };
+                    });
+                    
+                    currentRowNum++;
+                });
+
+                // A열 너비
                 worksheet.getColumn(1).width = 3; 
 
-                // B열부터 데이터 컬럼 (원장수녀, 수녀 추가됨)
-                const colWidths = [20, 20, 10, 25, 12, 12, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15];
-                colWidths.forEach((w, i) => {
-                    worksheet.getColumn(startCol + i).width = w;
+                // 컬럼 너비 설정
+                columns.forEach((col, idx) => {
+                    worksheet.getColumn(startCol + idx).width = col.width || 12;
                 });
 
                 const buffer = await workbook.xlsx.writeBuffer();
@@ -1024,6 +1115,7 @@
         };
     </script>
 </body>
+
 
 
 

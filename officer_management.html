@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260512_1624">
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -312,12 +312,17 @@
                         </select>
                     </div>
 
+                    <div class="form-group" style="display: flex; align-items: flex-end; gap: 8px; margin-bottom: 15px;">
+                        <button type="button" id="btnApplyNew" class="btn" style="background-color: #2e7d32; color: white; padding: 10px 14px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; height: 45px; width: 50%; justify-content: center; box-sizing: border-box;"><i class="fas fa-user-plus"></i> 임 명</button>
+                        <button type="button" id="btnApplyEdit" class="btn" style="background-color: #d4a017; color: white; padding: 10px 14px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; height: 45px; width: 50%; justify-content: center; box-sizing: border-box;"><i class="fas fa-user-edit"></i> 수 정</button>
+                    </div>
+
                     <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 20px;">
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <label style="margin-bottom: 0;">직급</label>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div style="flex: 1;">
-                                    <select name="role" id="roleSelect" required style="width: 100%;">
+                                    <select name="role" id="roleSelect" required style="width: 100%;" disabled>
                                         <option value="">직급 선택</option>
                                         <option value="단장">단장</option>
                                         <option value="부단장">부단장</option>
@@ -327,7 +332,7 @@
                                 </div>
                                 <div
                                     style="flex: 1.5; font-size: 0.8rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    (단원 및 직급 선택 시 자동 조회됩니다)
+                                    (단원 및 직급 선택 시 아래 목록이 자동 조회됩니다)
                                 </div>
                             </div>
                         </div>
@@ -362,13 +367,13 @@
                     <div class="form-group">
                         <label>임명일 <span style="color: red; font-size: 0.8rem;">(필수 *)</span></label>
                         <input type="text" name="appointmentDate" id="appointmentDate" placeholder="YYYY-MM-DD"
-                            maxlength="10" required>
+                            maxlength="10" required disabled>
                     </div>
 
                     <div class="form-group">
                         <label>임명 만료일</label>
                         <input type="text" name="appointmentExpiryDate" id="appointmentExpiryDate"
-                            placeholder="YYYY-MM-DD" maxlength="10">
+                            placeholder="YYYY-MM-DD" maxlength="10" disabled>
                     </div>
 
                     <div class="form-group">
@@ -378,14 +383,11 @@
 
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>특이 및 참고사항</label>
-                        <textarea name="notes" rows="3" placeholder="기타 참고사항을 입력하세요"></textarea>
+                        <textarea name="notes" rows="3" placeholder="기타 참고사항을 입력하세요" disabled></textarea>
                     </div>
                 </div>
 
                 <div class="form-btn-group">
-                    <button type="button" id="btnNewForm" class="btn btn-save"
-                        style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: #007bff; color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
-                            class="fas fa-plus"></i> 신규 입력</button>
                     <button type="submit" class="btn btn-save"
                         style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-save"></i> 저 장</button>
@@ -406,7 +408,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260512_1624"></script>
+    <script src="script.js?v=20260526_1856"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -417,6 +419,9 @@
         let membersList = [];
         let presidiaList = [];
         let isProcessingConflict = false; // Add for global focus/alert sync
+        let isViewingDetail = false; // 상세조회/수정 모드 플래그 추가
+        let currentOfficersList = []; // 실시간 간부 목록 저장용
+        let officerUnsubscribe = null; // 실시간 리스너 해제용
 
         // DOM Elements
         const form = document.getElementById('officerForm');
@@ -470,10 +475,14 @@
             const isAllowed = allowedRoles.some(r => userRole.includes(r.toLowerCase()));
 
             if (!isAllowed) {
-                alert('간부 관리 화면은 관리자 및 간부(단장, 부단장, 서기, 회계)만 접근 가능합니다.');
-                location.href = 'dashboard.html';
+                window.showGlobalAlert('간부 관리 화면은 관리자 및 간부(단장, 부단장, 서기, 회계)만 접근 가능합니다.', 'warning').then(() => {
+                    location.href = 'dashboard.html';
+                });
                 return;
             }
+
+            // 초기 상태에서는 임명 정보 입력 차단
+            disableAppointmentFields();
 
             const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
 
@@ -535,6 +544,7 @@
                 // Initial Member List Load
                 (async () => {
                     await loadMembers();
+                    subscribeOfficers(); // 실시간 구독 시작
                     await loadExistingOfficer();
                 })();
             }
@@ -583,6 +593,7 @@
                     memberSelect.innerHTML = '<option value="">단원 선택</option>';
                     memberSelect.disabled = true;
                     resetMemberUI();
+                    subscribeOfficers(); // 리스너 해제 및 목록 초기화
 
                     if (church) {
                         const curiae = [...new Set(presidiaList
@@ -630,6 +641,7 @@
                             presidiumDropdown.style.display = 'none';
                             (async () => {
                                 await loadMembers();
+                                subscribeOfficers(); // 실시간 구독 시작
                                 await loadExistingOfficer();
                             })();
                         });
@@ -646,6 +658,7 @@
                     memberSelect.innerHTML = '<option value="">단원 선택</option>';
                     memberSelect.disabled = true;
                     resetMemberUI();
+                    subscribeOfficers(); // 리스너 해제 및 목록 초기화
 
                     if (!church || !curia) {
                         presidiumInput.disabled = true;
@@ -685,36 +698,120 @@
                             if (currentVal && !currentPresidia.includes(currentVal)) {
                                 presidiumInput.value = '';
                                 if (originalPresidiumSelect) originalPresidiumSelect.value = '';
+                                subscribeOfficers(); // 리스너 해제
                             } else if (currentVal && currentPresidia.includes(currentVal)) {
                                 if (originalPresidiumSelect) originalPresidiumSelect.value = currentVal;
-                                loadMembers();
-                                loadExistingOfficer();
+                                (async () => {
+                                    await loadMembers();
+                                    subscribeOfficers(); // 실시간 구독 시작
+                                    await loadExistingOfficer();
+                                })();
                             }
                         }
                     }
                 });
             }
 
-            // Custom search handles data update internally
-
-            // Member Selection Logic
-            memberSelect.addEventListener('change', () => {
+            // [임명] 버튼 클릭 핸들러 (입력창을 깨끗이 비우고 신규 등록 준비)
+            document.getElementById('btnApplyNew').addEventListener('click', async () => {
                 const mid = memberSelect.value;
                 if (!mid) {
-                    resetMemberUI();
+                    await window.showGlobalAlert("먼저 단원을 선택해 주세요.", "warning");
+                    memberSelect.focus();
                     return;
                 }
-
+                
+                // 단원 선택 활성화 상태에서 기본 정보 로딩
                 const member = membersList.find(m => m.id === mid);
                 if (member) {
                     memberNameOutput.value = member.name;
                     baptismalNameOutput.value = member.baptismalName || '';
                     feastDateOutput.value = member.feastDate || '';
                     phoneOutput.value = member.phone || '';
-
-                    // [New] Automatically look for existing officer record for THIS member
-                    (async () => await loadExistingOfficer())();
                 }
+                // 입력 날짜 및 비고란 완전 비우기 (신규 모드 보장)
+                form.removeAttribute('data-edit-id');
+                form.querySelector('input[name="appointmentDate"]').value = '';
+                form.querySelector('input[name="appointmentExpiryDate"]').value = '';
+                form.querySelector('textarea[name="notes"]').value = '';
+                
+                // 임명 정보 필드들 활성화
+                enableAppointmentFields();
+                
+                // 잠금 해제 (새 입력이 가능하도록)
+                memberSelect.disabled = false;
+ 
+                updateTenure();
+                updateDeleteButtonVisibility();
+                
+                await window.showGlobalAlert("신규 임기 등록 모드가 활성화되었습니다.\n새로운 임명일을 입력하고 저장해 주세요.", "success");
+                document.getElementById('appointmentDate').focus();
+            });
+
+            // [수정] 버튼 클릭 핸들러 (명시적으로 기존 정보를 찾아 폼에 매핑)
+            document.getElementById('btnApplyEdit').addEventListener('click', async () => {
+                const mid = memberSelect.value;
+                const role = form.querySelector('select[name="role"]').value;
+                if (!mid) {
+                    await window.showGlobalAlert("먼저 단원을 선택해 주세요.", "warning");
+                    memberSelect.focus();
+                    return;
+                }
+                if (!role) {
+                    await window.showGlobalAlert("기존 정보를 수정하려면 먼저 직급을 선택해 주세요.", "warning");
+                    form.querySelector('select[name="role"]').focus();
+                    return;
+                }
+
+                // 폼 매핑 수행 전에 임명 필드 활성화
+                enableAppointmentFields();
+ 
+                // forceFillForm 인자를 true로 주어 명시적 폼 로딩 수행
+                await loadExistingOfficer(true);
+
+                // 단원 기본 정보 로딩
+                const member = membersList.find(m => m.id === mid);
+                if (member) {
+                    memberNameOutput.value = member.name;
+                    baptismalNameOutput.value = member.baptismalName || '';
+                    feastDateOutput.value = member.feastDate || '';
+                    phoneOutput.value = member.phone || '';
+                }
+ 
+                const editId = form.getAttribute('data-edit-id');
+                if (editId) {
+                    await window.showGlobalAlert("기존 활동 중인 현직 간부 정보가 성공적으로 로드되었습니다.\n수정 후 [저장]하시면 정보가 갱신됩니다.", "success");
+                } else {
+                    const appDate = form.querySelector('input[name="appointmentDate"]').value;
+                    if (appDate) {
+                        await window.showGlobalAlert("기존 만료된 과거 정보가 로드되었습니다.\n수정 후 [저장]하시면 새로운 임기 이력으로 신규 등록됩니다.", "info");
+                    } else {
+                        await window.showGlobalAlert("해당 직급으로 등록된 기존 임명 정보가 없습니다. [임명] 상태로 정보를 입력해 주세요.", "info");
+                    }
+                }
+            });
+
+            // Member Selection Logic (드롭다운 변경 시 자동 데이터 주입을 차단하고 빈 입력 폼 상태 유지)
+            memberSelect.addEventListener('change', () => {
+                const mid = memberSelect.value;
+                
+                // 단원 선택 및 임명 필드 잠금
+                resetMemberUI();
+                disableAppointmentFields();
+
+                // 단원 선택 시 직급 선택만 활성화해 줍니다.
+                const roleSel = form.querySelector('select[name="role"]');
+                if (mid && roleSel) {
+                    roleSel.disabled = false;
+                }
+
+                form.removeAttribute('data-edit-id');
+                form.querySelector('input[name="appointmentDate"]').value = '';
+                form.querySelector('input[name="appointmentExpiryDate"]').value = '';
+                form.querySelector('textarea[name="notes"]').value = '';
+                
+                updateTenure();
+                updateDeleteButtonVisibility();
             });
 
             // Date Auto-formatting
@@ -730,8 +827,9 @@
                 if (isProcessingConflict) return false; // Prevent double alerts
 
                 if (appDateInput.value.length < 10) {
-                    alert('먼저 임명일(날짜 전체 10자리)을 입력해 주세요.');
-                    appDateInput.focus();
+                    window.showGlobalAlert('먼저 임명일(날짜 전체 10자리)을 입력해 주세요.', 'warning').then(() => {
+                        appDateInput.focus();
+                    });
                     if (e) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -753,55 +851,16 @@
             // [New] Existing Officer Auto-lookup
             form.querySelector('select[name="role"]').addEventListener('change', async () => await loadExistingOfficer());
             [churchSelect, curiaSelect, presidiumSelect].forEach(sel => {
-                sel.addEventListener('change', async () => await loadExistingOfficer());
+                sel.addEventListener('change', async () => {
+                    subscribeOfficers(); // 실시간 구독 갱신
+                    await loadExistingOfficer();
+                });
             });
-
-
 
             // [New] Delete Logic
             const btnDelete = document.getElementById('btnDelete');
             btnDelete.clickEvent = handleDelete; // Store reference to original or wrap it 
             btnDelete.addEventListener('click', handleDelete);
-
-            // [New Entry] Guard original values
-            const btnNewForm = document.getElementById('btnNewForm');
-            if (btnNewForm) {
-                btnNewForm.addEventListener('click', () => {
-                    const cVal = churchSelect.value;
-                    const cuVal = curiaSelect.value;
-                    const pInput = document.getElementById('presidiumInput');
-                    const prVal = pInput ? pInput.value : '';
-                    const prHiddenVal = document.getElementById('presidiumSelect').value;
-
-                    form.reset();
-                    form.removeAttribute('data-edit-id');
-                    resetMemberUI();
-
-                    // Re-enable fields for new entry
-                    memberSelect.disabled = false;
-                    const roleSel = form.querySelector('select[name="role"]');
-                    if (roleSel) roleSel.disabled = false;
-
-                    const userRole = String(currentUser.role || '').toLowerCase();
-                    const isAdmin = userRole.includes('admin') || userRole.includes('관리자');
-
-                    if (isAdmin) {
-                        churchSelect.disabled = false;
-                        if (churchSelect.value) curiaSelect.disabled = false;
-                        if (curiaSelect.value && pInput) pInput.disabled = false;
-                    }
-
-                    churchSelect.value = cVal;
-                    curiaSelect.value = cuVal;
-                    if (pInput) {
-                        pInput.value = prVal;
-                    }
-                    document.getElementById('presidiumSelect').value = prHiddenVal;
-                    
-                    updateDeleteButtonVisibility();
-                    console.log("🧹 간부 입력창이 초기화되었습니다. 기존 조직 정보는 유지됩니다.");
-                });
-            }
 
             // Form Submit
             form.addEventListener('submit', handleSave);
@@ -819,7 +878,66 @@
             }
         }
 
-        async function loadExistingOfficer() {
+        // === [실시간 동기화] 조직 단위 간부 목록 실시간 구독 및 렌더링 ===
+        function subscribeOfficers() {
+            const church = String(churchSelect.value || '').trim();
+            const curia = String(curiaSelect.value || '').trim();
+            const presidium = String(presidiumSelect.value || '').trim();
+
+            // 이전 구독이 있으면 즉시 해제하여 메모리 누수 방지
+            if (officerUnsubscribe) {
+                officerUnsubscribe();
+                officerUnsubscribe = null;
+            }
+
+            const listDiv = document.getElementById('officerListContainer');
+
+            if (!church || !curia || !presidium) {
+                currentOfficersList = [];
+                if (listDiv) {
+                    listDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">조직을 선택하면 간부 명단이 표시됩니다.</div>';
+                }
+                return;
+            }
+
+            const q = query(
+                collection(db, 'officers_list'),
+                where('churchName', '==', church),
+                where('curiaName', '==', curia),
+                where('presidiumName', '==', presidium)
+            );
+
+            // Firestore 실시간 리스너 작동 (추가, 수정, 삭제 시 즉각 콜백 발생)
+            officerUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                currentOfficersList = [];
+                querySnapshot.forEach(doc => {
+                    currentOfficersList.push({ ...doc.data(), id: doc.id });
+                });
+                console.log("🔄 [실시간 업데이트] Firestore 간부 데이터 동기화 완료. 총 개수:", currentOfficersList.length);
+                
+                // 화면 목록 테이블 즉시 갱신
+                renderOfficerList(currentOfficersList);
+                
+                // 현재 수정/조회 모드가 아닌 경우 폼 동기화 트리거
+                if (!isViewingDetail && !form.getAttribute('data-edit-id')) {
+                    loadExistingOfficer();
+                }
+            }, (error) => {
+                console.error("🚨 [실시간 업데이트 에러] 간부 목록 실시간 구독 실패:", error);
+            });
+        }
+
+        async function loadExistingOfficer(forceFillForm = false) {
+            // 상세 조회/수정 모드이거나, 목록 선택 중인 경우 비동기 이력 조회 및 폼 덮어쓰기를 전면 차단합니다.
+            if (typeof isViewingDetail !== 'undefined' && isViewingDetail) return;
+            const editId = form.getAttribute('data-edit-id');
+            if (editId) return;
+
+            // 명시적 폼 로딩 요청 시 필드를 활성화합니다.
+            if (forceFillForm) {
+                enableAppointmentFields();
+            }
+
             const church = String(churchSelect.value || '').trim();
             const curia = String(curiaSelect.value || '').trim();
             const presidium = String(presidiumSelect.value || '').trim();
@@ -828,30 +946,8 @@
 
             if (!church || !curia || !presidium) return;
 
-            // [데이터 정화 완료] 이제 표준 필드만 사용합니다.
-
-            let officersList = [];
-            try {
-                const q = query(
-                    collection(db, 'officers_list'),
-                    where('churchName', '==', church),
-                    where('curiaName', '==', curia),
-                    where('presidiumName', '==', presidium)
-                );
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach(doc => officersList.push({ id: doc.id, ...doc.data() }));
-            } catch (error) {
-                console.error("Error fetching officers_list:", error);
-                officersList = JSON.parse(localStorage.getItem('officers_list') || '[]');
-            }
-
-            // 1. Position-based records (for the whole organization)
-            const orgRecords = officersList.filter(o => {
-                const oChurch = String(o.churchName || '').trim();
-                const oCuria = String(o.curiaName || '').trim();
-                const oPresidium = String(o.presidiumName || '').trim();
-                return oChurch === church && oCuria === curia && oPresidium === presidium;
-            });
+            // [실시간 동기화 개선] 매번 1회성 getDocs를 수행하지 않고, 실시간 리스너가 유지하는 currentOfficersList 메모리 캐시를 참조하여 즉시 반응하도록 개선
+            const orgRecords = currentOfficersList;
 
             // 2. Role-specific records
             const roleRecords = orgRecords.filter(o => String(o.role || '').trim() === role);
@@ -859,37 +955,41 @@
             // [Crucial] Member-Centric Matching
             if (role && selectedMemberId) {
                 const memberRecord = roleRecords.find(o =>
-                    String(o.memberId || o.memberUid || o.member || '').trim() === selectedMemberId
+                    String(o.memberId || '').trim() === selectedMemberId
                 );
 
                 if (memberRecord) {
-                    form.querySelector('input[name="appointmentDate"]').value = memberRecord.appointmentDate || '';
-                    form.querySelector('input[name="appointmentExpiryDate"]').value = memberRecord.appointmentExpiryDate || '';
-                    form.querySelector('textarea[name="notes"]').value = memberRecord.notes || '';
-                    
-                    // [Fix] Only set edit-id if the record is ACTIVE. 
-                    // Expired records should be loaded for info but saved as NEW entries.
-                    const today = new Date().toISOString().split('T')[0];
-                    const isActive = !memberRecord.appointmentExpiryDate || memberRecord.appointmentExpiryDate >= today;
-                    
-                    if (isActive) {
-                        form.setAttribute('data-edit-id', memberRecord.id);
-                        console.log("📝 [현직 활동 중] 수정 모드 활성화 - ID:", memberRecord.id);
-                    } else {
-                        form.removeAttribute('data-edit-id');
-                        console.log("📜 [과거 기록 로드] 신규 임기 등록 모드 (만료된 기록 보존)");
+                    if (forceFillForm) {
+                        form.querySelector('input[name="appointmentDate"]').value = memberRecord.appointmentDate || '';
+                        form.querySelector('input[name="appointmentExpiryDate"]').value = memberRecord.appointmentExpiryDate || '';
+                        form.querySelector('textarea[name="notes"]').value = memberRecord.notes || '';
+                        
+                        // [Fix] Only set edit-id if the record is ACTIVE. 
+                        // Expired records should be loaded for info but saved as NEW entries.
+                        const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                        const isActive = !memberRecord.appointmentExpiryDate || memberRecord.appointmentExpiryDate >= today;
+                        
+                        if (isActive) {
+                            form.setAttribute('data-edit-id', memberRecord.id);
+                            console.log("📝 [현직 활동 중] 수정 모드 활성화 - ID:", memberRecord.id);
+                        } else {
+                            form.removeAttribute('data-edit-id');
+                            console.log("📜 [과거 기록 로드] 신규 임기 등록 모드 (만료된 기록 보존)");
+                        }
                     }
                 } else {
                     // No history for this specific combination
-                    form.querySelector('input[name="appointmentDate"]').value = '';
-                    form.querySelector('input[name="appointmentExpiryDate"]').value = '';
-                    form.querySelector('textarea[name="notes"]').value = '';
-                    form.removeAttribute('data-edit-id');
+                    if (forceFillForm) {
+                        form.querySelector('input[name="appointmentDate"]').value = '';
+                        form.querySelector('input[name="appointmentExpiryDate"]').value = '';
+                        form.querySelector('textarea[name="notes"]').value = '';
+                        form.removeAttribute('data-edit-id');
+                    }
                 }
             }
             // 3. Just Role-based fallback (When no specific member selected yet)
             else if (role && !selectedMemberId) {
-                const today = new Date().toISOString().split('T')[0];
+                const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
                 roleRecords.sort((a, b) => {
                     const isActiveA = !a.appointmentExpiryDate || a.appointmentExpiryDate >= today;
                     const isActiveB = !b.appointmentExpiryDate || b.appointmentExpiryDate >= today;
@@ -900,22 +1000,24 @@
 
                 if (roleRecords.length > 0) {
                     const target = roleRecords[0];
-                    const mId = target.memberId || target.memberUid || target.member || '';
-                    if (mId) {
-                        memberSelect.value = mId;
-                        // Manually trigger basic member info load
-                        const member = membersList.find(m => m.id === mId);
-                        if (member) {
-                            memberNameOutput.value = member.name;
-                            baptismalNameOutput.value = member.baptismalName || '';
-                            feastDateOutput.value = member.feastDate || '';
-                            phoneOutput.value = member.phone || '';
+                    if (forceFillForm) {
+                        const mId = target.memberId || '';
+                        if (mId) {
+                            memberSelect.value = mId;
+                            // Manually trigger basic member info load
+                            const member = membersList.find(m => m.id === mId);
+                            if (member) {
+                                memberNameOutput.value = member.name;
+                                baptismalNameOutput.value = member.baptismalName || '';
+                                feastDateOutput.value = member.feastDate || '';
+                                phoneOutput.value = member.phone || '';
+                            }
                         }
+                        form.querySelector('input[name="appointmentDate"]').value = target.appointmentDate || '';
+                        form.querySelector('input[name="appointmentExpiryDate"]').value = target.appointmentExpiryDate || '';
+                        form.querySelector('textarea[name="notes"]').value = target.notes || '';
+                        form.setAttribute('data-edit-id', target.id);
                     }
-                    form.querySelector('input[name="appointmentDate"]').value = target.appointmentDate || '';
-                    form.querySelector('input[name="appointmentExpiryDate"]').value = target.appointmentExpiryDate || '';
-                    form.querySelector('textarea[name="notes"]').value = target.notes || '';
-                    form.setAttribute('data-edit-id', target.id);
                 }
             }
 
@@ -934,7 +1036,7 @@
             }
 
             // Sorting: Active first, then by role, then by appointment date DESC
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             records.sort((a, b) => {
                 const isActiveA = !a.appointmentExpiryDate || a.appointmentExpiryDate >= today;
                 const isActiveB = !b.appointmentExpiryDate || b.appointmentExpiryDate >= today;
@@ -1008,68 +1110,141 @@
 
         // Helper: When clicking a table row, populate the form
         window.setFormFromTable = async function (id) {
-            // [?ъ슜???붿껌] 遺덈윭???곗씠???섏젙 ?? ?깅떦/袁몃━???섎젅?쒕뵒? ?좏깮 遺덇? 泥섎━?슡
-            churchSelect.disabled = true;
-            curiaSelect.disabled = true;
-            presidiumSelect.disabled = true;
+            // console.log("🚀 [디버그] setFormFromTable 함수 시작! ID:", id);
+            
+            // 상세 조회/수정 모드 진입 플래그를 가장 먼저 설정하여 백그라운드 비동기 간섭을 완벽히 차단합니다.
+            isViewingDetail = true;
 
             let record = null;
             try {
-                // [?ъ슜???붿껌] Firestore?먯꽌 吏곸젒 ?곸꽭 ?뺣낫 媛?몄삤湲?(?깅뒫 蹂댁셿 2026.03.15)
+                // console.log("⏳ [디버그] Firestore에서 officers_list 조회 시도 중... ID:", id);
+                // Firestore에서 직접 상세 정보 가져오기
                 const docSnap = await getDoc(doc(db, "officers_list", id));
-                if (docSnap.exists()) record = { id: docSnap.id, ...docSnap.data() };
+                // console.log("✅ [디버그] Firestore 조회 응답 완료. 문서 존재 여부:", docSnap.exists());
+                if (docSnap.exists()) {
+                    record = { ...docSnap.data(), id: docSnap.id };
+                    // console.log("📦 [디버그] 조회된 record 데이터:", JSON.stringify(record, null, 2));
+                } else {
+                    // console.warn("⚠️ [디버그] Firestore에 해당 ID의 문서가 존재하지 않습니다.");
+                }
             } catch (error) {
-                console.error("Error fetching officer detail:", error);
+                // console.error("🚨 [디버그] Firestore 조회 중 예외 발생:", error);
+                await window.showGlobalAlert("Firestore 조회 오류: " + error.message, "error");
             }
 
-            if (!record) return;
+            if (!record) {
+                // console.log("🛑 [디버그] record가 비어 있어 함수를 종료합니다.");
+                isViewingDetail = false;
+                return;
+            }
 
-            // Trigger member selection
-            const mId = record.memberId || record.memberUid || record.member || "";
-            if (mId) {
-                // [시니어 패치] 드롭다운에 해당 단원이 없는 경우(예: 퇴단자 등)를 대비해 임시 옵션 추가
-                const existingOption = Array.from(memberSelect.options).find(opt => opt.value === mId);
-                if (!existingOption) {
-                    const tempOpt = document.createElement('option');
-                    tempOpt.value = mId;
-                    tempOpt.textContent = `${record.name || '단원명 미상'} (${record.baptismalName || '세례명 미상'})`;
-                    memberSelect.appendChild(tempOpt);
+            try {
+                // 클릭한 간부의 성당, 꾸리아, 쁘레시디움 정보를 화면 셀렉트 박스/인풋에 먼저 주입합니다.
+                // console.log("🏢 [디버그] UI 조직 필드에 주입 시도...");
+                if (record.churchName) {
+                    churchSelect.value = record.churchName;
+                    // console.log("- 성당 설정 완료:", churchSelect.value);
                 }
                 
-                memberSelect.value = mId;
-                // [용도에 따라] 선택된 단원정보 수정 불가 처리
-                memberSelect.disabled = true;
+                if (record.curiaName) {
+                    const existingCuriaOpt = Array.from(curiaSelect.options).find(opt => opt.value === record.curiaName);
+                    if (!existingCuriaOpt) {
+                        // console.log("- 꾸리아 옵션이 없어 임시 생성 추가:", record.curiaName);
+                        const opt = document.createElement('option');
+                        opt.value = record.curiaName;
+                        opt.textContent = record.curiaName;
+                        curiaSelect.appendChild(opt);
+                    }
+                    curiaSelect.value = record.curiaName;
+                    // console.log("- 꾸리아 설정 완료:", curiaSelect.value);
+                }
+
+                const pInput = document.getElementById('presidiumInput');
+                if (pInput && record.presidiumName) {
+                    pInput.value = record.presidiumName;
+                    // console.log("- 쁘레시디움 인풋 설정 완료:", pInput.value);
+                }
+                const pSelect = document.getElementById('presidiumSelect');
+                if (pSelect && record.presidiumName) {
+                    pSelect.value = record.presidiumName;
+                    // console.log("- 쁘레시디움 셀렉트 설정 완료:", pSelect.value);
+                }
+
+                // 수정 모드이므로 성당/꾸리아/쁘레시디움 선택은 잠금 처리합니다.
+                churchSelect.disabled = true;
+                curiaSelect.disabled = true;
+                if (pInput) pInput.disabled = true;
+                if (pSelect) pSelect.disabled = true;
+
+                // 이 간부가 소속된 조직의 단원 목록을 강제로 동기식 로딩하여 membersList 배열을 확실히 채워줍니다.
+                // console.log("⏳ [디버그] loadMembers() 실행 중... 조직 정보 기반 단원 검색 시작");
+                await loadMembers();
+                // console.log("✅ [디버그] loadMembers() 완료. 현재 로드된 membersList 항목 수:", membersList.length);
+
+                // 수정 모드 상태 세팅
+                form.setAttribute("data-edit-id", record.id);
+                // console.log("- data-edit-id 세팅 완료:", record.id);
+
+                // 단원 매칭 및 정보 바인딩
+                const mId = record.memberId || "";
+                // console.log("🆔 [디버그] 매칭할 memberId (mId):", mId);
+                if (mId) {
+                    // 드롭다운에 해당 단원이 없는 경우(예: 퇴단자 등)를 대비해 임시 옵션 추가
+                    const existingOption = Array.from(memberSelect.options).find(opt => opt.value === mId);
+                    if (!existingOption) {
+                        // console.log("- 단원 드롭다운에 단원이 없어 임시 생성 추가:", mId);
+                        const tempOpt = document.createElement('option');
+                        tempOpt.value = mId;
+                        tempOpt.textContent = `${record.name || '단원명 미상'} (${record.baptismalName || '세례명 미상'})`;
+                        memberSelect.appendChild(tempOpt);
+                    }
+                    
+                    memberSelect.value = mId;
+                    memberSelect.disabled = true;
+                    // console.log("- 단원 셀렉트박스 값 세팅 완료:", memberSelect.value);
+                }
+
+                // 단원 기본 정보 매핑: 오직 members_list의 표준 문서 ID를 기준으로 정확하게 일치하는 단원만 연동합니다. (폴백 배제)
+                let member = null;
+                if (typeof membersList !== "undefined" && Array.isArray(membersList) && mId) {
+                    // console.log("🔍 [디버그] membersList 내에서 매칭(mId 또는 UID) 검색 시작...");
+                    member = membersList.find(m => m && (m.id === mId || (m.UID && m.UID === mId)));
+                }
                 
-                // Find matching member in membersList to populate other info or use record data
-                const member = (typeof membersList !== "undefined" ? membersList.find(m => m.id === mId || (m.UID && m.UID === mId)) : null) || {
-                    name: record.name,
-                    baptismalName: record.baptismalName || "",
-                    feastDate: record.feastDate || "",
-                    phone: record.phone || ""
-                };
+                if (member) {
+                    // console.log("🎯 [디버그] 매칭 성공! 단원 정보:", JSON.stringify(member, null, 2));
+                    memberNameOutput.value = member.name || "";
+                    baptismalNameOutput.value = member.baptismalName || "";
+                    feastDateOutput.value = member.feastDate || "";
+                    phoneOutput.value = member.phone || "";
+                } else {
+                    // console.warn(`⚠️ [디버그] 경고: officers_list(ID: ${record.id})의 memberId(${mId})에 해당하는 활성 단원을 members_list에서 찾을 수 없습니다. 데이터 정비가 필요합니다.`);
+                    memberNameOutput.value = "";
+                    baptismalNameOutput.value = "";
+                    feastDateOutput.value = "";
+                    phoneOutput.value = "";
+                }
 
-                memberNameOutput.value = member.name || "";
-                baptismalNameOutput.value = member.baptismalName || "";
-                feastDateOutput.value = member.feastDate || "";
-                phoneOutput.value = member.phone || "";
+                const roleSel = form.querySelector("select[name='role']");
+                if (roleSel) {
+                    roleSel.value = record.role || "";
+                    roleSel.disabled = true;
+                    // console.log("- 직급 세팅 완료:", roleSel.value);
+                }
+
+                form.querySelector("input[name='appointmentDate']").value = record.appointmentDate || "";
+                form.querySelector("input[name='appointmentExpiryDate']").value = record.appointmentExpiryDate || "";
+                form.querySelector("textarea[name='notes']").value = record.notes || "";
+                // console.log("- 임명 정보(날짜/메모) 입력 완료");
+
+                updateTenure();
+                updateDeleteButtonVisibility();
+                // console.log("🏁 [디버그] setFormFromTable 모든 로직이 정상 처리되었습니다!");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            } catch (err) {
+                // console.error("🚨 [디버그] 폼 데이터 처리 중 에러 발생:", err);
+                await window.showGlobalAlert("데이터 처리 에러: " + err.message, "error");
             }
-
-            const roleSel = form.querySelector("select[name='role']");
-            if (roleSel) {
-                roleSel.value = record.role || "";
-                // [?ъ슜???붿껌] 遺덈윭??吏곴툒 ?뺣낫 ?섏젙 遺덇? 泥섎━?슡   
-                roleSel.disabled = true;
-            }
-
-            form.querySelector("input[name='appointmentDate']").value = record.appointmentDate || "";
-            form.querySelector("input[name='appointmentExpiryDate']").value = record.appointmentExpiryDate || "";
-            form.querySelector("textarea[name='notes']").value = record.notes || "";
-
-            form.setAttribute("data-edit-id", record.id);
-            updateTenure();
-            updateDeleteButtonVisibility();
-            console.log("📍 [목록 선택] 수정 모드 활성화 (만료 여부 무관) - ID:", record.id);
-            window.scrollTo({ top: 0, behavior: "smooth" });
 
         };
         function updateTenure() {
@@ -1167,11 +1342,81 @@
             }
         }
 
+        // [지능형 동기화 패치] 해당 단원의 전체 임기 기록을 동적으로 추적하여 유저 프로필(users)의 직책을 정교하게 변경합니다.
+        async function syncUserRoleFromActiveOfficers(memberId, targetUid) {
+            if (!memberId) return;
+            console.log(`⏳ [지능형 동기화] 단원 ID: ${memberId}에 대한 현직 임기 분석 시작...`);
+
+            try {
+                const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                
+                // 1. 해당 단원의 모든 간부 이력 목록 조회
+                const q = query(collection(db, 'officers_list'), where('memberId', '==', memberId));
+                const snap = await getDocs(q);
+                
+                let activeRoles = [];
+                snap.forEach(docSnap => {
+                    const o = docSnap.data();
+                    // 만료일이 없거나 오늘 이후인 현직 임기만 선별
+                    const isActive = !o.appointmentExpiryDate || o.appointmentExpiryDate >= today;
+                    if (isActive) {
+                        activeRoles.push(o);
+                    }
+                });
+
+                // 2. 해당 단원의 회원 계정(users)의 UID 식별 (UID가 없으면 memberId로 교차 대조)
+                let userUid = targetUid;
+                if (!userUid) {
+                    const qUser = query(collection(db, 'users'), where('memberId', '==', memberId));
+                    const userSnap = await getDocs(qUser);
+                    if (!userSnap.empty) {
+                        userUid = userSnap.docs[0].id;
+                    }
+                }
+
+                if (userUid) {
+                    const userDocRef = doc(db, 'users', userUid);
+                    
+                    if (activeRoles.length > 0) {
+                        // 3. 현직 임기가 존재하면 가장 최근에 임명된 직급을 찾아 동기화
+                        activeRoles.sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')));
+                        const latestActiveRole = activeRoles[0].role;
+                        await setDoc(userDocRef, { role: latestActiveRole }, { merge: true });
+                        console.log(`✅ [지능형 동기화 완료] 현직 임기 발견 (${latestActiveRole}) -> 회원 계정 반영 완료`);
+                    } else {
+                        // 4. 현직 임기가 0건인 경우 (만료/소급 만료/이력 삭제) 안전하게 일반 '단원'으로 롤백
+                        await setDoc(userDocRef, { role: '단원' }, { merge: true });
+                        console.log(`✅ [지능형 동기화 완료] 현직 임기 없음 -> 회원 계정 '단원' 복구 완료`);
+                    }
+                } else {
+                    console.log("ℹ️ [지능형 동기화 건너뜀] 연동된 사용자 계정(users)을 찾을 수 없습니다.");
+                }
+            } catch (err) {
+                console.error("🚨 [지능형 동기화 오류] 유저 직책 동기화 실패:", err);
+            }
+        }
+
         function resetMemberUI() {
             memberNameOutput.value = '';
             baptismalNameOutput.value = '';
             feastDateOutput.value = '';
             phoneOutput.value = '';
+        }
+
+        function disableAppointmentFields() {
+            form.querySelector('input[name="appointmentDate"]').disabled = true;
+            form.querySelector('input[name="appointmentExpiryDate"]').disabled = true;
+            form.querySelector('textarea[name="notes"]').disabled = true;
+            const roleSel = form.querySelector('select[name="role"]');
+            if (roleSel) roleSel.disabled = true;
+        }
+
+        function enableAppointmentFields() {
+            form.querySelector('input[name="appointmentDate"]').disabled = false;
+            form.querySelector('input[name="appointmentExpiryDate"]').disabled = false;
+            form.querySelector('textarea[name="notes"]').disabled = false;
+            const roleSel = form.querySelector('select[name="role"]');
+            if (roleSel) roleSel.disabled = false;
         }
 
         // === Helper: Date Formatting ===
@@ -1195,14 +1440,14 @@
                 updateTenure();
             });
 
-            input.addEventListener('blur', (e) => {
+            input.addEventListener('blur', async (e) => {
                 const val = e.target.value;
                 if (val && !/^\d{4}-\d{2}-\d{2}$/.test(val)) {
                     const digits = val.replace(/[^0-9]/g, '');
                     if (digits.length === 8) {
                         e.target.value = `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)}`;
                     } else if (digits.length > 0) {
-                        alert("날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)");
+                        await window.showGlobalAlert("날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)", "warning");
                         setTimeout(() => e.target.focus(), 10);
                         return;
                     }
@@ -1216,7 +1461,7 @@
                             // [Fix] Activate flag to suppress the "Enter Appointment Date first" alert on next field
                             if (typeof isProcessingConflict !== 'undefined') isProcessingConflict = true;
 
-                            alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
+                            await window.showGlobalAlert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`, "warning");
                             e.target.value = '';
                             const expInput = document.getElementsByName('appointmentExpiryDate')[0];
                             if (expInput) expInput.value = '';
@@ -1241,7 +1486,7 @@
 
         // === Helper: Duplicate Check Logic ===
         async function checkDuplicateActivity() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             const editId = form.getAttribute('data-edit-id');
             const church = (churchSelect.value || '').trim();
             const curia = (curiaSelect.value || '').trim();
@@ -1318,6 +1563,10 @@
             data.presidiumName = window.sanitizeInput(presidiumSelect.value);
             data.memberId = window.sanitizeInput(memberSelect.value);
 
+            // [지능형 동기화 패치] 단원 명부에서 해당 단원의 진짜 로그인 UID 정보를 맵핑합니다.
+            const selectedMember = membersList.find(m => m.id === data.memberId);
+            data.UID = (selectedMember && selectedMember.UID) ? window.sanitizeInput(selectedMember.UID) : "";
+
             // [정석화] 구버전 필드 및 불필요한 필드 완전 소거 (꼼수 원천 차단)
             const legacyFields = ['church', 'curia', 'presidium', 'memberUid', 'member'];
             legacyFields.forEach(f => delete data[f]);
@@ -1340,13 +1589,19 @@
             const notesArea = form.querySelector('textarea[name="notes"]');
             data.notes = window.sanitizeInput(notesArea ? notesArea.value : (data.notes || ''));
 
-            const today = new Date().toISOString().split('T')[0];
+            // [🚨 철벽 검증] 임명 정보 필수 체크 (비활성화 상태에서 저장 방지)
+            if (!data.role || !data.appointmentDate) {
+                await window.showGlobalAlert('⚠️ 직급과 임명일은 필수 입력 사항입니다.\n단원 선택 후 [임명] 또는 [수정] 버튼을 클릭하여 정보를 작성해 주세요.');
+                return;
+            }
+
+            const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             const editId = form.getAttribute('data-edit-id');
 
             // 1. Conflict Check (Re-use shared logic)
             const conflict = await checkDuplicateActivity();
             if (conflict) {
-                alert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`);
+                await window.showGlobalAlert(`해당 단원(${conflict.name})은 이미 이 조직에서 ${conflict.role}으로 활동 중입니다.`, "warning");
                 return;
             }
 
@@ -1394,30 +1649,16 @@
                     });
                 }
 
-                // [Sync] 유저 프로필 직책 동기화 (현재 활성 임기일 경우만 동기화하여 과거 이력으로 인한 꼬임 방지)
-                const todayForSync = new Date().toISOString().split('T')[0];
-                const isCurrentActive = !data.appointmentExpiryDate || data.appointmentExpiryDate >= todayForSync;
-
-                if (isCurrentActive) {
-                    const q = query(collection(db, 'users'), where('memberId', '==', data.memberId));
-                    const userSnap = await getDocs(q);
-                    
-                    if (userSnap.empty) {
-                        console.log(`ℹ️ 해당 단원(${data.name})으로 가입된 사용자 계정이 없어 직책 동기화를 건너뜁니다.`);
-                    }
-
-                    userSnap.forEach(async (uDoc) => {
-                        await setDoc(doc(db, 'users', uDoc.id), { role: data.role }, { merge: true });
-                        console.log(`✅ 현직 간부 프로필 직책 동기화 완료: ${data.name} -> ${data.role}`);
-                    });
-                } else {
-                    console.log(`ℹ️ 과거 이력 데이터(만료일: ${data.appointmentExpiryDate})이므로 유저 프로필 직책 동기화를 생략합니다.`);
-                }
+                // [지능형 동기화 패치] 단원의 전체 임기 이력을 동적으로 분석하여 유저 프로필 직책을 완벽히 동기화합니다.
+                await syncUserRoleFromActiveOfficers(data.memberId, data.UID);
 
                 await window.showGlobalAlert('간부 정보가 성공적으로 저장되었습니다.');
                 
-                // If it was a new record, we should refresh and potentially switch to edit mode if needed
-                setTimeout(loadExistingOfficer, 100);
+                // 저장 성공 후 이력 조회가 가능하도록 상세조회 플래그를 꺼줍니다.
+                isViewingDetail = false;
+                
+                // 실시간 리스너가 리스트를 자동 갱신하므로 폼 매핑용 loadExistingOfficer만 즉시 실행
+                loadExistingOfficer();
             } catch (error) {
                 console.error('Save failed:', error);
                 await window.showGlobalAlert('🚨 저장 중 오류가 발생했습니다:\n' + error.message);
@@ -1430,25 +1671,36 @@
             const name = memberNameOutput.value;
 
             if (!editId) {
-                alert('삭제할 정보를 선택(조회)해 주세요.');
+                await window.showGlobalAlert('삭제할 정보를 선택(조회)해 주세요.', 'warning');
                 return;
             }
 
-            if (confirm("현재 조회된 [ - ] 단원의 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
+            const isConfirmed = await window.showGlobalConfirm(`현재 조회된 [${name || '-'} (${role || '-'})] 간부 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`, 'error');
+            if (isConfirmed) {
                 try {
                     await deleteDoc(doc(db, 'officers_list', editId));
-                    alert('성공적으로 삭제되었습니다.');
+                    
+                    // [지능형 동기화 패치] 간부 정보 삭제 후, 남은 현직 임기 상태에 맞춰 유저 프로필 권한을 정밀 동기화합니다.
+                    const memberId = memberSelect.value;
+                    if (memberId) {
+                        const selectedMember = membersList.find(m => m.id === memberId);
+                        const memberUid = selectedMember ? selectedMember.UID : "";
+                        await syncUserRoleFromActiveOfficers(memberId, memberUid);
+                    }
+
+                    await window.showGlobalAlert('성공적으로 삭제되었습니다.', 'success');
 
                     // Clean up UI and reset edit state
+                    isViewingDetail = false;
                     form.removeAttribute('data-edit-id');
                     form.reset();
                     resetMemberUI();
 
-                    // Refresh View
-                    setTimeout(loadExistingOfficer, 100);
+                    // 실시간 리스너가 리스트를 자동 갱신하므로 폼 매핑용 loadExistingOfficer만 즉시 실행
+                    loadExistingOfficer();
                 } catch (error) {
                     console.error('Delete failed:', error);
-                    alert('삭제 중 오류가 발생했습니다.');
+                    await window.showGlobalAlert('삭제 중 오류가 발생했습니다.', 'error');
                 }
             }
         }
@@ -1456,6 +1708,7 @@
 </body>
 
 </html>
+
 
 
 

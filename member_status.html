@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260512_1624">
+    <link rel="stylesheet" href="styles.css?v=20260526_1856">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -443,9 +443,10 @@
 
                     <div class="form-group">
                         <label>협조단원 성명</label>
-                        <input type="text" id="auxNameInput" name="name" list="auxNamesDatalist" required
-                            placeholder="성명을 입력하거나 목록에서 선택하세요" autocomplete="off">
-                        <datalist id="auxNamesDatalist"></datalist>
+                        <select id="auxNameInput" name="name" required>
+                            <option value="">협조단원 선택</option>
+                            <option value="__NEW__">+ 신규 협조단원 직접 입력</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>세례명</label>
@@ -528,11 +529,11 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260512_1624"></script>
+    <script src="script.js?v=20260526_1856"></script>
     <script type="module">
         import { db, collection, getDocs, setDoc, deleteDoc, doc, query, where, serverTimestamp } from "./firebase-config.js?v=20260307_2342";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
-        import { getChurches, getCuriae, getPresidia } from "./data.js?v=20260303_1210";
+        import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js?v=20260303_1210";
 
         // State
         let currentUser = null;
@@ -569,6 +570,14 @@
 
         async function loadData() {
             try {
+                // [패치] data.js 내의 쁘레시디움 데이터 캐시 초기화 및 목록 수집
+                presidiaList = await fetchPresidiaList();
+                if (presidiaList && presidiaList.length > 0) {
+                    localStorage.setItem('presidia_list', JSON.stringify(presidiaList));
+                } else {
+                    presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
+                }
+
                 const [memSnap, auxSnap] = await Promise.all([
                     getDocs(collection(db, 'members_list')),
                     getDocs(collection(db, 'auxiliary_members_list'))
@@ -579,8 +588,6 @@
                 
                 auxiliaryList = [];
                 auxSnap.forEach(doc => auxiliaryList.push({ id: doc.id, ...doc.data() }));
-
-                presidiaList = JSON.parse(localStorage.getItem('presidia_list') || '[]');
                 
                 // Backup to localStorage
                 localStorage.setItem('members_list', JSON.stringify(membersList));
@@ -812,7 +819,6 @@
             });
 
             const auxNameInput = document.getElementById('auxNameInput');
-            const auxNamesDatalist = document.getElementById('auxNamesDatalist');
 
             activeMemberSelect.addEventListener('change', () => {
                 if (isAutoMatching) return; // [Fix] Skip reset if we are being changed programmatically
@@ -832,31 +838,56 @@
                 auxNameInput.focus();
             });
 
-            auxNameInput.addEventListener('input', () => {
+            auxNameInput.addEventListener('change', async () => {
                 const val = auxNameInput.value.trim();
+                if (val === '__NEW__') {
+                    const newName = await window.showGlobalPrompt('새롭게 등록할 협조단원의 성명을 입력해 주세요:');
+                    if (!newName || newName.trim() === '') {
+                        auxNameInput.value = '';
+                        return;
+                    }
+                    const name = newName.trim();
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = `${name} (신규 등록)`;
+                    auxNameInput.appendChild(opt);
+                    auxNameInput.value = name;
+                    resetOtherDetails();
+                    return;
+                }
+
                 const church = churchSelect.value;
                 const curia = curiaSelect.value;
                 const presidium = presidiumSelect.value;
+                const activeMemberId = activeMemberSelect.value;
 
-                // [정석화] 오직 표준 필드만 사용 (꼼수 제거)
+                // console.log("[Debug] === 협조단원 상세 조회 시도 ===");
+                // console.log("[Debug] 1. 화면 선택값:", { church, curia, presidium, activeMemberId, val });
+
+                // 디버깅: 이름이 같은 모든 협조단원 후보들의 속성을 JSON 텍스트로 출력 (접힘 방지)
+                // const candidates = auxiliaryList.filter(a => a.name === val);
+                // console.log("[Debug] 2. 이름 매칭 후보 목록 (상세):\n" + JSON.stringify(candidates.map(a => ({
+                //     id: a.id,
+                //     name: a.name,
+                //     activeMemberId: a.activeMemberId,
+                //     activeMemberName: a.activeMemberName,
+                //     churchName: a.churchName,
+                //     curiaName: a.curiaName,
+                //     presidiumName: a.presidiumName
+                // })), null, 2));
+
+                // 현재 선택된 행동단원의 협조단원 중 이름이 같은 데이터를 정확히 찾아옴
                 const found = auxiliaryList.find(a =>
                     a.churchName === church &&
                     a.curiaName === curia &&
                     a.presidiumName === presidium &&
+                    a.activeMemberId === activeMemberId &&
                     a.name === val
                 );
 
-                if (found) {
-                    // Match found: Auto-sync active member if different
-                    if (activeMemberSelect.value !== found.activeMemberId) {
-                        isAutoMatching = true;
-                        activeMemberSelect.value = found.activeMemberId;
-                        const member = membersList.find(m => m.id === found.activeMemberId);
-                        activeMemberBaptismal.value = member ? (member.baptismalName || '') : '';
-                        isAutoMatching = false;
+                // console.log("[Debug] 3. 최종 매칭 결과 (found):", found);
 
-                        renderTable();
-                    }
+                if (found) {
                     loadForEdit(found);
                 } else if (editId) {
                     resetOtherDetails();
@@ -877,37 +908,51 @@
                 const church = churchSelect.value;
                 const curia = curiaSelect.value;
                 const presidium = presidiumSelect.value;
+                const activeMemberId = activeMemberSelect.value;
 
-                auxNamesDatalist.innerHTML = '';
+                const currentVal = auxNameInput.value;
+
+                auxNameInput.innerHTML = '<option value="">협조단원 선택</option><option value="__NEW__">+ 신규 협조단원 직접 입력</option>';
                 if (!presidium) return;
 
                 const seenNames = new Set();
                 const filtered = auxiliaryList.filter(a => {
-                    const orgMatch = a.churchName === church && 
-                                   a.curiaName === curia && 
-                                   a.presidiumName === presidium;
+                    const orgMatch = a.presidiumName === presidium &&
+                                   (!a.churchName || a.churchName === church) && 
+                                   (!a.curiaName || a.curiaName === curia);
                     if (!orgMatch) return false;
+                    
+                    // 특정 행동단원이 선택된 경우, 해당 행동단원의 협조단원만 자동완성 후보에 추가
+                    if (activeMemberId && a.activeMemberId !== activeMemberId) {
+                        return false;
+                    }
+                    
+                    // [소급용 임시 주석 처리] 퇴단한 협조단원도 자동완성 목록에 나오도록 필터링 해제
+                    /*
                     // Filter out already withdrawn members from the quick list for better UX
                     return !a.withdrawalDate || a.withdrawalDate === '';
+                    */
+                    return true;
                 });
 
                 // Sort by name for better UX
                 filtered.sort((a, b) => a.name.localeCompare(b.name));
 
                 filtered.forEach(a => {
-                    if (!seenNames.has(a.name)) {
+                    const label = `${a.name} (${a.baptismalName || '-'})`;
+                    if (!seenNames.has(label)) {
                         const opt = document.createElement('option');
                         opt.value = a.name;
-                        auxNamesDatalist.appendChild(opt);
-                        seenNames.add(a.name);
+                        opt.textContent = label;
+                        auxNameInput.appendChild(opt);
+                        seenNames.add(label);
                     }
                 });
 
-                // Force a small delay to ensure browser updates the UI correctly
-                setTimeout(() => {
-                    const temp = auxNameInput.value;
-                    auxNameInput.value = temp;
-                }, 50);
+                // Restore value if it exists in the new options
+                if (currentVal) {
+                    auxNameInput.value = currentVal;
+                }
             }
 
             form.addEventListener('submit', handleSave);
@@ -991,12 +1036,18 @@
                 const fChurch = (church || '').toString().trim();
                 const fPresidium = (presidium || '').toString().trim();
                 
+                // [원래 필터 조건 주석 처리]
+                /*
                 return mChurch === fChurch && 
                        mPresidium === fPresidium &&
                        (
                            (m.status !== '퇴단' && m.status !== '전출') ||
                            registeredActiveMemberIds.has(m.id)
                        );
+                */
+
+                // [소급용 임시 필터 조건] 단원정보 조회 팝업처럼 쁘레시디움 내 모든 단원을 표시
+                return mChurch === fChurch && mPresidium === fPresidium;
             }).sort((a, b) => {
                 // 1. Status Rank: Active (0) > Retired/Moved (1)
                 const isRetiredA = (a.status === '퇴단' || a.status === '전출');
@@ -1006,10 +1057,18 @@
 
                 if (rankA !== rankB) return rankA - rankB;
 
+                // [원래 정렬 조건 주석 처리]
+                /*
                 // 2. Admission Date (Oldest first)
                 const dateA = a.admissionDate || '9999-99-99';
                 const dateB = b.admissionDate || '9999-99-99';
                 if (dateA !== dateB) return dateA.localeCompare(dateB);
+                */
+
+                // [소급용 임시 정렬 조건] 단원정보 조회 팝업처럼 입단일(probationaryDate) 최신순(내림차순) 정렬
+                const dA = a.probationaryDate || '1900-01-01';
+                const dB = b.probationaryDate || '1900-01-01';
+                if (dA !== dB) return dB.localeCompare(dA);
 
                 // 3. Name as fallback
                 return a.name.localeCompare(b.name);
@@ -1018,7 +1077,9 @@
             filtered.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m.id;
-                opt.textContent = `${m.name} (${m.baptismalName || '-'})`;
+                // [소급용 보임 처리] 퇴단/전출된 행동단원은 이름 뒤에 상태를 표시하여 가시성 향상
+                const statusSuffix = (m.status === '퇴단' || m.status === '전출') ? ` [${m.status}]` : '';
+                opt.textContent = `${m.name} (${m.baptismalName || '-'})` + statusSuffix;
                 activeMemberSelect.appendChild(opt);
             });
             activeMemberSelect.disabled = false;
@@ -1028,6 +1089,13 @@
             e.preventDefault();
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+
+            // [보안/무결성 패치] disabled 처리된 select 요소들의 값은 FormData에서 누락되므로 강제로 수동 주입
+            data.churchName = churchSelect.value;
+            data.curiaName = curiaSelect.value;
+            if (document.getElementById('presidiumSelect')) {
+                data.presidiumName = document.getElementById('presidiumSelect').value;
+            }
 
             // Check for duplicates (same name and no withdrawal date)
             if (!editId) {
@@ -1049,11 +1117,14 @@
             // Add Active Member Info
             const activeMember = membersList.find(m => m.id === data.activeMemberId);
 
+            // [소급용 임시 주석 처리] 퇴단/전출 행동단원의 협조단원 신규 등록 차단 로직 해제
+            /*
             // [New] Block new registration for retired/moved active members
             if (!editId && activeMember && (activeMember.status === '퇴단' || activeMember.status === '전출')) {
                 await showGlobalAlert(`해당 행동단원은 현재 '${activeMember.status}' 상태이므로 새로운 협조단원을 등록할 수 없습니다.\n기존 등록된 정보의 조회 및 수정만 가능합니다.`);
                 return;
             }
+            */
 
             if (activeMember) {
                 data.activeMemberName = activeMember.name;
@@ -1127,6 +1198,15 @@
                     // Trigger custom search event if needed or simply let dispatch take over if attached 
                 }
             }
+
+            // [패치] 폼 리셋 후 행동단원 목록의 옵션을 명시적으로 다시 채워줌
+            const church = preserved.churchName || '';
+            const curia = preserved.curiaName || '';
+            const presidium = preserved.presidiumName || '';
+            if (church && curia && presidium) {
+                loadActiveMembers(church, curia, presidium);
+            }
+
             activeMemberSelect.value = preserved.activeMemberId;
         }
 
@@ -1152,9 +1232,9 @@
             }
 
             let filtered = auxiliaryList.filter(a =>
-                a.churchName === church && 
-                a.curiaName === curia && 
-                a.presidiumName === presidium
+                a.presidiumName === presidium &&
+                (!a.churchName || a.churchName === church) && 
+                (!a.curiaName || a.curiaName === curia)
             );
 
             // Admin/Officer: All in Org, Member: Only Self
@@ -1214,6 +1294,14 @@
                 }
             }
 
+            // [패치] 행동단원 성명 셀렉트 박스의 옵션 목록을 명시적으로 로드하여 데이터 세팅 전 옵션이 비어있는 문제 해결
+            const church = data.churchName || '';
+            const curia = data.curiaName || '';
+            const presidium = data.presidiumName || '';
+            if (church && curia && presidium) {
+                loadActiveMembers(church, curia, presidium);
+            }
+
             activeMemberSelect.value = data.activeMemberId;
 
             const fields = ['name', 'baptismalName', 'gender', 'feastDate', 'admissionDate', 'birthDate', 'phone', 'address', 'withdrawalDate', 'notes'];
@@ -1230,26 +1318,48 @@
         };
 
         function updateAuxDatalist() {
-            if (!auxNamesDatalist) return;
+            const auxNameInput = document.getElementById('auxNameInput');
+            if (!auxNameInput) return;
             const church = churchSelect.value;
             const curia = curiaSelect.value;
             const presidium = presidiumSelect.value;
+            const activeMemberId = activeMemberSelect.value;
 
-            const names = [...new Set(auxiliaryList
-                .filter(a =>
-                    a.churchName === church &&
-                    a.curiaName === curia &&
-                    a.presidiumName === presidium
-                )
-                .map(a => a.name)
-            )].sort();
+            const currentVal = auxNameInput.value;
 
-            auxNamesDatalist.innerHTML = names.map(name => `<option value="${name}">`).join('');
+            auxNameInput.innerHTML = '<option value="">협조단원 선택</option><option value="__NEW__">+ 신규 협조단원 직접 입력</option>';
+            if (!presidium) return;
+
+            const seenNames = new Set();
+            const filtered = auxiliaryList.filter(a =>
+                a.presidiumName === presidium &&
+                (!a.churchName || a.churchName === church) &&
+                (!a.curiaName || a.curiaName === curia) &&
+                (!activeMemberId || a.activeMemberId === activeMemberId)
+            );
+
+            filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+            filtered.forEach(a => {
+                const label = `${a.name} (${a.baptismalName || '-'})`;
+                if (!seenNames.has(label)) {
+                    const opt = document.createElement('option');
+                    opt.value = a.name;
+                    opt.textContent = label;
+                    auxNameInput.appendChild(opt);
+                    seenNames.add(label);
+                }
+            });
+
+            if (currentVal) {
+                auxNameInput.value = currentVal;
+            }
         }
     </script>
 </body>
 
 </html>
+
 
 
 
