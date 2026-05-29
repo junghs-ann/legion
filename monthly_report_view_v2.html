@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260526_1856">
+    <link rel="stylesheet" href="styles.css?v=20260529_0507">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -310,6 +310,18 @@
             text-indent: -1.2em !important;
             line-height: 1.2 !important;
             display: block !important;
+        }
+
+        /* [추가] 8번 주요 활동 요약의 2행 이상 긴 레이블 줄간격 개선 */
+        #activitySummaryBody td.label-cell {
+            line-height: 1.6 !important;
+            padding: 0 1px !important;
+        }
+
+        /* 8. 주요 활동 요약 내 텍스트 줄바꿈 시 단어 쪼개짐 방지 */
+        #activitySummaryBody td, #activitySummaryBody td div {
+            word-break: keep-all !important;
+            word-wrap: break-word !important;
         }
 
         /* [긴급/스냅샷 대응] 이미 작성된 보고서의 인라인 스타일을 강제로 덮어써서 정렬 보정 */
@@ -684,7 +696,12 @@
                                 box-sizing: border-box !important;
                                 padding: 0.6mm 1mm !important; /* 1페이지는 원래대로 날씬하게 복구 */
                                 line-height: 1.05 !important; 
-                                font-size: 9.2pt !important;
+                                font-size: 9.2pt; /* !important를 제거하여 인라인 폰트 크기 축소가 동작하도록 함 */
+                            }
+                            
+                            /* [행사/교육/피정] PDF 변환 시 줄바꿈 방지 강제 적용 */
+                            #eventTableBody td {
+                                white-space: nowrap !important;
                             }
                             
                             /* [정밀 타격] 2페이지만 시원하게 벌려줌 (잘림 방지를 위해 2.3mm로 최적화) */
@@ -698,6 +715,12 @@
                                 padding: 0.3mm 1mm !important; /* 칸 높이 최소화 */
                                 line-height: 1.0 !important;
                                 font-size: 8.8pt !important; /* 글자 크기 미세 축소로 공간 확보 */
+                                word-break: keep-all !important;
+                                word-wrap: break-word !important;
+                            }
+                            #activitySummaryBody td div {
+                                word-break: keep-all !important;
+                                word-wrap: break-word !important;
                             }
                             #activitySummaryBody span[style*="color:red"], 
                             #activitySummaryBody span[style*="color: red"] {
@@ -705,9 +728,8 @@
                                 line-height: 0.9 !important;
                             }
                             /* [시각적 가독성] 줄바꿈 레이블 전용 여유 공간 확보 */
-                            .label-cell {
-                                line-height: 2.0 !important; /* 화면과 동일하게 시원하게 확대 */
-                                white-space: nowrap !important; /* 글자가 옆으로 삐져나가지 않게 고정 */
+                            #activitySummaryBody td.label-cell {
+                                line-height: 1.6 !important; /* 가독성을 위한 적절한 줄간격 */
                                 padding: 0 1px !important;
                             }
 
@@ -947,7 +969,7 @@
                     </tr>
                     <!-- 2행: 쉬는교우회두 (우) -->
                     <tr style="height:8mm;">
-                        <td style="text-align:center; padding:0 1px; font-size:8.5pt; line-height:1.1;">쉬는교우<br>회두</td>
+                        <td class="label-cell" style="text-align:center; padding:0 1px; font-size:8.5pt;">쉬는교우<br>회두</td>
                         <td style="text-align:left; padding-left:5px; font-size:9.5pt;">고해성사 및 신부님 면담</td>
                         <td style="text-align:right; padding-right:5px; font-weight:bold;"><span id="sum_soul">-</span>명</td>
                     </tr>
@@ -1022,7 +1044,7 @@
                         </td>
                         <td rowspan="2" style="text-align:right; padding-right:5px; vertical-align:middle;"><span id="sum_legion">-</span> 쪽</td>
                         <td rowspan="2" style="text-align:center;">6</td>
-                        <td rowspan="2" style="text-align:center; vertical-align:middle; line-height:1.2; font-size:9.5pt;">거룩한<br>독서</td>
+                        <td rowspan="2" class="label-cell" style="text-align:center; vertical-align:middle; font-size:9.5pt;">거룩한<br>독서</td>
                         <td style="text-align:left; padding-left:5px; font-size:8.5pt;">
                             <div style="padding-left:1.2em; text-indent:-1.2em; line-height:1.1;">① 말씀 봉독하기<br>(시청,묵상,기도)</div>
                         </td>
@@ -1083,7 +1105,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260526_1856"></script>
+    <script src="script.js?v=20260529_0507"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -1603,7 +1625,7 @@
                 for (let i = 0; i < rowCount; i++) {
                     const e = finalEvs[i] || {};
                     // [Text Fitting] 긴 글자가 들어가는 셀에 자동 축소 스타일 적용
-                    const fitStyle = `white-space: nowrap; overflow: hidden; text-overflow: clip; font-size: 9pt;`;
+                    const fitStyle = `white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important; font-size: 9pt !important;`;
                     const getFitAttr = (text) => {
                         if (!text) return '';
                         // 글자 길이에 따른 대략적인 폰트 크기 추정 (JS로 정밀 측정 대신 CSS clamp 효과)
@@ -1611,7 +1633,7 @@
                         let fontSize = '9pt';
                         if (len > 15) fontSize = '8pt';
                         if (len > 20) fontSize = '7pt';
-                        return `style="${fitStyle} font-size: ${fontSize};"`;
+                        return `style="${fitStyle} font-size: ${fontSize} !important;"`;
                     };
 
                     tableRows.push(`
@@ -2466,6 +2488,7 @@
 </body>
 
 </html>
+
 
 
 
