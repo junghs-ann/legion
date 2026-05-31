@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월례 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260529_0507">
+    <link rel="stylesheet" href="styles.css?v=20260531_2006">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PDF 생성 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -699,9 +699,12 @@
                                 font-size: 9.2pt; /* !important를 제거하여 인라인 폰트 크기 축소가 동작하도록 함 */
                             }
                             
-                            /* [행사/교육/피정] PDF 변환 시 줄바꿈 방지 강제 적용 */
+                            /* [행사/교육/피정] PDF 변환 시 줄바꿈 방지 강제 적용 및 높이 축소 */
                             #eventTableBody td {
                                 white-space: nowrap !important;
+                                height: 5.5mm !important;
+                                padding: 0.2mm 1mm !important;
+                                font-size: 8.5pt !important;
                             }
                             
                             /* [정밀 타격] 2페이지만 시원하게 벌려줌 (잘림 방지를 위해 2.3mm로 최적화) */
@@ -1105,7 +1108,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529_0507"></script>
+    <script src="script.js?v=20260531_2006"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -1603,16 +1606,16 @@
                 const nextPrefix = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
                 // [수정] DB 데이터를 있는 그대로 가져오며, 날짜 기준으로만 배분
-                // [수정] 기타행사는 사업보고서 전용이므로 월례보고서에서는 제외
+                // [한시적 해제] 상위기관 요청으로 월례보고서에 기타행사도 포함 (추후 원복 시 const isNotEtc = (e.type || '') !== '기타행사'; 로 수정 가능)
                 const executedEvs = evsAll.filter(e => {
                     const d = e.eventDate || '';
-                    const isNotEtc = (e.type || '') !== '기타행사';
+                    const isNotEtc = true; // (e.type || '') !== '기타행사';
                     return d.startsWith(curPrefix) && isNotEtc;
                 });
 
                 const plannedEvs = evsAll.filter(e => {
                     const d = e.eventDate || '';
-                    const isNotEtc = (e.type || '') !== '기타행사';
+                    const isNotEtc = true; // (e.type || '') !== '기타행사';
                     return d.startsWith(nextPrefix) && isNotEtc;
                 });
 
@@ -1638,7 +1641,7 @@
 
                     tableRows.push(`
                         <tr>
-                            <td style="height:8mm">${e.category || ''}</td>
+                            <td style="height:5.5mm">${e.category || ''}</td>
                             <td style="text-align:left;" ${getFitAttr(e.eventName)}>${e.eventName || ''}</td>
                             <td ${getFitAttr(e.organizer)}>${e.organizer || ''}</td>
                             <td>${e.eventDate || ''}</td>
@@ -2488,6 +2491,8 @@
 </body>
 
 </html>
+
+
 
 
 
