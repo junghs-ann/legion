@@ -1,0 +1,318 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>권혜진 단원 데이터 진단 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260601_2008">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { padding: 20px; font-family: 'Noto Sans KR', sans-serif; background-color: #f4f7f6; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        h1 { color: #2e7d32; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; }
+        h2 { color: #1976d2; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8fafc; font-weight: bold; }
+        .btn { padding: 10px 20px; background-color: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background-color: #1b5e20; }
+        .analysis { background-color: #fff9db; border-left: 5px solid #fcc419; padding: 15px; border-radius: 6px; margin-top: 20px; line-height: 1.6; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; }
+        .badge-active { background-color: #d3f9d8; color: #2b8a3e; }
+        .badge-expired { background-color: #ffe3e3; color: #c92a2a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🔍 권혜진 단원/간부 데이터 정밀 진단</h1>
+            <p>데이터베이스(Firestore) 내에 등록된 권혜진 단원의 명부 정보, 간부 임명 이력, 사용자 계정 데이터를 조회하여 상호 불일치 및 목록 누락 원인을 진단합니다.</p>
+            <button id="btnDiagnose" class="btn"><i class="fas fa-search"></i> 진단 시작</button>
+            <button onclick="location.href='dashboard.html'" class="btn" style="background-color: #6c757d;"><i class="fas fa-home"></i> 대시보드로 돌아가기</button>
+        </div>
+
+        <!-- 1. 단원 명부 (members_list) -->
+        <div class="card">
+            <h2>1. 단원 명부 (members_list) 내 정보</h2>
+            <div id="membersResult">
+                <p style="color: #888;">진단 시작 버튼을 눌러주세요.</p>
+            </div>
+        </div>
+
+        <!-- 2. 간부 명부 (officers_list) -->
+        <div class="card">
+            <h2>2. 간부 명부 (officers_list) 내 임명 이력 정보</h2>
+            <div id="officersResult">
+                <p style="color: #888;">진단 시작 버튼을 눌러주세요.</p>
+            </div>
+        </div>
+
+        <!-- 3. 로그인 계정 (users) -->
+        <div class="card">
+            <h2>3. 로그인 사용자 계정 (users) 내 정보</h2>
+            <div id="usersResult">
+                <p style="color: #888;">진단 시작 버튼을 눌러주세요.</p>
+            </div>
+        </div>
+
+        <!-- 4. 진단 결과 분석 및 솔루션 -->
+        <div class="card" id="analysisCard" style="display: none;">
+            <h2>💡 시니어 개발자의 진단 분석 및 해결책</h2>
+            <div id="analysisResult" class="analysis">
+                <!-- 결과 분석 내용 주입 -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, query, where, doc, updateDoc, setDoc } from "./firebase-config.js?v=20260313_1515";
+
+        const btnDiagnose = document.getElementById('btnDiagnose');
+        const membersResult = document.getElementById('membersResult');
+        const officersResult = document.getElementById('officersResult');
+        const usersResult = document.getElementById('usersResult');
+        const analysisCard = document.getElementById('analysisCard');
+        const analysisResult = document.getElementById('analysisResult');
+
+        btnDiagnose.onclick = async () => {
+            btnDiagnose.disabled = true;
+            btnDiagnose.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중...';
+            analysisCard.style.display = 'none';
+
+            try {
+                // 1. members_list 조회
+                const mSnap = await getDocs(collection(db, 'members_list'));
+                let mList = [];
+                mSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.name && data.name.includes("권혜진")) {
+                        mList.push({ id: d.id, ...data });
+                    }
+                });
+
+                // 2. officers_list 조회
+                const oSnap = await getDocs(collection(db, 'officers_list'));
+                let oList = [];
+                oSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.name && data.name.includes("권혜진")) {
+                        oList.push({ id: d.id, ...data });
+                    }
+                });
+
+                // 3. users 조회
+                const uSnap = await getDocs(collection(db, 'users'));
+                let uList = [];
+                uSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.name && data.name.includes("권혜진")) {
+                        uList.push({ id: d.id, ...data });
+                    }
+                });
+
+                // --- UI Rendering ---
+                renderMembers(mList);
+                renderOfficers(oList);
+                renderUsers(uList);
+
+                // --- 분석 보고서 생성 ---
+                generateAnalysis(mList, oList, uList);
+
+            } catch (err) {
+                alert("진단 오류: " + err.message);
+                console.error(err);
+            } finally {
+                btnDiagnose.disabled = false;
+                btnDiagnose.innerHTML = '<i class="fas fa-search"></i> 재진단 실행';
+            }
+        };
+
+        function renderMembers(list) {
+            if (list.length === 0) {
+                membersResult.innerHTML = '<p style="color:red; font-weight:bold;">⚠️ members_list 컬렉션에 "권혜진" 이라는 이름의 단원이 존재하지 않습니다!</p>';
+                return;
+            }
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>문서 ID (memberId)</th>
+                        <th>성명 (세례명)</th>
+                        <th>소속 성당</th>
+                        <th>소속 꾸리아</th>
+                        <th>소속 쁘레시디움</th>
+                        <th>상태</th>
+                        <th>UID (계정 연동)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            list.forEach(m => {
+                html += `<tr>
+                    <td><code>${m.id}</code></td>
+                    <td><strong>${m.name}</strong> (${m.baptismalName || '-'})</td>
+                    <td>${m.churchName || '-'}</td>
+                    <td>${m.curiaName || '-'}</td>
+                    <td>${m.presidiumName || '-'}</td>
+                    <td><span class="badge ${m.status === '활동' ? 'badge-active' : 'badge-expired'}">${m.status || '-'}</span></td>
+                    <td><code>${m.UID || '(누락)'}</code></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            membersResult.innerHTML = html;
+        }
+
+        function renderOfficers(list) {
+            if (list.length === 0) {
+                officersResult.innerHTML = '<p style="color:red; font-weight:bold;">⚠️ officers_list 컬렉션에 "권혜진" 이라는 이름의 간부 이력이 존재하지 않습니다!</p>';
+                return;
+            }
+
+            const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>간부 문서 ID (editId)</th>
+                        <th>연동된 memberId</th>
+                        <th>성명 (직급)</th>
+                        <th>소속 성당 / 꾸리아 / 쁘레시디움</th>
+                        <th>임명일 ~ 만료일</th>
+                        <th>재직 상태</th>
+                        <th>UID</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            list.forEach(o => {
+                const isActive = !o.appointmentExpiryDate || o.appointmentExpiryDate >= today;
+                html += `<tr>
+                    <td><code>${o.id}</code></td>
+                    <td><code>${o.memberId || '(누락)'}</code></td>
+                    <td><strong>${o.name}</strong> (<span style="color:#2563eb; font-weight:bold;">${o.role || '-'}</span>)</td>
+                    <td>${o.churchName || '-'} / ${o.curiaName || '-'} / ${o.presidiumName || '-'}</td>
+                    <td>${o.appointmentDate || '-'} ~ ${o.appointmentExpiryDate || '무기한'}</td>
+                    <td><span class="badge ${isActive ? 'badge-active' : 'badge-expired'}">${isActive ? '활동중 (현직)' : '만료 (전임)'}</span></td>
+                    <td><code>${o.UID || '(누락)'}</code></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            officersResult.innerHTML = html;
+        }
+
+        function renderUsers(list) {
+            if (list.length === 0) {
+                usersResult.innerHTML = '<p style="color:orange; font-weight:bold;">⚠️ users 컬렉션에 "권혜진" 이라는 이름의 가입 계정이 존재하지 않습니다. (아직 홈페이지 미가입 상태)</p>';
+                return;
+            }
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>사용자 고유 UID</th>
+                        <th>이메일 계정</th>
+                        <th>성명</th>
+                        <th>성당 / 쁘레시디움</th>
+                        <th>계정 권한 (role)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            list.forEach(u => {
+                html += `<tr>
+                    <td><code>${u.id}</code></td>
+                    <td>${u.email || '-'}</td>
+                    <td><strong>${u.name}</strong></td>
+                    <td>${u.churchName || '-'} / ${u.presidiumName || '-'}</td>
+                    <td><span style="font-weight:bold; color:#d9480f;">${u.role || '-'}</span></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            usersResult.innerHTML = html;
+        }
+
+        function generateAnalysis(mList, oList, uList) {
+            analysisCard.style.display = 'block';
+            let html = '';
+
+            if (mList.length === 0) {
+                html += `<p>❌ <strong>단원 명부에 "권혜진" 단원이 존재하지 않습니다.</strong><br>
+                간부 임명을 진행하려면 먼저 [단원관리] 화면에서 "권혜진" 단원을 해당 성당/꾸리아/쁘레시디움에 등록해 주셔야 합니다.</p>`;
+                analysisResult.innerHTML = html;
+                return;
+            }
+
+            if (oList.length === 0) {
+                html += `<p>❌ <strong>간부 임명 이력(officers_list)에 "권혜진" 단원의 기록이 등록되어 있지 않습니다.</strong><br>
+                간부 관리 화면에서 단원을 선택하고 직급(회계)과 임명일을 작성한 뒤 <strong>[임명]</strong> 또는 <strong>[저장]</strong>을 클릭하여 실제 간부 이력을 먼저 만들어주세요.</p>`;
+                analysisResult.innerHTML = html;
+                return;
+            }
+
+            // 조직 정보 체크
+            const m = mList[0];
+            const o = oList[0];
+
+            const isOrgMatch = (m.churchName === o.churchName) && (m.curiaName === o.curiaName) && (m.presidiumName === o.presidiumName);
+            
+            html += `<h3>📌 [검사 결과 요약]</h3>`;
+            html += `<ul>
+                <li><strong>단원 명부 소속:</strong> 성당 [${m.churchName || '없음'}], 꾸리아 [${m.curiaName || '없음'}], 쁘레시디움 [${m.presidiumName || '없음'}]</li>
+                <li><strong>간부 임명 소속:</strong> 성당 [${o.churchName || '없음'}], 꾸리아 [${o.curiaName || '없음'}], 쁘레시디움 [${o.presidiumName || '없음'}]</li>
+                <li><strong>간부 직급 및 상태:</strong> 직급 [${o.role || '없음'}], 상태 [${o.appointmentExpiryDate ? '만료일 지정됨: ' + o.appointmentExpiryDate : '무기한 활동중'}]</li>
+            </ul>`;
+
+            if (!isOrgMatch) {
+                html += `<div style="color:red; font-weight:bold; margin-top:10px;">
+                    ⚠️ [조직 정보 불일치 발견] 단원 명부의 소속 조직 정보와 간부 임명 정보의 소속 조직 정보가 서로 다릅니다!
+                </div>
+                <p>간부 현황 목록은 현재 화면 상단의 성당/꾸리아/쁘레시디움 선택 값과 <strong>완벽히 일치하는 간부 정보</strong>만 필터링하여 보여줍니다.
+                단원 정보 또는 간부 정보의 소속 정보(성당명, 쁘레시디움명 등의 띄어쓰기나 텍스트 불일치)를 확인해 주셔야 합니다.</p>`;
+            }
+
+            // 만료 여부 분석
+            const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            const isExpired = o.appointmentExpiryDate && o.appointmentExpiryDate < today;
+            if (isExpired) {
+                html += `<p style="color:red; font-weight:bold;">⚠️ [임기 만료 상태] 간부 만료일(${o.appointmentExpiryDate})이 오늘(${today})보다 과거 날짜로 설정되어 있습니다.</p>
+                <p>만료일이 지나 임기가 종료된 전임 간부의 경우, 필터링 로직에 의해 '현직 목록'에서 제외되거나 다르게 보일 수 있습니다. 
+                현직 간부 목록에 노출되도록 하려면 만료일을 지우거나 미래 날짜로 수정해 주셔야 합니다.</p>`;
+            }
+
+            // UID 체크
+            if (!o.UID && m.UID) {
+                html += `<p style="color:orange; font-weight:bold;">⚠️ [UID 연동 누락] 간부 임명 정보에 회원 UID가 연결되어 있지 않습니다. (단원 정보에는 UID가 존재합니다)</p>
+                <p>아래 [간부 UID 자동 복구] 버튼을 누르면 단원 명부의 고유 ID(UID)를 간부 임명 문서에 자동으로 주입해 줍니다. 
+                이를 통해 로그인 시 정상적으로 '회계' 권한을 인식하게 됩니다.</p>
+                <button id="btnAutoFixUid" class="btn" style="background-color: #2b8a3e; margin-top:10px;"><i class="fas fa-magic"></i> 간부 UID 자동 복구 실행</button>`;
+            } else if (!o.UID && !m.UID) {
+                html += `<p style="color:#d9480f; font-weight:bold;">ℹ️ [홈페이지 미가입 상태] 단원 명부와 간부 임명 정보 모두 고유 UID가 존재하지 않습니다.</p>
+                <p>권혜진 단원이 홈페이지에 회원 가입을 한 뒤, 관리자가 [단원 관리] 화면에서 '회원 매핑'을 완료해 주어야 최종적으로 홈페이지 권한이 연동됩니다.</p>`;
+            } else {
+                html += `<p style="color:green; font-weight:bold;">✅ [UID 정상 연동] 간부 임명 정보에 회원 UID(${o.UID})가 올바르게 매핑되어 있습니다.</p>`;
+            }
+
+            analysisResult.innerHTML = html;
+
+            // Uid 복구 버튼 이벤트 리스너 바인딩
+            const btnAutoFixUid = document.getElementById('btnAutoFixUid');
+            if (btnAutoFixUid) {
+                btnAutoFixUid.onclick = async () => {
+                    if (!confirm("권혜진 단원의 UID를 간부 임명 데이터에 복구하시겠습니까?")) return;
+                    try {
+                        btnAutoFixUid.disabled = true;
+                        btnAutoFixUid.innerHTML = '복구 중...';
+                        const docRef = doc(db, 'officers_list', o.id);
+                        await updateDoc(docRef, { UID: m.UID });
+                        alert("🎉 성공적으로 UID 복구가 완료되었습니다! 페이지를 새로고침 한 뒤 간부관리 화면을 다시 확인해 보세요.");
+                        location.reload();
+                    } catch (e) {
+                        alert("복구 실패: " + e.message);
+                        btnAutoFixUid.disabled = false;
+                        btnAutoFixUid.innerHTML = '간부 UID 자동 복구 실행';
+                    }
+                };
+            }
+        }
+    </script>
+</body>
+</html>
+

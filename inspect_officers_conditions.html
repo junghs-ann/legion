@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간부 소속 조건값 교차 검증 도구</title>
+    <link rel="stylesheet" href="styles.css?v=20260601_2008">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { padding: 30px; font-family: 'Noto Sans KR', sans-serif; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eef2f1; }
+        h1 { color: #2e7d32; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; font-size: 1.6rem; display: flex; align-items: center; gap: 10px; }
+        h2 { color: #1976d2; margin-top: 10px; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        /* 테이블 디자인 */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #eef2f1; padding: 12px 10px; text-align: left; font-size: 0.9rem; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; }
+        tr:hover { background-color: #f8fafc; }
+        
+        /* 공백 시각화 뱃지 */
+        .space-char { background-color: #ffec99; border: 1px solid #fcc419; color: #d9480f; padding: 0 4px; border-radius: 3px; font-family: monospace; font-size: 0.75rem; font-weight: bold; }
+        
+        /* 매칭 결과 상태 */
+        .match-badge { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
+        .match-success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .match-fail { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        
+        .btn { padding: 10px 24px; background-color: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { background-color: #1b5e20; }
+        .btn-grey { background-color: #6c757d; }
+        .btn-grey:hover { background-color: #5a6268; }
+
+        .info-box { background-color: #e8f4fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 6px; line-height: 1.5; font-size: 0.9rem; margin-bottom: 20px; }
+        code { font-family: 'Fira Code', monospace; background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #0f172a; font-weight: bold; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1><i class="fas fa-database"></i> 간부 소속 조건값 교차 검증 도구</h1>
+            <p style="color: #666; margin-top: 5px;">현재 로그인한 사용자의 프로필 조건값과 데이터베이스(Firestore) 내 각 간부의 실제 소속 정보(성당, 꾸리아, 쁘레시디움)를 공백과 글자 하나까지 정밀 대조하여 목록 누락 원인을 규명합니다.</p>
+            <div style="margin-top: 15px;">
+                <button id="btnLoadData" class="btn"><i class="fas fa-sync-alt"></i> 데이터 불러오기 및 대조 검증</button>
+                <button onclick="location.href='dashboard.html'" class="btn btn-grey"><i class="fas fa-home"></i> 대시보드로 돌아가기</button>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <!-- 1. 로그인 사용자 (세션 기준 검색 조건) -->
+            <div class="card">
+                <h2><i class="fas fa-user-circle"></i> 1. 로그인 사용자 프로필 기준 (검색 조건값)</h2>
+                <div class="info-box" style="margin-top: 15px;">
+                    <p style="margin: 0;">현재 로그인한 사용자 정보에 따라 간부관리 화면에서 데이터베이스를 필터링하는 실제 텍스트 값입니다.</p>
+                </div>
+                <div id="sessionUserInfo">
+                    <p style="color:#888;">데이터를 불러오는 중입니다...</p>
+                </div>
+            </div>
+
+            <!-- 2. UI 선택 박스에 세팅된 현재 값 -->
+            <div class="card">
+                <h2><i class="fas fa-sliders-h"></i> 2. 간부관리 화면 UI 셋팅 기준 조건값</h2>
+                <div class="info-box" style="margin-top: 15px; background-color: #fef9e7; border-left-color: #f39c12;">
+                    <p style="margin: 0;">간부관리 화면이 열렸을 때 화면 입력 칸에 셋팅되는 실제 조건값입니다.</p>
+                </div>
+                <div id="uiSettingInfo">
+                    <p style="color:#888;">데이터를 불러오는 중입니다...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. DB 실제 데이터 정밀 대조 테이블 -->
+        <div class="card">
+            <h2><i class="fas fa-list-ul"></i> 3. Firestore DB 간부 데이터 (officers_list) 정밀 조건 대조군</h2>
+            <p style="color: #666; font-size: 0.85rem; margin-top: 5px;">
+                ※ 각 문자열 속의 보이지 않는 공백은 <span class="space-char">[공백]</span> 표시로 명시하여 띄어쓰기 불일치를 즉각 식별할 수 있도록 하였습니다.
+            </p>
+            <div style="overflow-x: auto; margin-top: 15px;">
+                <table>
+                    <thead>
+                        <tr style="background-color: #f8fafc;">
+                            <th>성명 (세례명)</th>
+                            <th>직급</th>
+                            <th>성당명 (<code>churchName</code>)</th>
+                            <th>꾸리아명 (<code>curiaName</code>)</th>
+                            <th>쁘레시디움명 (<code>presidiumName</code>)</th>
+                            <th>임명일 ~ 만료일</th>
+                            <th>목록 노출 가능 여부</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dbOfficersBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: #888; padding: 30px;">
+                                [데이터 불러오기] 버튼을 눌러주세요.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from "./firebase-config.js?v=20260313_1515";
+        import { initAuthObserver } from "./auth.js?v=20260308_0345";
+
+        let currentProfile = null;
+        const btnLoadData = document.getElementById('btnLoadData');
+
+        // 사용자 세션 및 프로필 로드
+        initAuthObserver((user, profile) => {
+            currentProfile = profile;
+            renderProfileInfo();
+            renderUIExpectedInfo();
+            // 자동 로드
+            loadAndCompare();
+        }, () => {
+            alert("로그인 세션이 만료되었습니다. 로그인 페이지로 이동합니다.");
+            location.href = "index.html";
+        });
+
+        // 텍스트 내부의 공백 문자 시각화 도우미
+        function visualizeSpaces(str) {
+            if (!str) return '<code>(비어있음)</code>';
+            // 연속된 공백 및 끝자락 공백을 강조
+            return str.replace(/ /g, '<span class="space-char">␣</span>');
+        }
+
+        function renderProfileInfo() {
+            const container = document.getElementById('sessionUserInfo');
+            if (!currentProfile) return;
+
+            container.innerHTML = `
+                <table style="margin-top: 0;">
+                    <tr><th style="width: 120px;">이름 (권한)</th><td><strong>${currentProfile.name || '-'}</strong> (<code>${currentProfile.role || '-'}</code>)</td></tr>
+                    <tr><th>성당 조건값</th><td><code>${visualizeSpaces(currentProfile.churchName)}</code></td></tr>
+                    <tr><th>꾸리아 조건값</th><td><code>${visualizeSpaces(currentProfile.curiaName)}</code></td></tr>
+                    <tr><th>쁘레시디움 조건값</th><td><code>${visualizeSpaces(currentProfile.presidiumName)}</code></td></tr>
+                </table>
+            `;
+        }
+
+        function renderUIExpectedInfo() {
+            const container = document.getElementById('uiSettingInfo');
+            if (!currentProfile) return;
+
+            const role = String(currentProfile.role || '').toLowerCase();
+            const isAdmin = role.includes('admin') || role.includes('관리자');
+
+            if (isAdmin) {
+                container.innerHTML = `
+                    <div style="padding: 10px; color: #2e7d32; font-weight: bold;">
+                        <i class="fas fa-user-shield"></i> 현재 관리자(Admin) 계정으로 로그인 중입니다.<br>
+                        <span style="font-weight: normal; color: #555; font-size: 0.85rem;">
+                            관리자는 화면 상단에서 성당, 꾸리아, 쁘레시디움을 자유롭게 수동 선택하여 조회 조건을 세팅합니다.
+                        </span>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <table style="margin-top: 0;">
+                        <tr><th style="width: 120px;">UI 성당 고정값</th><td><code>${visualizeSpaces(currentProfile.churchName)}</code></td></tr>
+                        <tr><th>UI 꾸리아 고정값</th><td><code>${visualizeSpaces(currentProfile.curiaName)}</code></td></tr>
+                        <tr><th>UI 쁘레시디움 고정값</th><td><code>${visualizeSpaces(currentProfile.presidiumName)}</code></td></tr>
+                    </table>
+                `;
+            }
+        }
+
+        async function loadAndCompare() {
+            btnLoadData.disabled = true;
+            btnLoadData.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 데이터 분석 중...';
+
+            try {
+                if (!currentProfile) {
+                    alert("프로필 정보를 아직 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+                    return;
+                }
+
+                // Firestore officers_list 전체 문서 가져오기
+                const oSnap = await getDocs(collection(db, 'officers_list'));
+                let officers = [];
+                oSnap.forEach(d => {
+                    officers.push({ id: d.id, ...d.data() });
+                });
+
+                // UI의 기준 조건값 정의 (일반 간부는 고정, 관리자는 UI선택값 기반이나 여기선 로그인 프로필을 대조군으로 삼음)
+                const filterChurch = currentProfile.churchName || '';
+                const filterCuria = currentProfile.curiaName || '';
+                const filterPresidium = currentProfile.presidiumName || '';
+
+                const tbody = document.getElementById('dbOfficersBody');
+                tbody.innerHTML = '';
+
+                // 권혜진 단원 이름 강조 및 가시성 정렬 (권혜진 우선, 그 뒤 일반 간부)
+                const searchName = "권혜진";
+                officers.sort((a, b) => {
+                    const hasA = String(a.name).includes(searchName) ? 1 : 0;
+                    const hasB = String(b.name).includes(searchName) ? 1 : 0;
+                    return hasB - hasA;
+                });
+
+                officers.forEach(o => {
+                    // 조건 매칭 진단
+                    const isChurchMatch = String(o.churchName || '').trim() === String(filterChurch).trim();
+                    const isCuriaMatch = String(o.curiaName || '').trim() === String(filterCuria).trim();
+                    const isPresidiumMatch = String(o.presidiumName || '').trim() === String(filterPresidium).trim();
+                    
+                    const isTotalMatch = isChurchMatch && isCuriaMatch && isPresidiumMatch;
+
+                    let statusBadge = '';
+                    if (isTotalMatch) {
+                        statusBadge = '<span class="match-badge match-success"><i class="fas fa-check-circle"></i> 목록 노출 가능</span>';
+                    } else {
+                        let fails = [];
+                        if (!isChurchMatch) fails.push("성당 불일치");
+                        if (!isCuriaMatch) fails.push("꾸리아 불일치");
+                        if (!isPresidiumMatch) fails.push("쁘레시디움 불일치");
+                        statusBadge = `<span class="match-badge match-fail" title="${fails.join(', ')}"><i class="fas fa-times-circle"></i> 노출 불가 (${fails.join('/')})</span>`;
+                    }
+
+                    // 권혜진 님인 경우 행 강조를 위해 배경색 지정
+                    const isKweon = String(o.name).includes(searchName);
+                    const rowStyle = isKweon ? 'background-color: #fff9db; border: 2px solid #fcc419;' : '';
+
+                    tbody.innerHTML += `
+                        <tr style="${rowStyle}">
+                            <td><strong>${o.name || '-'}</strong> (${o.baptismalName || '-'})</td>
+                            <td><span style="font-weight:bold; color:#2563eb;">${o.role || '-'}</span></td>
+                            <td><code>${visualizeSpaces(o.churchName)}</code></td>
+                            <td><code>${visualizeSpaces(o.curiaName)}</code></td>
+                            <td><code>${visualizeSpaces(o.presidiumName)}</code></td>
+                            <td>${o.appointmentDate || '-'} ~ ${o.appointmentExpiryDate || '(현직)'}</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (err) {
+                console.error("데이터 로드 실패:", err);
+                alert("데이터 로드 중 에러가 발생했습니다: " + err.message);
+            } finally {
+                btnLoadData.disabled = false;
+                btnLoadData.innerHTML = '<i class="fas fa-sync-alt"></i> 데이터 불러오기 및 대조 검증';
+            }
+        }
+
+        btnLoadData.onclick = loadAndCompare;
+    </script>
+</body>
+</html>
+

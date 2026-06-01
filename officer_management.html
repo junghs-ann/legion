@@ -5,9 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260531_2006">
+    <link rel="stylesheet" href="styles.css?v=20260601_2008">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         .register-form-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 40px;
@@ -55,6 +59,14 @@
         }
 
         @media (max-width: 768px) {
+            .main-content {
+                padding-bottom: 200px !important; /* 모바일에서 하단 스크롤 공간을 넉넉히 확보하여 드롭다운 잘림/가림 해결 */
+            }
+
+            .register-form-container {
+                padding: 20px 15px; /* 모바일에서 좌우 내부 여백을 줄여 입력란 너비 확보 */
+            }
+
             .scroll-guide {
                 display: flex;
             }
@@ -118,6 +130,7 @@
             border-radius: 4px;
             font-size: 1rem;
             background-color: white;
+            box-sizing: border-box; /* 패딩과 테두리가 너비를 초과하지 않도록 설정 */
         }
 
         .form-group input[readonly] {
@@ -391,6 +404,9 @@
                     <button type="submit" class="btn btn-save"
                         style="padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-save"></i> 저 장</button>
+                    <button type="button" id="btnCancel" class="btn btn-cancel"
+                        style="padding: 9px 14px; font-size: 0.95rem; border-radius: 4px; background-color: white; color: #6c757d; border: 1px solid #6c757d; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
+                            class="fas fa-undo"></i> 취 소</button>
                     <button type="button" id="btnDelete" class="btn btn-delete"
                         style="display: none; padding: 10px 15px; font-size: 0.95rem; border-radius: 4px; background-color: #dc3545; color: white; border: none; cursor: pointer; min-width: 100px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i
                             class="fas fa-trash-alt"></i> 삭제</button>
@@ -408,7 +424,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260531_2006"></script>
+    <script src="script.js?v=20260601_2008"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -721,6 +737,9 @@
                     return;
                 }
                 
+                // 상세조회 모드 해제
+                isViewingDetail = false;
+
                 // 단원 선택 활성화 상태에서 기본 정보 로딩
                 const member = membersList.find(m => m.id === mid);
                 if (member) {
@@ -750,51 +769,100 @@
 
             // [수정] 버튼 클릭 핸들러 (명시적으로 기존 정보를 찾아 폼에 매핑)
             document.getElementById('btnApplyEdit').addEventListener('click', async () => {
+                console.log("🔘 [수정] 버튼 클릭됨. 선택된 단원 ID:", memberSelect.value);
                 const mid = memberSelect.value;
-                const role = form.querySelector('select[name="role"]').value;
                 if (!mid) {
                     await window.showGlobalAlert("먼저 단원을 선택해 주세요.", "warning");
                     memberSelect.focus();
                     return;
                 }
-                if (!role) {
-                    await window.showGlobalAlert("기존 정보를 수정하려면 먼저 직급을 선택해 주세요.", "warning");
-                    form.querySelector('select[name="role"]').focus();
+
+                // 해당 단원의 모든 임명 이력 Firestore 조회
+                let historyList = [];
+                try {
+                    console.log("⏳ Firestore에서 해당 단원의 임명 이력 검색 중...");
+                    const q = query(collection(db, 'officers_list'), where('memberId', '==', mid));
+                    const snap = await getDocs(q);
+                    snap.forEach(doc => {
+                        historyList.push({ ...doc.data(), id: doc.id });
+                    });
+                    console.log(`✅ 이력 조회 완료. 총 ${historyList.length}건 발견됨.`);
+                } catch (err) {
+                    console.error("🚨 이력 조회 중 오류 발생:", err);
+                    await window.showGlobalAlert("이력을 조회하는 중 오류가 발생했습니다.", "error");
                     return;
                 }
 
-                // 폼 매핑 수행 전에 임명 필드 활성화
-                enableAppointmentFields();
- 
-                // forceFillForm 인자를 true로 주어 명시적 폼 로딩 수행
-                await loadExistingOfficer(true);
+                if (historyList.length === 0) {
+                    await window.showGlobalAlert("해당 단원의 등록된 임명 이력이 존재하지 않습니다. [임명] 버튼을 통해 새 임기를 선임해 주세요.", "info");
+                    return;
+                }
 
-                // 단원 기본 정보 로딩
-                const member = membersList.find(m => m.id === mid);
-                if (member) {
-                    memberNameOutput.value = member.name;
-                    baptismalNameOutput.value = member.baptismalName || '';
-                    feastDateOutput.value = member.feastDate || '';
-                    phoneOutput.value = member.phone || '';
-                }
- 
-                const editId = form.getAttribute('data-edit-id');
-                if (editId) {
-                    await window.showGlobalAlert("기존 활동 중인 현직 간부 정보가 성공적으로 로드되었습니다.\n수정 후 [저장]하시면 정보가 갱신됩니다.", "success");
-                } else {
-                    const appDate = form.querySelector('input[name="appointmentDate"]').value;
-                    if (appDate) {
-                        await window.showGlobalAlert("기존 만료된 과거 정보가 로드되었습니다.\n수정 후 [저장]하시면 새로운 임기 이력으로 신규 등록됩니다.", "info");
-                    } else {
-                        await window.showGlobalAlert("해당 직급으로 등록된 기존 임명 정보가 없습니다. [임명] 상태로 정보를 입력해 주세요.", "info");
-                    }
-                }
+                // 이력이 존재할 경우 모달 팝업 표시 (1개이더라도 일관되게 팝업 선택창 노출)
+                const modal = document.getElementById('historySelectModal');
+                const tbody = document.getElementById('historySelectBody');
+                tbody.innerHTML = '';
+
+                // 임명일 기준 최근순 정렬
+                historyList.sort((a, b) => (b.appointmentDate || '').localeCompare(a.appointmentDate || ''));
+
+                const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+                historyList.forEach(hist => {
+                    const roleName = {
+                        '단장': '단장', '부단장': '부단장', '서기': '서기', '회계': '회계',
+                        'president': '단장', 'vice_president': '부단장', 'vicePresident': '부단장',
+                        'secretary': '서기', 'treasurer': '회계', 'admin': '관리자'
+                    }[(hist.role || '').toLowerCase().trim()] || hist.role;
+
+                    const isActive = !hist.appointmentExpiryDate || hist.appointmentExpiryDate >= today;
+                    const statusHtml = isActive ?
+                        '<span style="background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">활동중</span>' :
+                        '<span style="background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 4px;">만료</span>';
+
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.style.transition = 'background 0.2s';
+                    tr.innerHTML = `
+                        <td style="font-weight: bold; text-align: center; padding: 10px;">${roleName}</td>
+                        <td style="text-align: center; padding: 10px;">${hist.appointmentDate || '-'}</td>
+                        <td style="text-align: center; padding: 10px;">${hist.appointmentExpiryDate || '-'}</td>
+                        <td style="text-align: center; padding: 10px;">${statusHtml}</td>
+                    `;
+
+                    // 마우스 오버/아웃 효과
+                    tr.addEventListener('mouseover', () => { tr.style.background = '#f1f1f1'; });
+                    tr.addEventListener('mouseout', () => { tr.style.background = 'white'; });
+
+                    // 클릭 시 해당 이력 선택 및 로드
+                    tr.addEventListener('click', async () => {
+                        console.log(`🎯 [이력 선택] 모달에서 이력 터치됨. ID: ${hist.id} | 직급: ${roleName} | 임명일: ${hist.appointmentDate}`);
+                        modal.style.display = 'none';
+                        document.body.classList.remove('no-scroll');
+                        await setFormFromTable(hist.id);
+                        await window.showGlobalAlert(`[${roleName}] 임기 정보가 성공적으로 로드되었습니다.`, "success");
+                    });
+
+                    tbody.appendChild(tr);
+                });
+
+                modal.style.display = 'flex';
+                document.body.classList.add('no-scroll');
             });
 
             // Member Selection Logic (드롭다운 변경 시 자동 데이터 주입을 차단하고 빈 입력 폼 상태 유지)
-            memberSelect.addEventListener('change', () => {
+            memberSelect.addEventListener('change', (e) => {
+                console.log("📢 [이벤트] memberSelect change 발생 - isTrusted:", e ? e.isTrusted : "N/A");
+                if (e && !e.isTrusted) {
+                    console.log("🚫 [이벤트 차단] 프로그램에 의한 임의 변경이므로 리셋 핸들러를 차단합니다.");
+                    return;
+                }
+                console.log("🧹 [이벤트 실행] 사용자의 직접 조작이므로 폼 초기화를 수행합니다.");
                 const mid = memberSelect.value;
                 
+                // 상세조회 모드 해제
+                isViewingDetail = false;
+
                 // 단원 선택 및 임명 필드 잠금
                 resetMemberUI();
                 disableAppointmentFields();
@@ -852,15 +920,34 @@
             form.querySelector('select[name="role"]').addEventListener('change', async () => await loadExistingOfficer());
             [churchSelect, curiaSelect, presidiumSelect].forEach(sel => {
                 sel.addEventListener('change', async () => {
+                    isViewingDetail = false; // 조직 변경 시 상세조회 모드 해제
                     subscribeOfficers(); // 실시간 구독 갱신
                     await loadExistingOfficer();
                 });
+            });
+
+            // [New] Cancel Logic
+            document.getElementById('btnCancel').addEventListener('click', () => {
+                form.removeAttribute('data-edit-id');
+                form.reset();
+                resetMemberUI();
+                disableAppointmentFields();
+                isViewingDetail = false;
+                setupPermissions(); // 권한에 맞게 UI 필드 활성화 상태 재구성
+                loadExistingOfficer();
             });
 
             // [New] Delete Logic
             const btnDelete = document.getElementById('btnDelete');
             btnDelete.clickEvent = handleDelete; // Store reference to original or wrap it 
             btnDelete.addEventListener('click', handleDelete);
+
+            // 이력 선택 모달 닫기
+            document.getElementById('btnHistoryCancel').addEventListener('click', () => {
+                const modal = document.getElementById('historySelectModal');
+                modal.style.display = 'none';
+                document.body.classList.remove('no-scroll');
+            });
 
             // Form Submit
             form.addEventListener('submit', handleSave);
@@ -913,7 +1000,6 @@
                 querySnapshot.forEach(doc => {
                     currentOfficersList.push({ ...doc.data(), id: doc.id });
                 });
-                console.log("🔄 [실시간 업데이트] Firestore 간부 데이터 동기화 완료. 총 개수:", currentOfficersList.length);
                 
                 // 화면 목록 테이블 즉시 갱신
                 renderOfficerList(currentOfficersList);
@@ -923,15 +1009,15 @@
                     loadExistingOfficer();
                 }
             }, (error) => {
-                console.error("🚨 [실시간 업데이트 에러] 간부 목록 실시간 구독 실패:", error);
+                console.error("🚨 간부 목록 실시간 구독 실패:", error);
             });
         }
 
         async function loadExistingOfficer(forceFillForm = false) {
             // 상세 조회/수정 모드이거나, 목록 선택 중인 경우 비동기 이력 조회 및 폼 덮어쓰기를 전면 차단합니다.
-            if (typeof isViewingDetail !== 'undefined' && isViewingDetail) return;
+            if (!forceFillForm && typeof isViewingDetail !== 'undefined' && isViewingDetail) return;
             const editId = form.getAttribute('data-edit-id');
-            if (editId) return;
+            if (!forceFillForm && editId) return;
 
             // 명시적 폼 로딩 요청 시 필드를 활성화합니다.
             if (forceFillForm) {
@@ -1110,26 +1196,26 @@
 
         // Helper: When clicking a table row, populate the form
         window.setFormFromTable = async function (id) {
-            // console.log("🚀 [디버그] setFormFromTable 함수 시작! ID:", id);
-            
+            console.log(`🚀 [setFormFromTable] 함수 작동 시작! 대상 문서 ID: ${id}`);
             // 상세 조회/수정 모드 진입 플래그를 가장 먼저 설정하여 백그라운드 비동기 간섭을 완벽히 차단합니다.
             isViewingDetail = true;
 
+            // 임명일, 만료일, 비고 등 간부 임명 정보 입력창 잠금 해제
+            enableAppointmentFields();
+
             let record = null;
             try {
-                // console.log("⏳ [디버그] Firestore에서 officers_list 조회 시도 중... ID:", id);
-                // Firestore에서 직접 상세 정보 가져오기
+                console.log("⏳ Firestore에서 상세 정보(officers_list) 1회성 조회 중...");
                 const docSnap = await getDoc(doc(db, "officers_list", id));
-                // console.log("✅ [디버그] Firestore 조회 응답 완료. 문서 존재 여부:", docSnap.exists());
                 if (docSnap.exists()) {
                     record = { ...docSnap.data(), id: docSnap.id };
-                    // console.log("📦 [디버그] 조회된 record 데이터:", JSON.stringify(record, null, 2));
+                    console.log("✅ 문서 데이터 수신 완료:", JSON.stringify(record));
                 } else {
-                    // console.warn("⚠️ [디버그] Firestore에 해당 ID의 문서가 존재하지 않습니다.");
+                    console.warn("⚠️ Firestore에 해당 ID의 문서가 존재하지 않습니다.");
                 }
             } catch (error) {
-                // console.error("🚨 [디버그] Firestore 조회 중 예외 발생:", error);
-                await window.showGlobalAlert("Firestore 조회 오류: " + error.message, "error");
+                console.error("🚨 Firestore 조회 중 예외 발생:", error);
+                await window.showGlobalAlert("조회 오류: " + error.message, "error");
             }
 
             if (!record) {
@@ -1177,9 +1263,9 @@
                 if (pSelect) pSelect.disabled = true;
 
                 // 이 간부가 소속된 조직의 단원 목록을 강제로 동기식 로딩하여 membersList 배열을 확실히 채워줍니다.
-                // console.log("⏳ [디버그] loadMembers() 실행 중... 조직 정보 기반 단원 검색 시작");
+                console.log("⏳ [setFormFromTable] loadMembers() 실행 중... 조직 정보 기반 단원 검색 시작");
                 await loadMembers();
-                // console.log("✅ [디버그] loadMembers() 완료. 현재 로드된 membersList 항목 수:", membersList.length);
+                console.log("✅ [setFormFromTable] loadMembers() 완료. 현재 로드된 membersList 항목 수:", membersList.length);
 
                 // 수정 모드 상태 세팅
                 form.setAttribute("data-edit-id", record.id);
@@ -1319,14 +1405,15 @@
                 membersList = JSON.parse(localStorage.getItem('members_list') || '[]');
             }
 
-            // Filter: Same Org + Active (Not retired/transferred)
+            // Filter: Same Org (퇴단/전출/임명만료 여부와 관계없이 동일 조직 소속이면 모두 다 조회)
             const activeMembers = membersList.filter(m =>
                 m.churchName === church &&
                 m.curiaName === curia &&
-                m.presidiumName === presidium &&
-                m.status !== '퇴단' &&
-                m.status !== '전출'
+                m.presidiumName === presidium
             );
+
+            // [가나다 정렬] 단원명 한글 오름차순으로 정렬하여 사용자 편의성 제공
+            activeMembers.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
             if (activeMembers.length > 0) {
                 activeMembers.forEach(m => {
@@ -1337,7 +1424,7 @@
                 });
                 memberSelect.disabled = false;
             } else {
-                memberSelect.innerHTML = '<option value="">활동 중인 단원이 없습니다</option>';
+                memberSelect.innerHTML = '<option value="">소속 단원이 없습니다</option>';
                 memberSelect.disabled = true;
             }
         }
@@ -1548,6 +1635,8 @@
         async function handleSave(e) {
             e.preventDefault();
 
+            const editId = form.getAttribute('data-edit-id');
+
             // [Important] Gather all data from form elements
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
@@ -1571,7 +1660,7 @@
             const legacyFields = ['church', 'curia', 'presidium', 'memberUid', 'member'];
             legacyFields.forEach(f => delete data[f]);
 
-            // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
+            // [🚨 철벽 검증] 조직 정보 필수 체크
             if (!data.churchName || !data.curiaName || !data.presidiumName || !data.memberId) {
                 await window.showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움, 단원 정보가 누락되었습니다. 저장이 차단됩니다.');
                 return;
@@ -1589,14 +1678,13 @@
             const notesArea = form.querySelector('textarea[name="notes"]');
             data.notes = window.sanitizeInput(notesArea ? notesArea.value : (data.notes || ''));
 
-            // [🚨 철벽 검증] 임명 정보 필수 체크 (비활성화 상태에서 저장 방지)
+            // [🚨 철벽 검증] 임명 정보 필수 체크
             if (!data.role || !data.appointmentDate) {
                 await window.showGlobalAlert('⚠️ 직급과 임명일은 필수 입력 사항입니다.\n단원 선택 후 [임명] 또는 [수정] 버튼을 클릭하여 정보를 작성해 주세요.');
                 return;
             }
 
             const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
-            const editId = form.getAttribute('data-edit-id');
 
             // 1. Conflict Check (Re-use shared logic)
             const conflict = await checkDuplicateActivity();
@@ -1625,29 +1713,26 @@
                 });
             }
 
+            let finalId = editId;
+
             if (targetIdx > -1) {
                 const existingId = officersList[targetIdx].id;
+                finalId = existingId;
                 officersList[targetIdx] = { ...data, id: existingId };
             } else {
-                data.id = 'off_' + Date.now();
+                if (!finalId) {
+                    finalId = 'off_' + Date.now();
+                }
+                data.id = finalId;
                 officersList.push(data);
             }
+            localStorage.setItem('officers_list', JSON.stringify(officersList));
 
             try {
-                if (editId) {
-                    console.log("📝 현직 간부 정보 수정 시도 중... ID:", editId);
-                    await setDoc(doc(db, 'officers_list', editId), {
-                        ...data,
-                        updatedAt: serverTimestamp()
-                    });
-                } else {
-                    console.log("🆕 신규 임기(이력) 등록 시도 중...");
-                    const newId = 'off_' + Date.now();
-                    await setDoc(doc(db, 'officers_list', newId), {
-                        ...data,
-                        updatedAt: serverTimestamp()
-                    });
-                }
+                await setDoc(doc(db, 'officers_list', finalId), {
+                    ...data,
+                    updatedAt: serverTimestamp()
+                });
 
                 // [지능형 동기화 패치] 단원의 전체 임기 이력을 동적으로 분석하여 유저 프로필 직책을 완벽히 동기화합니다.
                 await syncUserRoleFromActiveOfficers(data.memberId, data.UID);
@@ -1657,10 +1742,18 @@
                 // 저장 성공 후 이력 조회가 가능하도록 상세조회 플래그를 꺼줍니다.
                 isViewingDetail = false;
                 
+                // 저장 성공 후 폼 및 수정 모드 완전 리셋 & 권한별 UI 복구
+                form.removeAttribute('data-edit-id');
+                form.reset();
+                resetMemberUI();
+                
+                // 사용자 권한에 맞게 UI 필드 활성화 상태 재구성
+                setupPermissions();
+                
                 // 실시간 리스너가 리스트를 자동 갱신하므로 폼 매핑용 loadExistingOfficer만 즉시 실행
                 loadExistingOfficer();
             } catch (error) {
-                console.error('Save failed:', error);
+                console.error('🚨 저장 중 예외 발생:', error);
                 await window.showGlobalAlert('🚨 저장 중 오류가 발생했습니다:\n' + error.message);
             }
         }
@@ -1705,71 +1798,38 @@
             }
         }
     </script>
+    <!-- [New] 이력 선택 모달 팝업 추가 -->
+    <div id="historySelectModal" class="global-custom-modal" style="display: none;">
+        <div class="global-custom-modal-content" style="max-width: 600px;">
+            <div class="global-custom-modal-header-line"></div>
+            <div class="global-custom-modal-body" style="padding: 25px 25px 15px;">
+                <i class="fas fa-history icon-info" style="font-size: 3rem; margin-bottom: 15px; display: block; text-align: center;"></i>
+                <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; font-family: 'Noto Serif KR', serif; text-align: center;"><i class="fas fa-list-ol"></i> 임명 이력 선택</h3>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px; word-break: keep-all; text-align: center;">수정할 임기 이력을 선택해 주세요. 선택한 이력 정보가 화면 입력 폼에 채워집니다.</p>
+                <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                    <table class="member-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="padding: 10px; text-align: center;">직급</th>
+                                <th style="padding: 10px; text-align: center;">임명일</th>
+                                <th style="padding: 10px; text-align: center;">만료일</th>
+                                <th style="padding: 10px; text-align: center;">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historySelectBody">
+                            <!-- 동적 데이터 로딩 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="global-custom-modal-buttons" style="padding: 0 25px 25px; justify-content: center;">
+                <button type="button" id="btnHistoryCancel" class="global-custom-modal-btn global-custom-modal-btn-cancel" style="max-width: 150px; font-weight: bold;">닫기</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
