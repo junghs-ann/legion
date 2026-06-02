@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -416,12 +416,28 @@
                 </div>
             </div>
         </div>
+
+        <!-- 간부 상세 정보 모달 -->
+        <div id="officerModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-user-tie"></i> 간부 상세정보</h3>
+                    <button class="btn-close-x" style="position: static;" onclick="closeOfficerModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="officerDetailContent" class="detail-grid">
+                    <!-- JS에서 동적으로 채워짐 -->
+                </div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn-search" onclick="closeOfficerModal()">닫 기</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 스크립트 연결 -->
     <script src="script.js?v=20260601_2008"></script>
     <script type="module">
-        import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
+        import { db, collection, getDocs, query, where, orderBy, doc, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
 
         let currentUserProfile = null;
@@ -567,7 +583,7 @@
                 } else {
                     officerSnap = await getDocs(collection(db, 'officers_list'));
                 }
-                const allOfficers = officerSnap.docs.map(doc => doc.data());
+                const allOfficers = officerSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
                 // 5. 쁘레또리움 데이터 로드
                 let praeSnap;
@@ -638,7 +654,7 @@
                     ).length;
 
                     // 간부 명단 (기준일자 재직 중인 분)
-                    const getOfficerName = (role) => {
+                    const getOfficerData = (role) => {
                         const found = allOfficers.find(o => 
                             o.presidiumName === pr.presidiumName && 
                             o.churchName === pr.churchName &&
@@ -646,20 +662,35 @@
                             o.appointmentDate <= baseDate && 
                             (!o.appointmentExpiryDate || o.appointmentExpiryDate >= baseDate)
                         );
-                        if (!found) return '-';
-                        return found.baptismalName ? `${found.name}(${found.baptismalName})` : found.name;
+                        if (!found) return { name: '-', id: null, date: '' };
+                        return {
+                            name: found.baptismalName ? `${found.name}(${found.baptismalName})` : found.name,
+                            id: found.id,
+                            date: found.appointmentDate || ''
+                        };
                     };
 
                     // 성직자(신부님) 정보 추출
-                    const getClergyName = (pos) => {
+                    const getClergyData = (pos) => {
                         const found = allClergy.find(c => 
                             c.churchName === pr.churchName &&
                             c.position === pos && 
                             c.appointmentDate <= baseDate && 
                             (!c.expiryDate || c.expiryDate >= baseDate)
                         );
-                        return found ? `${found.name}(${found.baptismalName})` : '-';
+                        if (!found) return { name: '-', date: '' };
+                        return {
+                            name: found.baptismalName ? `${found.name}(${found.baptismalName})` : found.name,
+                            date: found.appointmentDate || ''
+                        };
                     };
+
+                    const presidentData = getOfficerData('단장');
+                    const vpData = getOfficerData('부단장');
+                    const secretaryData = getOfficerData('서기');
+                    const treasurerData = getOfficerData('회계');
+                    const spiritualDirectorData = getClergyData('주임신부');
+                    const deputyData = getClergyData('보좌신부');
 
                     return {
                         ...pr,
@@ -671,12 +702,22 @@
                         auxFemaleCount,
                         praeCount,
                         adjCount,
-                        president: getOfficerName('단장'),
-                        vp: getOfficerName('부단장'),
-                        secretary: getOfficerName('서기'),
-                        treasurer: getOfficerName('회계'),
-                        spiritualDirector: getClergyName('주임신부'),
-                        deputy: getClergyName('보좌신부')
+                        president: presidentData.name,
+                        presidentId: presidentData.id,
+                        presidentDate: presidentData.date,
+                        vp: vpData.name,
+                        vpId: vpData.id,
+                        vpDate: vpData.date,
+                        secretary: secretaryData.name,
+                        secretaryId: secretaryData.id,
+                        secretaryDate: secretaryData.date,
+                        treasurer: treasurerData.name,
+                        treasurerId: treasurerData.id,
+                        treasurerDate: treasurerData.date,
+                        spiritualDirector: spiritualDirectorData.name,
+                        spiritualDirectorDate: spiritualDirectorData.date,
+                        deputy: deputyData.name,
+                        deputyDate: deputyData.date
                     };
                 });
 
@@ -712,9 +753,15 @@
                                 sistersMap[c.churchName] = { superior: [], general: [] };
                             }
                             if (c.position === '원장수녀') {
-                                sistersMap[c.churchName].superior.push({ name: `${c.name}(${c.baptismalName || ''})` });
+                                sistersMap[c.churchName].superior.push({ 
+                                    name: `${c.name}(${c.baptismalName || ''})`,
+                                    date: c.appointmentDate || ''
+                                });
                             } else if (c.position === '수녀') {
-                                sistersMap[c.churchName].general.push({ name: `${c.name}(${c.baptismalName || ''})` });
+                                sistersMap[c.churchName].general.push({ 
+                                    name: `${c.name}(${c.baptismalName || ''})`,
+                                    date: c.appointmentDate || ''
+                                });
                             }
                         }
                     });
@@ -772,6 +819,12 @@
                 let rowHtml = '<tr>';
                 if (!selectedChurch) rowHtml += `<td>${item.churchName}</td>`;
                 if (!selectedCuria) rowHtml += `<td>${item.curiaName}</td>`;
+
+                const renderOfficer = (name, id) => {
+                    if (!id || name === '-') return '-';
+                    return `<span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showOfficerDetail('${id}')">${name}</span>`;
+                };
+
                 rowHtml += `
                     <td style="color: #718096; font-size: 0.85rem;">${item.uniqueNumber || '-'}</td>
                     <td style="font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showPresidiumDetail('${item.id}')">${item.presidiumName}</td>
@@ -783,10 +836,10 @@
                     </td>
                     <td style="font-weight: bold; color: #6a1b9a;">${item.praeCount}</td>
                     <td style="font-weight: bold; color: #8d6e63;">${item.adjCount}</td>
-                    <td>${item.president}</td>
-                    <td>${item.vp}</td>
-                    <td>${item.secretary}</td>
-                    <td>${item.treasurer}</td>
+                    <td>${renderOfficer(item.president, item.presidentId)}</td>
+                    <td>${renderOfficer(item.vp, item.vpId)}</td>
+                    <td>${renderOfficer(item.secretary, item.secretaryId)}</td>
+                    <td>${renderOfficer(item.treasurer, item.treasurerId)}</td>
                     <td><span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${item.spiritualDirector}', '${item.churchName}')">${item.spiritualDirector}</span></td>
                     <td><span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${item.deputy}', '${item.churchName}')">${item.deputy}</span></td>
                     <td>${(item.superiorSisters || []).map(s => `<span style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showClergyDetail('${s.name}', '${item.churchName}')">${s.name}</span>`).join(', ') || '-'}</td>
@@ -892,6 +945,131 @@
             document.body.style.overflow = 'auto';
         };
 
+        // --- 재직기간 계산 헬퍼 함수 ---
+        const calculateTenure = (startDateStr, endDateStr, baseDateStr) => {
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!dateRegex.test(startDateStr)) return '-';
+            
+            const start = new Date(startDateStr);
+            let end;
+            let isCurrent = false;
+
+            if (!endDateStr || !dateRegex.test(endDateStr)) {
+                end = new Date(baseDateStr || new Date().toISOString().split('T')[0]);
+                isCurrent = true;
+            } else {
+                end = new Date(endDateStr);
+                const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                if (endDateStr >= todayStr) {
+                    isCurrent = true;
+                }
+            }
+
+            if (isNaN(start) || isNaN(end) || start > end) {
+                return '-';
+            }
+
+            let years = end.getFullYear() - start.getFullYear();
+            let months = end.getMonth() - start.getMonth();
+            let days = end.getDate() - start.getDate();
+
+            if (days < 0) {
+                months--;
+                const prevMonthEnd = new Date(end.getFullYear(), end.getMonth(), 0);
+                days += prevMonthEnd.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            let result = [];
+            if (years > 0) result.push(`${years}년`);
+            if (months > 0) result.push(`${months}개월`);
+            if (days > 0) result.push(`${days}일`);
+
+            const tenureStr = result.length > 0 ? result.join(' ') : "당일";
+            return isCurrent ? `${tenureStr} (재직 중)` : tenureStr;
+        };
+
+        // --- 간부 상세 정보 모달 제어 ---
+        window.showOfficerDetail = async (id) => {
+            if (!id || id === 'null' || id.trim() === '') return;
+            
+            try {
+                // Firestore에서 간부 상세 정보 조회
+                const docRef = doc(db, 'officers_list', id);
+                const docSnap = await getDoc(docRef);
+                
+                if (!docSnap.exists()) {
+                    if (window.showGlobalAlert) {
+                        window.showGlobalAlert('간부 상세 정보를 찾을 수 없습니다.', 'info');
+                    } else {
+                        alert('정보를 찾을 수 없습니다.');
+                    }
+                    return;
+                }
+                
+                const item = docSnap.data();
+                const modal = document.getElementById('officerModal');
+                const content = document.getElementById('officerDetailContent');
+                
+                const formatD = (d) => d ? d.replace(/-/g, '.') : '-';
+                
+                // 단원의 추가 정보(이메일) 조회를 위해 members_list 및 users 조회
+                let email = '-';
+                if (item.memberId) {
+                    try {
+                        const memberSnap = await getDoc(doc(db, 'members_list', item.memberId));
+                        if (memberSnap.exists() && memberSnap.data().email) {
+                            email = memberSnap.data().email;
+                        } else {
+                            // members_list에 없으면 users 컬렉션에서 memberId로 검색
+                            const userQuery = query(collection(db, 'users'), where('memberId', '==', item.memberId));
+                            const userSnap = await getDocs(userQuery);
+                            if (!userSnap.empty && userSnap.docs[0].data().email) {
+                                email = userSnap.docs[0].data().email;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("단원 이메일 정보 조회 실패:", e);
+                    }
+                }
+                
+                // 기준일자
+                const baseDate = document.getElementById('baseDate').value;
+                const tenureText = calculateTenure(item.appointmentDate, item.appointmentExpiryDate, baseDate);
+                
+                content.innerHTML = `
+                    <div class="detail-item"><strong>성당명</strong><span>${item.churchName || '-'}</span></div>
+                    <div class="detail-item"><strong>소속 꾸리아</strong><span>${item.curiaName || '-'}</span></div>
+                    <div class="detail-item"><strong>소속 쁘레시디움</strong><span>${item.presidiumName || '-'}</span></div>
+                    <div class="detail-item"><strong>직급</strong><span>${item.role || '-'}</span></div>
+                    <div class="detail-item span-2"><strong>성명</strong><span><b>${item.name}</b> (${item.baptismalName || '-'})</span></div>
+                    <div class="detail-item"><strong>축일</strong><span>${item.feastDate || '-'}</span></div>
+                    <div class="detail-item"><strong>연락처</strong><span>${item.phone || '-'}</span></div>
+                    <div class="detail-item span-2"><strong>이메일</strong><span>${email}</span></div>
+                    <div class="detail-item"><strong>임명일</strong><span>${formatD(item.appointmentDate)}</span></div>
+                    <div class="detail-item"><strong>임명 만료일</strong><span>${formatD(item.appointmentExpiryDate) === '-' ? '재직 중' : formatD(item.appointmentExpiryDate)}</span></div>
+                    <div class="detail-item span-2"><strong>재직기간</strong><span>${tenureText}</span></div>
+                    <div class="detail-item span-2" style="background: #fffaf0;"><strong>특이 및 참고사항</strong>
+                        <div style="margin-top: 5px; font-size: 0.9rem; line-height: 1.5; color: #4a5568;">${item.notes || '내용 없음'}</div>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } catch (err) {
+                console.error("간부 정보 조회 실패:", err);
+            }
+        };
+
+        window.closeOfficerModal = () => {
+            document.getElementById('officerModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        };
+
         document.getElementById('btnExcel').onclick = exportToExcel;
 
         async function exportToExcel() {
@@ -966,14 +1144,14 @@
 
                 columns.push({ key: 'praeCount', label: '쁘레또리움 수', width: 12, isNumeric: true });
                 columns.push({ key: 'adjCount', label: '아듀또리움 수', width: 12, isNumeric: true });
-                columns.push({ key: 'president', label: '단 장', width: 15 });
-                columns.push({ key: 'vp', label: '부단장', width: 15 });
-                columns.push({ key: 'secretary', label: '서 기', width: 15 });
-                columns.push({ key: 'treasurer', label: '회 계', width: 15 });
-                columns.push({ key: 'spiritualDirector', label: '영적지도자', width: 15 });
-                columns.push({ key: 'deputy', label: '대리자', width: 15 });
-                columns.push({ key: 'superiorSisters', label: '원장수녀', width: 15 });
-                columns.push({ key: 'sisters', label: '수녀', width: 15 });
+                columns.push({ key: 'president', label: '단 장\n(임명일)', width: 18 });
+                columns.push({ key: 'vp', label: '부단장\n(임명일)', width: 18 });
+                columns.push({ key: 'secretary', label: '서 기\n(임명일)', width: 18 });
+                columns.push({ key: 'treasurer', label: '회 계\n(임명일)', width: 18 });
+                columns.push({ key: 'spiritualDirector', label: '영적지도자\n(부임일)', width: 18 });
+                columns.push({ key: 'deputy', label: '대리자\n(부임일)', width: 18 });
+                columns.push({ key: 'superiorSisters', label: '원장수녀\n(부임일)', width: 18 });
+                columns.push({ key: 'sisters', label: '수녀\n(부임일)', width: 18 });
 
                 // 헤더 1행 (r1), 2행 (r2) 쓰기 및 병합
                 const r1 = startRow;
@@ -1036,6 +1214,15 @@
                     }
                 }
 
+                const formatExcelDate = (d) => {
+                    if (!d) return '';
+                    const digits = d.replace(/[^0-9]/g, '');
+                    if (digits.length === 8) {
+                        return `${digits.substring(0, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}.`;
+                    }
+                    return d.replace(/-/g, '.') + (d.endsWith('.') ? '' : '.');
+                };
+
                 // 데이터 셀 채우기
                 let currentRowNum = r2 + 1;
 
@@ -1050,7 +1237,17 @@
                         
                         // 원장수녀, 수녀 객체 가공
                         if (col.key === 'superiorSisters' || col.key === 'sisters') {
-                            val = (val || []).map(s => s.name).join(', ');
+                            val = (val || []).map(s => {
+                                const datePart = s.date ? `\n(${formatExcelDate(s.date)})` : '';
+                                return `${s.name}${datePart}`;
+                            }).join(', ');
+                        } else if (['president', 'vp', 'secretary', 'treasurer', 'spiritualDirector', 'deputy'].includes(col.key)) {
+                            // 단장, 부단장, 서기, 회계, 영적지도자, 대리자 날짜 개행 결합
+                            const dateKey = col.key + 'Date';
+                            const dateVal = item[dateKey];
+                            if (val && val !== '-' && dateVal) {
+                                val = `${val}\n(${formatExcelDate(dateVal)})`;
+                            }
                         }
                         
                         if (val === undefined || val === null) {
@@ -1104,12 +1301,17 @@
         window.onclick = function(event) {
             const detailModal = document.getElementById('detailModal');
             const clergyModal = document.getElementById('clergyModal');
+            const officerModal = document.getElementById('officerModal');
             if (event.target == detailModal) {
                 detailModal.style.display = "none";
                 document.body.style.overflow = 'auto';
             }
             if (event.target == clergyModal) {
                 clergyModal.style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
+            if (event.target == officerModal) {
+                officerModal.style.display = "none";
                 document.body.style.overflow = 'auto';
             }
         };

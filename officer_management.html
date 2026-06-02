@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -1718,7 +1718,8 @@
             if (targetIdx > -1) {
                 const existingId = officersList[targetIdx].id;
                 finalId = existingId;
-                officersList[targetIdx] = { ...data, id: existingId };
+                data.id = finalId; // 수정 저장 시에도 data 객체 내 id 필드가 유실되지 않도록 주입
+                officersList[targetIdx] = { ...data };
             } else {
                 if (!finalId) {
                     finalId = 'off_' + Date.now();
