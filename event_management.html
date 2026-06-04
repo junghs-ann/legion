@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사(행사/교육/피정)관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260602_1430">
+    <link rel="stylesheet" href="styles.css?v=20260604_1517">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -399,6 +399,155 @@
                 word-break: keep-all;
             }
         }
+
+        /* 날짜 중복 행사 모달 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+            box-sizing: border-box;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            box-sizing: border-box;
+            animation: modalFadeIn 0.25s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { transform: translateY(-15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-family: 'Noto Serif KR', serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .modal-desc {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 18px;
+            line-height: 1.5;
+            word-break: keep-all;
+        }
+
+        .modal-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 18px 0;
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        .modal-list-item {
+            padding: 15px 18px; /* 모바일 터치 영역 확대를 위해 내부 패딩 확장 */
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fcfcfc;
+            border-radius: 8px; /* 리스트 아이템마다 둥글게 입체감 추가 */
+            margin-bottom: 8px; /* 아이템 간 간격 추가 */
+            border: 1px solid #f0f0f0;
+        }
+
+        .modal-list-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .modal-list-item:hover {
+            background: #fff9e6;
+            color: #b8860b;
+            transform: translateY(-2px); /* 호버 시 위로 살짝 뜨는 효과 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 그림자 부각 */
+            border-color: #ffe8cc;
+        }
+
+        .modal-item-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-실시 {
+            background: #e3f2fd;
+            color: #1e88e5;
+        }
+
+        .badge-계획 {
+            background: #fff3e0;
+            color: #fb8c00;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-new {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .modal-btn-new:hover {
+            background: var(--hover-color);
+        }
+
+        .modal-btn-close {
+            background: #757575;
+            color: white;
+        }
+
+        .modal-btn-close:hover {
+            background: #616161;
+        }
+
+        /* 행사 정보 섹션 스크롤 마진 (상단 고정 헤더에 가려짐 방지) */
+        #eventInfoSection {
+            scroll-margin-top: 130px;
+        }
     </style>
 </head>
 
@@ -525,8 +674,12 @@
                         </div>
                     </div>
 
-                    <div class="section-header"><i class="fas fa-calendar-check"></i> 행사 정보</div>
+                    <div class="section-header" id="eventInfoSection"><i class="fas fa-calendar-check"></i> 행사 정보</div>
                     <div class="form-row-3">
+                        <div class="form-group">
+                            <label>일자</label>
+                            <input type="date" name="eventDate" id="eventDate" autocomplete="off" required>
+                        </div>
                         <div class="form-group">
                             <label>구분</label>
                             <select name="category" id="category" required>
@@ -541,6 +694,9 @@
                                 <option value="">종류 선택</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="form-row-3" style="margin-top: 10px;">
                         <div class="form-group">
                             <label>행사명</label>
                             <div class="event-name-container">
@@ -551,13 +707,6 @@
                                 <!-- 실제 저장에 사용될 숨겨진 필드 -->
                                 <input type="hidden" name="eventName" id="eventNameHidden">
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="form-row-3" style="margin-top: 10px;">
-                        <div class="form-group">
-                            <label>일자</label>
-                            <input type="date" name="eventDate" id="eventDate" autocomplete="off" required>
                         </div>
                         <div class="form-group">
                             <label>주관</label>
@@ -637,7 +786,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260602_1430"></script>
+    <script src="script.js?v=20260604_1517"></script>
     <script type="module">
         import { db, collection, query, where, orderBy, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -647,6 +796,7 @@
         let membersList = [];
         let eventsList = [];
         let eventTypesList = []; // [Dynamic] 서버에서 불러온 행사 종류 목록 (v16.88)
+        let tempSavedDate = ''; // 동일 일자 선택 시 change 이벤트를 강제하기 위한 임시 날짜 저장 변수
 
         const form = document.getElementById('eventForm');
         const churchSelect = document.getElementById('churchSelect');
@@ -793,11 +943,40 @@
                 }
             });
 
-            // 일자 변경 시 단원 목록 갱신 (type="date"이므로 change 이벤트가 더 적절함)
+            // 일자 변경 시 중복 행사 확인 및 단원 목록 갱신
             const dateInput = document.getElementById('eventDate');
+            
+            // 날짜 입력창에 포커스가 올 때(클릭 등) 기존 값을 임시 저장하고 필드를 비워 change 이벤트를 강제함
+            dateInput.addEventListener('focus', (e) => {
+                tempSavedDate = e.target.value;
+                e.target.value = '';
+            });
+
+            // 포커스를 잃었을 때 사용자가 날짜를 변경하지 않아 빈칸 상태라면 기존 보관된 날짜로 복원함
+            dateInput.addEventListener('blur', (e) => {
+                if (!e.target.value && tempSavedDate) {
+                    e.target.value = tempSavedDate;
+                }
+            });
+
             dateInput.addEventListener('change', async (e) => {
-                if (e.target.value.length === 10) {
-                    await loadMemberList();
+                const selectedDate = e.target.value;
+                if (selectedDate.length === 10) {
+                    // 1. 기존 입력/수정 중이던 폼 데이터를 모두 초기화 (날짜도 비워짐)
+                    clearFormDetails();
+                    // 2. 변경된 날짜를 입력 필드에 다시 채워줌
+                    document.getElementById('eventDate').value = selectedDate;
+
+                    // 현재 선택된 조직의 행사 목록 중 날짜가 일치하는 행사가 있는지 필터링
+                    const matchingEvents = eventsList.filter(ev => ev.eventDate === selectedDate);
+                    
+                    if (matchingEvents.length > 0) {
+                        // 일치하는 행사가 있으면 선택 모달 팝업을 띄움
+                        showDuplicateEventModal(matchingEvents, selectedDate);
+                    } else {
+                        // 없으면 신규 등록 상태로 두고 단원 명부만 로드
+                        await loadMemberList();
+                    }
                 }
             });
 
@@ -955,9 +1134,11 @@
             // 편집 모드 해제
             form.removeAttribute('data-edit-id');
 
-            // 폼 필드 초기화 (구분/종류는 사용자 선택 유지 위해 주석 처리)
-            // if (form.category) form.category.value = '';
-            // if (form.type) form.type.value = '';
+            // 폼 필드 초기화
+            if (form.category) form.category.value = '';
+            if (form.type) form.type.value = '';
+            tempSavedDate = ''; // 임시 보관 날짜 초기화 (복원 동작과 꼬임 방지)
+            document.getElementById('eventDate').value = ''; // 날짜 필드 초기화 추가 (동일 날짜 재선택 시 change 이벤트가 발생하도록 함)
             document.getElementById('eventNameHidden').value = '';
             document.getElementById('eventNameSelect').value = '';
             document.getElementById('eventNameInput').value = '';
@@ -1039,6 +1220,51 @@
             }
         }
 
+        // 날짜 중복 시 나타나는 행사 선택 모달 핸들러
+        function showDuplicateEventModal(events, selectedDate) {
+            const modal = document.getElementById('duplicateEventModal');
+            const listContainer = document.getElementById('modalEventList');
+            
+            listContainer.innerHTML = '';
+            
+            // 모바일 화면 및 콤팩트함을 위해 행사명과 구분/종류 정보만 리스트로 표기
+            events.forEach(e => {
+                const li = document.createElement('li');
+                li.className = 'modal-list-item';
+                li.innerHTML = `
+                    <span style="font-weight: 700; color: #111; font-size: 1.15rem; word-break: keep-all;">${e.eventName}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                        <span class="modal-item-badge badge-${e.category || '실시'}">${e.category || '실시'} - ${e.type}</span>
+                        <i class="fas fa-chevron-right" style="color: #ccc; font-size: 0.95rem;"></i>
+                    </div>
+                `;
+                li.addEventListener('click', async () => {
+                    modal.style.display = 'none';
+                    await loadEventToForm(e.id, true); // 날짜 선택으로 인한 데이터 로딩 시에는 스크롤이 위로 튀지 않도록 고정
+                });
+                listContainer.appendChild(li);
+            });
+            
+            modal.style.display = 'flex';
+            
+            // "새로 등록하기" 버튼 클릭 시 -> 폼을 초기화하고 입력한 날짜를 복원하여 신규 등록 진행
+            const btnNew = document.getElementById('modalBtnNewEvent');
+            btnNew.onclick = async () => {
+                modal.style.display = 'none';
+                clearFormDetails();
+                document.getElementById('eventDate').value = selectedDate; // 날짜 복원
+                await loadMemberList();
+            };
+            
+            // "취소/닫기" 버튼 클릭 시 -> 날짜 선택을 취소하는 것이므로 폼을 완전히 비우고(날짜 포함) 팝업을 닫음
+            const btnClose = document.getElementById('modalBtnClose');
+            btnClose.onclick = async () => {
+                modal.style.display = 'none';
+                clearFormDetails();
+                await loadMemberList();
+            };
+        }
+
         async function loadMemberList() {
             const church = churchSelect.value;
             const curia = curiaSelect.value;
@@ -1099,24 +1325,37 @@
                 }
             });
 
-            // [🚨 정렬 강화] 이름순 정렬 (단원 우선, 협조단원 나중)
+            // [🚨 정렬 강화] 로그인 사용자(본인) 최우선 정렬 및 단원 우선, 협조단원 나중, 이름순 정렬
             filteredMembers.sort((a, b) => {
-                if (a.isAux !== b.isAux) return a.isAux ? 1 : -1;
-                return a.name.localeCompare(b.name);
+                const aIsMe = (currentUser && (a.id === currentUser.id || a.id === currentUser.uid || a.name === currentUser.name));
+                const bIsMe = (currentUser && (b.id === currentUser.id || b.id === currentUser.uid || b.name === currentUser.name));
+                
+                if (aIsMe !== bIsMe) return aIsMe ? -1 : 1; // 본인이 최우선
+                if (a.isAux !== b.isAux) return a.isAux ? 1 : -1; // 행동단원 우선
+                return a.name.localeCompare(b.name); // 가나다순
             });
 
             memberListBox.innerHTML = '';
             filteredMembers.forEach(m => {
+                const isMe = (currentUser && (m.id === currentUser.id || m.id === currentUser.uid || m.name === currentUser.name));
                 const baptismal = m.baptismalName ? `(${m.baptismalName})` : '';
+                
                 const fullDisplayName = m.isAux ? `(협조) ${m.name}${baptismal}` : `${m.name}${baptismal}`;
+                let displayHtmlName = fullDisplayName;
+                if (isMe) {
+                    displayHtmlName += ' <span style="color: var(--primary-color); font-size: 0.8rem; font-weight: 800; background: #fff9e6; padding: 2px 6px; border-radius: 10px; margin-left: 5px; border: 1px solid #ffe8cc;">⭐ 본인</span>';
+                }
                 
                 const div = document.createElement('div');
                 div.className = 'member-item';
-                div.style = "padding: 10px 12px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; cursor: pointer; display: flex; align-items: center;";
+                
+                // 본인의 항목일 경우 왼쪽 테두리에 골드 포인트를 주어 시인성 강화
+                const borderLeftStyle = isMe ? "border-left: 4px solid var(--primary-color);" : "";
+                div.style = `padding: 10px 12px; border-bottom: 1px solid #f0f0f0; ${borderLeftStyle} transition: background 0.2s; cursor: pointer; display: flex; align-items: center;`;
                 
                 div.innerHTML = `
                     <input type="checkbox" name="attendee" value="${fullDisplayName}" data-name="${m.name}" data-uid="${m.id || m.UID}" data-is-aux="${m.isAux}" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
-                    <span style="font-weight: 600; font-size: 1.05rem; color: #333; flex-grow: 1;">${fullDisplayName}</span>
+                    <span style="font-weight: 600; font-size: 1.05rem; color: #333; flex-grow: 1;">${displayHtmlName}</span>
                 `;
                 
                 const checkbox = div.querySelector('input');
@@ -1216,7 +1455,7 @@
             });
         }
 
-        async function loadEventToForm(id) {
+        async function loadEventToForm(id, preventScroll = false) {
             const event = eventsList.find(e => e.id === id);
             if (!event) return;
 
@@ -1248,10 +1487,10 @@
             await renderEventList();
 
             // 조직 로딩이 완료된 후 나머지 상세 정보 로드
-            await finishLoadingEvent(event);
+            await finishLoadingEvent(event, preventScroll);
         }
 
-        async function finishLoadingEvent(event) {
+        async function finishLoadingEvent(event, preventScroll = false) {
             console.log("[Debug] finishLoadingEvent 호출 시작. 불러온 행사 데이터:", event);
 
             form.category.value = event.category;
@@ -1315,7 +1554,14 @@
                 updateCount();
             }
 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!preventScroll) {
+                const target = document.getElementById('eventInfoSection');
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
         }
 
         async function handleSave(e) {
@@ -1435,9 +1681,26 @@
             }
         }
     </script>
+
+    <!-- 날짜 중복 행사 선택 모달 -->
+    <div id="duplicateEventModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title"><i class="fas fa-calendar-check"></i> 등록된 행사 선택</div>
+            <div class="modal-desc">해당 날짜에 이미 등록된 행사가 있습니다. 수정할 행사를 선택하거나 새로 등록하실 수 있습니다.</div>
+            <ul id="modalEventList" class="modal-list">
+                <!-- 동적으로 생성 -->
+            </ul>
+            <div class="modal-btn-group">
+                <button type="button" class="modal-btn modal-btn-new" id="modalBtnNewEvent">새로 등록하기</button>
+                <button type="button" class="modal-btn modal-btn-close" id="modalBtnClose">취소</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
+
+
 
 
 
