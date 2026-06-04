@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사(행사/교육/피정)관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260601_2008">
+    <link rel="stylesheet" href="styles.css?v=20260602_1430">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-form-container {
@@ -637,7 +637,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260601_2008"></script>
+    <script src="script.js?v=20260602_1430"></script>
     <script type="module">
         import { db, collection, query, where, orderBy, getDocs, getDoc, setDoc, deleteDoc, doc, serverTimestamp } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -925,10 +925,13 @@
             const editId = form.getAttribute('data-edit-id');
             if (!editId) return;
 
-            if (await showGlobalConfirm('정말로 이 기록을 삭제하시겠습니까?')) {
+            // [시니어 멘토 가이드] 삭제 시엔 경고를 위해 'error' 아이콘 테마로 컨펌 창을 띄웁니다.
+            if (await showGlobalConfirm('정말로 이 기록을 삭제하시겠습니까?', 'error')) {
                 try {
                     await deleteDoc(doc(db, 'events_list', editId));
-                    await showGlobalAlert('삭제되었습니다.');
+                    
+                    // [시니어 멘토 가이드] 성공 알림에는 'success' 타입을 지정하여 초록색 체크 마크를 보여줍니다.
+                    await showGlobalAlert('삭제되었습니다.', 'success');
 
                     // 삭제 후 폼 초기화 및 목록 갱신
                     form.removeAttribute('data-edit-id');
@@ -942,7 +945,8 @@
                     await renderEventList();
                 } catch (error) {
                     console.error("Error deleting event:", error);
-                    await showGlobalAlert('삭제 중 오류가 발생했습니다.');
+                    // [시니어 멘토 가이드] 오류 알림에는 'error' 타입을 지정하여 빨간색 경고를 띄웁니다.
+                    await showGlobalAlert('삭제 중 오류가 발생했습니다.', 'error');
                 }
             }
         }
@@ -975,7 +979,8 @@
         async function resetEventForm() {
             form.removeAttribute('data-edit-id');
             clearFormDetails();
-            await showGlobalAlert('행사 정보가 초기화되었습니다.');
+            // [시니어 멘토 가이드] 일반 안내 메시지에는 'info' 타입을 사용하여 부드러운 파란색 테마로 소통합니다.
+            await showGlobalAlert('행사 정보가 초기화되었습니다.', 'info');
         }
 
         async function updateEventNameOptions() {
@@ -1247,6 +1252,8 @@
         }
 
         async function finishLoadingEvent(event) {
+            console.log("[Debug] finishLoadingEvent 호출 시작. 불러온 행사 데이터:", event);
+
             form.category.value = event.category;
             form.eventDate.value = event.eventDate;
 
@@ -1260,7 +1267,14 @@
             const eventNameInput = document.getElementById('eventNameInput');
 
             eventNameHidden.value = event.eventName;
-            if (event.type === '레지오마리애 5대행사') {
+            
+            // [🚨 버그 수정] 종류별 추천 목록 유무에 따른 셀렉트 모드 판정 조건과 가시성 조건을 완벽히 동기화합니다.
+            const targetType = eventTypesList.find(t => t.name === event.type);
+            const isSelectMode = event.type === '레지오마리애 5대행사' || (targetType && targetType.baseEvents && targetType.baseEvents.length > 0);
+            
+            console.log(`[Debug] 행사명 로드 모드 판정 -> 종류: ${event.type}, Select 모드 여부: ${isSelectMode}, 행사명: ${event.eventName}`);
+
+            if (isSelectMode) {
                 eventNameSelect.value = event.eventName;
                 eventNameInput.value = '';
             } else {
@@ -1306,6 +1320,27 @@
 
         async function handleSave(e) {
             e.preventDefault();
+            console.log("[Debug] handleSave 저장 이벤트 트리거됨.");
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            // [시니어 멘토 가이드] 이미 제출 중인 상태라면 중복 처리를 차단합니다.
+            if (btnSubmit.disabled) {
+                console.log("[Debug] 이미 처리가 진행 중이므로 중복 저장을 방지합니다.");
+                return;
+            }
+
+            // [시니어 멘토 가이드] 저장 버튼 클릭 즉시 비활성화하여 비동기 대기 중 발생하는 추가 이벤트를 완전히 막습니다.
+            btnSubmit.disabled = true;
+            const originalHtml = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+
+            // 버튼 상태 복구 헬퍼 함수
+            const restoreSubmitButton = () => {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalHtml;
+                console.log("[Debug] 저장 버튼 상태 복구 완료.");
+            };
+
             const editId = form.getAttribute('data-edit-id');
             const attendees = Array.from(memberListBox.querySelectorAll('input[name="attendee"]:checked')).map(i => ({
                 name: i.dataset.name, // 순수 이름만 저장
@@ -1319,9 +1354,13 @@
                 presidiumName: document.getElementById('presidiumHidden').value,
             };
 
+            console.log("[Debug] 수집된 기본 데이터:", { editId, eventData, 참석단원수: attendees.length });
+
             // [🚨 철벽 검증] 조직 정보 필수 체크 (v16.86)
             if (!eventData.churchName || !eventData.curiaName || !eventData.presidiumName) {
-                await showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 저장이 차단되었습니다.');
+                console.warn("[Debug] 검증 실패: 조직 정보 누락");
+                await showGlobalAlert('⚠️ 성당, 꾸리아, 쁘레시디움 정보가 누락되었습니다. 저장이 차단되었습니다.', 'warning');
+                restoreSubmitButton();
                 return;
             }
 
@@ -1337,44 +1376,69 @@
             eventData.attendeeNames = attendeeNames.value;
             eventData.updatedAt = serverTimestamp();
 
+            console.log("[Debug] 전체 행사 저장 데이터 스냅샷:", eventData);
+
             if (!eventData.eventName) {
-                await showGlobalAlert('행사명을 입력하거나 선택해 주세요.');
+                console.warn("[Debug] 검증 실패: 행사명 누락");
+                await showGlobalAlert('행사명을 입력하거나 선택해 주세요.', 'warning');
+                restoreSubmitButton();
+
+                // [시니어 멘토 가이드] 현재 가시화되어 있는 행사명 입력 필드로 포커스를 안내하여 입력 편의성을 높입니다.
+                const eventNameSelect = document.getElementById('eventNameSelect');
+                const eventNameInput = document.getElementById('eventNameInput');
+                if (eventNameSelect.style.display !== 'none') {
+                    eventNameSelect.focus();
+                } else {
+                    eventNameInput.focus();
+                }
                 return;
             }
 
             if (eventData.type === '레지오마리애 5대행사') {
                 const list = ['아치에스', '야외행사', '쁘레시디움 친목회', '연차 총 친목회', '토론대회'];
                 if (!list.includes(eventData.eventName)) {
-                    await showGlobalAlert('레지오마리애 5대행사는 정해진 목록에서만 선택해 주세요.');
+                    console.warn("[Debug] 검증 실패: 5대행사 유효성 미충족", eventData.eventName);
+                    await showGlobalAlert('레지오마리애 5대행사는 정해진 목록에서만 선택해 주세요.', 'warning');
+                    restoreSubmitButton();
                     return;
                 }
             }
 
-            const btnSubmit = document.getElementById('btnSubmit');
-            btnSubmit.disabled = true;
+            // [시니어 멘토 가이드] 최종 동의 단계
+            const confirmMsg = editId ? '수정된 행사 정보를 저장하시겠습니까?' : '행사 정보를 저장하시겠습니까?';
+            if (!await showGlobalConfirm(confirmMsg, 'info')) {
+                console.log("[Debug] 사용자가 확인 모달에서 '취소'를 클릭함.");
+                restoreSubmitButton();
+                return;
+            }
+
+            // 실제 저장 진행 단계로 스피너 텍스트 갱신
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+            console.log("[Debug] Firebase Firestore 저장 시도 중...");
 
             try {
                 const docId = editId || Date.now().toString();
                 await setDoc(doc(db, 'events_list', docId), eventData);
+                console.log(`[Debug] Firestore 저장 성공! 문서 ID: ${docId}`);
 
                 // 저장 후 폼 초기화 (소속 정보는 유지)
                 clearFormDetails();
                 await loadMemberList();
                 await renderEventList();
-                await showGlobalAlert(editId ? '수정되었습니다.' : '성공적으로 저장되었습니다.');
+                await showGlobalAlert(editId ? '수정되었습니다.' : '성공적으로 저장되었습니다.', 'success');
             } catch (error) {
-                console.error("Error saving event:", error);
-                await showGlobalAlert('저장 중 오류가 발생했습니다.');
+                console.error("[Debug] Firestore 저장 중 전산 오류 발생:", error);
+                // [시니어 멘토 가이드] 오류 발생 시 상세 메시지(error.message)를 팝업에 노출하여 즉시 대처할 수 있도록 합니다.
+                await showGlobalAlert(`저장 중 오류가 발생했습니다.\n오류 정보: ${error.message || error}`, 'error');
             } finally {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-save"></i> 저 장';
+                restoreSubmitButton();
             }
         }
     </script>
 </body>
 
 </html>
+
 
 
 
