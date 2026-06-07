@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -7,6 +7,9 @@
     <title>간부현황 - 레지오 마리애</title>
     <link rel="stylesheet" href="styles.css?v=20260604_1517">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- ExcelJS & FileSaver.js 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2340">
     <style>
         /* Report specific styles */
@@ -439,6 +442,10 @@
                         style="height: 42px; background-color: #d4a017; color: white; border: none; padding: 0 35px; border-radius: 6px; font-weight: bold; font-size: 1rem;">
                         <i class="fas fa-search"></i> 조회
                     </button>
+                    <button id="btnExcel"
+                        style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; font-weight: bold; font-size: 1rem;">
+                        <i class="fas fa-file-excel"></i> 엑셀내려받기
+                    </button>
                     <button onclick="window.print()"
                         style="height: 42px; background-color: #333; color: white; border: none; padding: 0 35px; border-radius: 6px; font-weight: bold; font-size: 1rem;">
                         <i class="fas fa-print"></i> 인쇄
@@ -493,6 +500,8 @@
 
         let currentUser = null;
         let isAdmin = false;
+        // 엑셀 다운로드를 위해 필터링된 최종 간부 데이터를 보관하는 전역 변수
+        let currentFilteredOfficers = [];
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
@@ -504,6 +513,7 @@
         const endDateFilter = document.getElementById('endDateFilter');
         const nameFilter = document.getElementById('nameFilter');
         const btnSearch = document.getElementById('btnSearch');
+        const btnExcel = document.getElementById('btnExcel');
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
@@ -716,6 +726,7 @@
             });
 
             if (filtered.length === 0) {
+                currentFilteredOfficers = []; // 데이터가 없을 경우 초기화
                 reportContent.style.display = 'none';
                 noDataMsg.style.display = 'block';
                 return;
@@ -732,6 +743,9 @@
                 if (orderA !== orderB) return orderA - orderB;
                 return (a.appointmentDate || '').localeCompare(b.appointmentDate || '');
             });
+
+            // 엑셀 출력을 위해 최종 조회 결과 캐싱
+            currentFilteredOfficers = filtered;
 
             noDataMsg.style.display = 'none';
             reportContent.style.display = 'block';
@@ -779,6 +793,7 @@
 
         function setupEventListeners() {
             btnSearch.onclick = async () => await loadReport();
+            btnExcel.onclick = exportToExcel; // 엑셀 다운로드 핸들러 바인딩
 
             presidiumSearch.onfocus = () => renderPresidiumDropdown(presidiumSearch.value);
             presidiumSearch.oninput = () => renderPresidiumDropdown(presidiumSearch.value);
@@ -812,6 +827,398 @@
                     }
                 });
             });
+        }
+
+        // --- 엑셀 파일 다운로드 기능 구현 ---
+        // --- 2번째 시트: 역대 간부 이력 생성 함수 ---
+        async function generateHistorySheet(workbook, selectedChurch, selectedPresidium) {
+            if (!selectedChurch || !selectedPresidium || selectedChurch === '전체' || selectedPresidium === '전체') {
+                return; // 단일 쁘레시디움 정보가 명확히 지정되지 않은 경우 작성 생략
+            }
+
+            try {
+                // 1. Firestore에서 역대 주임신부(영적지도자) 정보 쿼리
+                const clergyQuery = query(
+                    collection(db, 'clergy_info'), 
+                    where('churchName', '==', selectedChurch),
+                    where('position', '==', '주임신부')
+                );
+                const clergySnap = await getDocs(clergyQuery);
+                const clergies = clergySnap.docs.map(doc => doc.data());
+                // 부임일 순 정렬
+                clergies.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+
+                // 2. Firestore에서 역대 간부 목록 정보 쿼리
+                const officerQuery = query(
+                    collection(db, 'officers_list'),
+                    where('churchName', '==', selectedChurch),
+                    where('presidiumName', '==', selectedPresidium)
+                );
+                const officerSnap = await getDocs(officerQuery);
+                const officers = officerSnap.docs.map(doc => doc.data());
+                // 임명일 순 정렬
+                officers.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+
+                // 3. 2번째 시트(역대 간부 이력) 생성
+                const worksheet = workbook.addWorksheet('역대 간부 이력');
+
+                // B열(2번 컬럼) 2행부터 메인 제목 기재
+                const startCol = 2;
+                const baseStartRow = 2;
+
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 4);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = `${selectedPresidium} 역대 간부 이력`;
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                worksheet.getCell(baseStartRow + 1, startCol).value = `성당: ${selectedChurch} | 쁘레시디움: ${selectedPresidium}`;
+                worksheet.getCell(baseStartRow + 1, startCol).font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+
+                const startRow = baseStartRow + 3; // B5행부터 표 헤더
+
+                // 헤더 구성 명세
+                const columns = [
+                    { label: '영적지도자 (부임기간)', width: 26 },
+                    { label: '단장 (임명기간)', width: 26 },
+                    { label: '부단장 (임명기간)', width: 26 },
+                    { label: '서기 (임명기간)', width: 26 },
+                    { label: '회계 (임명기간)', width: 26 }
+                ];
+
+                const headerRow = worksheet.getRow(startRow);
+                columns.forEach((col, idx) => {
+                    const cell = headerRow.getCell(startCol + idx);
+                    cell.value = col.label;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFEBF4FF' } // 연파랑
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                let currentRowNum = startRow + 1;
+
+                if (clergies.length === 0 && officers.length === 0) {
+                    worksheet.getRow(currentRowNum).getCell(startCol).value = '역대 임명 데이터가 존재하지 않습니다.';
+                    return;
+                }
+
+                // 날짜 포맷 헬퍼 (YYYY-MM-DD -> YYYY.MM.DD.)
+                const formatExcelDate = (d) => {
+                    if (!d) return '';
+                    const digits = d.replace(/[^0-9]/g, '');
+                    if (digits.length === 8) {
+                        return `${digits.substring(0, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}.`;
+                    }
+                    return d.replace(/-/g, '.') + (d.endsWith('.') ? '' : '.');
+                };
+
+                // 역할 표준화 매핑 딕셔너리
+                const roleMap = {
+                    'president': '단장', 'vice_president': '부단장', 'secretary': '서기', 'treasurer': '회계',
+                    '단장': '단장', '부단장': '부단장', '서기': '서기', '회계': '회계'
+                };
+
+                // 연속 재임 중인 간부의 유효 데이터를 매핑하고, 공석은 빈 문자열을 반환하는 헬퍼 함수
+                const getActiveValue = (list, idx, cEnd) => {
+                    if (list[idx]) {
+                        const o = list[idx];
+                        const oName = o.baptismalName ? `${o.name}(${o.baptismalName})` : o.name;
+                        const oTenure = `${formatExcelDate(o.appointmentDate)} ~ ${o.appointmentExpiryDate ? formatExcelDate(o.appointmentExpiryDate) : '재직 중'}`;
+                        return `${oName}\n(${oTenure})`;
+                    }
+                    // 마지막 간부의 재임 기간이 현재 신부님의 임기 영역까지 이어지는지 확인
+                    if (list.length > 0 && idx >= list.length) {
+                        const lastO = list[list.length - 1];
+                        const lastExpiry = lastO.appointmentExpiryDate || '9999-12-31';
+                        // 신부님 임기 종료일(cEnd) 시점까지 여전히 임기 종료가 안 되었다면 계속 일하고 있었던 것으로 간주
+                        if (lastExpiry >= cEnd) {
+                            const oName = lastO.baptismalName ? `${lastO.name}(${lastO.baptismalName})` : lastO.name;
+                            const oTenure = `${formatExcelDate(lastO.appointmentDate)} ~ ${lastO.appointmentExpiryDate ? formatExcelDate(lastO.appointmentExpiryDate) : '재직 중'}`;
+                            return `${oName}\n(${oTenure})`;
+                        }
+                    }
+                    return ''; // 실제 임기가 끝난 진짜 공석인 경우 공백 처리
+                };
+
+                // 각 신부님 재임 기간(세그먼트)을 기준으로 돌면서 겹치는 간부 이력을 분류하여 기재
+                clergies.forEach(clergy => {
+                    const cStart = clergy.appointmentDate || '0000-00-00';
+                    const cEnd = clergy.expiryDate || '9999-12-31';
+
+                    // 신부님 임기 내에 재직 기간이 오버랩되는 간부 목록 필터링
+                    const activeOfficers = officers.filter(o => {
+                        const oStart = o.appointmentDate || '0000-00-00';
+                        const oEnd = o.appointmentExpiryDate || '9999-12-31';
+                        // 동시 재임 오버랩 공식
+                        return oStart <= cEnd && cStart <= oEnd;
+                    });
+
+                    // 직급별 필터링
+                    const prs = activeOfficers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '단장');
+                    const vps = activeOfficers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '부단장');
+                    const scs = activeOfficers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '서기');
+                    const trs = activeOfficers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '회계');
+
+                    // 신부님 임기 영역 아래에 생성해야 할 행의 최대 개수 구하기
+                    const maxRows = Math.max(1, prs.length, vps.length, scs.length, trs.length);
+                    const rowStartNum = currentRowNum;
+
+                    for (let i = 0; i < maxRows; i++) {
+                        const row = worksheet.getRow(currentRowNum);
+
+                        // 신부님 정보 구성 (매 행 일단 기입 후 추후 세로 병합)
+                        const cName = clergy.baptismalName ? `${clergy.name}(${clergy.baptismalName})` : clergy.name;
+                        const cTenure = `${formatExcelDate(cStart)} ~ ${clergy.expiryDate ? formatExcelDate(clergy.expiryDate) : '재직 중'}`;
+                        row.getCell(startCol).value = `${cName}\n(${cTenure})`;
+
+                        // 단장, 부단장, 서기, 회계 연속 재직 판별 데이터 기입
+                        row.getCell(startCol + 1).value = getActiveValue(prs, i, cEnd);
+                        row.getCell(startCol + 2).value = getActiveValue(vps, i, cEnd);
+                        row.getCell(startCol + 3).value = getActiveValue(scs, i, cEnd);
+                        row.getCell(startCol + 4).value = getActiveValue(trs, i, cEnd);
+
+                        // 디자인 스타일 적용
+                        for (let colIdx = 0; colIdx < 5; colIdx++) {
+                            const cell = row.getCell(startCol + colIdx);
+                            cell.border = {
+                                top: { style: 'thin' },
+                                left: { style: 'thin' },
+                                bottom: { style: 'thin' },
+                                right: { style: 'thin' }
+                            };
+                            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                            cell.font = { size: 9 };
+                        }
+
+                        currentRowNum++;
+                    }
+
+                    // --- [개선] 현재 신부님(그룹)의 행 범위 내에서만 각각 세로 병합 수행 ---
+                    const rowEndNum = currentRowNum - 1;
+
+                    // 1. 영적지도자 열(B열) 세로 병합
+                    if (maxRows > 1) {
+                        worksheet.mergeCells(rowStartNum, startCol, rowEndNum, startCol);
+                    }
+
+                    // 2. 단장, 부단장, 서기, 회계 열 각각 병합 (B+1 ~ B+4)
+                    for (let col = startCol + 1; col < startCol + 5; col++) {
+                        let mergeStartRow = rowStartNum;
+                        let prevVal = worksheet.getRow(mergeStartRow).getCell(col).value;
+
+                        for (let r = rowStartNum + 1; r <= rowEndNum; r++) {
+                            const currentVal = worksheet.getRow(r).getCell(col).value;
+                            
+                            // 값이 동일하고, 비어있지 않은 유효 데이터일 때 병합 이행
+                            if (currentVal === prevVal && currentVal !== '' && currentVal !== null) {
+                                // 연속 재임 유지 중
+                            } else {
+                                const mergeEndRow = r - 1;
+                                if (mergeEndRow > mergeStartRow) {
+                                    worksheet.mergeCells(mergeStartRow, col, mergeEndRow, col);
+                                }
+                                mergeStartRow = r;
+                                prevVal = currentVal;
+                            }
+                        }
+                        // 루프 종료 후 남은 누적 행 병합
+                        if (rowEndNum > mergeStartRow) {
+                            worksheet.mergeCells(mergeStartRow, col, rowEndNum, col);
+                        }
+                    }
+                });
+
+                // A열 여백 및 각 컬럼 너비 조정
+                worksheet.getColumn(1).width = 3;
+                columns.forEach((col, idx) => {
+                    worksheet.getColumn(startCol + idx).width = col.width || 26;
+                });
+
+            } catch (err) {
+                console.error('[ExcelJS] generateHistorySheet failed:', err);
+            }
+        }
+
+        // --- 엑셀 파일 다운로드 기능 구현 ---
+        async function exportToExcel() {
+            if (!currentFilteredOfficers || currentFilteredOfficers.length === 0) {
+                if (window.showGlobalAlert) {
+                    window.showGlobalAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                } else {
+                    alert('조회된 데이터가 없습니다.');
+                }
+                return;
+            }
+
+            // 검색 조건 문자열 가공
+            let churchVal, curiaVal, presidiumVal;
+            if (isAdmin) {
+                churchVal = churchFilter.value || '전체';
+                curiaVal = curiaFilter.value || '전체';
+                presidiumVal = presidiumFilter.value || '전체';
+            } else {
+                churchVal = currentUser.churchName || '전체';
+                curiaVal = currentUser.curiaName || '전체';
+                presidiumVal = presidiumFilter.value || currentUser.presidiumName || '전체';
+            }
+            const rankVal = rankFilter.value || '전체';
+            const startVal = startDateFilter.value;
+            const endVal = endDateFilter.value;
+            const nameVal = nameFilter.value.trim() || '전체';
+
+            // 파일명 포맷: 간부현황_성당명_꾸리아명_오늘날짜.xlsx
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `간부현황_${churchVal}_${curiaVal}_${baseDateStr}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                
+                // 1. 첫 번째 시트 생성 (현재 간부현황 리스트)
+                const worksheet1 = workbook.addWorksheet('간부현황');
+
+                // B열(2번 컬럼), 2행부터 작성 시작
+                const startCol = 2; 
+                const baseStartRow = 2;
+
+                // 타이틀 병합 및 폰트 세팅
+                worksheet1.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 4);
+                const titleCell = worksheet1.getCell(baseStartRow, startCol);
+                titleCell.value = '간부 현황 조회 결과';
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 필터 요약 정보 출력
+                worksheet1.getCell(baseStartRow + 1, startCol).value = `성당: ${churchVal}`;
+                worksheet1.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아: ${curiaVal}`;
+                worksheet1.getCell(baseStartRow + 1, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
+                worksheet1.getCell(baseStartRow + 1, startCol + 3).value = `직급: ${rankVal}`;
+                worksheet1.getCell(baseStartRow + 1, startCol + 4).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : '전 기간'}`;
+                
+                const summaryCells = [
+                    worksheet1.getCell(baseStartRow + 1, startCol),
+                    worksheet1.getCell(baseStartRow + 1, startCol + 1),
+                    worksheet1.getCell(baseStartRow + 1, startCol + 2),
+                    worksheet1.getCell(baseStartRow + 1, startCol + 3),
+                    worksheet1.getCell(baseStartRow + 1, startCol + 4)
+                ];
+                summaryCells.forEach(cell => {
+                    cell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                });
+
+                const startRow = baseStartRow + 3; // B5행부터 데이터 표 작성
+
+                // 컬럼 명세 정의
+                const columns = [
+                    { key: 'role', label: '직급', width: 12 },
+                    { key: 'name', label: '성명', width: 12 },
+                    { key: 'baptismalName', label: '세례명', width: 15 },
+                    { key: 'feastDate', label: '축일', width: 10 },
+                    { key: 'appointmentDate', label: '임명일', width: 14 },
+                    { key: 'appointmentExpiryDate', label: '임명 만료일', width: 14 },
+                    { key: 'tenure', label: '재직기간', width: 18 },
+                    { key: 'phone', label: '연락처', width: 16 },
+                    { key: 'notes', label: '특이 및 참고사항', width: 35, alignLeft: true }
+                ];
+
+                // 표 헤더 렌더링 및 연파랑 스타일링
+                const headerRow = worksheet1.getRow(startRow);
+                columns.forEach((col, idx) => {
+                    const excelCol = startCol + idx;
+                    const cell = headerRow.getCell(excelCol);
+                    cell.value = col.label;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFEBF4FF' } // 헤더 연파랑 배경색
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // 직책 표기 변환 매핑
+                const roleMap = {
+                    'admin': '관리자',
+                    'president': '단장',
+                    'vice_president': '부단장',
+                    'secretary': '서기',
+                    'treasurer': '회계',
+                    'member': '단원'
+                };
+
+                // 데이터 셀 채우기
+                let currentRowNum = startRow + 1;
+                currentFilteredOfficers.forEach(item => {
+                    const row = worksheet1.getRow(currentRowNum);
+                    
+                    columns.forEach((col, idx) => {
+                        const excelCol = startCol + idx;
+                        const cell = row.getCell(excelCol);
+                        
+                        let val = '';
+                        if (col.key === 'role') {
+                            const rKey = (item.role || '').toLowerCase().trim();
+                            val = roleMap[rKey] || item.role || '-';
+                        } else if (col.key === 'tenure') {
+                            val = calculateTenure(item.appointmentDate, item.appointmentExpiryDate);
+                        } else {
+                            val = item[col.key] || '-';
+                        }
+                        
+                        cell.value = val;
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        cell.alignment = {
+                            vertical: 'middle',
+                            horizontal: col.alignLeft ? 'left' : 'center',
+                            wrapText: true
+                        };
+                        cell.font = { size: 10 };
+                    });
+                    
+                    currentRowNum++;
+                });
+
+                // A열 여백 부여
+                worksheet1.getColumn(1).width = 3;
+
+                // 정의된 컬럼 너비 지정
+                columns.forEach((col, idx) => {
+                    worksheet1.getColumn(startCol + idx).width = col.width || 12;
+                });
+
+                // 2. 두 번째 시트 생성 (역대 간부 이력)
+                await generateHistorySheet(workbook, churchVal, presidiumVal);
+
+                // 3. 엑셀 파일 변환 및 세이브 처리
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+                console.log(`[ExcelJS] Exported with history: ${filename}`);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                alert('엑셀 파일 생성 중 오류가 발생했습니다.');
+            }
         }
     </script>
 </body>
