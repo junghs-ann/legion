@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쁘레시디움 기본정보 관리 - 레지오 마리애 관리시스템</title>
     <!-- UI Update: 2026-03-13_1450 (Presidium Name Input Resized) -->
-    <link rel="stylesheet" href="styles.css?v=20260604_1517">
+    <link rel="stylesheet" href="styles.css?v=20260608_0701">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Form specific styles */
@@ -316,6 +316,11 @@
             animation: fadeIn 0.15s ease-out;
         }
 
+        /* [시니어 개발자 패치] 알림 모달이 이력 관리 모달보다 위에 렌더링되도록 층수(z-index) 상향 */
+        #customModal {
+            z-index: 100000;
+        }
+
         .custom-modal {
             background: white;
             padding: 25px;
@@ -572,6 +577,11 @@
                         <label>쁘레시디움 해체/이동일자</label>
                         <input type="date" name="dissolutionDate" placeholder="날짜 선택" autocomplete="one-time-code">
                     </div>
+                    <div class="form-group span-2" id="historyBtnContainer" style="display: none; margin-top: 15px;">
+                        <button type="button" id="btnManageHistory" class="btn-premium" style="background-color: var(--secondary-color); width: 100%; justify-content: center; height: 44px; margin-top: 5px;">
+                            <i class="fas fa-history"></i> 소속 꾸리아 및 회합 정보 이동 이력 관리
+                        </button>
+                    </div>
                 </div>
                 <!-- Hidden inputs for validation or future use -->
                 <input type="hidden" id="recordId">
@@ -598,13 +608,91 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260604_1517"></script>
+    <!-- 이동 이력 관리 모달 추가 -->
+    <div id="historyModal" class="custom-modal-overlay" style="display: none; justify-content: center; align-items: center;">
+        <div class="custom-modal" style="max-width: 650px; width: 90%; text-align: left; padding: 25px; display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; box-sizing: border-box;">
+            <h3 class="form-title" style="margin-bottom: 20px; font-size: 1.25rem; border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; margin-top: 0;">소속 꾸리아 및 회합 정보 이동 이력</h3>
+            
+            <form id="historyForm" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-sizing: border-box;">
+                <input type="hidden" id="historyId">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">소속 꾸리아 명(Cu.) *</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="histCuriaName" id="histCuriaNameInput" required placeholder="Cu. 명 입력" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" autocomplete="one-time-code">
+                            <ul id="histCuriaCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">소속 시작일 *</label>
+                        <input type="date" name="histStartDate" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">소속 종료일 *</label>
+                        <input type="date" name="histEndDate" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">주회합 요일 (선택)</label>
+                        <select name="histMeetingDay" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; background: white;">
+                            <option value="">기존 유지 (변경 없음)</option>
+                            <option value="일">일요일</option>
+                            <option value="월">월요일</option>
+                            <option value="화">화요일</option>
+                            <option value="수">수요일</option>
+                            <option value="목">목요일</option>
+                            <option value="금">금요일</option>
+                            <option value="토">토요일</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">주회합 시간 (선택)</label>
+                        <input type="time" name="histMeetingTime" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group" style="margin: 0; display: flex; align-items: flex-end;">
+                        <!-- 레이아웃 균형을 위한 빈 공간 -->
+                    </div>
+                    <div class="form-group span-2" style="grid-column: span 2; margin: 0;">
+                        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 5px;">주회합 장소 (선택)</label>
+                        <input type="text" name="histMeetingPlace" placeholder="해당 시점에 변경된 경우 입력" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" id="btnResetHistoryForm" class="btn-premium" style="background-color: #718096; padding: 6px 15px; font-size: 0.85rem; box-shadow: none; border-radius: 6px; height: 32px; min-width: 70px;">초기화</button>
+                    <button type="submit" class="btn-premium" style="background-color: var(--primary-color); padding: 6px 20px; font-size: 0.85rem; box-shadow: none; border-radius: 6px; height: 32px; min-width: 80px;">이력 저장</button>
+                </div>
+            </form>
+
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 15px; max-height: 180px; box-sizing: border-box;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; table-layout: fixed;">
+                    <thead style="background: #edf2f7; position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e0; font-weight: 600; width: 20%;">꾸리아 명</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e0; font-weight: 600; width: 20%;">시작일</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e0; font-weight: 600; width: 20%;">종료일</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e0; font-weight: 600; width: 25%;">요일/시간/장소</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e0; font-weight: 600; width: 15%;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- 스크립트로 동적 로딩 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="button" id="btnCloseHistoryModal" class="btn-premium btn-premium-close" style="width: 90px; border-radius: 6px; height: 34px; display: flex; justify-content: center; align-items: center; box-shadow: none;">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260608_0701"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
 
         // State
         let presidia_list = [];
+        let curia_list = [];
 
         // Auth Guard
         initAuthObserver(async (user, profile) => {
@@ -615,6 +703,12 @@
                 presidia_list = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id }));
                 updateChurchSelect();
             });
+
+            // Firestore real-time sync for curia_list
+            onSnapshot(collection(db, 'curia_list'), (snapshot) => {
+                curia_list = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id }));
+            });
+
             window.showCustomAlert = (message) => {
                 return new Promise((resolve) => {
                     const modal = document.getElementById('customModal');
@@ -788,13 +882,22 @@
                 const updateCuriaList = (filterText = '') => {
                     const selectedChurch = churchNameInput.value.trim();
 
-                    let filtered = presidia_list;
+                    // [시니어 개발자 패치] 쁘레시디움 목록 대신 등록된 공식 꾸리아 목록(curia_list)을 사용합니다.
+                    let filtered = curia_list;
                     if (selectedChurch) {
                         filtered = filtered.filter(p => (p.churchName || '').trim() === selectedChurch);
                     }
 
-                    let curiaNames = filtered.map(p => p.curiaName);
-                    curiaNames = [...new Set(curiaNames)].filter(n => n).sort();
+                    // [시니어 개발자 패치] 고유번호(uniqueNumber) 기준 오름차순 정렬 후 이름 추출
+                    const sortedCuriae = [...filtered].sort((a, b) => {
+                        const numA = parseInt(a.uniqueNumber || 99999);
+                        const numB = parseInt(b.uniqueNumber || 99999);
+                        if (numA !== numB) return numA - numB;
+                        return (a.curiaName || '').localeCompare(b.curiaName || '');
+                    });
+
+                    let curiaNames = sortedCuriae.map(p => p.curiaName);
+                    curiaNames = [...new Set(curiaNames)].filter(n => n);
 
                     if (filterText) {
                         curiaNames = curiaNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
@@ -808,6 +911,24 @@
                             curiaInputRef.value = name;
                             curiaCustomList.style.display = 'none';
                             presidiumNameInput.value = '';
+
+                            // [시니어 개발자 패치] 꾸리아 선택 시 공식 등록된 상급 평의회 정보(Co., Re., Se.) 자동 입력
+                            const matchedCuria = filtered.find(p => (p.curiaName || '').trim() === name);
+                            if (matchedCuria) {
+                                const comitiumInput = form.querySelector('input[name="comitiumName"]');
+                                const regiaInput = form.querySelector('input[name="regiaName"]');
+                                const senatusSelect = form.querySelector('select[name="senatusName"]');
+
+                                if (comitiumInput && matchedCuria.comitiumName) {
+                                    comitiumInput.value = matchedCuria.comitiumName;
+                                }
+                                if (regiaInput && matchedCuria.regiaName) {
+                                    regiaInput.value = matchedCuria.regiaName;
+                                }
+                                if (senatusSelect && matchedCuria.senatusName) {
+                                    senatusSelect.value = matchedCuria.senatusName;
+                                }
+                            }
                         });
                         curiaCustomList.appendChild(li);
                     });
@@ -928,6 +1049,11 @@
 
                         if (btnDelete) btnDelete.style.display = 'inline-block';
                         form.dataset.currentId = record.id; // ✅ 폼 객체에 ID를 확실하게 저장
+
+                        // 이동 이력 버튼 노출
+                        const historyBtnContainer = document.getElementById('historyBtnContainer');
+                        if (historyBtnContainer) historyBtnContainer.style.display = 'block';
+
                         console.log("📍 조회 완료 - ID:", record.id);
                         window.showCustomAlert('기존 정보를 불러왔습니다. 삭제 버튼이 활성화되었습니다.');
                     } else {
@@ -1068,6 +1194,10 @@
                             form.reset();
                             document.getElementById('recordId').value = '';
                             delete form.dataset.currentId;
+                            
+                            const historyBtnContainer = document.getElementById('historyBtnContainer');
+                            if (historyBtnContainer) historyBtnContainer.style.display = 'none';
+
                             if (!isDirectInput) {
                                 churchSelect.value = '';
                                 churchNameInput.value = '';
@@ -1120,11 +1250,23 @@
 
                                     if (targetId) {
                                         console.log("🗑️ 최종 삭제 실행 ID:", targetId);
+
+                                        // 쁘레시디움 관련 이동 이력도 삭제 (종속 삭제)
+                                        const qHist = query(collection(db, 'presidium_history'), where('presidiumId', '==', targetId));
+                                        const snapHist = await getDocs(qHist);
+                                        const deletePromises = snapHist.docs.map(docSnap => deleteDoc(doc(db, 'presidium_history', docSnap.id)));
+                                        await Promise.all(deletePromises);
+                                        console.log(`🗑️ 쁘레시디움 관련 이력 ${deletePromises.length}건이 자동 삭제되었습니다.`);
+
                                         await deleteDoc(doc(db, 'presidia_list', targetId));
                                         window.showCustomAlert('성공적으로 삭제되었습니다.');
                                         form.reset();
                                         delete form.dataset.currentId;
                                         if (document.getElementById('recordId')) document.getElementById('recordId').value = '';
+                                        
+                                        const historyBtnContainer = document.getElementById('historyBtnContainer');
+                                        if (historyBtnContainer) historyBtnContainer.style.display = 'none';
+
                                         churchSelect.value = '';
                                         churchNameInput.value = '';
                                         churchNameInput.dispatchEvent(new Event('input'));
@@ -1140,6 +1282,324 @@
                         });
                     });
                 }
+
+                // ==========================================
+                // [신규] 쁘레시디움 소속 꾸리아 및 회합 정보 이동 이력 관리 로직
+                // ==========================================
+                const historyModal = document.getElementById('historyModal');
+                const btnManageHistory = document.getElementById('btnManageHistory');
+                const btnCloseHistoryModal = document.getElementById('btnCloseHistoryModal');
+                const historyForm = document.getElementById('historyForm');
+                const historyTableBody = document.getElementById('historyTableBody');
+                const btnResetHistoryForm = document.getElementById('btnResetHistoryForm');
+                const histCuriaInput = document.getElementById('histCuriaNameInput');
+                const histCuriaCustomList = document.getElementById('histCuriaCustomList');
+
+                let activePresidiumHistory = []; // 현재 쁘레시디움의 이력 데이터 캐시
+
+                // 이동이력 꾸리아 추천 목록 업데이트
+                const updateHistCuriaList = (filterText = '') => {
+                    const selectedChurch = churchNameInput.value.trim();
+                    // [시니어 개발자 패치] 이동 이력 모달에서도 공식 꾸리아 목록(curia_list)을 참조합니다.
+                    let filtered = curia_list;
+                    if (selectedChurch) {
+                        filtered = filtered.filter(p => (p.churchName || '').trim() === selectedChurch);
+                    }
+                    // [시니어 개발자 패치] 고유번호(uniqueNumber) 기준 오름차순 정렬 후 이름 추출
+                    const sortedCuriae = [...filtered].sort((a, b) => {
+                        const numA = parseInt(a.uniqueNumber || 99999);
+                        const numB = parseInt(b.uniqueNumber || 99999);
+                        if (numA !== numB) return numA - numB;
+                        return (a.curiaName || '').localeCompare(b.curiaName || '');
+                    });
+
+                    let curiaNames = sortedCuriae.map(p => p.curiaName);
+                    curiaNames = [...new Set(curiaNames)].filter(n => n);
+
+                    if (filterText) {
+                        curiaNames = curiaNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
+                    }
+
+                    histCuriaCustomList.innerHTML = '';
+                    curiaNames.forEach(name => {
+                        const li = document.createElement('li');
+                        li.textContent = name;
+                        li.addEventListener('click', () => {
+                            histCuriaInput.value = name;
+                            histCuriaCustomList.style.display = 'none';
+                        });
+                        histCuriaCustomList.appendChild(li);
+                    });
+
+                    if (curiaNames.length > 0) {
+                        histCuriaCustomList.style.display = 'block';
+                    } else {
+                        histCuriaCustomList.style.display = 'none';
+                    }
+                };
+
+                histCuriaInput.addEventListener('focus', () => updateHistCuriaList(''));
+                histCuriaInput.addEventListener('click', () => updateHistCuriaList(''));
+                histCuriaInput.addEventListener('input', (e) => updateHistCuriaList(e.target.value));
+
+                document.addEventListener('click', (e) => {
+                    if (histCuriaInput && !histCuriaInput.contains(e.target) && !histCuriaCustomList.contains(e.target)) {
+                        histCuriaCustomList.style.display = 'none';
+                    }
+                });
+
+                // 모달창 열기
+                btnManageHistory.addEventListener('click', async () => {
+                    const currentId = document.getElementById('recordId').value || form.dataset.currentId;
+                    if (!currentId) {
+                        window.showCustomAlert('쁘레시디움을 먼저 조회해주세요.');
+                        return;
+                    }
+                    historyModal.style.display = 'flex';
+                    resetHistoryForm();
+                    await loadPresidiumHistory(currentId);
+                });
+
+                // 모달창 닫기
+                btnCloseHistoryModal.addEventListener('click', () => {
+                    historyModal.style.display = 'none';
+                });
+
+                // 이력 데이터 조회
+                async function loadPresidiumHistory(presidiumId) {
+                    historyTableBody.innerHTML = '<tr><td colspan="5" style="padding:15px; text-align:center;">이력을 불러오는 중...</td></tr>';
+                    try {
+                        const q = query(collection(db, 'presidium_history'), where('presidiumId', '==', presidiumId));
+                        const snap = await getDocs(q);
+                        activePresidiumHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        
+                        // 시작일 기준 내림차순 정렬 (최신 이력이 위에 오도록)
+                        activePresidiumHistory.sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+                        
+                        renderHistoryTable();
+                    } catch (err) {
+                        console.error("이력 로딩 실패:", err);
+                        historyTableBody.innerHTML = '<tr><td colspan="5" style="padding:15px; text-align:center; color:red;">이력을 불러오지 못했습니다.</td></tr>';
+                    }
+                }
+
+                // 이력 목록 렌더링
+                function renderHistoryTable() {
+                    if (activePresidiumHistory.length === 0) {
+                        historyTableBody.innerHTML = '<tr><td colspan="5" style="padding:15px; text-align:center; color:#718096;">이력 기록이 없습니다.</td></tr>';
+                        return;
+                    }
+                    
+                    historyTableBody.innerHTML = activePresidiumHistory.map(h => {
+                        const meetingInfo = [];
+                        if (h.meetingDay) meetingInfo.push(`${h.meetingDay}요일`);
+                        if (h.meetingTime) meetingInfo.push(h.meetingTime); // 시간 추가
+                        if (h.meetingPlace) meetingInfo.push(h.meetingPlace);
+                        const displayMeeting = meetingInfo.length > 0 ? meetingInfo.join(' / ') : '-';
+                        const displayEndDate = h.endDate === '9999-12-31' ? '현재 소속' : h.endDate;
+                        
+                        return `
+                            <tr style="border-bottom: 1px solid #e2e8f0; height:36px;">
+                                <td style="padding: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${h.curiaName}</td>
+                                <td style="padding: 6px;">${h.startDate}</td>
+                                <td style="padding: 6px;">${displayEndDate}</td>
+                                <td style="padding: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${displayMeeting}">${displayMeeting}</td>
+                                <td style="padding: 6px;">
+                                    <div style="display:flex; gap:4px; justify-content:center; align-items:center;">
+                                        <button type="button" class="btn-edit-hist btn-premium" data-id="${h.id}" style="background:#4a5568; padding:3px 6px; font-size:0.75rem; border-radius:4px; box-shadow:none; height:auto; min-width:auto; width:36px; display:inline-flex; justify-content:center; align-items:center; margin:0;">수정</button>
+                                        <button type="button" class="btn-delete-hist btn-premium" data-id="${h.id}" style="background:#e53e3e; padding:3px 6px; font-size:0.75rem; border-radius:4px; box-shadow:none; height:auto; min-width:auto; width:36px; display:inline-flex; justify-content:center; align-items:center; margin:0;">삭제</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    // 이벤트 리스너 바인딩
+                    historyTableBody.querySelectorAll('.btn-edit-hist').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const histId = e.currentTarget.dataset.id;
+                            const item = activePresidiumHistory.find(h => h.id === histId);
+                            if (item) fillHistoryForm(item);
+                        });
+                    });
+                    
+                    historyTableBody.querySelectorAll('.btn-delete-hist').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const histId = e.currentTarget.dataset.id;
+                            const confirmed = await window.showCustomConfirm('선택한 이동 이력을 삭제하시겠습니까?');
+                            if (confirmed) {
+                                try {
+                                    await deleteDoc(doc(db, 'presidium_history', histId));
+                                    window.showCustomAlert('이력이 정상적으로 삭제되었습니다.');
+                                    
+                                    const currentId = document.getElementById('recordId').value || form.dataset.currentId;
+                                    await loadPresidiumHistory(currentId);
+                                    await syncPresidiumBasicInfo(currentId); // 현재 소속 동기화
+                                } catch (err) {
+                                    console.error("이력 삭제 중 에러:", err);
+                                    window.showCustomAlert('삭제 중 오류가 발생했습니다.');
+                                }
+                            }
+                        });
+                    });
+                }
+
+                // 이력 폼 초기화
+                function resetHistoryForm() {
+                    document.getElementById('historyId').value = '';
+                    historyForm.querySelector('input[name="histCuriaName"]').value = '';
+                    historyForm.querySelector('input[name="histStartDate"]').value = '';
+                    historyForm.querySelector('input[name="histEndDate"]').value = '9999-12-31';
+                    historyForm.querySelector('select[name="histMeetingDay"]').value = '';
+                    historyForm.querySelector('input[name="histMeetingTime"]').value = ''; // 시간 초기화 추가
+                    historyForm.querySelector('input[name="histMeetingPlace"]').value = '';
+                }
+
+                btnResetHistoryForm.addEventListener('click', resetHistoryForm);
+
+                // 이력 폼 값 입력 (수정 모드 시)
+                function fillHistoryForm(item) {
+                    document.getElementById('historyId').value = item.id;
+                    historyForm.querySelector('input[name="histCuriaName"]').value = item.curiaName;
+                    historyForm.querySelector('input[name="histStartDate"]').value = item.startDate;
+                    historyForm.querySelector('input[name="histEndDate"]').value = item.endDate;
+                    historyForm.querySelector('select[name="histMeetingDay"]').value = item.meetingDay || '';
+                    historyForm.querySelector('input[name="histMeetingTime"]').value = item.meetingTime || ''; // 시간 입력 추가
+                    historyForm.querySelector('input[name="histMeetingPlace"]').value = item.meetingPlace || '';
+                }
+
+                // 이력 소속 기간 중복 체크
+                function hasDateConflict(startDate, endDate, excludeId = null) {
+                    for (const h of activePresidiumHistory) {
+                        if (excludeId && h.id === excludeId) continue;
+                        
+                        const startA = startDate;
+                        const endA = endDate;
+                        const startB = h.startDate;
+                        const endB = h.endDate;
+                        
+                        // 기간이 겹치는 경우
+                        if (startA <= endB && endA >= startB) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                // 기본 정보와 실시간 동기화
+                async function syncPresidiumBasicInfo(presidiumId) {
+                    try {
+                        const q = query(collection(db, 'presidium_history'), where('presidiumId', '==', presidiumId));
+                        const snap = await getDocs(q);
+                        const histories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        const isMoved = histories.length > 0;
+                        
+                        // 오늘 날짜 (KST 기준 YYYY-MM-DD)
+                        const today = new Date().toLocaleDateString('sv-SE');
+                        
+                        // 오늘 날짜가 기간에 포함되는 활성 이력 조회
+                        const activeHist = histories.find(h => h.startDate <= today && today <= h.endDate);
+                        
+                        const updateData = {
+                            isMoved: isMoved
+                        };
+                        
+                        if (activeHist) {
+                            updateData.curiaName = activeHist.curiaName;
+                            
+                            // 이력에 기재된 회합 정보가 있을 경우에만 동기화
+                            if (activeHist.meetingDay) {
+                                updateData.meetingDay = activeHist.meetingDay;
+                            }
+                            if (activeHist.meetingTime) {
+                                updateData.meetingTime = activeHist.meetingTime; // 시간 동기화 추가
+                            }
+                            if (activeHist.meetingPlace) {
+                                updateData.meetingPlace = activeHist.meetingPlace;
+                            }
+                        }
+                        
+                        // DB 업데이트
+                        await updateDoc(doc(db, 'presidia_list', presidiumId), updateData);
+                        
+                        // 현재 화면 폼에 사용자 피드백을 위해 데이터 갱신
+                        if (activeHist) {
+                            const curiaInput = form.querySelector('input[name="curiaName"]');
+                            if (curiaInput) curiaInput.value = activeHist.curiaName;
+                            
+                            if (activeHist.meetingDay) {
+                                const meetingDaySelect = form.querySelector('select[name="meetingDay"]');
+                                if (meetingDaySelect) meetingDaySelect.value = activeHist.meetingDay;
+                            }
+                            if (activeHist.meetingTime) {
+                                const meetingTimeInput = form.querySelector('input[name="meetingTime"]');
+                                if (meetingTimeInput) meetingTimeInput.value = activeHist.meetingTime; // 시간 폼 갱신 추가
+                            }
+                            if (activeHist.meetingPlace) {
+                                const meetingPlaceInput = form.querySelector('input[name="meetingPlace"]');
+                                if (meetingPlaceInput) meetingPlaceInput.value = activeHist.meetingPlace;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("기본 정보 동기화 실패:", err);
+                    }
+                }
+
+                // 이력 저장 (추가/수정)
+                historyForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const currentId = document.getElementById('recordId').value || form.dataset.currentId;
+                    if (!currentId) {
+                        window.showCustomAlert('쁘레시디움 정보가 유효하지 않습니다.');
+                        return;
+                    }
+                    
+                    const histId = document.getElementById('historyId').value;
+                    const curiaName = historyForm.querySelector('input[name="histCuriaName"]').value.trim();
+                    const startDate = historyForm.querySelector('input[name="histStartDate"]').value;
+                    const endDate = historyForm.querySelector('input[name="histEndDate"]').value;
+                    const meetingDay = historyForm.querySelector('select[name="histMeetingDay"]').value;
+                    const meetingTime = historyForm.querySelector('input[name="histMeetingTime"]').value; // 시간 추출 추가
+                    const meetingPlace = historyForm.querySelector('input[name="histMeetingPlace"]').value.trim();
+                    
+                    if (startDate > endDate) {
+                        window.showCustomAlert('시작일이 종료일보다 늦을 수 없습니다.');
+                        return;
+                    }
+                    
+                    if (hasDateConflict(startDate, endDate, histId)) {
+                        window.showCustomAlert('입력한 소속 기간이 이미 등록된 다른 소속 기간과 중복됩니다.\n날짜를 다시 확인해주세요.');
+                        return;
+                    }
+                    
+                    const data = {
+                        presidiumId: currentId,
+                        curiaName,
+                        startDate,
+                        endDate,
+                        meetingDay,
+                        meetingTime, // 시간 추가
+                        meetingPlace,
+                        updatedAt: serverTimestamp()
+                    };
+                    
+                    try {
+                        if (histId) {
+                            await updateDoc(doc(db, 'presidium_history', histId), data);
+                            await window.showCustomAlert('이력이 정상적으로 수정되었습니다.');
+                        } else {
+                            await addDoc(collection(db, 'presidium_history'), data);
+                            await window.showCustomAlert('이력이 정상적으로 등록되었습니다.');
+                        }
+                        
+                        resetHistoryForm();
+                        await loadPresidiumHistory(currentId);
+                        await syncPresidiumBasicInfo(currentId); // 현재 소속 동기화
+                    } catch (err) {
+                        console.error("이력 저장 실패:", err);
+                        await window.showCustomAlert('이력 저장 중 오류가 발생했습니다.');
+                    }
+                });
 
                 // Enter Key Navigation
                 form.addEventListener('keydown', (e) => {
@@ -1178,6 +1638,10 @@
 </body>
 
 </html>
+
+
+
+
 
 
 

@@ -530,58 +530,44 @@ window.initCommonMenus = (profile, logoutUser) => {
                 item.style.setProperty('display', isAdmin ? 'block' : 'none', 'important');
                 
                 const subMenu = item.querySelector('.sub-menu');
+                if (subMenu && isAdmin) {
+                    // 기존 서브메뉴 항목 전부 비우기 (동적 재생성하여 중복 방지 및 정돈)
+                    subMenu.innerHTML = '';
 
-                // [새 기능] 성직자/수도자 정보 관리 메뉴 추가
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="clergy_info_management"]')) {
-                    const presidiumLink = subMenu.querySelector('a[href*="presidium_register.html"]');
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="clergy_info_management.html">성직자/수도자 정보관리</a>';
-                    if (presidiumLink && presidiumLink.parentElement.nextSibling) {
-                        subMenu.insertBefore(li, presidiumLink.parentElement.nextSibling);
-                    } else {
+                    // 1. 기본 관리 메뉴 구성
+                    const menuItems = [
+                        { href: 'curia_register.html', text: '꾸리아 기본 정보 관리', style: 'font-weight: bold; color: #2e7d32;' },
+                        { href: 'presidium_register.html', text: '쁘레시디움 기본정보 관리' },
+                        { href: 'clergy_info_management.html', text: '성직자/수도자 정보관리' },
+                        { href: 'activity_register.html', text: '활동항목 관리' },
+                        { href: 'accounting_management.html', text: '회계 입/출금 항목관리' },
+                        { href: 'member_management.html', text: '회원가입정보 관리' },
+                        { href: 'event_type_register.html', text: '📋 행사 종류 관리', style: 'color: #6a1b9a; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px;' }
+                    ];
+
+                    menuItems.forEach(mi => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<a href="${mi.href}"${mi.style ? ` style="${mi.style}"` : ''}>${mi.text}</a>`;
                         subMenu.appendChild(li);
-                    }
-                }
+                    });
 
-                // [시니어 개발자 패치] 관리자 서브메뉴에 '데이터 표준화 진단' 링크 동적 주입
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_data"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="diagnose_data.html">데이터 표준화 진단</a>';
-                    subMenu.appendChild(li);
-                }
-
-                // [새 기능] 단원 UID 누락 정비 링크 동적 주입
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_members_uid"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="diagnose_members_uid.html">단원 UID 누락 정비</a>';
-                    subMenu.appendChild(li);
-                }
-
-                // [새 기능] 간부 UID 누락 정비 링크 동적 주입
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_officers_uid"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="diagnose_officers_uid.html">간부 UID 누락 정비</a>';
-                    subMenu.appendChild(li);
-                }
-
-                // [새 기능] 쁘레시디움 ID 진단 및 정비 링크 동적 주입 (어제 완료 건)
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="diagnose_empty_ids"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="diagnose_empty_ids.html">쁘레시디움 ID 진단 및 정비</a>';
-                    subMenu.appendChild(li);
-                }
-                // 기존 데이터 일괄 정리가 있다면 유지하되 아래에 배치 (필요시)
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="data_cleanup"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="data_cleanup.html">데이터 일괄 정리(구)</a>';
-                    subMenu.appendChild(li);
-                }
-
-                // [새 기능] 행사 종류 관리 메뉴 추가 (v16.88)
-                if (subMenu && isAdmin && !subMenu.querySelector('a[href*="event_type_register"]')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = '<a href="event_type_register.html" style="color: #6a1b9a; font-weight: bold; border-top: 1px solid #eee; margin-top: 5px; padding-top: 8px;">📋 행사 종류 관리</a>';
-                    subMenu.appendChild(li);
+                    // 2. 신설 3단계 "📂 데이터 관리" 그룹 추가
+                    const nestedLi = document.createElement('li');
+                    nestedLi.className = 'nested-menu-item';
+                    nestedLi.innerHTML = `
+                        <a href="javascript:void(0)" class="nested-trigger" style="font-weight: bold; color: #e67e22; display: flex; justify-content: space-between; align-items: center;">
+                            <span>📂 데이터 관리</span>
+                            <i class="fas fa-chevron-right nested-arrow" style="font-size: 0.8rem; transition: transform 0.3s; margin-left: 8px;"></i>
+                        </a>
+                        <ul class="nested-sub-menu">
+                            <li><a href="diagnose_data.html">데이터 표준화 진단</a></li>
+                            <li><a href="diagnose_members_uid.html">단원 UID 누락 정비</a></li>
+                            <li><a href="diagnose_officers_uid.html">간부 UID 누락 정비</a></li>
+                            <li><a href="diagnose_empty_ids.html">쁘레시디움 ID 진단 및 정비</a></li>
+                            <li><a href="data_cleanup.html">데이터 일괄 정리(구)</a></li>
+                        </ul>
+                    `;
+                    subMenu.appendChild(nestedLi);
                 }
             }
 
@@ -676,6 +662,23 @@ window.initCommonMenus = (profile, logoutUser) => {
             li.innerHTML = '<span class="nav-link" style="cursor:pointer;" onclick="window.handleLogout()"><i class="fas fa-sign-out-alt"></i> 로그아웃</span>';
             li.style.setProperty('display', 'block', 'important');
             navMenu.appendChild(li);
+        }
+
+        // [신설] 3단계 데이터 관리 메뉴 아코디언 토글 (모바일용 및 터치용)
+        const nestedTrigger = navMenu.querySelector('.nested-trigger');
+        const nestedItem = navMenu.querySelector('.nested-menu-item');
+        if (nestedTrigger && nestedItem) {
+            nestedTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // 부모 메뉴가 닫히는 현상 방지
+                
+                const isOpen = nestedItem.classList.contains('active-nested');
+                if (isOpen) {
+                    nestedItem.classList.remove('active-nested');
+                } else {
+                    nestedItem.classList.add('active-nested');
+                }
+            });
         }
         console.log("Common menus initialized (vFinal with Global Handler).");
     }, 50);

@@ -343,6 +343,7 @@ body {
     opacity: 1;
     visibility: visible;
     padding: 10px 0;
+    overflow: visible; /* [3단계 드롭다운 패치] 자식 메뉴가 잘리지 않도록 영역 밖 노출 허용 */
 }
 
 .sub-menu li a {
@@ -378,6 +379,7 @@ body {
         opacity: 1;
         visibility: visible;
         margin-top: 5px;
+        overflow: visible; /* [3단계 드롭다운 패치] 데스크탑 마우스 호버 시 자식 메뉴 노출 허용 */
     }
 }
 
@@ -729,5 +731,99 @@ body {
 @media (max-width: 480px) {
     .footer-credit {
         font-size: 0.72rem;
+    }
+}
+
+/* === 3단계 데이터 관리 메뉴 스타일 (PC & 모바일 대응) === */
+@media (min-width: 1025px) {
+    .nested-menu-item {
+        position: relative;
+    }
+    
+    .nested-sub-menu {
+        position: absolute;
+        top: 0;
+        left: 100%;
+        background-color: #ffffff;
+        min-width: 220px;
+        list-style: none;
+        border-radius: 2px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 0;
+        display: block;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1002;
+        border: 1px solid #eee;
+        border-top: 3px solid var(--secondary-color);
+        margin-left: 2px;
+    }
+    
+    .nested-menu-item:hover .nested-sub-menu {
+        max-height: 800px;
+        opacity: 1;
+        visibility: visible;
+        padding: 10px 0;
+    }
+    
+    .nested-menu-item:hover .nested-arrow {
+        transform: rotate(90deg);
+        color: var(--secondary-color);
+    }
+    
+    .nested-sub-menu li a {
+        padding: 12px 20px;
+        border-bottom: 1px solid #f8f9fa;
+        font-size: 0.95rem;
+    }
+    
+    .nested-sub-menu li:last-child a {
+        border-bottom: none;
+    }
+    
+    .nested-sub-menu li a:hover {
+        background-color: #f5f5f5;
+        color: var(--primary-color);
+        padding-left: 25px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .nested-sub-menu {
+        list-style: none;
+        background-color: #f0f0f0;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+        padding: 0;
+        width: 100%;
+    }
+    
+    .nested-menu-item.active-nested .nested-sub-menu {
+        max-height: 800px;
+        opacity: 1;
+        visibility: visible;
+        padding: 5px 0;
+    }
+    
+    .nested-menu-item.active-nested .nested-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .nested-sub-menu li a {
+        padding-left: 55px !important;
+        font-size: 0.9rem !important;
+        background-color: #f0f0f0 !important;
+        color: #555 !important;
+        border-bottom: 1px solid #e5e5e5;
+    }
+    
+    .nested-sub-menu li a:active {
+        background-color: #e0e0e0 !important;
     }
 }

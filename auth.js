@@ -10,7 +10,11 @@ import {
     doc,
     setDoc,
     getDoc,
-    updateDoc
+    updateDoc,
+    collection,
+    query,
+    where,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- Role Standardization (New) ---
@@ -151,23 +155,84 @@ export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
             // Get most recent profile from Firestore
             const profile = await getUserProfile(user.uid);
             if (profile) {
+                // [시니어 개발자 패치] 30분 로컬 캐시를 이용한 오늘 날짜 기준 꾸리아 소속 동적 보정
+                let curiaName = profile.curiaName || '';
+                const todayStr = new Date().toISOString().split('T')[0];
+
+                if (profile.presidiumName && profile.churchName) {
+                    try {
+                        const now = Date.now();
+                        const cacheKey = `curiaCache_${user.uid}`;
+                        const cachedDataStr = localStorage.getItem(cacheKey);
+                        let useCache = false;
+
+                        if (cachedDataStr) {
+                            const cache = JSON.parse(cachedDataStr);
+                            // 캐시된 쁘레시디움명이 현재와 같고, 만료시간(expiry)이 지나지 않았으면 캐시를 그대로 사용
+                            if (cache.presidiumName === profile.presidiumName && cache.expiry > now) {
+                                curiaName = cache.curiaName;
+                                useCache = true;
+                                console.log("[Auth Cache] Using cached curia:", curiaName);
+                            }
+                        }
+
+                        if (!useCache) {
+                            // 캐시가 없거나 만료된 경우 Firestore 조회 실행
+                            // 1. presidia_list에서 쁘레시디움 고유 ID 조회
+                            const prQuery = query(
+                                collection(db, "presidia_list"),
+                                where("churchName", "==", profile.churchName),
+                                where("presidiumName", "==", profile.presidiumName)
+                            );
+                            const prSnap = await getDocs(prQuery);
+                            if (!prSnap.empty) {
+                                const prDoc = prSnap.docs[0];
+                                const prId = prDoc.id;
+                                const prData = prDoc.data();
+                                
+                                // 2. presidium_history에서 오늘 날짜에 소속되었던 역사 소속 조회
+                                const histQuery = query(
+                                    collection(db, "presidium_history"),
+                                    where("presidiumId", "==", prId),
+                                    where("startDate", "<=", todayStr),
+                                    where("endDate", ">=", todayStr)
+                                );
+                                const histSnap = await getDocs(histQuery);
+                                if (!histSnap.empty) {
+                                    curiaName = histSnap.docs[0].data().curiaName || prData.curiaName || curiaName;
+                                } else {
+                                    curiaName = prData.curiaName || curiaName;
+                                }
+
+                                // 30분 유효 캐시 저장 (30분 = 30 * 60 * 1000 ms)
+                                const expiry = now + (30 * 60 * 1000);
+                                localStorage.setItem(cacheKey, JSON.stringify({
+                                    curiaName: curiaName,
+                                    presidiumName: profile.presidiumName,
+                                    expiry: expiry
+                                }));
+                                console.log("[Auth Cache] Firestore loaded & cached curia:", curiaName);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("[Auth] 동적 꾸리아 갱신 중 오류:", err);
+                    }
+                }
+
                 // [V17.0] 표준 필드명 및 식별자(ID) 동기화 보강
                 const standardizedProfile = {
                     ...profile,
                     uid: user.uid, // Auth UID 보존
                     churchName: profile.churchName || '',
                     presidiumName: profile.presidiumName || '',
-                    curiaName: profile.curiaName || '',
+                    curiaName: curiaName, // 동적으로 보정된 실시간 꾸리아명 적용
                     role: profile.role || 'member'
                 };
 
                 // [핵심] 단원 명부 ID(memberId)가 있으면 이를 기본 식별자(id)로 사용
-                // 관리자가 보고 있는 ID와 단원 본인이 로그인했을 때 사용하는 ID를 일치시킵니다.
                 if (profile.memberId) {
                     standardizedProfile.id = profile.memberId;
                 } else {
-                    // [V17.0] Fallback 제거: 명확한 데이터 연결을 위해 보조 매칭 로직을 삭제함.
-                    // 향후 데이터 정리 도구를 통해 모든 사용자의 memberId를 채워 넣는 방식으로 해결합니다.
                     standardizedProfile.id = profile.id || user.uid;
                 }
                 
@@ -178,6 +243,12 @@ export function initAuthObserver(onUserAuthenticated, onUserNotAuthenticated) {
             }
         } else {
             localStorage.removeItem('currentUser');
+            // 캐시 데이터도 함께 제거하여 로그아웃 시 깔끔하게 청소
+            for (let key in localStorage) {
+                if (key.startsWith("curiaCache_")) {
+                    localStorage.removeItem(key);
+                }
+            }
             if (onUserNotAuthenticated) onUserNotAuthenticated();
         }
     });

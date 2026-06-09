@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>꾸리아 기본 정보 관리 - 레지오 마리애 관리시스템</title>
+    <link rel="stylesheet" href="styles.css?v=20260608_0701">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Form specific styles */
+        .register-form-container {
+            background: rgba(255, 255, 248, 0.98); /* 쁘레시디움 화면과 동일한 고급스러운 미색 */
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 120px auto 40px;
+            text-align: left;
+            position: relative;
+        }
+
+        .form-title {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            font-size: 1.5rem;
+            word-break: keep-all;
+        }
+
+        /* 상단 우측 닫기 버튼 */
+        .btn-close-x {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: #adb5bd;
+            cursor: pointer;
+            z-index: 10;
+            transition: color 0.2s, transform 0.2s;
+            padding: 5px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close-x:hover {
+            color: #495057;
+            transform: scale(1.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .span-2 {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 768px) {
+            .span-2 {
+                grid-column: span 1 !important;
+            }
+        }
+
+        /* 입력 그룹 스타일 */
+        .church-name-group,
+        .curia-name-group,
+        .spiritual-director-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .church-name-group select,
+        .church-name-group input {
+            flex: 1;
+        }
+
+        .btn-toggle-church {
+            width: 100px;
+            height: 42px;
+            background: #666;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background-color: white;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+        }
+
+        /* 하단 고정 버튼 그룹 */
+        .btn-sticky-group {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10000;
+            width: fit-content;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 40px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(212, 160, 23, 0.2);
+        }
+
+        .btn-premium {
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            white-space: nowrap;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-premium-save {
+            background-color: var(--primary-color);
+        }
+
+        .btn-premium-delete {
+            background-color: #e53e3e;
+        }
+
+        .btn-premium-close {
+            background-color: #718096;
+        }
+
+        .custom-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .custom-dropdown li {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .custom-dropdown li:hover {
+            background-color: #f5f5f5;
+        }
+
+        .input-group-relative {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .unique-number-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .unique-number-group label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+            margin: 0 !important;
+        }
+
+        .input-unique-number {
+            width: 120px;
+            text-align: center;
+            background-color: #f8f9fa !important;
+        }
+
+        /* 모달 오버레이 스타일 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(2px);
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .custom-modal-message {
+            font-size: 1.05rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: keep-all;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-modal {
+            padding: 10px 30px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .btn-modal-confirm {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-modal-cancel {
+            background: #eee;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .register-form-container {
+                margin-top: 80px;
+                padding: 20px;
+                width: calc(100% - 30px);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px;
+            }
+
+            .church-name-group,
+            .curia-name-group,
+            .spiritual-director-group {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+
+            .btn-sticky-group {
+                width: calc(100% - 20px);
+                max-width: 500px;
+                padding: 8px 12px;
+                bottom: 20px;
+                gap: 6px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .btn-premium {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+                flex: 1;
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <a href="dashboard.html" class="brand-logo">레지오 마리애 관리시스템</a>
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <!-- 정적 메뉴 뼈대 (스크립트로 공통 처리되지만 템플릿 유지용) -->
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-link">등록관리</span>
+                <ul class="sub-menu">
+                    <li><a href="attendance_status.html">출&nbsp;&nbsp;&nbsp;석</a></li>
+                    <li><a href="activity_entry.html">활동보고</a></li>
+                    <li><a href="easy_activity_report.html">&nbsp;&nbsp;ㄴ 간편활동보고</a></li>
+                    <li><a href="accounting_ledger.html">회&nbsp;&nbsp;&nbsp;계</a></li>
+                    <li><a href="auxiliary_care_management.html">협조단원 돌봄</a></li>
+                    <li><a href="event_management.html">행사(행사/교육/피정)관리</a></li>
+                    <li><a href="council_attendance_management.html">평의회 출석 관리</a></li>
+                    <li><a href="member_register.html">단원관리</a></li>
+                    <li><a href="officer_management.html">&nbsp;&nbsp;ㄴ 간부관리</a></li>
+                    <li><a href="member_status.html">&nbsp;&nbsp;ㄴ 협조단원 관리</a></li>
+                    <li><a href="praetorium_management.html">&nbsp;&nbsp;ㄴ 쁘레또리움 관리</a></li>
+                    <li><a href="adjutorium_management.html">&nbsp;&nbsp;ㄴ 아듀또리움 관리</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">각종 장부</span>
+                <ul class="sub-menu">
+                    <li><a href="service_record.html">복무기록부</a></li>
+                    <li><a href="attendance_history.html">출결내역</a></li>
+                    <li><a href="accounting_report.html">입출내역</a></li>
+                    <li><a href="activity_stats_total.html">활동 내역</a></li>
+                    <li><a href="event_history.html">행사관리내역</a></li>
+                    <li><a href="auxiliary_care_history.html">협조단원 돌봄내역</a></li>
+                    <li><a href="council_attendance_history.html">평의회 출석 내역</a></li>
+                    <li><a href="auxiliary_member_list.html">협조단원 명부</a></li>
+                    <li><a href="member_status_active.html">단원 현황</a></li>
+                    <li><a href="officer_status.html">간부현황</a></li>
+                    <li><a href="prae_adj_status.html">쁘레/아듀또리움 현황</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">소통</span>
+                <ul class="sub-menu">
+                    <li><a href="notice_management.html">공지사항</a></li>
+                    <li><a href="schedule_management.html">일정</a></li>
+                    <li><a href="board_management.html">게시판</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">보고서</span>
+                <ul class="sub-menu">
+                    <li><a href="monthly_report.html">월례보고서</a></li>
+                    <li><a href="business_report.html">사업보고서</a></li>
+                </ul>
+            </li>
+            <li class="nav-item" id="menu-resources" style="display: none;">
+                <span class="nav-link">자료실</span>
+                <ul class="sub-menu">
+                    <li><a href="#">문서 서식</a></li>
+                    <li><a href="#">사진첩</a></li>
+                    <li><a href="#">지침 다운로드</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link">관리자</span>
+                <ul class="sub-menu">
+                    <li><a href="curia_register.html" style="font-weight: bold; color: #2e7d32;">꾸리아 기본 정보 관리</a></li>
+                    <li><a href="presidium_register.html">쁘레시디움 기본정보 관리</a></li>
+                    <li><a href="clergy_info_management.html">성직자/수도자 정보관리</a></li>
+                    <li><a href="activity_register.html">활동항목 관리</a></li>
+                    <li><a href="accounting_management.html">회계 입/출금 항목관리</a></li>
+                    <li><a href="member_management.html">회원가입정보 관리</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <div class="main-content">
+        <div class="register-form-container">
+            <button type="button" class="btn-close-x" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i></button>
+            <h2 class="form-title">꾸리아 기본 정보 관리</h2>
+            <form id="curiaForm" autocomplete="one-time-code">
+                <div class="form-grid">
+                    <!-- 1. 성당 명 -->
+                    <div class="form-group">
+                        <label>성당 명</label>
+                        <div class="church-name-group">
+                            <select id="churchSelect">
+                                <option value="">성당 선택</option>
+                            </select>
+                            <input type="text" name="churchName" id="churchNameInput" required placeholder="성당 명 입력" style="display: none;" autocomplete="one-time-code">
+                            <button type="button" id="btnToggleChurchInput" class="btn-toggle-church">직접 입력</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. 꾸리아 명 -->
+                    <div class="form-group">
+                        <label>꾸리아 명(Cu.)</label>
+                        <div class="curia-name-group">
+                            <div class="input-group-relative">
+                                <input type="text" name="curiaName" id="curiaNameInput" required placeholder="Cu. 이름을 입력하세요" autocomplete="one-time-code">
+                                <ul id="curiaCustomList" class="custom-dropdown"></ul>
+                            </div>
+                            <button type="button" id="btnView" class="btn-toggle-church" style="background-color: var(--secondary-color);">조회</button>
+                            <div class="unique-number-group">
+                                <label>고유번호:</label>
+                                <input type="text" name="uniqueNumber" placeholder="고유번호" class="input-unique-number" autocomplete="one-time-code" title="고유번호를 입력하거나 자동 생성 번호를 확인하세요">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 소속 꼬미시움 명 -->
+                    <div class="form-group">
+                        <label>소속 꼬미시움 명(Co.)</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="comitiumName" placeholder="Co. 이름을 입력하세요" autocomplete="one-time-code">
+                            <ul id="comitiumCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+
+                    <!-- 4. 소속 레지아 명 -->
+                    <div class="form-group">
+                        <label>소속 레지아 명(Re.)</label>
+                        <div class="input-group-relative">
+                            <input type="text" name="regiaName" placeholder="Re. 이름을 입력하세요" autocomplete="one-time-code">
+                            <ul id="regiaCustomList" class="custom-dropdown"></ul>
+                        </div>
+                    </div>
+
+                    <!-- 5. 소속 세나뚜스 명 -->
+                    <div class="form-group">
+                        <label>소속 세나뚜스 명</label>
+                        <select name="senatusName" required>
+                            <option value="">선택하세요</option>
+                            <option value="서울">서울</option>
+                            <option value="광주">광주</option>
+                            <option value="대구">대구</option>
+                        </select>
+                    </div>
+
+                    <!-- 6. 설립일 및 승인일 -->
+                    <div class="form-group">
+                        <label>설립일</label>
+                        <input type="date" name="foundationDate" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group">
+                        <label>승인일</label>
+                        <input type="date" name="approvalDate" autocomplete="one-time-code">
+                    </div>
+
+                    <!-- 7. 꾸리아 월례회의 정보 (주회합 정보 -> 명칭 변경 요청 반영) -->
+                    <div class="form-group">
+                        <label>월례회의 요일</label>
+                        <select name="meetingDay">
+                            <option value="">선택하세요</option>
+                            <option value="일">일요일</option>
+                            <option value="월">월요일</option>
+                            <option value="화">화요일</option>
+                            <option value="수">수요일</option>
+                            <option value="목">목요일</option>
+                            <option value="금">금요일</option>
+                            <option value="토">토요일</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>월례회의 일시</label>
+                        <input type="time" name="meetingTime" autocomplete="one-time-code">
+                    </div>
+                    <div class="form-group span-2">
+                        <label>월례회의 장소</label>
+                        <input type="text" name="meetingPlace" placeholder="월례회의 장소를 입력하세요" autocomplete="one-time-code">
+                    </div>
+
+                    <!-- 8. 영적지도자 및 대리자 (요청 반영) -->
+                    <div class="form-group">
+                        <label>영적지도자 / 대리자</label>
+                        <div class="spiritual-director-group">
+                            <input type="text" name="spiritualDirector" placeholder="영적지도자 성명" autocomplete="one-time-code">
+                            <input type="text" name="spiritualDirectorDeputy" placeholder="대리자 성명" autocomplete="one-time-code">
+                        </div>
+                    </div>
+
+                    <!-- 9. 해체/이동 일자 -->
+                    <div class="form-group">
+                        <label>꾸리아 해체/이동일자</label>
+                        <input type="date" name="dissolutionDate" autocomplete="one-time-code">
+                    </div>
+                </div>
+
+                <!-- Hidden record ID -->
+                <input type="hidden" id="recordId">
+
+                <!-- 스티키 버튼들 -->
+                <div class="btn-sticky-group">
+                    <button type="submit" class="btn-premium btn-premium-save"><i class="fas fa-save"></i>저 장</button>
+                    <button type="button" id="btnDelete" class="btn-premium btn-premium-delete" style="display: none;"><i class="fas fa-trash"></i>삭 제</button>
+                    <button type="button" class="btn-premium btn-premium-close" onclick="location.href='dashboard.html'"><i class="fas fa-times"></i>닫 기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 커스텀 경고 모달 -->
+    <div id="customModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div id="modalMessage" class="custom-modal-message"></div>
+            <div id="modalBtnGroup" class="modal-btn-group">
+                <button id="modalCancelBtn" class="btn-modal btn-modal-cancel" style="display: none;">취소</button>
+                <button id="modalConfirmBtn" class="btn-modal btn-modal-confirm">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260608_0701"></script>
+    <script type="module">
+        import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp } from "./firebase-config.js?v=20260313_1450";
+        import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
+
+        let curia_list = [];
+
+        // Auth Observer & Firestore Sync
+        initAuthObserver(async (user, profile) => {
+            const currentUser = profile;
+
+            // curia_list 실시간 동기화
+            onSnapshot(collection(db, 'curia_list'), (snapshot) => {
+                curia_list = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id }));
+                updateChurchSelect();
+            });
+
+            // 커스텀 알림/확인 프라미스 정의
+            window.showCustomAlert = (message) => {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('customModal');
+                    const msgEl = document.getElementById('modalMessage');
+                    const confirmBtn = document.getElementById('modalConfirmBtn');
+                    const cancelBtn = document.getElementById('modalCancelBtn');
+
+                    msgEl.textContent = message;
+                    cancelBtn.style.display = 'none';
+                    confirmBtn.style.width = '100%';
+                    modal.style.display = 'flex';
+
+                    const close = () => {
+                        modal.style.display = 'none';
+                        confirmBtn.removeEventListener('click', close);
+                        resolve();
+                    };
+                    confirmBtn.addEventListener('click', close);
+                });
+            };
+
+            window.showCustomConfirm = (message) => {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('customModal');
+                    const msgEl = document.getElementById('modalMessage');
+                    const confirmBtn = document.getElementById('modalConfirmBtn');
+                    const cancelBtn = document.getElementById('modalCancelBtn');
+
+                    msgEl.textContent = message;
+                    cancelBtn.style.display = 'block';
+                    confirmBtn.style.width = 'auto';
+                    modal.style.display = 'flex';
+
+                    const onConfirm = () => {
+                        modal.style.display = 'none';
+                        confirmBtn.removeEventListener('click', onConfirm);
+                        cancelBtn.removeEventListener('click', onCancel);
+                        resolve(true);
+                    };
+                    const onCancel = () => {
+                        modal.style.display = 'none';
+                        confirmBtn.removeEventListener('click', onConfirm);
+                        cancelBtn.removeEventListener('click', onCancel);
+                        resolve(false);
+                    };
+
+                    confirmBtn.addEventListener('click', onConfirm);
+                    cancelBtn.addEventListener('click', onCancel);
+                });
+            };
+
+            // DOM Elements 정의부를 최상단으로 끌어올림 (스코프 에러 해결)
+            const churchSelect = document.getElementById('churchSelect');
+            const churchNameInput = document.getElementById('churchNameInput');
+            const btnToggleChurchInput = document.getElementById('btnToggleChurchInput');
+            const curiaNameInput = document.getElementById('curiaNameInput');
+            const curiaCustomList = document.getElementById('curiaCustomList');
+            const form = document.getElementById('curiaForm');
+            const btnDelete = document.getElementById('btnDelete');
+
+            // 성당 목록 갱신 (기본 등록된 꾸리아 및 사용자 소속 성당 수집)
+            const updateChurchSelect = async () => {
+                if (!churchSelect) return;
+                try {
+                    const userSnapshot = await getDocs(collection(db, 'users'));
+                    const userChurches = userSnapshot.docs.map(u => u.data().churchName).filter(c => c);
+                    const curiaChurches = curia_list.map(p => p.churchName).filter(c => c);
+                    const uniqueChurches = [...new Set([...curiaChurches, ...userChurches])].sort();
+
+                    const currentVal = churchSelect.value;
+                    churchSelect.innerHTML = '<option value="">성당 선택</option>';
+                    uniqueChurches.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c;
+                        opt.textContent = c;
+                        churchSelect.appendChild(opt);
+                    });
+                    if (currentVal) churchSelect.value = currentVal;
+                } catch (error) {
+                    console.error("Error updating church select:", error);
+                }
+            };
+
+            try {
+
+                // 직접 입력 / 목록 선택 토글
+                let isDirectInput = false;
+                btnToggleChurchInput.addEventListener('click', () => {
+                    isDirectInput = !isDirectInput;
+                    if (isDirectInput) {
+                        churchSelect.style.display = 'none';
+                        churchNameInput.style.display = 'block';
+                        churchNameInput.value = '';
+                        churchNameInput.focus();
+                        btnToggleChurchInput.textContent = '목록 선택';
+                    } else {
+                        churchSelect.style.display = 'block';
+                        churchNameInput.style.display = 'none';
+                        churchNameInput.value = churchSelect.value;
+                        btnToggleChurchInput.textContent = '직접 입력';
+                        churchNameInput.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                churchSelect.addEventListener('change', () => {
+                    churchNameInput.value = churchSelect.value;
+                    churchNameInput.dispatchEvent(new Event('input'));
+                });
+
+                // 꾸리아 자동완성 리스트 필터링
+                const updateCuriaList = (filterText = '') => {
+                    const selectedChurch = churchNameInput.value.trim();
+                    let filtered = curia_list;
+
+                    if (selectedChurch) {
+                        filtered = filtered.filter(p => (p.churchName || '').trim() === selectedChurch);
+                    }
+
+                    // 고유번호 순 정렬
+                    let curiaNames = filtered
+                        .sort((a, b) => {
+                            const numA = parseInt(a.uniqueNumber || 9999);
+                            const numB = parseInt(b.uniqueNumber || 9999);
+                            if (numA !== numB) return numA - numB;
+                            return (a.curiaName || '').localeCompare(b.curiaName || '');
+                        })
+                        .map(p => p.curiaName);
+
+                    curiaNames = [...new Set(curiaNames)];
+
+                    if (filterText) {
+                        curiaNames = curiaNames.filter(name => name.toLowerCase().includes(filterText.toLowerCase()));
+                    }
+
+                    curiaCustomList.innerHTML = '';
+                    curiaNames.forEach(name => {
+                        const li = document.createElement('li');
+                        li.textContent = name;
+                        li.addEventListener('click', () => {
+                            curiaNameInput.value = name;
+                            curiaCustomList.style.display = 'none';
+                        });
+                        curiaCustomList.appendChild(li);
+                    });
+
+                    if (curiaNames.length > 0) {
+                        curiaCustomList.style.display = 'block';
+                    } else {
+                        curiaCustomList.style.display = 'none';
+                    }
+                };
+
+                curiaNameInput.addEventListener('focus', () => updateCuriaList(''));
+                curiaNameInput.addEventListener('click', () => updateCuriaList(''));
+                curiaNameInput.addEventListener('input', (e) => updateCuriaList(e.target.value));
+
+                document.addEventListener('click', (e) => {
+                    if (!curiaNameInput.contains(e.target) && !curiaCustomList.contains(e.target)) {
+                        curiaCustomList.style.display = 'none';
+                    }
+                });
+
+                // 꼬미시움 및 레지아 자동완성
+                const createCustomDropdown = (inputId, listId, dataKey) => {
+                    const input = document.querySelector(`input[name="${inputId}"]`);
+                    const list = document.getElementById(listId);
+                    if (!input || !list) return;
+
+                    const updateList = (filterText = '') => {
+                        const selectedChurch = churchNameInput.value.trim();
+                        const churchCuriae = curia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
+                        let filteredData = churchCuriae.map(p => p[dataKey]);
+                        
+                        filteredData = [...new Set(filteredData)].filter(item => item).sort();
+
+                        if (filterText) {
+                            filteredData = filteredData.filter(item => item.toLowerCase().includes(filterText.toLowerCase()));
+                        }
+
+                        list.innerHTML = '';
+                        filteredData.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            li.addEventListener('click', () => {
+                                input.value = item;
+                                list.style.display = 'none';
+                            });
+                            list.appendChild(li);
+                        });
+                        if (filteredData.length > 0) list.style.display = 'block';
+                        else list.style.display = 'none';
+                    };
+
+                    input.addEventListener('focus', () => updateList(''));
+                    input.addEventListener('click', () => updateList(''));
+                    input.addEventListener('input', (e) => updateList(e.target.value));
+
+                    document.addEventListener('click', (e) => {
+                        if (!input.contains(e.target) && !list.contains(e.target)) {
+                            list.style.display = 'none';
+                        }
+                    });
+                };
+
+                createCustomDropdown('comitiumName', 'comitiumCustomList', 'comitiumName');
+                createCustomDropdown('regiaName', 'regiaCustomList', 'regiaName');
+
+                // 조회 기능 (btnView)
+                const btnView = document.getElementById('btnView');
+                btnView.addEventListener('click', () => {
+                    const selectedChurch = churchNameInput.value.trim();
+                    const selectedCuria = curiaNameInput.value.trim();
+
+                    if (!selectedChurch || !selectedCuria) {
+                        window.showCustomAlert('성당 명과 꾸리아 명을 모두 선택/입력해 주세요.');
+                        return;
+                    }
+
+                    const record = curia_list.find(p =>
+                        (p.churchName || '').trim() === selectedChurch &&
+                        (p.curiaName || '').trim() === selectedCuria
+                    );
+
+                    if (record) {
+                        Object.keys(record).forEach(key => {
+                            const input = form.querySelector(`[name="${key}"]`);
+                            if (input) {
+                                input.value = record[key];
+                            }
+                        });
+
+                        document.getElementById('recordId').value = record.id;
+                        form.dataset.currentId = record.id;
+
+                        if (btnDelete) btnDelete.style.display = 'inline-block';
+                        window.showCustomAlert('기존 정보를 불러왔습니다. 삭제 버튼이 활성화되었습니다.');
+                    } else {
+                        window.showCustomAlert('해당하는 꾸리아 정보를 찾을 수 없습니다.');
+                    }
+                });
+
+                // 상급 평의회 자동 기입
+                const autoFillHigherCouncils = () => {
+                    const selectedChurch = churchNameInput.value.trim();
+                    const churchCuriae = curia_list.filter(p => (p.churchName || '').trim() === selectedChurch);
+
+                    if (churchCuriae.length > 0) {
+                        const firstRecord = churchCuriae[0];
+                        if (firstRecord.comitiumName) document.querySelector('input[name="comitiumName"]').value = firstRecord.comitiumName;
+                        if (firstRecord.regiaName) document.querySelector('input[name="regiaName"]').value = firstRecord.regiaName;
+                        if (firstRecord.senatusName) document.querySelector('select[name="senatusName"]').value = firstRecord.senatusName;
+
+                        document.querySelector('input[name="uniqueNumber"]').value = '';
+                        document.querySelector('input[name="spiritualDirector"]').value = '';
+                        document.querySelector('input[name="spiritualDirectorDeputy"]').value = '';
+                    }
+                };
+
+                churchNameInput.addEventListener('input', () => {
+                    curiaNameInput.value = '';
+                    autoFillHigherCouncils();
+                });
+
+                if (churchNameInput.value) {
+                    autoFillHigherCouncils();
+                }
+
+                // 최근 성당명 자동완성
+                if (curia_list.length > 0) {
+                    const lastChurch = curia_list[curia_list.length - 1].churchName;
+                    if (churchNameInput) {
+                        churchNameInput.value = lastChurch;
+                        if (!isDirectInput) {
+                            churchSelect.value = lastChurch;
+                        }
+                    }
+                }
+
+                // 권한 처리 및 메뉴 적용
+                const isAdminRole = (currentUser.role || '').toLowerCase().includes('admin') || (currentUser.role || '').includes('관리자');
+                if (btnDelete && isAdminRole) {
+                    btnDelete.style.display = 'inline-block';
+                }
+
+                if (window.initCommonMenus) {
+                    window.initCommonMenus(currentUser, logoutUser);
+                }
+
+                // 폼 서브밋 (저장 / 수정)
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData.entries());
+
+                    if (!data.churchName || !data.curiaName) {
+                        window.showCustomAlert('성당 명과 꾸리아 명은 필수입니다.');
+                        return;
+                    }
+
+                    delete data.id;
+
+                    try {
+                        const currentId = document.getElementById('recordId').value || form.dataset.currentId;
+                        let targetId = currentId;
+
+                        if (!targetId) {
+                            const existing = curia_list.find(p =>
+                                (p.churchName || '').trim() === (data.churchName || '').trim() &&
+                                (p.curiaName || '').trim() === (data.curiaName || '').trim()
+                            );
+                            if (existing) targetId = existing.id;
+                        }
+
+                        if (targetId) {
+                            // 수정 모드
+                            await updateDoc(doc(db, 'curia_list', targetId), {
+                                ...data,
+                                updatedAt: serverTimestamp()
+                            });
+                            window.showCustomAlert('정보가 수정되었습니다.');
+                        } else {
+                            // 등록 모드
+                            data.createdAt = serverTimestamp();
+                            data.updatedAt = serverTimestamp();
+
+                            const duplicate = curia_list.find(p =>
+                                (p.churchName || '').trim() === (data.churchName || '').trim() &&
+                                (p.curiaName || '').trim() === (data.curiaName || '').trim()
+                            );
+
+                            if (duplicate) {
+                                window.showCustomAlert('이미 동일한 성당 명과 꾸리아 명을 가진 기록이 존재합니다. 수정하려면 먼저 조회해 주세요.');
+                                return;
+                            }
+
+                            await addDoc(collection(db, 'curia_list'), data);
+                            window.showCustomAlert('성공적으로 등록되었습니다.');
+                            form.reset();
+                            document.getElementById('recordId').value = '';
+                            delete form.dataset.currentId;
+                            if (!isDirectInput) {
+                                churchSelect.value = '';
+                                churchNameInput.value = '';
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error saving curia:", error);
+                        window.showCustomAlert('저장 중 오류가 발생했습니다.');
+                    }
+                });
+
+                // 삭제 기능
+                if (btnDelete) {
+                    btnDelete.addEventListener('click', async () => {
+                        const selectedChurch = churchNameInput.value.trim();
+                        const selectedCuria = curiaNameInput.value.trim();
+
+                        if (!selectedChurch || !selectedCuria) {
+                            window.showCustomAlert('삭제할 꾸리아를 먼저 조회해 주세요.');
+                            return;
+                        }
+
+                        const displayChurch = selectedChurch.endsWith('성당') ? selectedChurch : `${selectedChurch} 성당`;
+                        const confirmed = await window.showCustomConfirm(`정말로 '${displayChurch}'의 '${selectedCuria}' 꾸리아 정보를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`);
+                        
+                        if (confirmed) {
+                            try {
+                                const currentId = document.getElementById('recordId').value || form.dataset.currentId;
+                                let targetId = currentId;
+
+                                if (!targetId) {
+                                    const targetByName = curia_list.find(p =>
+                                        (p.churchName || '').trim() === selectedChurch &&
+                                        (p.curiaName || '').trim() === selectedCuria
+                                    );
+                                    if (targetByName) targetId = targetByName.id;
+                                }
+
+                                if (targetId) {
+                                    await deleteDoc(doc(db, 'curia_list', targetId));
+                                    window.showCustomAlert('성공적으로 삭제되었습니다.');
+                                    form.reset();
+                                    delete form.dataset.currentId;
+                                    document.getElementById('recordId').value = '';
+                                    churchSelect.value = '';
+                                    churchNameInput.value = '';
+                                    churchNameInput.dispatchEvent(new Event('input'));
+                                } else {
+                                    window.showCustomAlert('삭제할 대상을 찾을 수 없습니다. (조회 후 진행해 주세요)');
+                                }
+                            } catch (error) {
+                                console.error("Error deleting curia:", error);
+                                window.showCustomAlert('삭제 중 오류가 발생했습니다.');
+                            }
+                        }
+                    });
+                }
+
+                // 엔터 내비게이션
+                form.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        if (e.target.type === 'submit' || e.target.id === 'btnView') return;
+                        e.preventDefault();
+
+                        const elements = Array.from(form.querySelectorAll('input:not([type="hidden"]), select'))
+                            .filter(el => {
+                                const style = window.getComputedStyle(el);
+                                return style.display !== 'none' && style.visibility !== 'hidden' && !el.disabled;
+                            });
+
+                        const index = elements.indexOf(e.target);
+                        if (index > -1) {
+                            if (index < elements.length - 1) {
+                                elements[index + 1].focus();
+                            } else {
+                                form.querySelector('button[type="submit"]').click();
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing curia register:", error);
+            }
+        }, () => {
+            window.location.href = "index.html";
+        });
+    </script>
+</body>
+
+</html>

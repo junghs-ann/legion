@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260604_1517">
+    <link rel="stylesheet" href="styles.css?v=20260608_0701">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 (테두리 및 스타일 지원) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -800,7 +800,7 @@
     </div>
     </div>
 
-    <script src="script.js?v=20260604_1517"></script>
+    <script src="script.js?v=20260608_0701"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260303_1210";
@@ -811,6 +811,11 @@
         let activityRecords = [];
         let activitySchemaMap = {};
         let currentPresidia = [];
+        let allPresidia = [];
+        let allHistory = [];
+        let currentFilteredRecords = [];
+        let currentMemberBaptismalLookup = {};
+        let currentNameBaptismalLookup = {};
 
         // --- 활동 항목 기본 스키마 (이미지 표준 기반) ---
         const DEFAULT_SCHEMA = [
@@ -959,7 +964,14 @@
         });
 
         async function initCommonData() {
-            await fetchPresidiaList();
+            allPresidia = await fetchPresidiaList();
+            try {
+                const historySnap = await getDocs(collection(db, 'presidium_history'));
+                allHistory = historySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("[CommonData] Loaded history docs:", allHistory.length);
+            } catch (error) {
+                console.error("Error loading presidium history:", error);
+            }
         }
 
 
@@ -1375,6 +1387,9 @@
                 if (!nameBaptismalLookup[m.name]) nameBaptismalLookup[m.name] = m.baptismalName || '';
             });
 
+            currentMemberBaptismalLookup = memberBaptismalLookup;
+            currentNameBaptismalLookup = nameBaptismalLookup;
+
             const schemaCopy = JSON.parse(JSON.stringify(prSchema));
             const otherIdx = schemaCopy.findIndex(group => group.title === '기타활동(2)');
             if (otherIdx > 0) {
@@ -1429,6 +1444,8 @@
                 // 동일 순위인 경우 이름으로 2차 정렬 (데이터 무결성을 위해 원본 비교)
                 return (a.memberName || '').localeCompare(b.memberName || '');
             });
+
+            currentFilteredRecords = filteredRecords;
 
             // 3. 컬럼별 통계 계산 (스키마 필터링용)
             const colTotals = {};
@@ -1595,123 +1612,503 @@
             foot.innerHTML = html;
         }
 
-        /**
-         * @function exportToExcel
-         * @description ExcelJS를 사용하여 HTML 테이블의 rowSpan/colSpan을 완벽히 인식하여 내보냅니다.
-         */
-        async function exportToExcel() {
-            const table = document.getElementById('statsTable');
-            if (!table || table.rows.length <= 1) {
-                alert('조회된 데이터가 없습니다.');
-                return;
+        // 실제 데이터 일자 범위를 구하는 헬퍼 함수
+        function getActualDateRange(records) {
+            if (!records || records.length === 0) return '자료 없음';
+            const dates = records.map(r => r.date).filter(Boolean).sort();
+            if (dates.length === 0) return '자료 없음';
+            return `${dates[0]} ~ ${dates[dates.length - 1]}`;
+        }
+
+        // 쁘레시디움 고유 ID 추출 헬퍼 함수
+        function getPresidiumId(churchName, presidiumName) {
+            const found = allPresidia.find(p => 
+                (p.churchName || '').trim() === churchName.trim() && 
+                (p.presidiumName || '').trim() === presidiumName.trim()
+            );
+            return found ? found.id : null;
+        }
+
+        // 조회 기간 동안의 소속 꾸리아 및 기간 리스트 산출 헬퍼 함수
+        function getCuriaPeriods(presidiumId, startD, endD, defaultCuria) {
+            const prHistory = allHistory.filter(h => h.presidiumId === presidiumId);
+            
+            // 날짜 범위 기본값 설정
+            const sd = startD || '0000-00-00';
+            const ed = endD || '9999-12-31';
+
+            if (prHistory.length === 0) {
+                return [{
+                    curiaName: defaultCuria,
+                    startDate: sd,
+                    endDate: ed
+                }];
             }
 
-            const church = churchSelect.value;
-            const pr = presidiumInput.value;
-            const filename = `활동내역_${church}_${pr}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const periods = [];
+            prHistory.forEach(h => {
+                const hStart = h.startDate || '0000-00-00';
+                const hEnd = h.endDate || '9999-12-31';
 
-            try {
-                const workbook = new ExcelJS.Workbook();
-                const worksheet = workbook.addWorksheet('활동내역');
+                // 오버랩 기간 산출
+                const overlapStart = hStart > sd ? hStart : sd;
+                const overlapEnd = hEnd < ed ? hEnd : ed;
 
-                // 셀 점유 상태를 추적하기 위한 2차원 맵
-                const occupiedCells = {}; // "row,col" -> true
+                if (overlapStart <= overlapEnd) {
+                    periods.push({
+                        curiaName: h.curiaName,
+                        startDate: overlapStart,
+                        endDate: overlapEnd
+                    });
+                }
+            });
 
-                for (let r = 0; r < table.rows.length; r++) {
-                    const htmlRow = table.rows[r];
-                    let excelCol = 1;
+            if (periods.length === 0) {
+                periods.push({
+                    curiaName: defaultCuria,
+                    startDate: sd,
+                    endDate: ed
+                });
+            }
 
-                    for (let c = 0; c < htmlRow.cells.length; c++) {
-                        const htmlCell = htmlRow.cells[c];
+            return periods.sort((a, b) => a.startDate.localeCompare(b.startDate));
+        }
 
-                        // 이미 점유된 셀(rowSpan 등에 의해) 건너뛰기
-                        while (occupiedCells[`${r + 1},${excelCol}`]) {
-                            excelCol++;
-                        }
+        // 특정 시트(worksheet)에 활동내역 표를 그리는 공통 함수
+        function buildStatsSheet(worksheet, title, filterText, records, schema, memberBaptismalLookup, nameBaptismalLookup) {
+            // A열 여백 부여
+            worksheet.getColumn(1).width = 3;
 
-                        const excelCell = worksheet.getRow(r + 1).getCell(excelCol);
-                        const rowSpan = htmlCell.rowSpan || 1;
-                        const colSpan = htmlCell.colSpan || 1;
+            // B2행에 타이틀 기재 및 병합
+            worksheet.mergeCells(2, 2, 2, 7);
+            const titleCell = worksheet.getCell(2, 2);
+            titleCell.value = title;
+            titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+            titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-                        // 셀 병합 처리
-                        if (rowSpan > 1 || colSpan > 1) {
-                            worksheet.mergeCells(r + 1, excelCol, r + rowSpan, excelCol + colSpan - 1);
-                            // 병합된 영역 점유 표시
-                            for (let i = 0; i < rowSpan; i++) {
-                                for (let j = 0; j < colSpan; j++) {
-                                    occupiedCells[`${r + 1 + i},${excelCol + j}`] = true;
-                                }
-                            }
-                        } else {
-                            occupiedCells[`${r + 1},${excelCol}`] = true;
-                        }
+            // B3행에 필터 정보 기재
+            worksheet.getCell(3, 2).value = filterText;
+            worksheet.getCell(3, 2).font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
 
-                        // 값 입력 처리
-                        const val = htmlCell.textContent.replace(/,/g, '').trim();
-                        // 데이터 행(r >= 2)이면서 숫자인 경우 숫자로 입력
-                        if (val !== "" && !isNaN(val) && r >= 2) {
-                            excelCell.value = Number(val);
-                            excelCell.numFmt = '#,##0';
-                        } else {
-                            excelCell.value = htmlCell.textContent.trim();
-                        }
+            const startCol = 2; // B열(2번)부터 작성 시작
+            const startRow = 5; // 5행부터 데이터 표 작성
 
-                        // 스타일 적용
-                        excelCell.border = {
+            // 1. 헤더 구조 생성 (Row 5 & Row 6)
+            // (가) 고정 헤더: 년, 월, 회, 성명
+            worksheet.mergeCells(startRow, startCol, startRow + 1, startCol);
+            const cellYear = worksheet.getCell(startRow, startCol);
+            cellYear.value = '년';
+            
+            worksheet.mergeCells(startRow, startCol + 1, startRow + 1, startCol + 1);
+            const cellMonth = worksheet.getCell(startRow, startCol + 1);
+            cellMonth.value = '월';
+
+            worksheet.mergeCells(startRow, startCol + 2, startRow + 1, startCol + 2);
+            const cellSession = worksheet.getCell(startRow, startCol + 2);
+            cellSession.value = '회';
+
+            worksheet.mergeCells(startRow, startCol + 3, startRow + 1, startCol + 3);
+            const cellMember = worksheet.getCell(startRow, startCol + 3);
+            cellMember.value = '성명';
+
+            // 고정 헤더 스타일 적용
+            for (let c = 0; c < 4; c++) {
+                const colIdx = startCol + c;
+                const cell5 = worksheet.getCell(startRow, colIdx);
+                const cell6 = worksheet.getCell(startRow + 1, colIdx);
+                [cell5, cell6].forEach(cell => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF4FF' } }; // 연파랑
+                    cell.font = { bold: true, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            }
+
+            // (나) 동적 스키마 헤더
+            const schemaCopy = JSON.parse(JSON.stringify(schema));
+            const otherIdx = schemaCopy.findIndex(group => group.title === '기타활동(2)');
+            if (otherIdx > 0) {
+                const otherGroup = schemaCopy.splice(otherIdx, 1)[0];
+                schemaCopy.unshift(otherGroup);
+            }
+
+            // 먼저 전체 레코드에서 컬럼 합계를 구해서, 데이터가 있는 항목만 필터링하는 로직 적용
+            const colTotals = {};
+            records.forEach(r => {
+                if (r.counts) {
+                    for (let itemName in r.counts) {
+                        const val = parseInt(r.counts[itemName]) || 0;
+                        colTotals[itemName] = (colTotals[itemName] || 0) + val;
+                    }
+                }
+            });
+
+            // 화면과 동일한 필터링 스키마 구성
+            const filteredSchema = schemaCopy.map(group => {
+                const activeAndDataItems = group.items.filter(item => {
+                    const isActive = item.isActive !== false;
+                    const hasData = (colTotals[item.name] || 0) > 0;
+                    return isActive && hasData;
+                });
+                return { ...group, items: activeAndDataItems };
+            }).filter(group => group.items.length > 0);
+
+            // 그룹별 및 전체 합계 계산
+            let grandTotal = 0;
+            const groupTotals = {};
+            filteredSchema.forEach(group => {
+                let gSum = 0;
+                group.items.forEach(item => {
+                    const val = colTotals[item.name] || 0;
+                    gSum += val;
+                });
+                groupTotals[group.title] = gSum;
+                grandTotal += gSum;
+            });
+
+            // 헤더 컬러 맵 (연주황, 연노랑 등)
+            const groupColors = {
+                'cat_mission': 'FFFFF2CC',      // 선교
+                'cat_nonbeliever': 'FFFFF9C4',   // 비신자
+                'cat_care': 'FFE3F2FD',         // 교우돌봄
+                'cat_suffering': 'FFE8F5E9',    // 어려움돌봄
+                'cat_parish_service': 'FFF3E5F5', // 교회활동
+                'cat_community': 'FFF3E5F5',    // 소공동체활동
+                'cat_family': 'FFECEFF1',       // 가정성화
+                'cat_others_simple': 'FFECEFF1', // 기타활동(1)
+                'cat_others_detail': 'FFECEFF1', // 기타활동(2)
+                'cat_charity': 'FFECEFF1'       // 기타활동(사랑의증언)
+            };
+
+            let currentExcelCol = startCol + 4; // 년,월,회,성명 다음 열(F열, 6번)부터 시작
+
+            filteredSchema.forEach(group => {
+                const activeItems = group.items;
+                const colSpan = activeItems.length;
+                if (colSpan === 0) return;
+
+                const colorHex = groupColors[group.id] || 'FFEBF4FF';
+
+                // 카테고리명 & 합계 병합 기재 (5행)
+                worksheet.mergeCells(startRow, currentExcelCol, startRow, currentExcelCol + colSpan - 1);
+                const catCell = worksheet.getCell(startRow, currentExcelCol);
+                const gSum = groupTotals[group.title] || 0;
+                catCell.value = `${group.title}\n( 계 : ${gSum.toLocaleString()} )`;
+                catCell.font = { bold: true, size: 9 };
+                catCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+                activeItems.forEach((item, itemIdx) => {
+                    const subCell = worksheet.getCell(startRow + 1, currentExcelCol + itemIdx);
+                    subCell.value = item.name;
+                    subCell.font = { size: 8 };
+                    subCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                });
+
+                // 카테고리 셀 스타일 적용
+                for (let c = 0; c < colSpan; c++) {
+                    const colIdx = currentExcelCol + c;
+                    const cell5 = worksheet.getCell(startRow, colIdx);
+                    const cell6 = worksheet.getCell(startRow + 1, colIdx);
+                    [cell5, cell6].forEach(cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorHex } };
+                        cell.border = {
                             top: { style: 'thin' },
                             left: { style: 'thin' },
                             bottom: { style: 'thin' },
                             right: { style: 'thin' }
                         };
-                        excelCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    });
+                }
 
-                        // 헤더 배경색 설정
-                        if (r < 2) {
-                            const bgColor = window.getComputedStyle(htmlCell).backgroundColor;
-                            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                                const hex = rgbToHex(bgColor).replace('#', '');
-                                excelCell.fill = {
-                                    type: 'pattern',
-                                    pattern: 'solid',
-                                    fgColor: { argb: 'FF' + hex }
-                                };
+                currentExcelCol += colSpan;
+            });
+
+            // (다) 합계 헤더 (Row 5 & Row 6 병합)
+            worksheet.mergeCells(startRow, currentExcelCol, startRow + 1, currentExcelCol);
+            const cellSum = worksheet.getCell(startRow, currentExcelCol);
+            cellSum.value = '합계';
+            [cellSum, worksheet.getCell(startRow + 1, currentExcelCol)].forEach(cell => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF4FF' } };
+                cell.font = { bold: true, size: 10 };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+
+            const grandTotalColIdx = currentExcelCol; // 최종 합계 열 번호
+
+            // 2. 데이터 행 기재
+            let currentRowNum = startRow + 2;
+
+            if (records.length > 0) {
+                // (가) 상단 총계 행
+                const totalRow = worksheet.getRow(currentRowNum);
+                totalRow.getCell(startCol + 3).value = '총계';
+                
+                let tempCol = startCol + 4;
+                filteredSchema.forEach(group => {
+                    group.items.forEach(item => {
+                        const val = colTotals[item.name] || 0;
+                        const cell = totalRow.getCell(tempCol);
+                        cell.value = val ? Number(val) : '';
+                        if (val) cell.numFmt = '#,##0';
+                        tempCol++;
+                    });
+                });
+                
+                const totalSumCell = totalRow.getCell(grandTotalColIdx);
+                totalSumCell.value = grandTotal ? Number(grandTotal) : '';
+                if (grandTotal) totalSumCell.numFmt = '#,##0';
+
+                // 총계 행 스타일링
+                for (let col = startCol; col <= grandTotalColIdx; col++) {
+                    const cell = totalRow.getCell(col);
+                    cell.font = { bold: true, size: 9 };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F3F5' } }; // 연회색
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                }
+                currentRowNum++;
+
+                // (나) 개별 레코드 행 기재
+                let lastYear = null;
+                let lastMonth = null;
+                let lastSession = null;
+
+                records.forEach(r => {
+                    const row = worksheet.getRow(currentRowNum);
+                    const d = new Date(r.date);
+                    const year = d.getFullYear();
+                    const month = d.getMonth() + 1;
+                    const session = r.session;
+
+                    const displayYear = (year === lastYear) ? "" : year;
+                    const displayMonth = (year === lastYear && month === lastMonth) ? "" : month;
+                    const displaySession = (year === lastYear && month === lastMonth && session === lastSession) ? "" : session;
+
+                    lastYear = year;
+                    lastMonth = month;
+                    lastSession = session;
+
+                    row.getCell(startCol).value = displayYear ? Number(displayYear) : '';
+                    row.getCell(startCol + 1).value = displayMonth ? Number(displayMonth) : '';
+                    row.getCell(startCol + 2).value = displaySession ? Number(displaySession) : '';
+
+                    const bName = memberBaptismalLookup[r.memberId] || r.baptismalName || nameBaptismalLookup[r.memberName] || '-';
+                    row.getCell(startCol + 3).value = `${r.memberName} (${bName})`;
+
+                    let rowSum = 0;
+                    let detailCol = startCol + 4;
+                    filteredSchema.forEach(group => {
+                        group.items.forEach(item => {
+                            let val = r.counts[item.name] || 0;
+                            if (item.name === '탄소중립 실천하기' && r.counts['자연보호 활동']) {
+                                val += (parseInt(r.counts['자연보호 활동']) || 0);
                             }
-                            excelCell.font = { bold: true };
-                        }
+                            row.getCell(detailCol).value = val ? Number(val) : '';
+                            if (val) row.getCell(detailCol).numFmt = '#,##0';
+                            rowSum += val;
+                            detailCol++;
+                        });
+                    });
 
-                        excelCol += colSpan;
+                    const rowSumCell = row.getCell(grandTotalColIdx);
+                    rowSumCell.value = rowSum ? Number(rowSum) : '';
+                    if (rowSum) rowSumCell.numFmt = '#,##0';
+
+                    // 스타일 적용
+                    for (let col = startCol; col <= grandTotalColIdx; col++) {
+                        const cell = row.getCell(col);
+                        cell.font = { size: 9 };
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    }
+
+                    currentRowNum++;
+                });
+
+                // (다) 하단 함계 행
+                const footRow = worksheet.getRow(currentRowNum);
+                footRow.getCell(startCol + 3).value = '함 계';
+                
+                let footCol = startCol + 4;
+                filteredSchema.forEach(group => {
+                    group.items.forEach(item => {
+                        const val = colTotals[item.name] || 0;
+                        const cell = footRow.getCell(footCol);
+                        cell.value = val ? Number(val) : '';
+                        if (val) cell.numFmt = '#,##0';
+                        footCol++;
+                    });
+                });
+                const footSumCell = footRow.getCell(grandTotalColIdx);
+                footSumCell.value = grandTotal ? Number(grandTotal) : '';
+                if (grandTotal) footSumCell.numFmt = '#,##0';
+
+                // 함계 행 스타일링
+                for (let col = startCol; col <= grandTotalColIdx; col++) {
+                    const cell = footRow.getCell(col);
+                    cell.font = { bold: true, size: 9 };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF4FF' } }; // 연파랑
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                }
+            } else {
+                worksheet.mergeCells(currentRowNum, startCol, currentRowNum, grandTotalColIdx);
+                const emptyCell = worksheet.getCell(currentRowNum, startCol);
+                emptyCell.value = '조회된 내역이 없습니다.';
+                emptyCell.alignment = { vertical: 'middle', horizontal: 'center' };
+                emptyCell.font = { size: 10, italic: true };
+                emptyCell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            }
+
+            // 컬럼 너비 조정
+            worksheet.getColumn(startCol).width = 8;     // 년
+            worksheet.getColumn(startCol + 1).width = 6; // 월
+            worksheet.getColumn(startCol + 2).width = 8; // 회차
+            worksheet.getColumn(startCol + 3).width = 18; // 성명(세례명)
+            
+            let dataColIdx = startCol + 4;
+            filteredSchema.forEach(group => {
+                group.items.forEach(() => {
+                    worksheet.getColumn(dataColIdx).width = 7;
+                    dataColIdx++;
+                });
+            });
+            worksheet.getColumn(grandTotalColIdx).width = 9; // 합계 열
+        }
+
+        // 멀티 시트 엑셀 내보내기 메인 함수
+        async function exportToExcel() {
+            if (!currentFilteredRecords || currentFilteredRecords.length === 0) {
+                alert('조회된 데이터가 없습니다. 먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                return;
+            }
+
+            const church = churchSelect.value;
+            const curia = curiaSelect.value;
+            const pr = presidiumInput.value;
+            const startD = startDate.value;
+            const endD = endDate.value;
+            const selectedMember = memberSelect.value;
+
+            // 파일명 포맷: 활동내역_성당명_쁘레시디움명_오늘날짜.xlsx
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `활동내역_${church}_${pr}_${baseDateStr}.xlsx`;
+
+            const churchKey = (church || '').trim();
+            const prSchema = activitySchemaMap[churchKey] || DEFAULT_SCHEMA;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+
+                // 1. 첫 번째 시트 생성 (전체 합산)
+                const worksheet1 = workbook.addWorksheet('전체 합산');
+                const title1 = '활동 내역 조회 결과 (전체 합산)';
+                const actualRange1 = getActualDateRange(currentFilteredRecords);
+                const filterText1 = `성당: ${church} | 꾸리아: ${curia} | 쁘레시디움: ${pr} | 자료 기간: ${actualRange1} | 단원: ${selectedMember || '전체'}`;
+                
+                buildStatsSheet(
+                    worksheet1,
+                    title1,
+                    filterText1,
+                    currentFilteredRecords,
+                    prSchema,
+                    currentMemberBaptismalLookup,
+                    currentNameBaptismalLookup
+                );
+
+                // 2. 소속 꾸리아별 다중 시트 생성
+                const prId = getPresidiumId(church, pr);
+                if (prId) {
+                    const periods = getCuriaPeriods(prId, startD, endD, curia);
+                    
+                    // 기간이 여러 개이거나, 혹은 1개여도 과거 이동 이력이 있는 경우 추가 시트들을 생성해 줍니다.
+                    const isMoved = periods.length > 1 || (periods.length === 1 && periods[0].curiaName !== curia);
+
+                    if (isMoved) {
+                        const addedSheets = new Set();
+                        periods.forEach(p => {
+                            // 오버랩 기간에 속하는 데이터 필터링
+                            const recordsForCuria = currentFilteredRecords.filter(r => r.date >= p.startDate && r.date <= p.endDate);
+                            
+                            // 해당 기간 내에 활동한 데이터가 있을 때만 시트를 추가합니다.
+                            if (recordsForCuria.length > 0) {
+                                // 시트명 중복 회피 처리 (일련번호 추가)
+                                let sheetName = p.curiaName;
+                                let suffix = 1;
+                                while (addedSheets.has(sheetName)) {
+                                    sheetName = `${p.curiaName} (${suffix})`;
+                                    suffix++;
+                                }
+                                addedSheets.add(sheetName);
+
+                                const worksheetN = workbook.addWorksheet(sheetName);
+                                const titleN = `활동 내역 조회 결과 (${p.curiaName})`;
+                                const actualRangeN = getActualDateRange(recordsForCuria);
+                                const filterTextN = `성당: ${church} | 소속 꾸리아: ${p.curiaName} | 쁘레시디움: ${pr} | 자료 기간: ${actualRangeN} | 단원: ${selectedMember || '전체'}`;
+
+                                buildStatsSheet(
+                                    worksheetN,
+                                    titleN,
+                                    filterTextN,
+                                    recordsForCuria,
+                                    prSchema,
+                                    currentMemberBaptismalLookup,
+                                    currentNameBaptismalLookup
+                                );
+                            }
+                        });
                     }
                 }
 
-                // 컬럼 너비 최적화
-                worksheet.columns.forEach((column, i) => {
-                    column.width = i < 4 ? 10 : 7; // 년,월,회,성명은 좀 더 넓게
-                });
-
+                // 3. 엑셀 파일 변환 및 저장
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
-                console.log(`[ExcelJS] Exported with MergeCells: ${filename}`);
+                console.log(`[ExcelJS] Exported multi-sheet: ${filename}`);
 
             } catch (error) {
-                console.error('[ExcelJS] Export failed:', error);
+                console.error('[ExcelJS] Multi-sheet export failed:', error);
                 alert('엑셀 파일 생성 중 오류가 발생했습니다.');
             }
-        }
-
-        // RGB를 HEX로 변환하는 헬퍼 함수
-        function rgbToHex(rgb) {
-            if (rgb.startsWith('#')) return rgb;
-            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-            if (!match) return '#FFFFFF';
-            const r = parseInt(match[1]);
-            const g = parseInt(match[2]);
-            const b = parseInt(match[3]);
-            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
         }
     </script>
 </body>
 
 </html>
+
+
+
+
 
 
 

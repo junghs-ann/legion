@@ -1,6 +1,7 @@
 import { db, collection, getDocs } from "./firebase-config.js";
 
 let cachedPresidia = null;
+let cachedCuria = null;
 
 /**
  * Fetch presidia list from Firestore and cache it.
@@ -14,6 +15,22 @@ export async function fetchPresidiaList(forceRefresh = false) {
         return cachedPresidia;
     } catch (error) {
         console.error("Error fetching presidia_list from Firestore:", error);
+        return [];
+    }
+}
+
+/**
+ * Fetch curia list from Firestore and cache it.
+ */
+export async function fetchCuriaList(forceRefresh = false) {
+    if (cachedCuria && !forceRefresh) return cachedCuria;
+    try {
+        const querySnapshot = await getDocs(collection(db, 'curia_list'));
+        cachedCuria = [];
+        querySnapshot.forEach(doc => cachedCuria.push({ id: doc.id, ...doc.data() }));
+        return cachedCuria;
+    } catch (error) {
+        console.error("Error fetching curia_list from Firestore:", error);
         return [];
     }
 }

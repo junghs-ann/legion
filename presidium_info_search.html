@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -12,7 +12,7 @@
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=20260604_1517">
+    <link rel="stylesheet" href="styles.css?v=20260608_0701">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -234,6 +234,104 @@
             .detail-grid { grid-template-columns: 1fr; }
             .detail-item.span-2 { grid-column: span 1; }
         }
+
+        /* [시니어 디자이너 패치] 역사 타임라인 프리미엄 스타일 */
+        .timeline-wrapper {
+            position: relative;
+            padding-left: 35px;
+            margin-top: 15px;
+            border-left: 2px solid #e2e8f0;
+            margin-left: 15px;
+        }
+
+        .timeline-node {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .timeline-node:last-child {
+            margin-bottom: 10px;
+        }
+
+        .timeline-badge {
+            position: absolute;
+            left: -47px;
+            top: 2px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s;
+        }
+
+        .timeline-node.current-node .timeline-badge {
+            background: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.2);
+        }
+
+        .timeline-panel {
+            background: #f8fafc;
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s;
+        }
+
+        .timeline-panel:hover {
+            transform: translateX(3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border-color: rgba(212, 160, 23, 0.3);
+        }
+
+        .timeline-node.current-node .timeline-panel {
+            background: rgba(255, 255, 248, 0.98);
+            border: 1.5px solid rgba(212, 160, 23, 0.4);
+        }
+
+        .timeline-time-period {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #718096;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .timeline-node.current-node .timeline-time-period {
+            color: var(--primary-color);
+        }
+
+        .timeline-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .timeline-details p {
+            margin: 0;
+            color: #4a5568;
+            line-height: 1.4;
+        }
+
+        .timeline-details p strong {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .timeline-details p span {
+            margin-left: 5px;
+        }
     </style>
 </head>
 
@@ -401,6 +499,22 @@
             </div>
         </div>
 
+        <!-- [시니어 디자이너 패치] 꾸리아 상세 정보 모달 -->
+        <div id="curiaModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-landmark"></i> <span id="modalCuName"></span> 기본정보</h3>
+                    <button class="btn-close-x" style="position: static;" onclick="closeCuriaModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="modalCuriaContent">
+                    <!-- JS에서 동적으로 채워짐 -->
+                </div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn-search" onclick="closeCuriaModal()">닫 기</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 성직자 상세 정보 모달 -->
         <div id="clergyModal" class="modal-overlay">
             <div class="modal-content">
@@ -435,7 +549,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260604_1517"></script>
+    <script src="script.js?v=20260608_0701"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy, doc, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -443,6 +557,8 @@
         let currentUserProfile = null;
         let isAdmin = false;
         let allPresidia = [];
+        let allHistory = []; // [시니어 개발자 패치] 쁘레시디움 이동 이력 리스트 캐시
+        let allCuriae = []; // [시니어 개발자 패치] 공식 꾸리아 정보 리스트 캐시
         let currentResults = []; // 엑셀 다운로드용 전역 저장소
         let lastSelectedChurch = ''; 
         let lastSelectedCuria = ''; 
@@ -473,8 +589,15 @@
         // 기초 데이터 로드
         async function loadInitialData() {
             try {
-                const snap = await getDocs(collection(db, 'presidia_list'));
-                allPresidia = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // [시니어 개발자 패치] 쁘레시디움 정보, 이동 이력, 공식 꾸리아 정보를 병렬로 동시에 로드
+                const [presidiaSnap, historySnap, curiaeSnap] = await Promise.all([
+                    getDocs(collection(db, 'presidia_list')),
+                    getDocs(collection(db, 'presidium_history')),
+                    getDocs(collection(db, 'curia_list'))
+                ]);
+                allPresidia = presidiaSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allHistory = historySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allCuriae = curiaeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
                 populateChurches();
             } catch (err) {
@@ -505,13 +628,22 @@
 
             if (!churchName) return;
 
-            const curiae = [...new Set(allPresidia
-                .filter(p => p.churchName === churchName)
-                .map(p => p.curiaName)
-                .filter(Boolean)
-            )].sort();
+            // [시니어 개발자 패치] 쁘레시디움 목록 대신 공식 꾸리아 목록(allCuriae)을 참조합니다.
+            const churchCuriae = allCuriae.filter(c => (c.churchName || '').trim() === churchName.trim());
+            
+            // 고유번호(uniqueNumber) 기준 오름차순 정렬
+            const sortedCuriae = [...churchCuriae].sort((a, b) => {
+                const numA = parseInt(a.uniqueNumber || 99999);
+                const numB = parseInt(b.uniqueNumber || 99999);
+                if (numA !== numB) return numA - numB;
+                return (a.curiaName || '').localeCompare(b.curiaName || '');
+            });
 
-            curiae.forEach(c => {
+            // 이름 추출 및 중복 제거
+            let curiaNames = sortedCuriae.map(c => c.curiaName);
+            curiaNames = [...new Set(curiaNames)].filter(n => n);
+
+            curiaNames.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c;
                 opt.textContent = c;
@@ -549,8 +681,34 @@
             resultBody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 50px;"><i class="fas fa-spinner fa-spin"></i> 데이터를 집계 중입니다...</td></tr>';
 
             try {
-                // 1. 대상 쁘레시디움 필터링
-                let targetPresidia = allPresidia;
+                // 1. 대상 쁘레시디움 필터링 및 기준일자(baseDate) 시점 기준 역사적 이력 연동
+                let targetPresidia = allPresidia
+                    .filter(pr => {
+                        // 기준일자 시점에 이미 설립되었고, 아직 해체되지 않았는지 검사 (예외 핸들링)
+                        const isFounded = !pr.foundationDate || pr.foundationDate <= baseDate;
+                        const isNotDissolved = !pr.dissolutionDate || pr.dissolutionDate >= baseDate;
+                        return isFounded && isNotDissolved;
+                    })
+                    .map(pr => {
+                        const prCopy = { ...pr };
+
+                        // 기준일자(baseDate) 시점의 이력 정보가 있는지 확인
+                        const matchedHist = allHistory.find(h => 
+                            h.presidiumId === pr.id &&
+                            h.startDate <= baseDate &&
+                            h.endDate >= baseDate
+                        );
+
+                        if (matchedHist) {
+                            // 당시의 꾸리아 및 회합 정보로 덮어쓰기
+                            prCopy.curiaName = matchedHist.curiaName || pr.curiaName;
+                            prCopy.meetingDay = matchedHist.meetingDay || pr.meetingDay;
+                            prCopy.meetingTime = matchedHist.meetingTime || pr.meetingTime;
+                            prCopy.meetingPlace = matchedHist.meetingPlace || pr.meetingPlace;
+                        }
+                        return prCopy;
+                    });
+
                 if (searchChurch) {
                     targetPresidia = targetPresidia.filter(p => p.churchName === searchChurch);
                 }
@@ -818,7 +976,13 @@
             resultBody.innerHTML = list.map(item => {
                 let rowHtml = '<tr>';
                 if (!selectedChurch) rowHtml += `<td>${item.churchName}</td>`;
-                if (!selectedCuria) rowHtml += `<td>${item.curiaName}</td>`;
+                if (!selectedCuria) {
+                    if (item.curiaName && item.curiaName !== '-') {
+                        rowHtml += `<td style="font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="showCuriaDetail('${item.curiaName}', '${item.churchName}')">${item.curiaName}</td>`;
+                    } else {
+                        rowHtml += `<td>-</td>`;
+                    }
+                }
 
                 const renderOfficer = (name, id) => {
                     if (!id || name === '-') return '-';
@@ -863,6 +1027,56 @@
                 return days[day] || '-';
             };
 
+            // [시니어 개발자 패치] 쁘레시디움의 모든 이동/회합 변경 이력 가져오기 및 타임라인 구성
+            const prHistories = allHistory
+                .filter(h => h.presidiumId === id)
+                .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+            let timelineHtml = '';
+            if (prHistories.length > 0) {
+                timelineHtml = `
+                    <div style="margin-top: 30px; border-top: 2px solid #e2e8f0; padding-top: 20px;">
+                        <h4 style="font-family: 'Noto Serif KR', serif; color: var(--primary-color); margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-history"></i> 소속 및 회합 정보 변천사 (역사 기록)
+                        </h4>
+                        <div class="timeline-wrapper">
+                `;
+                
+                prHistories.forEach((h, index) => {
+                    const formatEndDate = h.endDate === '9999-12-31' ? '현재 소속' : formatDate(h.endDate);
+                    const isCurrent = h.endDate === '9999-12-31';
+                    
+                    timelineHtml += `
+                        <div class="timeline-node ${isCurrent ? 'current-node' : ''}">
+                            <div class="timeline-badge">
+                                <span class="badge-index">${index + 1}</span>
+                            </div>
+                            <div class="timeline-panel">
+                                <div class="timeline-time-period">
+                                    <i class="far fa-calendar-alt"></i> ${formatDate(h.startDate)} ~ ${formatEndDate}
+                                </div>
+                                <div class="timeline-details">
+                                    <p><strong>소속 꾸리아:</strong> <span>${h.curiaName || '-'}</span></p>
+                                    <p><strong>주회합 정보:</strong> <span>${formatDay(h.meetingDay)} ${h.meetingTime || ''} (${h.meetingPlace || '-'})</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                timelineHtml += `
+                        </div>
+                    </div>
+                `;
+            } else {
+                timelineHtml = `
+                    <div style="margin-top: 30px; border-top: 2px solid #e2e8f0; padding-top: 20px; text-align: center; color: #a0aec0; font-size: 0.9rem; padding: 30px 10px;">
+                        <i class="fas fa-info-circle" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                        <p>등록된 과거 소속 및 회합 정보 이동 이력이 없습니다.</p>
+                    </div>
+                `;
+            }
+
             content.innerHTML = `
                 <div class="detail-grid">
                     <div class="detail-item"><strong>성당 명</strong><span>${pr.churchName || '-'}</span></div>
@@ -877,6 +1091,7 @@
                     <div class="detail-item span-2"><strong>주회합 장소</strong><span>${pr.meetingPlace || '-'}</span></div>
                     <div class="detail-item"><strong>해체/이동 일자</strong><span>${formatDate(pr.dissolutionDate)}</span></div>
                 </div>
+                ${timelineHtml}
             `;
 
             document.getElementById('modalPrName').textContent = pr.presidiumName;
@@ -885,6 +1100,62 @@
 
         window.closeDetailModal = () => {
             document.getElementById('detailModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        };
+
+        // --- 꾸리아 상세 정보 모달 제어 ---
+        window.showCuriaDetail = (curiaName, churchName) => {
+            if (!curiaName || curiaName === '-' || curiaName.trim() === '') return;
+
+            const cu = allCuriae.find(c => 
+                (c.curiaName || '').trim() === curiaName.trim() && 
+                (c.churchName || '').trim() === churchName.trim()
+            );
+
+            if (!cu) {
+                if (window.showGlobalAlert) {
+                    window.showGlobalAlert(`'${curiaName}' 꾸리아의 공식 상세 정보를 찾을 수 없습니다.\n꾸리아 기본 정보 관리 메뉴에서 등록 여부를 확인해 주세요.`, 'info');
+                } else {
+                    alert('정보를 찾을 수 없습니다.');
+                }
+                return;
+            }
+
+            const modal = document.getElementById('curiaModal');
+            const content = document.getElementById('modalCuriaContent');
+
+            const formatDate = (d) => d ? d : '-';
+            const formatDay = (day) => {
+                const days = { '일': '일요일', '월': '월요일', '화': '화요일', '수': '수요일', '목': '목요일', '금': '금요일', '토': '토요일' };
+                return days[day] || '-';
+            };
+
+            content.innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>성당 명</strong><span>${cu.churchName || '-'}</span></div>
+                    <div class="detail-item"><strong>꾸리아 명(Cu.)</strong><span>${cu.curiaName || '-'}</span></div>
+                    <div class="detail-item"><strong>고유번호</strong><span>${cu.uniqueNumber || '-'}</span></div>
+                    <div class="detail-item"><strong>소속 꼬미시움 명(Co.)</strong><span>${cu.comitiumName || '-'}</span></div>
+                    <div class="detail-item"><strong>소속 레지아 명(Re.)</strong><span>${cu.regiaName || '-'}</span></div>
+                    <div class="detail-item"><strong>소속 세나뚜스 명</strong><span>${cu.senatusName || '-'}</span></div>
+                    <div class="detail-item"><strong>설립일</strong><span>${formatDate(cu.foundationDate)}</span></div>
+                    <div class="detail-item"><strong>승인일</strong><span>${formatDate(cu.approvalDate)}</span></div>
+                    <div class="detail-item"><strong>월례회의 요일</strong><span>${formatDay(cu.meetingDay)}</span></div>
+                    <div class="detail-item"><strong>월례회의 일시</strong><span>${cu.meetingTime || '-'}</span></div>
+                    <div class="detail-item span-2"><strong>월례회의 장소</strong><span>${cu.meetingPlace || '-'}</span></div>
+                    <div class="detail-item"><strong>영적지도자 명</strong><span>${cu.spiritualDirector || '-'}</span></div>
+                    <div class="detail-item"><strong>대리자 명</strong><span>${cu.spiritualDirectorDeputy || '-'}</span></div>
+                    <div class="detail-item"><strong>해체/이동 일자</strong><span>${formatDate(cu.dissolutionDate)}</span></div>
+                </div>
+            `;
+
+            document.getElementById('modalCuName').textContent = cu.curiaName;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeCuriaModal = () => {
+            document.getElementById('curiaModal').style.display = 'none';
             document.body.style.overflow = 'auto';
         };
 
@@ -1302,6 +1573,7 @@
             const detailModal = document.getElementById('detailModal');
             const clergyModal = document.getElementById('clergyModal');
             const officerModal = document.getElementById('officerModal');
+            const curiaModal = document.getElementById('curiaModal');
             if (event.target == detailModal) {
                 detailModal.style.display = "none";
                 document.body.style.overflow = 'auto';
@@ -1314,9 +1586,17 @@
                 officerModal.style.display = "none";
                 document.body.style.overflow = 'auto';
             }
+            if (event.target == curiaModal) {
+                curiaModal.style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
         };
     </script>
 </body>
+
+
+
+
 
 
 
