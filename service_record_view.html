@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -304,13 +304,78 @@
                 console.error("Error fetching events:", error);
             }
 
-            // Calculate Pages
-            const moveData = [{ 
-                presidiumName: member.presidiumName || '-', 
-                curiaName: member.curiaName || '-', 
-                churchName: member.churchName || '-', 
-                period: `${member.probationaryDate || ''} ~ ${member.leaveDate || ''}` 
-            }];
+            // Fetch Presidium ID and History to compute moveData (V19.1 - Historical Joint)
+            const moveData = [];
+            let presidiumId = null;
+            try {
+                // 1. presidia_list에서 성당명과 쁘레시디움명으로 쁘레시디움 고유 ID 조회
+                const prQuery = query(collection(db, 'presidia_list'), 
+                    where('churchName', '==', member.churchName),
+                    where('presidiumName', '==', member.presidiumName)
+                );
+                const prSnap = await getDocs(prQuery);
+                if (!prSnap.empty) {
+                    presidiumId = prSnap.docs[0].id;
+                }
+            } catch (error) {
+                console.error("Error fetching presidium ID for service record:", error);
+            }
+
+            if (presidiumId) {
+                try {
+                    // 2. presidium_history에서 해당 쁘레시디움의 역사 목록 조회
+                    const histQuery = query(collection(db, 'presidium_history'), 
+                        where('presidiumId', '==', presidiumId)
+                    );
+                    const histSnap = await getDocs(histQuery);
+                    const histories = [];
+                    histSnap.forEach(d => histories.push(d.data()));
+                    
+                    // 시작일 기준 오름차순 정렬
+                    histories.sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
+                    
+                    const enterDate = member.probationaryDate || '';
+                    const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                    const leaveDate = member.leaveDate || member.retiredDate || member.extinctionDate || todayStr;
+                    
+                    histories.forEach(h => {
+                        const start = h.startDate || '';
+                        const end = h.endDate || '2999-12-31';
+                        
+                        // 단원의 활동 기간(enterDate ~ leaveDate)과 쁘레시디움의 소속 기간(start ~ end)이 겹치는지 계산
+                        // 겹치는 구간: Max(enterDate, start) ~ Min(leaveDate, end)
+                        const overlapStart = enterDate > start ? enterDate : start;
+                        const overlapEnd = leaveDate < end ? leaveDate : end;
+                        
+                        if (overlapStart <= overlapEnd) {
+                            // 겹치는 구간이 유효한 경우에만 이동 현황 테이블 행 생성
+                            const displayEnd = (overlapEnd === '2999-12-31' || overlapEnd === todayStr)
+                                ? (member.leaveDate || member.retiredDate || member.extinctionDate ? overlapEnd : '') // 활동중이면 끝날짜 비워둠
+                                : overlapEnd;
+                                
+                            moveData.push({
+                                presidiumName: member.presidiumName || '-',
+                                curiaName: h.curiaName || '-',
+                                churchName: member.churchName || '-',
+                                period: `${overlapStart} ~ ${displayEnd ? displayEnd : '(활동중)'}`
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error fetching presidium history for service record:", error);
+                }
+            }
+
+            // 역사 데이터가 없거나 예외 발생 시 기존 방식대로 폴백
+            if (moveData.length === 0) {
+                moveData.push({ 
+                    presidiumName: member.presidiumName || '-', 
+                    curiaName: member.curiaName || '-', 
+                    churchName: member.churchName || '-', 
+                    period: `${member.probationaryDate || ''} ~ ${member.leaveDate || member.retiredDate || member.extinctionDate || ''}` 
+                });
+            }
+
             const totalCareerPages = Math.ceil(allCareer.length / PAGE_LIMITS.career) || 1;
             const totalEduPages = Math.ceil(allEvents.length / PAGE_LIMITS.education) || 1;
             const totalPages = Math.max(totalCareerPages, totalEduPages, 1);
@@ -599,10 +664,11 @@
             }
         }, () => { window.close(); });
     </script>
-    <script src="script.js?v=20260608_0701"></script>
+    <script src="script.js?v=20260609_1523"></script>
 </body>
 
 </html>
+
 
 
 
