@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>평의회 출석 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260609_1523">
+    <link rel="stylesheet" href="styles.css?v=20260609_1531">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
@@ -327,6 +327,97 @@
             color: #888;
             transform: scale(1.1);
         }
+
+        /* 럭셔리 커스텀 경고 모달 스타일 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .custom-modal {
+            background: white;
+            padding: 30px 25px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            border-top: 5px solid #d4a017;
+            animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .custom-modal-icon {
+            font-size: 2.8rem;
+            color: #d4a017;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .custom-modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-family: 'Noto Serif KR', serif;
+        }
+
+        .custom-modal-message {
+            font-size: 0.98rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #4a5568;
+            white-space: pre-wrap;
+            word-break: keep-all;
+            text-align: left;
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #edf2f7;
+        }
+
+        .btn-modal-confirm {
+            background: #d4a017;
+            color: white;
+            padding: 12px 40px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(212, 160, 23, 0.2);
+        }
+
+        .btn-modal-confirm:hover {
+            background: #b8860b;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(212, 160, 23, 0.3);
+        }
+
+        .btn-modal-confirm:active {
+            transform: translateY(0);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 
@@ -441,23 +532,14 @@
                             <input type="hidden" id="presidiumFilter">
                         </div>
                     </div>
-                    <div class="filter-group" style="width: 100%; max-width: 120px;">
-                        <label>해당년도</label>
-                        <input type="number" id="yearFilter" min="2000" max="2100"
-                            style="text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
-                    </div>
-                    <div class="filter-group" style="width: 100%; max-width: 320px;">
-                        <label>기준차수 (날짜 자동 매칭)</label>
+                    <div class="filter-group" style="width: 100%; max-width: 360px;">
+                        <label>조회 기간 (시작일 ~ 종료일)</label>
                         <div style="display: flex; gap: 5px; align-items: center;">
-                            <select id="startSessionFilter"
-                                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">시작</option>
-                            </select>
+                            <input type="date" id="startDateFilter"
+                                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                             <span>~</span>
-                            <select id="endSessionFilter"
-                                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="">종료</option>
-                            </select>
+                            <input type="date" id="endDateFilter"
+                                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                         </div>
                     </div>
                 </div>
@@ -574,7 +656,17 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260609_1523"></script>
+    <!-- 럭셔리 커스텀 경고 모달 레이아웃 추가 -->
+    <div id="customModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <i class="fas fa-exclamation-triangle custom-modal-icon"></i>
+            <div class="custom-modal-title">[알림] 시스템 경고</div>
+            <div id="modalMessage" class="custom-modal-message"></div>
+            <button id="modalConfirmBtn" class="btn-modal-confirm">확인</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260609_1531"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -589,15 +681,43 @@
         const presidiumSearch = document.getElementById('presidiumSearch');
         const presidiumDropdown = document.getElementById('presidiumDropdown');
         const presidiumFilter = document.getElementById('presidiumFilter');
-        const yearFilter = document.getElementById('yearFilter');
-        const startSessionFilter = document.getElementById('startSessionFilter');
-        const endSessionFilter = document.getElementById('endSessionFilter');
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
         const btnSearch = document.getElementById('btnSearch');
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
 
-        yearFilter.value = new Date().getFullYear();
+        // 기본값: 시작일은 한 달 전, 종료일은 오늘
+        const today = new Date();
+        const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+        const formatDate = (date) => {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+        startDateFilter.value = formatDate(oneMonthAgo);
+        endDateFilter.value = formatDate(today);
+
+        // [시니어 멘토] 브라우저 기본 alert 대신 활성화되는 비동기 커스텀 알림창 함수
+        const showCustomAlert = (message) => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const msgEl = document.getElementById('modalMessage');
+                const btn = document.getElementById('modalConfirmBtn');
+
+                msgEl.textContent = message;
+                modal.style.display = 'flex';
+
+                const close = () => {
+                    modal.style.display = 'none';
+                    btn.removeEventListener('click', close);
+                    resolve();
+                };
+                btn.addEventListener('click', close);
+            });
+        };
 
         initAuthObserver(async (user, profile) => {
             currentUser = profile;
@@ -636,14 +756,11 @@
                 presidiumSearch.value = profile.presidiumName || '';
                 presidiumFilter.value = profile.presidiumName || '';
                 presidiumSearch.disabled = true;
-
-                // 소속 설정 후 즉시 회차 목록 업데이트
-                await updateSessionDatalist();
             }
 
             churchFilter.onchange = async () => await updateCuriaFilter(churchFilter.value);
             curiaFilter.onchange = async () => {
-                await updateSessionDatalist();
+                // 회차 목록 업데이트 없음
             };
         }
 
@@ -657,7 +774,6 @@
                 curiaFilter.appendChild(opt);
             });
             curiaFilter.disabled = !churchName;
-            await updateSessionDatalist();
         }
 
         // This function is no longer needed as presidium selection is handled by custom search
@@ -703,66 +819,7 @@
             }
         }
 
-        async function updateSessionDatalist() {
-            const church = churchFilter.value;
-            const curia = curiaFilter.value;
-
-            startSessionFilter.innerHTML = '<option value="">시작</option>';
-            endSessionFilter.innerHTML = '<option value="">종료</option>';
-
-            if (!church || !curia) return;
-
-            try {
-                // [정석화] 오직 표준 필드명으로만 쿼리
-                const qSessions = query(collection(db, 'council_attendance_list'),
-                    where('churchName', '==', church),
-                    where('curiaName', '==', curia)
-                );
-
-                const snap = await getDocs(qSessions);
-                const allData = snap.docs.map(docSnap => docSnap.data());
-
-                // [추가] 복합 인덱스 오류 방지를 위해 메모리 정렬 수행
-                allData.sort((a, b) => {
-                    if (b.date !== a.date) return b.date.localeCompare(a.date);
-                    return parseInt(b.session) - parseInt(a.session);
-                });
-
-                // Sort by session descending and remove duplicates
-                const sessions = [...new Map(allData.filter(r => r.date && r.session).map(item => [item.session, item])).values()]
-                    .sort((a, b) => parseInt(b.session) - parseInt(a.session));
-
-                sessions.forEach(s => {
-                    const optStr = `${s.session}차 (${s.date})`;
-
-                    const opt1 = document.createElement('option');
-                    opt1.value = s.session;
-                    opt1.textContent = optStr;
-                    opt1.dataset.date = s.date;
-                    startSessionFilter.appendChild(opt1);
-
-                    const opt2 = document.createElement('option');
-                    opt2.value = s.session;
-                    opt2.textContent = optStr;
-                    opt2.dataset.date = s.date;
-                    endSessionFilter.appendChild(opt2);
-                });
-            } catch (error) {
-                console.error("Error updating session datalist:", error);
-            }
-        }
-
-        // This function is no longer needed as date filters are removed
-        // function handleSessionSelect(selectEl, dateEl) {
-        //     const sess = selectEl.value;
-        //     const opt = selectEl.options[selectEl.selectedIndex];
-        //     if (sess && opt && opt.dataset.date) {
-        //         dateEl.value = opt.dataset.date;
-        //     }
-        // }
-
-        // startSessionFilter.addEventListener('change', () => handleSessionSelect(startSessionFilter, startDateFilter));
-        // endSessionFilter.addEventListener('change', () => handleSessionSelect(endSessionFilter, endDateFilter));
+        // [시니어 멘토] 회차 목록 동적 생성 함수(updateSessionDatalist)는 날짜 입력 방식으로 전환됨에 따라 불필요하므로 영구 제거합니다.
 
         function setupEventListeners() {
             btnSearch.onclick = async () => await loadReport();
@@ -777,8 +834,8 @@
             });
 
             // Enter key navigation
-            const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumSearch, yearFilter, startSessionFilter, endSessionFilter]
-                : [yearFilter, startSessionFilter, endSessionFilter]);
+            const fields = (isAdmin ? [churchFilter, curiaFilter, presidiumSearch, startDateFilter, endDateFilter]
+                : [startDateFilter, endDateFilter]);
             fields.forEach((f, idx) => {
                 f.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
@@ -796,36 +853,91 @@
         async function loadReport() {
             const church = churchFilter.value;
             const curia = curiaFilter.value;
-            const year = parseInt(yearFilter.value);
-            const startSess = startSessionFilter.value ? parseInt(startSessionFilter.value) : null;
-            const endSess = endSessionFilter.value ? parseInt(endSessionFilter.value) : null;
+            const startD = startDateFilter.value;
+            const endD = endDateFilter.value;
+            const presidium = presidiumFilter.value;
 
             if (!church || !curia) {
-                alert("성당과 꾸리아를 선택해주세요.");
+                await showCustomAlert("성당과 꾸리아를 선택해 주세요.");
+                return;
+            }
+
+            if (!startD || !endD) {
+                await showCustomAlert("조회 기간(시작일과 종료일)을 지정해 주세요.");
+                return;
+            }
+
+            if (startD > endD) {
+                await showCustomAlert("시작 날짜가 종료 날짜보다 늦을 수 없습니다.");
                 return;
             }
 
             try {
-                // [정석화] 오직 표준 필드명으로만 쿼리
+                // [시니어 멘토] 1단계: 쁘레시디움 선택 시 조회 기간 내 꾸리아 이동(엇박자) 이력 검증
+                if (presidium) {
+                    // presidiaList에서 현재 쁘레시디움의 고유 ID를 가져옵니다.
+                    const targetPr = presidiaList.find(p => p.presidiumName === presidium);
+                    const presidiumId = targetPr ? targetPr.id : null;
+
+                    if (presidiumId) {
+                        // 쁘레시디움의 이력 데이터(presidium_history)를 조회합니다.
+                        const histQuery = query(collection(db, 'presidium_history'), 
+                            where('presidiumId', '==', presidiumId)
+                        );
+                        const histSnap = await getDocs(histQuery);
+                        const histories = [];
+                        histSnap.forEach(d => histories.push(d.data()));
+
+                        // 사용자가 지정한 조회 기간과 쁘레시디움 소속 이력 기간이 겹치는지 체크하여 겹치는 이력들을 모음
+                        const overlappingHistories = [];
+                        histories.forEach(h => {
+                            const start = h.startDate || '';
+                            const end = h.endDate || '9999-12-31';
+
+                            // 겹치는 구간 계산: Max(startD, start) <= Min(endD, end)
+                            const overlapStart = startD > start ? startD : start;
+                            const overlapEnd = endD < end ? endD : end;
+
+                            if (overlapStart <= overlapEnd) {
+                                overlappingHistories.push(h);
+                            }
+                        });
+
+                        // 시작 날짜 순서대로 정렬
+                        overlappingHistories.sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
+
+                        // 중복을 제거한 고유 꾸리아 수 계산
+                        const uniqueCuriaNames = new Set(overlappingHistories.map(h => h.curiaName).filter(Boolean));
+
+                        // 조회 기간 동안 쁘레시디움의 소속 꾸리아가 2개 이상 감지되면 조회 차단
+                        if (uniqueCuriaNames.size >= 2) {
+                            const historyTexts = overlappingHistories.map(h => {
+                                const displayEnd = (!h.endDate || h.endDate === '2999-12-31' || h.endDate === '9999-12-31') ? '현재' : h.endDate;
+                                return `  • ${h.curiaName} (${h.startDate || ''} ~ ${displayEnd})`;
+                            });
+                            const historyMessage = historyTexts.join('\n');
+
+                            await showCustomAlert(`선택하신 조회 기간(${startD} ~ ${endD}) 중에 해당 쁘레시디움의 소속 꾸리아가 변경되었습니다.\n\n* 소속 이력 및 기간:\n${historyMessage}\n\n데이터의 정확성을 위해 꾸리아 소속별 기간으로 날짜 범위를 나누어서 각각 따로 조회해 주세요.`);
+                            return;
+                        }
+                    }
+                }
+
+                // 2단계: 평의회 출석 리스트를 성당 및 꾸리아 기준으로 가져옴
+                // (엇박자가 검증으로 걸러졌으므로 선택한 단일 꾸리아 기준 쿼리가 유효함)
                 const qReport = query(collection(db, 'council_attendance_list'),
                     where('churchName', '==', church),
                     where('curiaName', '==', curia)
                 );
 
                 const snap = await getDocs(qReport);
-                const allData = snap.docs.map(docSnap => docSnap.data())
-                    .filter(data => new Date(data.date).getFullYear() === year);
+                const allData = snap.docs.map(docSnap => docSnap.data());
 
-                let filtered = allData;
+                // 지정한 시작일 ~ 종료일 범위 내의 평의회 회합 기록만 필터링
+                let filtered = allData.filter(r => r.date >= startD && r.date <= endD);
 
-                if (startSess) filtered = filtered.filter(r => parseInt(r.session) >= startSess);
-                if (endSess) filtered = filtered.filter(r => parseInt(r.session) <= endSess);
-                // if (startD) filtered = filtered.filter(r => r.date >= startD); // Removed
-                // if (endD) filtered = filtered.filter(r => r.date <= endD);     // Removed
-
-                const presidium = presidiumFilter.value;
-
-                filtered.sort((a, b) => parseInt(a.session) - parseInt(b.session));
+                // 회차 기준 오름차순 정렬
+                filtered.sort((a, b) => parseInt(a.session || 0) - parseInt(b.session || 0));
 
                 if (filtered.length === 0) {
                     reportContent.style.display = 'none';
@@ -833,7 +945,7 @@
                     return;
                 }
 
-                // If presidium is selected, we only filter the internal attendanceData
+                // 쁘레시디움 필터 적용 시 내부 단원 명단의 쁘레시디움명 기준으로 한번 더 필터링
                 let finalData = filtered;
                 if (presidium) {
                     finalData = filtered.map(r => ({
@@ -854,7 +966,7 @@
                 renderReport(finalData);
             } catch (error) {
                 console.error("Error loading report:", error);
-                alert("보고서를 불러오는 중 오류가 발생했습니다.");
+                await showCustomAlert("보고서를 불러오는 중 오류가 발생했습니다.");
             }
         }
 
@@ -929,6 +1041,7 @@
 </body>
 
 </html>
+
 
 
 
