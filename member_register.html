@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단원 등록 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260609_1531">
+    <link rel="stylesheet" href="styles.css?v=20260609_1616">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Reuse styles from presidium_register.html for consistency */
@@ -443,7 +443,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260609_1531"></script>
+    <script src="script.js?v=20260609_1616"></script>
     <script type="module">
         import { auth, db, storage, collection, query, where, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy, deleteField } from './firebase-config.js';
         import { fetchPresidiaList, getChurches, getCuriae, getPresidia } from './data.js';
@@ -1156,6 +1156,7 @@
                     await updateDoc(doc(db, "members_list", editId), memberData);
                     console.log("✅ 수정 성공!");
                     await syncUserAccountStatus(memberData);
+                    await syncOfficerAndUserProfile(editId, memberData);
                     await window.showGlobalAlert('✅ 수정 완료되었습니다.');
                 } else {
                     console.log("🆕 신규 등록 시도 중 (members_list)...");
@@ -1262,6 +1263,47 @@
             }
         }
 
+        // [근본 패치] 단원 정보(성명/세례명/연락처/축일) 수정 시 간부 이력(officers_list) 및 유저 프로필(users) 실시간 동기화
+        async function syncOfficerAndUserProfile(memberId, memberData) {
+            try {
+                console.log(`⏳ [동기화] 단원 ID: ${memberId}의 변경사항을 간부 이력 및 사용자 계정에 동기화 중...`);
+
+                // 1. officers_list 일괄 업데이트
+                const oQuery = query(collection(db, 'officers_list'), where('memberId', '==', memberId));
+                const oSnap = await getDocs(oQuery);
+                if (!oSnap.empty) {
+                    const batchPromises = oSnap.docs.map(d => 
+                        updateDoc(d.ref, {
+                            name: memberData.name || '',
+                            baptismalName: memberData.baptismalName || '',
+                            phone: memberData.phone || '',
+                            feastDate: memberData.feastDate || ''
+                        })
+                    );
+                    await Promise.all(batchPromises);
+                    console.log(`✅ [동기화 완료] officers_list ${oSnap.size}건 업데이트`);
+                }
+
+                // 2. users 컬렉션 프로필 정보 일괄 업데이트
+                const uQuery = query(collection(db, 'users'), where('memberId', '==', memberId));
+                const uSnap = await getDocs(uQuery);
+                if (!uSnap.empty) {
+                    const batchPromises = uSnap.docs.map(d => 
+                        updateDoc(d.ref, {
+                            name: memberData.name || '',
+                            baptismalName: memberData.baptismalName || '',
+                            phone: memberData.phone || '',
+                            feastDate: memberData.feastDate || ''
+                        })
+                    );
+                    await Promise.all(batchPromises);
+                    console.log(`✅ [동기화 완료] users ${uSnap.size}건 업데이트`);
+                }
+            } catch (err) {
+                console.error("🚨 [동기화 실패] 자동 동기화 중 오류 발생:", err);
+            }
+        }
+
         // --- UI Utils (Formatting) ---
         const dateInputs = document.querySelectorAll('input[placeholder="YYYY-MM-DD"]');
         dateInputs.forEach(input => {
@@ -1300,6 +1342,7 @@
 </body>
 
 </html>
+
 
 
 

@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부현황 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260609_1531">
+    <link rel="stylesheet" href="styles.css?v=20260609_1616">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -492,7 +492,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260609_1531"></script>
+    <script src="script.js?v=20260609_1616"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2340";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -1049,6 +1049,298 @@
             }
         }
 
+        // --- 3번째 시트: 역대 간부이력(2) 생성 함수 ---
+        async function generateSortedHistorySheet(workbook, selectedChurch, selectedPresidium) {
+            if (!selectedChurch || !selectedPresidium || selectedChurch === '전체' || selectedPresidium === '전체') {
+                return; // 단일 쁘레시디움 정보가 명확히 지정되지 않은 경우 작성 생략
+            }
+
+            try {
+                // 1. 쁘레시디움 기본 정보 가져오기 (설립일, 승인일 등)
+                const presSnap = await getDocs(query(
+                    collection(db, 'presidia_list'), 
+                    where('churchName', '==', selectedChurch),
+                    where('presidiumName', '==', selectedPresidium)
+                ));
+                const presData = presSnap.docs.map(d => ({ ...d.data(), id: d.id }))[0] || {};
+                const foundationDate = presData.foundationDate || '';
+                const approvalDate = presData.approvalDate || '';
+
+                // 2. 단원 목록 조회 (설립일 당시 행동단원 수 계산용)
+                const memberSnap = await getDocs(query(
+                    collection(db, 'members_list'),
+                    where('presidiumName', '==', selectedPresidium)
+                ));
+                const members = memberSnap.docs.map(d => d.data());
+                
+                // 3. 협조단원 목록 조회 (설립일 당시 협조단원 수 계산용)
+                const auxSnap = await getDocs(query(
+                    collection(db, 'auxiliary_members_list'),
+                    where('presidiumName', '==', selectedPresidium)
+                ));
+                const auxMembers = auxSnap.docs.map(d => d.data());
+
+                // 4. 연혁(꾸리아 변경 이력) 조회
+                let histories = [];
+                if (presData.id) {
+                    const histSnap = await getDocs(query(
+                        collection(db, 'presidium_history'),
+                        where('presidiumId', '==', presData.id)
+                    ));
+                    histories = histSnap.docs.map(d => d.data());
+                }
+
+                // 5. Firestore에서 역대 주임신부(영적지도자) 정보 쿼리 및 부임일 순 정렬
+                const clergyQuery = query(
+                    collection(db, 'clergy_info'), 
+                    where('churchName', '==', selectedChurch),
+                    where('position', '==', '주임신부')
+                );
+                const clergySnap = await getDocs(clergyQuery);
+                const clergies = clergySnap.docs.map(doc => doc.data());
+                clergies.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+
+                // 6. Firestore에서 역대 간부 목록 정보 쿼리
+                const officerQuery = query(
+                    collection(db, 'officers_list'),
+                    where('churchName', '==', selectedChurch),
+                    where('presidiumName', '==', selectedPresidium)
+                );
+                const officerSnap = await getDocs(officerQuery);
+                const officers = officerSnap.docs.map(doc => doc.data());
+
+                // 역할 표준화 매핑 딕셔너리
+                const roleMap = {
+                    'president': '단장', 'vice_president': '부단장', 'secretary': '서기', 'treasurer': '회계',
+                    '단장': '단장', '부단장': '부단장', '서기': '서기', '회계': '회계'
+                };
+
+                // 각 직급별 필터링 및 임명(선출)일 기준 오름차순 정렬
+                const presidents = officers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '단장');
+                const vicePresidents = officers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '부단장');
+                const secretaries = officers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '서기');
+                const treasurers = officers.filter(o => roleMap[(o.role || '').toLowerCase().trim()] === '회계');
+
+                presidents.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+                vicePresidents.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+                secretaries.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+                treasurers.sort((a, b) => (a.appointmentDate || '').localeCompare(b.appointmentDate || ''));
+
+                // --- 3번째 시트 생성 ---
+                const worksheet = workbook.addWorksheet('편찬 자료서');
+
+                const startCol = 2; // B열
+                
+                // 2행: 대제목
+                worksheet.mergeCells(2, startCol, 2, startCol + 4);
+                const titleCell = worksheet.getCell(2, startCol);
+                titleCell.value = '대전교구 레지오 마리애 편찬 자료서';
+                titleCell.font = { size: 16, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+                worksheet.getRow(2).height = 30;
+
+                // 3행: 성당/쁘레시디움 정보
+                worksheet.mergeCells(3, startCol, 3, startCol + 4);
+                const infoCell = worksheet.getCell(3, startCol);
+                const churchDisp = selectedChurch.endsWith('성당') ? selectedChurch : `${selectedChurch} 성당`;
+                infoCell.value = `성당: ${churchDisp} | 쁘레시디움: ${selectedPresidium}`;
+                infoCell.font = { bold: true, size: 10, color: { argb: 'FF4A5568' } };
+                infoCell.alignment = { horizontal: 'left', vertical: 'middle' };
+                worksheet.getRow(3).height = 20;
+
+                // 날짜 포맷 헬퍼들
+                const formatKoreanDate = (d) => {
+                    if (!d) return '';
+                    const parts = d.split('-');
+                    if (parts.length === 3) {
+                        return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일`;
+                    }
+                    return d;
+                };
+
+                const formatHistoryDate = (d) => {
+                    if (!d) return '';
+                    const parts = d.split('-');
+                    if (parts.length === 3) {
+                        return `${parts[0]}. ${parts[1]}. ${parts[2]}.`;
+                    }
+                    return d;
+                };
+
+                // 설립일 당시 행동단원 수 계산
+                const actionCount = members.filter(m => 
+                    (m.classification === '행동단원' || m.classification === '활동단원') && 
+                    (m.probationaryDate || '') <= foundationDate && 
+                    (!m.leaveDate || m.leaveDate > foundationDate)
+                ).length;
+
+                // 설립일 당시 협조단원 수 계산
+                const auxCount = auxMembers.filter(m => 
+                    (m.admissionDate || '') <= foundationDate && 
+                    (!m.withdrawalDate || m.withdrawalDate > foundationDate)
+                ).length;
+
+                const formatCount = (count) => {
+                    return count > 0 ? String(count).padStart(2, '0') : '0';
+                };
+
+                // 승인평의회 (설립 당시의 소속 꾸리아 구함)
+                histories.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+                const initialCuria = histories.length > 0 ? histories[0].curiaName : (presData.curiaName || '');
+                const curiaDisp = initialCuria ? (initialCuria.endsWith('Cu.') ? initialCuria : `${initialCuria} Cu.`) : '';
+
+                // 연혁 문구 가공
+                let historyText = '5. 연   혁:';
+                let historyLines = 1;
+                for (let k = 1; k < histories.length; k++) {
+                    const prev = histories[k-1];
+                    const curr = histories[k];
+                    if (prev.curiaName !== curr.curiaName) {
+                        const changeDate = formatHistoryDate(curr.startDate);
+                        historyText += `\n${changeDate} ${prev.curiaName} Cu. 에서 ${curr.curiaName} Cu. 소속 변경`;
+                        historyLines++;
+                    }
+                }
+
+                // 4행: 호도명
+                worksheet.mergeCells(4, startCol, 4, startCol + 4);
+                const cell4 = worksheet.getCell(4, startCol);
+                const presDisp = selectedPresidium.endsWith('Pr.') ? selectedPresidium : `${selectedPresidium} Pr.`;
+                cell4.value = `1. Pr. 호도명: ${presDisp}`;
+                cell4.font = { size: 10, color: { argb: 'FF2D3748' } };
+                cell4.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 5행: 설립연월일
+                worksheet.mergeCells(5, startCol, 5, startCol + 4);
+                const cell5 = worksheet.getCell(5, startCol);
+                const fDateDisp = foundationDate ? formatKoreanDate(foundationDate) : '';
+                cell5.value = `2. 설립연월일: ${fDateDisp}(행동단원 ${formatCount(actionCount)} 명, 협조단원 ${formatCount(auxCount)} 명)`;
+                cell5.font = { size: 10, color: { argb: 'FF2D3748' } };
+                cell5.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 6행: 승인연월일
+                worksheet.mergeCells(6, startCol, 6, startCol + 4);
+                const cell6 = worksheet.getCell(6, startCol);
+                const aDateDisp = approvalDate ? formatKoreanDate(approvalDate) : '';
+                cell6.value = `3. 승인연월일: ${aDateDisp}`;
+                cell6.font = { size: 10, color: { argb: 'FF2D3748' } };
+                cell6.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 7행: 승인평의회
+                worksheet.mergeCells(7, startCol, 7, startCol + 4);
+                const cell7 = worksheet.getCell(7, startCol);
+                cell7.value = `4. 승인평의회: ${curiaDisp}`;
+                cell7.font = { size: 10, color: { argb: 'FF2D3748' } };
+                cell7.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 8행: 연혁
+                worksheet.mergeCells(8, startCol, 8, startCol + 4);
+                const cell8 = worksheet.getCell(8, startCol);
+                cell8.value = historyText;
+                cell8.font = { size: 10, color: { argb: 'FF2D3748' } };
+                cell8.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+                worksheet.getRow(8).height = Math.max(20, historyLines * 18);
+
+                // 10행 표 헤더 (9행은 이미지처럼 공백행으로 둠)
+                const startRow = 10;
+                const columns = [
+                    { label: '지도신부\n(부임일)', width: 26 },
+                    { label: '단 장\n(임명일)', width: 26 },
+                    { label: '부단장\n(임명일)', width: 26 },
+                    { label: '서 기\n(임명일)', width: 26 },
+                    { label: '회 계\n(임명일)', width: 26 }
+                ];
+
+                const headerRow = worksheet.getRow(startRow);
+                headerRow.height = 28;
+                columns.forEach((col, idx) => {
+                    const cell = headerRow.getCell(startCol + idx);
+                    cell.value = col.label;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFFFFFF' } // 흰색 배경 강제 적용
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // 날짜 포맷 헬퍼 (YYYY-MM-DD -> YYYY.MM.DD.)
+                const formatExcelDate = (d) => {
+                    if (!d) return '';
+                    const digits = d.replace(/[^0-9]/g, '');
+                    if (digits.length === 8) {
+                        return `${digits.substring(0, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}.`;
+                    }
+                    return d.replace(/-/g, '.') + (d.endsWith('.') ? '' : '.');
+                };
+
+                // 데이터 셀 가공 헬퍼 (이름 세례명 \n (YYYY.MM.DD.) 포맷)
+                const formatCellData = (item) => {
+                    if (!item) return '';
+                    const namePart = item.baptismalName ? `${item.name} ${item.baptismalName}` : item.name;
+                    const datePart = item.appointmentDate ? `\n(${formatExcelDate(item.appointmentDate)})` : '';
+                    return `${namePart}${datePart}`;
+                };
+
+                // 다섯 개의 열 중에서 데이터가 가장 많은 수만큼 행 생성
+                const maxRows = Math.max(
+                    clergies.length,
+                    presidents.length,
+                    vicePresidents.length,
+                    secretaries.length,
+                    treasurers.length
+                );
+
+                let currentRowNum = startRow + 1;
+                for (let i = 0; i < maxRows; i++) {
+                    const row = worksheet.getRow(currentRowNum);
+                    row.height = 28;
+
+                    row.getCell(startCol).value = formatCellData(clergies[i]);
+                    row.getCell(startCol + 1).value = formatCellData(presidents[i]);
+                    row.getCell(startCol + 2).value = formatCellData(vicePresidents[i]);
+                    row.getCell(startCol + 3).value = formatCellData(secretaries[i]);
+                    row.getCell(startCol + 4).value = formatCellData(treasurers[i]);
+
+                    // 디자인 스타일 적용 (가운데 정렬, 얇은 보더, 줄바꿈 활성화, 흰색 배경 강제 적용)
+                    for (let colIdx = 0; colIdx < 5; colIdx++) {
+                        const cell = row.getCell(startCol + colIdx);
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFFFFFFF' } // 흰색 배경 강제 지정 (클립보드 변환기 버그 방지)
+                        };
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        cell.font = { size: 9 };
+                    }
+
+                    currentRowNum++;
+                }
+
+                // A열 여백 및 각 컬럼 너비 조정
+                worksheet.getColumn(1).width = 3;
+                columns.forEach((col, idx) => {
+                    worksheet.getColumn(startCol + idx).width = col.width || 26;
+                });
+
+            } catch (err) {
+                console.error('[ExcelJS] generateSortedHistorySheet failed:', err);
+            }
+        }
+
         // --- 엑셀 파일 다운로드 기능 구현 ---
         async function exportToExcel() {
             if (!currentFilteredOfficers || currentFilteredOfficers.length === 0) {
@@ -1210,7 +1502,10 @@
                 // 2. 두 번째 시트 생성 (역대 간부 이력)
                 await generateHistorySheet(workbook, churchVal, presidiumVal);
 
-                // 3. 엑셀 파일 변환 및 세이브 처리
+                // 3. 세 번째 시트 생성 (역대 간부이력(2))
+                await generateSortedHistorySheet(workbook, churchVal, presidiumVal);
+
+                // 4. 엑셀 파일 변환 및 세이브 처리
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
                 console.log(`[ExcelJS] Exported with history: ${filename}`);
@@ -1224,6 +1519,7 @@
 </body>
 
 </html>
+
 
 
 
