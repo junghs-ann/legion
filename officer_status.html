@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부현황 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260609_1616">
+    <link rel="stylesheet" href="styles.css?v=20260618_1425">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -492,7 +492,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260609_1616"></script>
+    <script src="script.js?v=20260618_1425"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2340";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -1271,14 +1271,19 @@
                     };
                 });
 
-                // 날짜 포맷 헬퍼 (YYYY-MM-DD -> YYYY.MM.DD.)
+                // 날짜 포맷 헬퍼 (YYYY-MM-DD -> yy.mm.dd.)
                 const formatExcelDate = (d) => {
                     if (!d) return '';
                     const digits = d.replace(/[^0-9]/g, '');
                     if (digits.length === 8) {
-                        return `${digits.substring(0, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}.`;
+                        return `${digits.substring(2, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}.`;
                     }
-                    return d.replace(/-/g, '.') + (d.endsWith('.') ? '' : '.');
+                    let formatted = d.replace(/-/g, '.');
+                    // 'YYYY.MM.DD.' 형식 등에서 앞 2자리(세기 표시 부분) 제거
+                    if (/^\d{4}\.\d{2}\.\d{2}/.test(formatted)) {
+                        formatted = formatted.substring(2);
+                    }
+                    return formatted + (formatted.endsWith('.') ? '' : '.');
                 };
 
                 // 데이터 셀 가공 헬퍼 (이름 세례명 \n (YYYY.MM.DD.) 포맷)
@@ -1519,6 +1524,8 @@
 </body>
 
 </html>
+
+
 
 
 
