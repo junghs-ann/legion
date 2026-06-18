@@ -385,13 +385,32 @@ body {
 
 /* Mobile Toggle */
 .menu-toggle {
-    display: none;
-    position: absolute;
-    right: 25px;
-    top: 25px;
-    font-size: 1.5rem;
+    display: none; /* 기본적으로 데스크톱(PC) 화면에서는 숨깁니다. */
+    align-items: center; /* 아이콘과 한글 텍스트를 세로 가운데 정렬합니다. */
+    justify-content: center;
+    gap: 6px; /* ☰ 아이콘과 '메뉴' 글씨 사이의 부드러운 간격입니다. */
+    padding: 6px 12px; /* 클릭하기 편하도록 안쪽 여백을 넉넉히 줍니다. */
+    border-radius: 20px; /* 친근하고 둥글둥글한 알약 형태의 예쁜 버튼입니다. */
+    border: 1.5px solid var(--primary-color); /* 브랜드 정체성을 담은 초록색 테두리입니다. */
+    background-color: rgba(46, 125, 50, 0.05); /* 은은하고 맑은 연초록색 배경입니다. */
+    color: var(--primary-color); /* 아이콘 색상도 브랜드 컬러와 통일합니다. */
+    font-size: 1rem;
     cursor: pointer;
-    color: var(--text-color);
+    transition: all 0.2s ease; /* 누를 때 부드러운 애니메이션 효과를 줍니다. */
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* ☰ 아이콘 오른쪽에 한글로 '메뉴' 글씨를 마술처럼 붙여 줍니다. */
+.menu-toggle::after {
+    content: "메뉴";
+    font-size: 0.85rem; /* 글씨 크기는 아이콘보다 조금 작게 조정합니다. */
+    font-weight: 700; /* 두껍게 표현하여 가독성을 높입니다. */
+}
+
+/* 사용자가 마우스를 올리거나 손가락으로 누르고 있을 때의 색상 반전 효과입니다. */
+.menu-toggle:hover, .menu-toggle:active {
+    background-color: var(--primary-color);
+    color: white;
 }
 
 /* === Dashboard Custom Components === */
@@ -539,7 +558,7 @@ body {
     }
 
     .menu-toggle {
-        display: block;
+        display: flex; /* block에서 flex로 변경하여 아이콘과 '메뉴' 가상 요소가 가로로 나란히 정렬되도록 합니다. */
         position: static;
     }
 

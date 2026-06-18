@@ -611,16 +611,6 @@
                 return;
             }
 
-            // [안전성 개선] 회계연도 경계를 넘어서 조회하는 경우(년도 걸침)를 방지합니다.
-            if (filters.startDate && filters.endDate) {
-                const startYear = filters.startDate.split('-')[0];
-                const endYear = filters.endDate.split('-')[0];
-                if (startYear !== endYear) {
-                    await window.showGlobalAlert("⚠️ 회계 보고서는 동일한 년도 내에서만 조회가 가능합니다.\n기준일자를 확인해 주세요.", "warning");
-                    return;
-                }
-            }
-
             try {
                 // 1. Load Initial Balance (from accounting_summaries) from Firestore
                 const summaryId = `${filters.year}_${filters.church}_${filters.curia}_${filters.presidium}`;
@@ -693,8 +683,7 @@
 
                 // --- Logic for Carryover & Totals ---
                 // 1. Calculate Balance before Start Date (Prev Carryover)
-                let prevIncome = initialCarryover; // 연초 이월금으로 시작
-                let prevExpense = 0;
+                let prevBalance = initialCarryover;
                 let rangeIncomeTotal = 0;
                 let rangeExpenseTotal = 0;
 
@@ -722,10 +711,10 @@
 
                     if (!endDate || tDate <= endDate) isYtd = true;
 
-                    // Carryover Calc (전월 누계 수입/지출을 구분하여 계산)
+                    // Carryover Calc
                     if (isBefore) {
-                        if (t.type === 'deposit') prevIncome += amt;
-                        else prevExpense += amt;
+                        if (t.type === 'deposit') prevBalance += amt;
+                        else prevBalance -= amt;
                     }
 
                     // YTD Calc
@@ -753,9 +742,6 @@
                     }
                 }
 
-                // 전월까지의 최종 잔액 계산
-                let prevBalance = prevIncome - prevExpense;
-
                 // Cumulative Totals
                 const totalCumulativeIncome = ytdIncomeTotal + initialCarryover;
                 const totalCumulativeExpense = ytdExpenseTotal;
@@ -765,51 +751,17 @@
                 // 3. Render Main Table
                 reportBody.innerHTML = '';
 
-                // 조회 기간 시작일에 따른 이월금 명칭 및 수입/지출/잔액 렌더링 분기 로직
-                let carryoverTitle = "전월 이월금";
-                let isFirstMonth = false;
-
-                if (startDate) {
-                    const startMonth = startDate.getMonth(); // 0 = 1월
-                    const startDateVal = startDate.getDate();
-                    
-                    if (startMonth === 0 && startDateVal === 1) {
-                        carryoverTitle = "전차 이월금"; // 1월 1일 연초 시작
-                        isFirstMonth = true;
-                    } else if (startDateVal !== 1) {
-                        carryoverTitle = "이월금"; // 월 중간 시작 (예: 11월 15일)
-                    }
-                } else {
-                    // 시작일이 설정되지 않은 전체 조회는 기본적으로 연초로 취급
-                    carryoverTitle = "전차 이월금";
-                    isFirstMonth = true;
-                }
-
                 // 3.1 Prev Carryover Row
                 const trInit = document.createElement('tr');
-                if (isFirstMonth) {
-                    // 연초(전차이월금): 수입란과 잔액란에 잔액만 출력, 지출란은 공백
-                    trInit.innerHTML = `
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td style="text-align: left; padding-left: 20px; font-weight: bold;">${carryoverTitle}</td>
-                        <td class="amount">${prevBalance.toLocaleString()}</td>
-                        <td class="amount"></td>
-                        <td class="amount">${prevBalance.toLocaleString()}</td>
-                    `;
-                } else {
-                    // 연중(전월이월금 또는 이월금): 전월까지 누적된 수입/지출/잔액을 모두 출력
-                    trInit.innerHTML = `
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td style="text-align: left; padding-left: 20px; font-weight: bold;">${carryoverTitle}</td>
-                        <td class="amount">${prevIncome.toLocaleString()}</td>
-                        <td class="amount">${prevExpense.toLocaleString()}</td>
-                        <td class="amount">${prevBalance.toLocaleString()}</td>
-                    `;
-                }
+                trInit.innerHTML = `
+                <td></td>
+                <td></td>
+                <td></td>
+                <td style="text-align: left; padding-left: 20px;">전월 이월금</td>
+                <td class="amount">${prevBalance.toLocaleString()}</td>
+                <td class="amount"></td>
+                <td class="amount">${prevBalance.toLocaleString()}</td>
+            `;
                 reportBody.appendChild(trInit);
 
                 // 3.2 Transaction Rows
@@ -889,7 +841,7 @@
 
                     summaryTable.innerHTML = `
                     <tr>
-                        <th style="background-color: #f5f5f5;">${carryoverTitle}</th> <!-- 테이블 첫 행과 명칭 완벽 연동 -->
+                        <th style="background-color: #f5f5f5;">전월 이월금</th>
                         <td class="amount" id="summaryPrevBalance" style="background-color: #f5f5f5;">${prevBalance.toLocaleString()}</td>
                     </tr>
                     <tr>
@@ -937,92 +889,4 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

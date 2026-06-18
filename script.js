@@ -637,7 +637,8 @@ window.initCommonMenus = (profile, logoutUser) => {
             if (text === '등록관리') {
                 link.innerHTML = '등록관리 <span style="font-size: 0.8rem; opacity: 0.8;">(입력)</span>';
             } else if (text === '각종 장부') {
-                link.innerHTML = '각종 장부 <span style="font-size: 0.8rem; opacity: 0.8;">(조회)</span>';
+                // [UX 개선] 기존 '각종 장부(조회)' 명칭을 직관적이고 세련된 '조회(출력)'로 변경합니다.
+                link.innerHTML = '조회 <span style="font-size: 0.8rem; opacity: 0.8;">(출력)</span>';
                 item.classList.add('is-inquiry');
             } else if (text === '보고서') {
                 link.innerHTML = '보고서 <span style="font-size: 0.8rem; opacity: 0.8;">(조회)</span>';

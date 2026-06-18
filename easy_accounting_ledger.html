@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>입출등록 v3.0 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260618_1425">
+    <link rel="stylesheet" href="styles.css?v=20260619_0219">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -226,20 +226,16 @@
         .entry-table th:nth-child(3), .entry-table td:nth-child(3) { width: 90px; min-width: 90px; } /* 금액 */
         .entry-table th:nth-child(4), .entry-table td:nth-child(4) { width: 100px; min-width: 100px; color: #475569; font-weight: 600; } /* 잔액 */
         .entry-table th:nth-child(5), .entry-table td:nth-child(5) { min-width: 130px; } /* 적요 */
-        .entry-table th:nth-child(6), .entry-table td:nth-child(6) { width: 50px; min-width: 50px; } /* 삭제 */
+        .entry-table th:nth-child(6), .entry-table td:nth-child(6) { width: 90px; min-width: 90px; } /* 관리 (수정/삭제) */
 
-        /* [Senior UX] 행 클릭 수정 지원 스타일 */
+        /* [Senior UX] 행 스타일 (터치 스크롤 오작동 방지를 위해 포인터 및 액티브 배경 제거) */
         .entry-table tbody tr {
-            cursor: pointer;
+            cursor: default;
             transition: background-color 0.2s;
         }
 
         .entry-table tbody tr:hover {
             background-color: #f8fafc;
-        }
-
-        .entry-table tbody tr:active {
-            background-color: #f1f5f9;
         }
 
         .type-badge {
@@ -314,8 +310,22 @@
             transform: translateY(-2px);
         }
 
+        .btn-edit-row {
+            color: #3b82f6; /* 수정 버튼 (파란색) */
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: transform 0.2s;
+            margin-right: 12px;
+        }
+
+        .btn-edit-row:hover {
+            transform: scale(1.2);
+        }
+
         .btn-delete-row {
-            color: #ef4444;
+            color: #ef4444; /* 삭제 버튼 (빨간색) */
             background: none;
             border: none;
             cursor: pointer;
@@ -482,7 +492,7 @@
                                 <th style="width: 90px; text-align: right;">금액</th>
                                 <th style="width: 100px; text-align: right;">잔액</th>
                                 <th>적요</th>
-                                <th style="width: 50px; text-align: center;">삭제</th>
+                                <th style="width: 90px; text-align: center;">관리</th>
                             </tr>
                         </thead>
                         <tbody id="transHistoryBody">
@@ -504,7 +514,7 @@
         <button class="btn-action btn-close" id="btnCloseBottom"><i class="fas fa-times"></i> 닫기</button>
     </div>
 
-    <script src="script.js?v=20260618_1425"></script>
+    <script src="script.js?v=20260619_0219"></script>
     <script type="module">
         import { db } from "./firebase-config.js";
         import {
@@ -807,7 +817,7 @@
                 else running -= amt;
 
                 const tr = document.createElement('tr');
-                tr.onclick = () => editTransaction(idx); // [Senior UX] 행 클릭 시 수정 모드로 전환
+                // tr.onclick = () => editTransaction(idx); // [UX 개선] 터치 스크롤 오작동 방지를 위해 행 전체 클릭 이벤트 제거
                 
                 tr.innerHTML = `
                     <td><span class="type-badge ${t.type === 'deposit' ? 'badge-deposit' : 'badge-withdrawal'}">${t.type === 'deposit' ? '입금' : '출금'}</span></td>
@@ -819,8 +829,9 @@
                         ${running.toLocaleString()}
                     </td>
                     <td style="color: #64748b; font-size: 0.85rem;">${t.remarks || ''}</td>
-                    <td style="text-align: center;">
-                        <button class="btn-delete-row" data-idx="${idx}" onclick="event.stopPropagation();"><i class="far fa-trash-alt"></i></button>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn-edit-row" data-idx="${idx}" onclick="event.stopPropagation();" title="수정"><i class="far fa-edit"></i></button>
+                        <button class="btn-delete-row" data-idx="${idx}" onclick="event.stopPropagation();" title="삭제"><i class="far fa-trash-alt"></i></button>
                     </td>
                 `;
                 transHistoryBody.appendChild(tr);
@@ -829,10 +840,18 @@
 
             updateRunningBalanceDisplay();
 
-            // Setup delete listeners
+            // Setup edit & delete listeners
+            document.querySelectorAll('.btn-edit-row').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = e.currentTarget.dataset.idx;
+                    editTransaction(idx);
+                };
+            });
+
             document.querySelectorAll('.btn-delete-row').forEach(btn => {
                 btn.onclick = (e) => {
-                    e.stopPropagation(); // 행 클릭 이벤트와 겹치지 않게 방지
+                    e.stopPropagation();
                     const idx = e.currentTarget.dataset.idx;
                     deleteTransaction(idx);
                 };
@@ -846,10 +865,11 @@
 
             showLoading(true);
             try {
-                // 1. 이미 저장된 데이터라면 서버에서 먼저 삭제 (수정 후 다시 저장되므로)
-                if (t.id) {
-                    await deleteDoc(doc(db, 'accounting_transactions', t.id));
-                }
+                // [안전성 개선] 수정 모드 진입 시 서버에서 즉시 삭제하지 않고 보존합니다.
+                // 최종 하단의 [저장] 버튼 클릭 시점에 일괄 변경(삭제 및 재등록) 처리됩니다.
+                // if (t.id) {
+                //     await deleteDoc(doc(db, 'accounting_transactions', t.id));
+                // }
 
                 // 2. 입력 필드에 값 채우기
                 transType.value = t.type;
@@ -877,7 +897,7 @@
             const t = curTransactions[idx];
             if (!t) return;
 
-            if (await window.showGlobalConfirm(`[${t.item}] 내역을 삭제하시겠습니까?\n(확인을 누르면 즉시 서버에서 삭제됩니다.)`, 'error')) {
+            if (await window.showGlobalConfirm(`[${t.item}] 내역을 삭제하시겠습니까?\n(확인을 누르면 즉시 삭제됩니다.)`, 'error')) {
                 showLoading(true);
                 try {
                     // 1. 이미 저장된 데이터라면 서버에서 즉시 삭제
@@ -1035,6 +1055,10 @@
 </body>
 
 </html>
+
+
+
+
 
 
 
