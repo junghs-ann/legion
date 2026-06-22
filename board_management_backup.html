@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -716,9 +716,9 @@
                         <tr>
                             <th style="width: 60px;">번호</th>
                             <th style="width: 120px;">분류</th>
-                            <th id="colTitle" style="text-align: left; padding-left: 20px; cursor: pointer; user-select: none;">제목 <span id="sortTitleIcon" style="font-size: 0.8rem; margin-left: 4px;">▼</span></th>
+                            <th style="text-align: left; padding-left: 20px;">제목</th>
                             <th style="width: 100px;">작성자</th>
-                            <th id="colDate" style="width: 120px; cursor: pointer; user-select: none;">등록일 <span id="sortDateIcon" style="font-size: 0.8rem; margin-left: 4px;"></span></th>
+                            <th style="width: 120px;">등록일</th>
                             <th style="width: 80px;">자료</th>
                             <th id="manageCol" style="width: 80px; display: none;">관리</th>
                         </tr>
@@ -838,8 +838,6 @@
         let orgFilter = { church: '', curia: '', presidium: '' };
         let unsubscribe = null;
         let unsubscribeCategories = null;
-        let sortBy = 'title'; // 'title' 또는 'date'
-        let sortOrder = 'desc'; // 'asc' 또는 'desc'
 
 
 
@@ -1096,21 +1094,6 @@
                 const presidiumMatch = !orgFilter.presidium || (p.presidiumName || '').trim() === orgFilter.presidium.trim();
                 const searchMatch = !searchQuery || (p.title || '').toLowerCase().includes(searchQuery.toLowerCase());
                 return catMatch && churchMatch && curiaMatch && presidiumMatch && searchMatch;
-            });
-
-            // 정렬 적용 (제목 내림차순/오름차순, 등록일 오름차순/내림차순)
-            filtered.sort((a, b) => {
-                let comparison = 0;
-                if (sortBy === 'title') {
-                    const titleA = a.title || '';
-                    const titleB = b.title || '';
-                    comparison = titleA.localeCompare(titleB, 'ko');
-                } else if (sortBy === 'date') {
-                    const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.date).getTime()) : new Date(a.date || 0).getTime();
-                    const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.date).getTime()) : new Date(b.date || 0).getTime();
-                    comparison = dateA - dateB;
-                }
-                return sortOrder === 'desc' ? -comparison : comparison;
             });
 
             boardBody.innerHTML = '';
@@ -1382,51 +1365,6 @@
                 }
             }
         };
-
-        function updateSortHeaders() {
-            const titleIcon = document.getElementById('sortTitleIcon');
-            const dateIcon = document.getElementById('sortDateIcon');
-            
-            if (titleIcon) {
-                if (sortBy === 'title') {
-                    titleIcon.textContent = sortOrder === 'desc' ? ' ▼' : ' ▲';
-                    titleIcon.style.color = 'var(--primary-color)';
-                } else {
-                    titleIcon.textContent = '';
-                }
-            }
-            if (dateIcon) {
-                if (sortBy === 'date') {
-                    dateIcon.textContent = sortOrder === 'desc' ? ' ▼' : ' ▲';
-                    dateIcon.style.color = 'var(--primary-color)';
-                } else {
-                    dateIcon.textContent = '';
-                }
-            }
-        }
-
-        // 헤더 클릭 이벤트 등록
-        document.getElementById('colTitle').addEventListener('click', () => {
-            if (sortBy === 'title') {
-                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortBy = 'title';
-                sortOrder = 'asc'; // 제목 클릭 시 오름차순으로 정렬
-            }
-            updateSortHeaders();
-            renderPosts();
-        });
-
-        document.getElementById('colDate').addEventListener('click', () => {
-            if (sortBy === 'date') {
-                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortBy = 'date';
-                sortOrder = 'asc'; // 등록일 클릭 시 오름차순으로 정렬
-            }
-            updateSortHeaders();
-            renderPosts();
-        });
     </script>
 </body>
 
