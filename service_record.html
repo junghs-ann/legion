@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -420,7 +420,7 @@
                 const left = (window.screen.width / 2) - (width / 2);
                 const top = (window.screen.height / 2) - (height / 2);
 
-                window.open(`service_record_view.html?id=${memberId}`, 'ServiceRecordWindow',
+                window.open(`service_record_view.html?id=${memberId}&v=${Date.now()}`, 'ServiceRecordWindow',
                     `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
             };
         }, () => { location.href = 'index.html'; });
