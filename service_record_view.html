@@ -29,7 +29,7 @@
 
         .print-page {
             width: 297mm;
-            height: 210mm;
+            height: 208mm; /* A4 가로 210mm에서 브라우저 여백 오차 방지를 위해 208mm로 조정 */
             background: white;
             padding: 10mm 12mm;
             box-sizing: border-box;
@@ -41,16 +41,33 @@
         }
 
         @media print {
-            .print-page {
+            html, body {
                 margin: 0 !important;
-                page-break-after: always;
+                padding: 0 !important;
+                height: 100%;
+                overflow: hidden !important; /* 스크롤바와 유령 스페이스로 인한 페이지 늘어남 방지 */
+                background-color: #ffffff;
             }
-        }
 
-        @media print {
             .print-page {
                 margin: 0 !important;
-                page-break-after: always;
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+            }
+
+            /* 마지막 페이지가 아닐 때만 강제 나누기 */
+            .print-page:not(:last-child) {
+                page-break-after: always !important;
+            }
+
+            /* 마지막 페이지는 나누기 방지 */
+            .print-page:last-child {
+                page-break-after: avoid !important;
+            }
+
+            .print-btn-overlay {
+                display: none !important;
             }
         }
 
@@ -219,23 +236,7 @@
             color: white;
         }
 
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-                margin: 0;
-            }
 
-            .print-page {
-                box-shadow: none;
-                margin: 0;
-                border: none;
-            }
-
-            .print-btn-overlay {
-                display: none !important;
-            }
-        }
     </style>
 </head>
 
@@ -664,10 +665,12 @@
             }
         }, () => { window.close(); });
     </script>
-    <script src="script.js?v=20260619_0219"></script>
+    <script src="script.js?v=20260625_1621"></script>
 </body>
 
 </html>
+
+
 
 
 

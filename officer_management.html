@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260619_0219">
+    <link rel="stylesheet" href="styles.css?v=20260625_1621">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -424,7 +424,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260619_0219"></script>
+    <script src="script.js?v=20260625_1621"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, setDoc, deleteField } from "./firebase-config.js?v=20260313_1515";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -1676,7 +1676,8 @@
             data.role = window.sanitizeInput(roleSel ? roleSel.value : (data.role || ''));
 
             const notesArea = form.querySelector('textarea[name="notes"]');
-            data.notes = window.sanitizeInput(notesArea ? notesArea.value : (data.notes || ''));
+            // [시니어 패치] 줄바꿈 보존을 위해 sanitizeInput 대신 직접 trim()을 수행합니다.
+            data.notes = notesArea ? notesArea.value.trim() : (data.notes || '');
 
             // [🚨 철벽 검증] 임명 정보 필수 체크
             if (!data.role || !data.appointmentDate) {
@@ -1831,6 +1832,8 @@
 </body>
 
 </html>
+
+
 
 
 
