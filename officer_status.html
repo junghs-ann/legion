@@ -5,13 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간부현황 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260625_1621">
+    <link rel="stylesheet" href="styles.css?v=20260629_2351">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2340">
     <style>
+        .print-only-tfoot {
+            display: none;
+        }
         /* Report specific styles */
         .attendance-table th {
             background-color: var(--primary-color);
@@ -70,16 +73,17 @@
         }
 
         @media print {
-
             .dashboard-header,
             .filter-section,
             button,
-            .menu-toggle {
+            .menu-toggle,
+            .btn-top-close {
                 display: none !important;
             }
 
             .main-content {
                 padding: 0 !important;
+                margin: 0 !important;
             }
 
             .container {
@@ -87,6 +91,12 @@
                 width: 100% !important;
                 max-width: none !important;
                 padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            #reportContent {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
             }
 
             body {
@@ -96,6 +106,26 @@
             .attendance-table td {
                 font-size: 0.75rem;
             }
+
+            .print-only-tfoot {
+                display: table-footer-group !important;
+            }
+
+            .print-only-watermark {
+                display: block !important;
+                position: fixed;
+                bottom: 8px;
+                right: 20px;
+                font-size: 8pt;
+                color: #555;
+                font-family: inherit;
+                z-index: 9999;
+            }
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 15mm 15mm 15mm 15mm;
         }
 
         /* Mobile & Tablet Responsive Styles */
@@ -446,7 +476,7 @@
                         style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; font-weight: bold; font-size: 1rem;">
                         <i class="fas fa-file-excel"></i> 엑셀내려받기
                     </button>
-                    <button onclick="window.print()"
+                    <button id="btnPrint"
                         style="height: 42px; background-color: #333; color: white; border: none; padding: 0 35px; border-radius: 6px; font-weight: bold; font-size: 1rem;">
                         <i class="fas fa-print"></i> 인쇄
                     </button>
@@ -481,6 +511,11 @@
                             </tr>
                         </thead>
                         <tbody id="reportBody"></tbody>
+                        <tfoot class="print-only-tfoot">
+                            <tr>
+                                <td colspan="9" style="height: 45px; border: none !important; background: transparent !important;"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -489,19 +524,49 @@
                 style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">
                 해당 조건의 간부 데이터가 없습니다.
             </div>
+            <!-- 화면 인쇄 시 하단에만 표시될 인쇄용 워터마크 보안 고지 영역 -->
+            <div id="printWatermark" class="print-only-watermark"></div>
         </div>
     </div>
 
-    <script src="script.js?v=20260625_1621"></script>
+    <script src="script.js?v=20260629_2351"></script>
     <script type="module">
-        import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260307_2340";
+        import { db, collection, query, where, getDocs, orderBy, addDoc } from "./firebase-config.js?v=20260307_2340";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
         import { fetchPresidiaList, getChurches } from "./data.js?v=20260303_1210";
 
         let currentUser = null;
         let isAdmin = false;
-        // 엑셀 다운로드를 위해 필터링된 최종 간부 데이터를 보관하는 전역 변수
         let currentFilteredOfficers = [];
+        let lastSearchQuery = null;
+
+        function isFilterDirty() {
+            if (!lastSearchQuery) return true;
+            
+            let currentChurch, currentCuria, currentPresidium;
+            if (isAdmin) {
+                currentChurch = churchFilter.value;
+                currentCuria = curiaFilter.value;
+                currentPresidium = presidiumFilter.value;
+            } else {
+                currentChurch = currentUser ? (currentUser.churchName || '') : '';
+                currentCuria = currentUser ? (currentUser.curiaName || '') : '';
+                currentPresidium = presidiumFilter.value || (currentUser ? currentUser.presidiumName : '') || '';
+            }
+            
+            const currentRank = rankFilter.value;
+            const currentStart = startDateFilter.value;
+            const currentEnd = endDateFilter.value;
+            const currentName = nameFilter.value.trim();
+
+            return currentChurch !== lastSearchQuery.church ||
+                   currentCuria !== lastSearchQuery.curia ||
+                   currentPresidium !== lastSearchQuery.presidium ||
+                   currentRank !== lastSearchQuery.rank ||
+                   currentStart !== lastSearchQuery.start ||
+                   currentEnd !== lastSearchQuery.end ||
+                   currentName !== lastSearchQuery.name;
+        }
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
@@ -746,6 +811,15 @@
 
             // 엑셀 출력을 위해 최종 조회 결과 캐싱
             currentFilteredOfficers = filtered;
+            lastSearchQuery = {
+                church: church,
+                curia: curia,
+                presidium: presidium,
+                rank: rank,
+                start: start,
+                end: end,
+                name: name
+            };
 
             noDataMsg.style.display = 'none';
             reportContent.style.display = 'block';
@@ -793,7 +867,11 @@
 
         function setupEventListeners() {
             btnSearch.onclick = async () => await loadReport();
-            btnExcel.onclick = exportToExcel; // 엑셀 다운로드 핸들러 바인딩
+            btnExcel.onclick = exportToExcel;
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.onclick = customPrint;
+            }
 
             presidiumSearch.onfocus = () => renderPresidiumDropdown(presidiumSearch.value);
             presidiumSearch.oninput = () => renderPresidiumDropdown(presidiumSearch.value);
@@ -872,8 +950,12 @@
                 titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
                 titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-                worksheet.getCell(baseStartRow + 1, startCol).value = `성당: ${selectedChurch} | 쁘레시디움: ${selectedPresidium}`;
-                worksheet.getCell(baseStartRow + 1, startCol).font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                // 3행: 소속 정보 출력
+                worksheet.mergeCells(baseStartRow + 1, startCol, baseStartRow + 1, startCol + 4);
+                const infoCell = worksheet.getCell(baseStartRow + 1, startCol);
+                infoCell.value = `성당: ${selectedChurch} | 쁘레시디움: ${selectedPresidium}`;
+                infoCell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                infoCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
                 const startRow = baseStartRow + 3; // B5행부터 표 헤더
 
@@ -1042,6 +1124,22 @@
                 worksheet.getColumn(1).width = 3;
                 columns.forEach((col, idx) => {
                     worksheet.getColumn(startCol + idx).width = col.width || 26;
+                });
+
+                // 시트 잠금 보호 설정
+                await worksheet.protect('legion_secret_sheet_protect_2026', {
+                    selectLockedCells: true,
+                    selectUnlockedCells: true,
+                    formatCells: false,
+                    formatRows: false,
+                    formatColumns: false,
+                    insertColumns: false,
+                    insertRows: false,
+                    insertHyperlinks: false,
+                    deleteColumns: false,
+                    deleteRows: false,
+                    sort: true,
+                    autoFilter: true
                 });
 
             } catch (err) {
@@ -1341,6 +1439,22 @@
                     worksheet.getColumn(startCol + idx).width = col.width || 26;
                 });
 
+                // 시트 잠금 보호 설정
+                await worksheet.protect('legion_secret_sheet_protect_2026', {
+                    selectLockedCells: true,
+                    selectUnlockedCells: true,
+                    formatCells: false,
+                    formatRows: false,
+                    formatColumns: false,
+                    insertColumns: false,
+                    insertRows: false,
+                    insertHyperlinks: false,
+                    deleteColumns: false,
+                    deleteRows: false,
+                    sort: true,
+                    autoFilter: true
+                });
+
             } catch (err) {
                 console.error('[ExcelJS] generateSortedHistorySheet failed:', err);
             }
@@ -1350,9 +1464,18 @@
         async function exportToExcel() {
             if (!currentFilteredOfficers || currentFilteredOfficers.length === 0) {
                 if (window.showGlobalAlert) {
-                    window.showGlobalAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                    await window.showGlobalAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
                 } else {
-                    alert('조회된 데이터가 없습니다.');
+                    alert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                }
+                return;
+            }
+
+            if (isFilterDirty()) {
+                if (window.showGlobalAlert) {
+                    await window.showGlobalAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                } else {
+                    alert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
                 }
                 return;
             }
@@ -1380,6 +1503,11 @@
             try {
                 const workbook = new ExcelJS.Workbook();
                 
+                // 발급자 보안 고지 각인 정보 빌드 (3중 보안용)
+                const nowStr = new Date().toLocaleString('ko-KR');
+                const userDisp = `${currentUser.name || ''}${currentUser.baptismalName ? ` ${currentUser.baptismalName}` : ''}(${currentUser.id || currentUser.uid || ''})`;
+                const watermarkText = `본 문서는 ${userDisp} 단원이 ${nowStr}에 정식 다운로드한 파일입니다. 무단 배포 및 유출 시 보안(민형사) 책임이 따릅니다.`;
+
                 // 1. 첫 번째 시트 생성 (현재 간부현황 리스트)
                 const worksheet1 = workbook.addWorksheet('간부현황');
 
@@ -1394,26 +1522,33 @@
                 titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
                 titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-                // 필터 요약 정보 출력
-                worksheet1.getCell(baseStartRow + 1, startCol).value = `성당: ${churchVal}`;
-                worksheet1.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아: ${curiaVal}`;
-                worksheet1.getCell(baseStartRow + 1, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
-                worksheet1.getCell(baseStartRow + 1, startCol + 3).value = `직급: ${rankVal}`;
-                worksheet1.getCell(baseStartRow + 1, startCol + 4).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : '전 기간'}`;
+                // B3 셀에 발급 보안 정보 병합하여 기입 (1중 보안 - 셀 기재)
+                worksheet1.mergeCells('B3:J3');
+                const securityCell = worksheet1.getCell('B3');
+                securityCell.value = watermarkText;
+                securityCell.font = { size: 8, color: { argb: 'FFD32F2F' }, bold: true };
+                securityCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 필터 요약 정보 출력 (B4행부터 출력하도록 행 번호 1씩 아래로 다운)
+                worksheet1.getCell(baseStartRow + 2, startCol).value = `성당: ${churchVal}`;
+                worksheet1.getCell(baseStartRow + 2, startCol + 1).value = `꾸리아: ${curiaVal}`;
+                worksheet1.getCell(baseStartRow + 2, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
+                worksheet1.getCell(baseStartRow + 2, startCol + 3).value = `직급: ${rankVal}`;
+                worksheet1.getCell(baseStartRow + 2, startCol + 4).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : '전 기간'}`;
                 
                 const summaryCells = [
-                    worksheet1.getCell(baseStartRow + 1, startCol),
-                    worksheet1.getCell(baseStartRow + 1, startCol + 1),
-                    worksheet1.getCell(baseStartRow + 1, startCol + 2),
-                    worksheet1.getCell(baseStartRow + 1, startCol + 3),
-                    worksheet1.getCell(baseStartRow + 1, startCol + 4)
+                    worksheet1.getCell(baseStartRow + 2, startCol),
+                    worksheet1.getCell(baseStartRow + 2, startCol + 1),
+                    worksheet1.getCell(baseStartRow + 2, startCol + 2),
+                    worksheet1.getCell(baseStartRow + 2, startCol + 3),
+                    worksheet1.getCell(baseStartRow + 2, startCol + 4)
                 ];
                 summaryCells.forEach(cell => {
                     cell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
                     cell.alignment = { horizontal: 'left', vertical: 'middle' };
                 });
 
-                const startRow = baseStartRow + 3; // B5행부터 데이터 표 작성
+                const startRow = baseStartRow + 4; // B6행부터 데이터 표 작성
 
                 // 컬럼 명세 정의
                 const columns = [
@@ -1504,26 +1639,104 @@
                     worksheet1.getColumn(startCol + idx).width = col.width || 12;
                 });
 
+                // 바닥글 페이지 설정 지정 (2중 보안 - 인쇄 바닥글 설정)
+                worksheet1.headerFooter = {
+                    oddFooter: `&R&8${watermarkText}`,
+                    evenFooter: `&R&8${watermarkText}`
+                };
+
                 // 2. 두 번째 시트 생성 (역대 간부 이력)
                 await generateHistorySheet(workbook, churchVal, presidiumVal);
 
                 // 3. 세 번째 시트 생성 (역대 간부이력(2))
                 await generateSortedHistorySheet(workbook, churchVal, presidiumVal);
 
+                // 시트 잠금 보호 설정 (3중 보안 - 쓰기 잠금)
+                await worksheet1.protect('legion_secret_sheet_protect_2026', {
+                    selectLockedCells: true,
+                    selectUnlockedCells: true,
+                    formatCells: false,
+                    formatRows: false,
+                    formatColumns: false,
+                    insertColumns: false,
+                    insertRows: false,
+                    insertHyperlinks: false,
+                    deleteColumns: false,
+                    deleteRows: false,
+                    sort: true,
+                    autoFilter: true
+                });
+
                 // 4. 엑셀 파일 변환 및 세이브 처리
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
                 console.log(`[ExcelJS] Exported with history: ${filename}`);
+
+                // 5. 감사 로깅 적립
+                await addDoc(collection(db, 'excel_download_audit_logs'), {
+                    downloadedBy: currentUser.name || '',
+                    baptismalName: currentUser.baptismalName || '',
+                    uid: currentUser.uid || '',
+                    memberId: currentUser.id || '',
+                    role: currentUser.role || '',
+                    churchName: currentUser.churchName || '',
+                    curiaName: currentUser.curiaName || '',
+                    presidiumName: currentUser.presidiumName || '',
+                    menuName: '간부현황',
+                    downloadDate: new Date().toISOString(),
+                    fileName: filename,
+                    searchConditions: {
+                        church: churchVal,
+                        curia: curiaVal,
+                        presidium: presidiumVal,
+                        rank: rankVal,
+                        startDate: startVal || '',
+                        endDate: endVal || '',
+                        name: nameVal
+                    }
+                });
 
             } catch (error) {
                 console.error('[ExcelJS] Export failed:', error);
                 alert('엑셀 파일 생성 중 오류가 발생했습니다.');
             }
         }
+
+        async function customPrint() {
+            if (!currentFilteredOfficers || currentFilteredOfficers.length === 0) {
+                if (window.showGlobalAlert) {
+                    await window.showGlobalAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                } else {
+                    alert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                }
+                return;
+            }
+
+            if (isFilterDirty()) {
+                if (window.showGlobalAlert) {
+                    await window.showGlobalAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                } else {
+                    alert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                }
+                return;
+            }
+
+            // 화면 인쇄용 보안 꼬리표 문구 업데이트
+            const watermarkEl = document.getElementById('printWatermark');
+            if (watermarkEl && currentUser) {
+                const nowStr = new Date().toLocaleString('ko-KR');
+                const userDisp = `${currentUser.name || ''}${currentUser.baptismalName ? ` ${currentUser.baptismalName}` : ''}(${currentUser.id || currentUser.uid || ''})`;
+                watermarkEl.textContent = `본 문서는 ${userDisp} 단원이 ${nowStr}에 정식 출력한 파일입니다. 무단 배포 및 유출 시 보안(민형사) 책임이 따릅니다.`;
+            }
+
+            window.print();
+        }
     </script>
 </body>
 
 </html>
+
+
 
 
 

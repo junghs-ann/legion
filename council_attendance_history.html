@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>평의회 출석 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260625_1621">
+    <link rel="stylesheet" href="styles.css?v=20260629_2351">
+    <!-- ExcelJS & FileSaver.js 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
@@ -208,16 +211,25 @@
         }
 
         @media print {
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
 
             .dashboard-header,
             .filter-section,
             button,
-            .menu-toggle {
+            .menu-toggle,
+            .btn-top-close,
+            .button-row,
+            #menu-container {
                 display: none !important;
             }
 
             .main-content {
                 padding: 0 !important;
+                margin: 0 !important;
             }
 
             .container {
@@ -225,10 +237,7 @@
                 width: 100% !important;
                 max-width: none !important;
                 padding: 0 !important;
-            }
-
-            body {
-                background: white;
+                border: none !important;
             }
         }
 
@@ -545,17 +554,17 @@
                 </div>
 
                 <!-- 버튼 영역을 레퍼런스 스타일로 업데이트 -->
-                <div class="button-row">
-                    <button id="btnSearch"
-                        style="height: 42px; background-color: #d4a017; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                <div class="button-row" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                    <button id="btnSearch" style="height: 42px; background-color: #d4a017; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fas fa-search"></i> 조회
                     </button>
-                    <button onclick="window.print()"
-                        style="height: 42px; background-color: #333; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                    <button id="btnExcel" style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fas fa-file-excel"></i> 엑셀내려받기
+                    </button>
+                    <button id="btnPrint" style="height: 42px; background-color: #333; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fas fa-print"></i> 인쇄
                     </button>
-                    <button onclick="location.href='dashboard.html'"
-                        style="height: 42px; background-color: #666; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+                    <button onclick="location.href='dashboard.html'" style="height: 42px; background-color: #666; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
@@ -666,7 +675,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260625_1621"></script>
+    <script src="script.js?v=20260629_2351"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -675,6 +684,8 @@
         let currentUser = null;
         let isAdmin = false;
         let presidiaList = [];
+        let currentFilteredReport = null;
+        let lastSearchQuery = null;
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
@@ -821,8 +832,242 @@
 
         // [시니어 멘토] 회차 목록 동적 생성 함수(updateSessionDatalist)는 날짜 입력 방식으로 전환됨에 따라 불필요하므로 영구 제거합니다.
 
+        function isFilterDirty() {
+            if (!lastSearchQuery) return true;
+            if (churchFilter.value !== lastSearchQuery.church) return true;
+            if (curiaFilter.value !== lastSearchQuery.curia) return true;
+            if (presidiumFilter.value !== lastSearchQuery.presidium) return true;
+            if (presidiumSearch.value !== lastSearchQuery.presidiumSearch) return true;
+            if (startDateFilter.value !== lastSearchQuery.start) return true;
+            if (endDateFilter.value !== lastSearchQuery.end) return true;
+            return false;
+        }
+
+        async function handlePrint() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                await showCustomAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                return;
+            }
+            if (isFilterDirty()) {
+                await showCustomAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                return;
+            }
+            window.print();
+        }
+
+        async function exportToExcel() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                await showCustomAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                return;
+            }
+            if (isFilterDirty()) {
+                await showCustomAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.');
+                return;
+            }
+
+            const churchVal = lastSearchQuery.church || '전체';
+            const curiaVal = lastSearchQuery.curia || '전체';
+            const presidiumVal = lastSearchQuery.presidium || '전체';
+            const startVal = lastSearchQuery.start;
+            const endVal = lastSearchQuery.end;
+
+            const sumSessionRangeVal = document.getElementById('sumSessionRange').textContent;
+            const sumTotalSessionsVal = document.getElementById('sumTotalSessions').textContent;
+            const sumAvgRateVal = document.getElementById('sumAvgRate').textContent;
+
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `평의회출결내역_${churchVal}_${curiaVal}_${baseDateStr}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('평의회출결내역');
+
+                const startCol = 2; // B열
+                const baseStartRow = 2; // 2행
+
+                // 1. 타이틀
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 6);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = '평의회 출결내역';
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 2. 차수 범위 밑줄 텍스트 기입 (B3)
+                const dateRangeText = document.getElementById('reportDateRange').textContent;
+                worksheet.mergeCells(baseStartRow + 1, startCol, baseStartRow + 1, startCol + 5);
+                const dateRangeCell = worksheet.getCell(baseStartRow + 1, startCol);
+                dateRangeCell.value = dateRangeText;
+                dateRangeCell.font = { size: 10, bold: true, underline: true, color: { argb: 'FF2D3748' } };
+                dateRangeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+                // 3. 필터 요약 (B4)
+                worksheet.getCell(baseStartRow + 2, startCol).value = `성당: ${churchVal}  |  꾸리아: ${curiaVal}  |  쁘레시디움: ${presidiumVal}  |  조회기간: ${startVal} ~ ${endVal}`;
+                worksheet.getCell(baseStartRow + 2, startCol).font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                worksheet.getCell(baseStartRow + 2, startCol).alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 4. 2분할 요약 카드 표 생성 (6행 ~ 10행)
+                const cardStartRow = baseStartRow + 4; // 6행
+
+                // 조회 요약 헤더 (B6:C6 병합)
+                worksheet.mergeCells(cardStartRow, startCol, cardStartRow, startCol + 1);
+                const querySummaryTitle = worksheet.getCell(cardStartRow, startCol);
+                querySummaryTitle.value = '조회 요약';
+
+                // 출석 현황 헤더 (D6:G6 병합)
+                worksheet.mergeCells(cardStartRow, startCol + 2, cardStartRow, startCol + 5);
+                const attSummaryTitle = worksheet.getCell(cardStartRow, startCol + 2);
+                attSummaryTitle.value = '출석 현황';
+
+                // 헤더 폰트 및 배경 스타일
+                [querySummaryTitle, attSummaryTitle].forEach(cell => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFE2E8F0' } // 연회색
+                    };
+                    cell.font = { bold: true, size: 9, color: { argb: 'FF2D3748' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                // 조회 요약 내용 (B7:C9)
+                worksheet.getCell(cardStartRow + 1, startCol).value = '차수 범위';
+                worksheet.getCell(cardStartRow + 1, startCol + 1).value = sumSessionRangeVal;
+                worksheet.getCell(cardStartRow + 2, startCol).value = '총 회합 횟수';
+                worksheet.getCell(cardStartRow + 2, startCol + 1).value = sumTotalSessionsVal;
+                worksheet.getCell(cardStartRow + 3, startCol).value = '평균 출석률';
+                worksheet.getCell(cardStartRow + 3, startCol + 1).value = sumAvgRateVal;
+
+                // C열 수치는 오른쪽 정렬
+                [cardStartRow + 1, cardStartRow + 2, cardStartRow + 3].forEach(r => {
+                    worksheet.getCell(r, startCol + 1).alignment = { horizontal: 'right', vertical: 'middle' };
+                });
+
+                // B10:C10 병합 (균형 맞추기)
+                worksheet.mergeCells(cardStartRow + 4, startCol, cardStartRow + 4, startCol + 1);
+                worksheet.getCell(cardStartRow + 4, startCol).value = '';
+
+                // 출석 현황 내용 (D7:G10)
+                const officerRatios = [
+                    { role: '단장', ratio: `${document.getElementById('stat_pres_ratio').textContent} ${document.getElementById('stat_pres_pct').textContent}` },
+                    { role: '부단장', ratio: `${document.getElementById('stat_vice_ratio').textContent} ${document.getElementById('stat_vice_pct').textContent}` },
+                    { role: '서기', ratio: `${document.getElementById('stat_sec_ratio').textContent} ${document.getElementById('stat_sec_pct').textContent}` },
+                    { role: '회계', ratio: `${document.getElementById('stat_trea_ratio').textContent} ${document.getElementById('stat_trea_pct').textContent}` }
+                ];
+
+                officerRatios.forEach((item, idx) => {
+                    const currentRow = cardStartRow + 1 + idx;
+                    // 직급명 기입
+                    worksheet.getCell(currentRow, startCol + 2).value = item.role;
+                    // 출석 비율 기입 (E열~G열 병합하여 충분한 공간 확보)
+                    worksheet.mergeCells(currentRow, startCol + 3, currentRow, startCol + 5);
+                    const ratioCell = worksheet.getCell(currentRow, startCol + 3);
+                    ratioCell.value = item.ratio;
+                    ratioCell.alignment = { horizontal: 'right', vertical: 'middle' };
+                });
+
+                // 요약 카드 표 모든 셀의 테두리 및 폰트 크기 세팅
+                for (let rIdx = cardStartRow; rIdx <= cardStartRow + 4; rIdx++) {
+                    const rowObj = worksheet.getRow(rIdx);
+                    for (let cIdx = startCol; cIdx <= startCol + 5; cIdx++) {
+                        const cell = rowObj.getCell(cIdx);
+                        if (!cell.font) cell.font = { size: 9 };
+                        if (!cell.alignment) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        cell.border = {
+                            top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                        };
+                    }
+                }
+
+                // B12행부터 본문 헤더
+                const startRow = baseStartRow + 10; // B12행
+                const rowHeader = worksheet.getRow(startRow);
+                const headers = ['차수', '날짜', '쁘레시디움명', '직급', '성명', '세례명', '출석여부'];
+                
+                headers.forEach((h, idx) => {
+                    const cell = rowHeader.getCell(startCol + idx);
+                    cell.value = h;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFEBF4FF' }
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 9 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                    };
+                });
+
+                let currentRowNum = startRow + 1;
+
+                currentFilteredReport.forEach(record => {
+                    const attendanceData = record.attendanceData || [];
+                    const startMergeRowIndex = currentRowNum;
+
+                    attendanceData.forEach((row, idx) => {
+                        const rowObj = worksheet.getRow(currentRowNum);
+
+                        // 테두리 설정
+                        for (let colIdx = startCol; colIdx < startCol + 7; colIdx++) {
+                            const cell = rowObj.getCell(colIdx);
+                            cell.font = { size: 9 };
+                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                            cell.border = {
+                                top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                        }
+
+                        rowObj.getCell(startCol).value = `${record.session}차`;
+                        rowObj.getCell(startCol + 1).value = record.date;
+                        rowObj.getCell(startCol + 2).value = row.presidiumName || '-';
+                        rowObj.getCell(startCol + 3).value = row.role;
+                        rowObj.getCell(startCol + 4).value = row.memberName;
+                        rowObj.getCell(startCol + 5).value = row.baptismalName;
+
+                        const cellStatus = rowObj.getCell(startCol + 6);
+                        cellStatus.value = row.status;
+                        if (row.status === '출석') {
+                            cellStatus.font = { color: { argb: 'FF0000FF' }, bold: true, size: 9 };
+                        } else {
+                            cellStatus.font = { color: { argb: 'FFFF0000' }, bold: true, size: 9 };
+                        }
+
+                        currentRowNum++;
+                    });
+
+                    // 회차별 세션 가로 병합
+                    const mergeLen = attendanceData.length - 1;
+                    if (mergeLen > 0) {
+                        worksheet.mergeCells(startMergeRowIndex, startCol, startMergeRowIndex + mergeLen, startCol);
+                        worksheet.mergeCells(startMergeRowIndex, startCol + 1, startMergeRowIndex + mergeLen, startCol + 1);
+                    }
+                });
+
+                // A열 여백
+                worksheet.getColumn(1).width = 3;
+
+                // 기본 컬럼 너비 설정
+                worksheet.getColumn(startCol).width = 8;
+                worksheet.getColumn(startCol + 1).width = 12;
+                worksheet.getColumn(startCol + 2).width = 18;
+                worksheet.getColumn(startCol + 3).width = 10;
+                worksheet.getColumn(startCol + 4).width = 10;
+                worksheet.getColumn(startCol + 5).width = 13;
+                worksheet.getColumn(startCol + 6).width = 10;
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                await showCustomAlert('엑셀 파일 생성 중 오류가 발생했습니다.');
+            }
+        }
+
         function setupEventListeners() {
             btnSearch.onclick = async () => await loadReport();
+            document.getElementById('btnExcel').onclick = async () => await exportToExcel();
+            document.getElementById('btnPrint').onclick = handlePrint;
 
             presidiumSearch.onfocus = () => renderPresidiumDropdown(presidiumSearch.value);
             presidiumSearch.oninput = () => renderPresidiumDropdown(presidiumSearch.value);
@@ -940,6 +1185,8 @@
                 filtered.sort((a, b) => parseInt(a.session || 0) - parseInt(b.session || 0));
 
                 if (filtered.length === 0) {
+                    currentFilteredReport = null;
+                    lastSearchQuery = null;
                     reportContent.style.display = 'none';
                     noDataMsg.style.display = 'block';
                     return;
@@ -955,6 +1202,8 @@
                 }
 
                 if (finalData.length === 0) {
+                    currentFilteredReport = null;
+                    lastSearchQuery = null;
                     reportContent.style.display = 'none';
                     noDataMsg.style.display = 'block';
                     return;
@@ -963,8 +1212,20 @@
                 noDataMsg.style.display = 'none';
                 reportContent.style.display = 'block';
 
+                currentFilteredReport = finalData;
+                lastSearchQuery = {
+                    church: church,
+                    curia: curia,
+                    presidium: presidium,
+                    presidiumSearch: presidiumSearch.value,
+                    start: startD,
+                    end: endD
+                };
+
                 renderReport(finalData);
             } catch (error) {
+                currentFilteredReport = null;
+                lastSearchQuery = null;
                 console.error("Error loading report:", error);
                 await showCustomAlert("보고서를 불러오는 중 오류가 발생했습니다.");
             }
@@ -1035,12 +1296,12 @@
                 document.getElementById(`${prefix}_pct`).textContent = `(${r}%)`;
             });
         }
-
-        btnSearch.onclick = loadReport;
     </script>
 </body>
 
 </html>
+
+
 
 
 

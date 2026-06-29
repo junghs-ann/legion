@@ -5,8 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사관리내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260625_1621">
+    <link rel="stylesheet" href="styles.css?v=20260629_2351">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- ExcelJS & FileSaver.js 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* [쁘레시디움 커스텀 검색창 스타일] */
@@ -81,8 +84,6 @@
         }
 
         .btn-action {
-            flex: 1;
-            max-width: 200px;
             height: 48px;
             font-size: 1.05rem;
             font-weight: bold;
@@ -554,13 +555,16 @@
                 </div>
 
                 <div class="bottom-actions">
-                    <button id="btnSearch" class="btn-action btn-search">
+                    <button id="btnSearch" class="btn-action btn-search" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-search"></i> 조회
                     </button>
-                    <button onclick="window.print()" class="btn-action btn-print">
+                    <button id="btnExcel" class="btn-action" style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fas fa-file-excel"></i> 엑셀내려받기
+                    </button>
+                    <button id="btnPrint" class="btn-action btn-print" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-print"></i> 인쇄
                     </button>
-                    <button onclick="location.href='dashboard.html'" class="btn-action btn-close">
+                    <button onclick="location.href='dashboard.html'" class="btn-action btn-close" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
@@ -594,8 +598,8 @@
             </div>
 
             <div id="noDataMsg"
-                style="text-align: center; color: #666; padding: 100px; display: none; font-size: 1.2rem;">
-                해당 기간의 행사 내역 데이터가 없습니다.
+                style="text-align: center; color: #666; padding: 100px; display: block; font-size: 1.2rem;">
+                조회 조건 선택 후 [조회] 버튼을 눌러주세요.
             </div>
         </div>
     </div>
@@ -613,7 +617,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260625_1621"></script>
+    <script src="script.js?v=20260629_2351"></script>
     <script type="module">
         import { db, collection, query, where, orderBy, getDocs } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -621,6 +625,8 @@
 
         let currentUser = null;
         let isAdmin = false;
+        let currentFilteredReport = null; // 엑셀 출력을 위해 데이터를 보관하는 전역 변수
+        let lastSearchQuery = null; // 마지막으로 성공한 조회 조건을 캐싱하는 변수
 
         const churchFilter = document.getElementById('churchFilter');
         const curiaFilter = document.getElementById('curiaFilter');
@@ -630,6 +636,8 @@
         const startDateFilter = document.getElementById('startDateFilter');
         const endDateFilter = document.getElementById('endDateFilter');
         const btnSearch = document.getElementById('btnSearch');
+        const btnExcel = document.getElementById('btnExcel');
+        const btnPrint = document.getElementById('btnPrint');
         const reportContent = document.getElementById('reportContent');
         const reportBody = document.getElementById('reportBody');
         const noDataMsg = document.getElementById('noDataMsg');
@@ -655,10 +663,6 @@
             isAdmin = (profile.role === 'admin' || profile.role === '관리자');
             await setupControls(profile);
             setupEventListeners();
-
-            if (!isAdmin) {
-                await loadReport();
-            }
         }, () => {
             location.href = 'index.html';
         });
@@ -769,6 +773,18 @@
             document.getElementById('customAlertModal').style.display = 'none';
         };
 
+        function showAlert(message, type = 'warning') {
+            if (window.showGlobalAlert) {
+                window.showGlobalAlert(message, type);
+            } else {
+                if (typeof showCustomAlert === 'function') {
+                    showCustomAlert(message);
+                } else {
+                    alert(message);
+                }
+            }
+        }
+
         async function loadReport() {
             let church, curia, presidium;
             if (isAdmin) {
@@ -776,7 +792,9 @@
                 curia = curiaFilter.value;
                 presidium = presidiumInput.value; // [Fix] presidiumFilter 대신 실제 값이 입력된 presidiumInput 참조
                 if (!church || !curia || !presidium) {
-                    showCustomAlert("성당, 꾸리아, 쁘레시디움을 모두 선택해 주세요.");
+                    currentFilteredReport = null;
+                    lastSearchQuery = null;
+                    showAlert("성당, 꾸리아, 쁘레시디움을 모두 선택해 주세요.", "warning");
                     return;
                 }
             } else {
@@ -808,12 +826,17 @@
                     return isDateMatch;
                 });
             } catch (error) {
+                currentFilteredReport = null;
+                lastSearchQuery = null;
                 console.error("Error fetching event history:", error);
-                showCustomAlert("데이터를 불러오는 중 오류가 발생했습니다.");
+                showAlert("데이터를 불러오는 중 오류가 발생했습니다.", "error");
                 return;
             }
 
             if (filtered.length === 0) {
+                currentFilteredReport = null;
+                lastSearchQuery = null;
+                noDataMsg.textContent = "해당 기간의 행사 내역 데이터가 없습니다.";
                 reportContent.style.display = 'none';
                 noDataMsg.style.display = 'block';
                 return;
@@ -900,10 +923,253 @@
                     }
                 }
             });
+
+            currentFilteredReport = filtered;
+            lastSearchQuery = {
+                church: church,
+                curia: curia,
+                presidium: presidium,
+                start: start,
+                end: end
+            };
+        }
+
+        function isFilterDirty() {
+            if (!lastSearchQuery) return true;
+            if (churchFilter.value !== lastSearchQuery.church) return true;
+            if (curiaFilter.value !== lastSearchQuery.curia) return true;
+            if (presidiumInput.value !== lastSearchQuery.presidium) return true;
+            if (startDateFilter.value !== lastSearchQuery.start) return true;
+            if (endDateFilter.value !== lastSearchQuery.end) return true;
+            return false;
+        }
+
+        function handlePrint() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            if (isFilterDirty()) {
+                showAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            window.print();
+        }
+
+        async function exportToExcel() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            if (isFilterDirty()) {
+                showAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+
+            const churchVal = lastSearchQuery.church || '전체';
+            const curiaVal = lastSearchQuery.curia || '전체';
+            const presidiumVal = lastSearchQuery.presidium || '전체';
+            const startVal = lastSearchQuery.start;
+            const endVal = lastSearchQuery.end;
+
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `행사내역_${churchVal}_${presidiumVal}_${baseDateStr}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('행사관리내역');
+
+                const startCol = 2; // B열
+                const baseStartRow = 2; // 2행
+
+                // 1. 타이틀
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 7);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = '행사(행사/교육/피정) 관리 내역';
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 2. 필터 요약
+                worksheet.getCell(baseStartRow + 1, startCol).value = `성당: ${churchVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아: ${curiaVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 3).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : '전체'}`;
+
+                const summaryCells = [
+                    worksheet.getCell(baseStartRow + 1, startCol),
+                    worksheet.getCell(baseStartRow + 1, startCol + 1),
+                    worksheet.getCell(baseStartRow + 1, startCol + 2),
+                    worksheet.getCell(baseStartRow + 1, startCol + 3)
+                ];
+                summaryCells.forEach(cell => {
+                    cell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                });
+
+                const startRow = baseStartRow + 3; // B5행부터 표 헤더 작성
+
+                // 컬럼 명세
+                const columns = [
+                    { key: 'category', label: '구분', width: 10 },
+                    { key: 'type', label: '종류', width: 12 },
+                    { key: 'eventDate', label: '일자', width: 10 },
+                    { key: 'eventName', label: '행사명', width: 25 },
+                    { key: 'organizer', label: '주관', width: 14 },
+                    { key: 'venue', label: '장소', width: 14 },
+                    { key: 'attendRatio', label: '참석/총인원', width: 14 },
+                    { key: 'attendeeNames', label: '참여자', width: 40 }
+                ];
+
+                // 표 헤더 렌더링
+                const headerRow = worksheet.getRow(startRow);
+                columns.forEach((col, idx) => {
+                    const excelCol = startCol + idx;
+                    const cell = headerRow.getCell(excelCol);
+                    cell.value = col.label;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFEBF4FF' } // 연파랑
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                let currentRowNum = startRow + 1;
+
+                const groupOrder = ['행사', '교육', '피정'];
+                const grouped = {
+                    '행사': [],
+                    '교육': [],
+                    '피정': []
+                };
+
+                currentFilteredReport.forEach(e => {
+                    if (e.type === '교육') {
+                        grouped['교육'].push(e);
+                    } else if (e.type === '피정') {
+                        grouped['피정'].push(e);
+                    } else {
+                        grouped['행사'].push(e);
+                    }
+                });
+
+                groupOrder.forEach(majorCat => {
+                    const list = grouped[majorCat];
+                    if (list && list.length > 0) {
+                        // 3. 카테고리 대분류 헤더 추가 (예: [행사] 내역)
+                        const rowCat = worksheet.getRow(currentRowNum);
+                        worksheet.mergeCells(currentRowNum, startCol, currentRowNum, startCol + 7);
+                        
+                        // B~I열까지 병합 셀 전체 테두리 및 회색 배경 칠하기
+                        for (let c = startCol; c <= startCol + 7; c++) {
+                            const cell = rowCat.getCell(c);
+                            cell.border = {
+                                top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFF1F3F5' } // 밝은 회색
+                            };
+                        }
+
+                        const catCell = rowCat.getCell(startCol);
+                        catCell.value = `[${majorCat}] 내역`;
+                        catCell.font = { size: 10, bold: true, color: { argb: 'FF2D3748' } };
+                        catCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+                        
+                        currentRowNum++;
+
+                        // 정렬
+                        list.sort((a, b) => {
+                            if (a.category !== b.category) return a.category === '실시' ? -1 : 1;
+                            if (a.type !== b.type) return a.type.localeCompare(b.type);
+                            return b.eventDate.localeCompare(a.eventDate);
+                        });
+
+                        const startMergeRowIndex = currentRowNum;
+
+                        // 대분류 리스트 내부 데이터 채우기
+                        list.forEach((e) => {
+                            const row = worksheet.getRow(currentRowNum);
+
+                            columns.forEach((col, idx) => {
+                                const cell = row.getCell(startCol + idx);
+                                cell.border = {
+                                    top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                                };
+                                cell.font = { size: 10 };
+                                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                            });
+
+                            row.getCell(startCol).value = e.category;
+                            row.getCell(startCol + 1).value = e.type;
+                            row.getCell(startCol + 2).value = e.eventDate ? e.eventDate.substring(5) : '-';
+                            row.getCell(startCol + 3).value = e.eventName;
+                            row.getCell(startCol + 4).value = e.organizer || '-';
+                            row.getCell(startCol + 5).value = e.venue || '-';
+                            row.getCell(startCol + 6).value = `${e.attendanceCount}/${e.totalCount || 0}`;
+                            
+                            const attCell = row.getCell(startCol + 7);
+                            attCell.value = e.attendeeNames || '-';
+                            attCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+
+                            currentRowNum++;
+                        });
+
+                        // 4. 세로 셀 병합 (RowSpan) 처리
+                        // (가) 구분(실시/계획) 세로 셀 병합
+                        let catMergeStart = startMergeRowIndex;
+                        for (let i = 0; i < list.length; i++) {
+                            if (i === list.length - 1 || list[i + 1].category !== list[i].category) {
+                                if (catMergeStart < startMergeRowIndex + i) {
+                                    worksheet.mergeCells(catMergeStart, startCol, startMergeRowIndex + i, startCol);
+                                }
+                                catMergeStart = startMergeRowIndex + i + 1;
+                            }
+                        }
+
+                        // (나) 종류 세로 셀 병합 (구분 범주 내부에서만 병합)
+                        let typeMergeStart = startMergeRowIndex;
+                        for (let i = 0; i < list.length; i++) {
+                            if (i === list.length - 1 || list[i + 1].type !== list[i].type || list[i + 1].category !== list[i].category) {
+                                if (typeMergeStart < startMergeRowIndex + i) {
+                                    worksheet.mergeCells(typeMergeStart, startCol + 1, startMergeRowIndex + i, startCol + 1);
+                                }
+                                typeMergeStart = startMergeRowIndex + i + 1;
+                            }
+                        }
+                    }
+                });
+
+                // A열 여백
+                worksheet.getColumn(1).width = 3;
+
+                // 컬럼 너비 재지정
+                columns.forEach((col, idx) => {
+                    worksheet.getColumn(startCol + idx).width = col.width || 12;
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                showAlert('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
+            }
         }
 
         function setupEventListeners() {
             btnSearch.onclick = async () => await loadReport();
+            btnExcel.onclick = async () => await exportToExcel();
+            btnPrint.onclick = handlePrint;
 
             // Enter 키 이동 및 자동 조회
             const fields = [startDateFilter, endDateFilter];
@@ -934,6 +1200,8 @@
 </body>
 
 </html>
+
+
 
 
 

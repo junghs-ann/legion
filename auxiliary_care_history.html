@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>협조단원 돌봄내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260625_1621">
+    <link rel="stylesheet" href="styles.css?v=20260629_2351">
+    <!-- ExcelJS & FileSaver.js 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Print Styles */
@@ -15,10 +18,19 @@
                 margin: 10mm;
             }
 
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+
             .dashboard-header,
             .filter-container,
             .btn-group,
-            .nav-menu {
+            .nav-menu,
+            .bottom-actions,
+            .btn-top-close,
+            #menu-container {
                 display: none !important;
             }
 
@@ -325,8 +337,6 @@
         }
 
         .btn-action {
-            flex: 1;
-            max-width: 200px;
             height: 48px;
             font-size: 1.05rem;
             font-weight: bold;
@@ -751,14 +761,17 @@
                     </div>
                 </div>
 
-                <div class="bottom-actions">
-                    <button class="btn-action btn-search" id="btnSearch">
+                <div class="bottom-actions" style="display: flex; justify-content: center; gap: 10px; margin-top: 25px;">
+                    <button class="btn-action btn-search" id="btnSearch" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-search"></i> 조회
                     </button>
-                    <button class="btn-action btn-print" id="btnPrint">
+                    <button class="btn-action" id="btnExcel" style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fas fa-file-excel"></i> 엑셀내려받기
+                    </button>
+                    <button class="btn-action btn-print" id="btnPrint" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-print"></i> 인쇄
                     </button>
-                    <button class="btn-action btn-close" onclick="location.href='dashboard.html'">
+                    <button class="btn-action btn-close" onclick="location.href='dashboard.html'" style="padding: 0 35px; white-space: nowrap; height: 42px;">
                         <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
@@ -802,6 +815,8 @@
 
         let currentUser = null;
         let isAdmin = false;
+        let currentFilteredReport = null; // 엑셀 출력을 위해 데이터를 보관하는 전역 변수
+        let lastSearchQuery = null; // 마지막으로 성공한 조회 조건을 캐싱하는 변수
 
         const churchSelect = document.getElementById('churchSelect');
         const curiaSelect = document.getElementById('curiaSelect');
@@ -843,10 +858,6 @@
             setupYearSelector();
             await setupOrgSelectors();
             setupEventListeners();
-
-            if (!isAdmin) {
-                await renderReport();
-            }
         }, () => { location.href = 'index.html'; });
 
         function setupYearSelector() {
@@ -1023,6 +1034,18 @@
             document.getElementById('customAlertModal').style.display = 'none';
         };
 
+        function showAlert(message, type = 'warning') {
+            if (window.showGlobalAlert) {
+                window.showGlobalAlert(message, type);
+            } else {
+                if (typeof showCustomAlert === 'function') {
+                    showCustomAlert(message);
+                } else {
+                    alert(message);
+                }
+            }
+        }
+
         function updateSessionLists() {
             // This function is kept empty or removed as session filter is gone
         }
@@ -1050,7 +1073,302 @@
             // startSessionInput, endSessionInput removed
 
             document.getElementById('btnSearch').onclick = async () => await renderReport(true);
-            document.getElementById('btnPrint').onclick = () => window.print();
+            document.getElementById('btnExcel').onclick = async () => await exportToExcel();
+            document.getElementById('btnPrint').onclick = handlePrint;
+        }
+
+        function isFilterDirty() {
+            if (!lastSearchQuery) return true;
+            if (churchSelect.value !== lastSearchQuery.church) return true;
+            if (curiaSelect.value !== lastSearchQuery.curia) return true;
+            if (presidiumInput.value !== lastSearchQuery.presidium) return true;
+            if (memberSelect.value !== lastSearchQuery.member) return true;
+            if (yearSelect.value !== lastSearchQuery.year) return true;
+            if (startDateInput.value !== lastSearchQuery.start) return true;
+            if (endDateInput.value !== lastSearchQuery.end) return true;
+            return false;
+        }
+
+        function handlePrint() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            if (isFilterDirty()) {
+                showAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            window.print();
+        }
+
+        async function exportToExcel() {
+            if (!currentFilteredReport || currentFilteredReport.length === 0) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            if (isFilterDirty()) {
+                showAlert('입력 조건이 변경되었습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+
+            const churchVal = lastSearchQuery.church || '전체';
+            const curiaVal = lastSearchQuery.curia || '전체';
+            const presidiumVal = lastSearchQuery.presidium || '전체';
+            const memberVal = document.getElementById('memberSelect').options[document.getElementById('memberSelect').selectedIndex]?.text || '전체';
+            const yearVal = lastSearchQuery.year ? `${lastSearchQuery.year}년` : '';
+            const startVal = lastSearchQuery.start;
+            const endVal = lastSearchQuery.end;
+
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `협조단원돌봄내역_${churchVal}_${presidiumVal}_${baseDateStr}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('협조단원돌봄내역');
+
+                const startCol = 2; // B열
+                const baseStartRow = 2; // 2행
+
+                // 1. 타이틀
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 4);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = '협조단원 돌봄 내역';
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 2. 필터 요약
+                worksheet.getCell(baseStartRow + 1, startCol).value = `성당: ${churchVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아: ${curiaVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 3).value = `단원: ${memberVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 4).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : `${yearVal} 전체`}`;
+
+                const summaryCells = [
+                    worksheet.getCell(baseStartRow + 1, startCol),
+                    worksheet.getCell(baseStartRow + 1, startCol + 1),
+                    worksheet.getCell(baseStartRow + 1, startCol + 2),
+                    worksheet.getCell(baseStartRow + 1, startCol + 3),
+                    worksheet.getCell(baseStartRow + 1, startCol + 4)
+                ];
+                summaryCells.forEach(cell => {
+                    cell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                });
+
+                // 표의 월별 주회 집계
+                const months = {};
+                currentFilteredReport.forEach(r => {
+                    const mKey = r.date.substring(0, 7);
+                    if (!months[mKey]) months[mKey] = [];
+                    months[mKey].push(r);
+                });
+
+                // 헤더 1행, 2행 렌더링
+                const startRow = baseStartRow + 3; // B5행
+                const row1 = worksheet.getRow(startRow);
+                const row2 = worksheet.getRow(startRow + 1);
+
+                // 고정 헤더 병합 및 기입
+                worksheet.mergeCells(startRow, startCol, startRow, startCol + 1);
+                worksheet.getCell(startRow, startCol).value = '행동단원';
+                worksheet.mergeCells(startRow, startCol + 2, startRow, startCol + 4);
+                worksheet.getCell(startRow, startCol + 2).value = '협조단원';
+
+                // 고정 서브 헤더
+                const subLabels = ['이름', '세례명', '이름', '세례명', '성별'];
+                subLabels.forEach((label, idx) => {
+                    row2.getCell(startCol + idx).value = label;
+                });
+
+                // 동적 월별 컬럼 헤더 기입
+                let excelColIdx = startCol + 5;
+                Object.entries(months).forEach(([mKey, recs]) => {
+                    const [y, m] = mKey.split('-');
+                    let monthTotal = 0;
+                    recs.forEach(r => {
+                        if (r.careDataSnapshot) {
+                            monthTotal += r.careDataSnapshot.filter(s => s.checked === 'checked').length;
+                        } else {
+                            monthTotal += Object.values(r.careData || {}).filter(v => v === 'checked').length;
+                        }
+                    });
+
+                    // 월별 대분류 병합
+                    worksheet.mergeCells(startRow, excelColIdx, startRow, excelColIdx + recs.length - 1);
+                    const monthCell = worksheet.getCell(startRow, excelColIdx);
+                    monthCell.value = `${y}년 ${parseInt(m)}월 (총 ${monthTotal}회 돌봄)`;
+
+                    // 각 주회 서브 헤더
+                    recs.forEach(r => {
+                        const dateObj = new Date(r.date);
+                        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                        const day = dayNames[dateObj.getDay()];
+                        row2.getCell(excelColIdx).value = `${r.session}(${parseInt(r.date.split('-')[1])}/${parseInt(r.date.split('-')[2])}${day})`;
+                        excelColIdx++;
+                    });
+                });
+
+                // 헤더 셀 스타일 적용
+                for (let rIdx = startRow; rIdx <= startRow + 1; rIdx++) {
+                    const rowObj = worksheet.getRow(rIdx);
+                    for (let cIdx = startCol; cIdx < excelColIdx; cIdx++) {
+                        const cell = rowObj.getCell(cIdx);
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFEBF4FF' } // 연파랑
+                        };
+                        cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 9 };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        cell.border = {
+                            top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                        };
+                    }
+                }
+
+                // uniqueAuxMap 생성
+                const uniqueAuxMap = new Map();
+                currentFilteredReport.forEach(r => {
+                    if (r.careDataSnapshot) {
+                        r.careDataSnapshot.forEach(item => {
+                            if (!uniqueAuxMap.has(item.auxId)) {
+                                const realAux = auxiliaryList.find(a => String(a.id) === String(item.auxId));
+                                uniqueAuxMap.set(item.auxId, {
+                                    id: item.auxId,
+                                    name: item.name,
+                                    baptismalName: item.baptismalName,
+                                    gender: item.gender,
+                                    activeMemberId: item.activeMemberId,
+                                    activeMemberName: item.activeMemberName,
+                                    activeMemberBaptismalName: item.activeMemberBaptismalName,
+                                    withdrawalDate: realAux ? (realAux.withdrawalDate || '') : (item.withdrawalDate || '')
+                                });
+                            }
+                        });
+                    } else {
+                        // Legacy support
+                        Object.keys(r.careData).forEach(auxId => {
+                            if (!uniqueAuxMap.has(auxId)) {
+                                const realAux = auxiliaryList.find(a => String(a.id) === String(auxId));
+                                if (realAux) {
+                                    uniqueAuxMap.set(auxId, {
+                                        id: auxId,
+                                        name: realAux.name,
+                                        baptismalName: realAux.baptismalName,
+                                        gender: realAux.gender,
+                                        activeMemberId: realAux.activeMemberId,
+                                        activeMemberName: realAux.activeMemberName,
+                                        activeMemberBaptismalName: realAux.activeMemberBaptismalName,
+                                        withdrawalDate: realAux.withdrawalDate || ''
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+
+                const mergedAuxiliaries = Array.from(uniqueAuxMap.values());
+
+                const grouped = {};
+                mergedAuxiliaries.forEach(aux => {
+                    const key = aux.activeMemberId || 'unknown';
+                    const selectedMemberId = document.getElementById('memberSelect').value;
+                    if (selectedMemberId && String(key) !== String(selectedMemberId)) return;
+
+                    if (!grouped[key]) grouped[key] = { name: aux.activeMemberName, baptismal: aux.activeMemberBaptismalName, list: [] };
+                    grouped[key].list.push(aux);
+                });
+
+                let currentRowNum = startRow + 2;
+
+                Object.values(grouped).forEach(g => {
+                    g.list.sort((a, b) => a.name.localeCompare(b.name));
+
+                    const startMergeRowIndex = currentRowNum;
+
+                    g.list.forEach((aux, idx) => {
+                        const rowObj = worksheet.getRow(currentRowNum);
+
+                        // 모든 셀 디폴트 테두리/폰트 설정
+                        for (let colIdx = startCol; colIdx < excelColIdx; colIdx++) {
+                            const cell = rowObj.getCell(colIdx);
+                            cell.font = { size: 9 };
+                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                            cell.border = {
+                                top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                        }
+
+                        rowObj.getCell(startCol).value = g.name;
+                        rowObj.getCell(startCol + 1).value = g.baptismal || '-';
+                        rowObj.getCell(startCol + 2).value = aux.name;
+                        rowObj.getCell(startCol + 3).value = aux.baptismalName || '-';
+                        rowObj.getCell(startCol + 4).value = aux.gender || '-';
+
+                        // 동적 세션 체크 기입
+                        let sessionColIdx = startCol + 5;
+                        Object.values(months).forEach(recs => {
+                            recs.forEach(r => {
+                                let status = 'none';
+                                if (r.careDataSnapshot) {
+                                    const snapItem = r.careDataSnapshot.find(s => String(s.auxId) === String(aux.id));
+                                    status = snapItem ? snapItem.checked : 'none';
+                                } else {
+                                    status = r.careData[aux.id] || 'none';
+                                }
+
+                                const isRetiredAtThisSession = 
+                                    aux.withdrawalDate && 
+                                    aux.withdrawalDate.trim() !== '' && 
+                                    aux.withdrawalDate <= r.date;
+
+                                const cell = rowObj.getCell(sessionColIdx);
+                                if (isRetiredAtThisSession) {
+                                    cell.value = '퇴단';
+                                    cell.font = { color: { argb: 'FF888888' }, bold: true, size: 9 };
+                                } else if (status === 'checked') {
+                                    cell.value = '돌봄';
+                                    cell.font = { color: { argb: 'FF2E7D32' }, bold: true, size: 9 };
+                                } else {
+                                    cell.value = '-';
+                                    cell.font = { color: { argb: 'FFCCCCCC' }, size: 9 };
+                                }
+                                sessionColIdx++;
+                            });
+                        });
+
+                        currentRowNum++;
+                    });
+
+                    // 행동단원 이름/세례명 세로 병합 (RowSpan)
+                    const mergeLen = currentRowNum - 1 - startMergeRowIndex;
+                    if (mergeLen > 0) {
+                        worksheet.mergeCells(startMergeRowIndex, startCol, startMergeRowIndex + mergeLen, startCol);
+                        worksheet.mergeCells(startMergeRowIndex, startCol + 1, startMergeRowIndex + mergeLen, startCol + 1);
+                    }
+                });
+
+                // A열 여백
+                worksheet.getColumn(1).width = 3;
+
+                // 기본 컬럼 너비 설정
+                worksheet.getColumn(startCol).width = 11;     // 행동단원 이름
+                worksheet.getColumn(startCol + 1).width = 13; // 행동단원 세례명
+                worksheet.getColumn(startCol + 2).width = 11; // 협조단원 이름
+                worksheet.getColumn(startCol + 3).width = 13; // 협조단원 세례명
+                worksheet.getColumn(startCol + 4).width = 7;  // 성별
+
+                for (let cIdx = startCol + 5; cIdx < excelColIdx; cIdx++) {
+                    worksheet.getColumn(cIdx).width = 9; // 주회별 컬럼
+                }
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                showAlert('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
+            }
         }
 
         function updateDateRange() {
@@ -1064,7 +1382,9 @@
 
             // [Senior Fix] Only Presidium is strictly required now. Dates are optional for "View All".
             if (!pr) {
-                if (isManualSearch) showCustomAlert('조직(쁘레시디움)을 선택해 주세요.');
+                currentFilteredReport = null;
+                lastSearchQuery = null;
+                if (isManualSearch) showAlert('조직(쁘레시디움)을 선택해 주세요.', 'warning');
                 return;
             }
 
@@ -1090,8 +1410,10 @@
                 });
 
                 if (relevantRecords.length === 0) {
-                    // [수정] 수동으로 [조회] 버튼을 눌렀을 때만 내역 없음 알림 표시
-                    if (isManualSearch) showCustomAlert('해당 범위에 등록된 돌봄 내역이 없습니다.');
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" style="padding: 100px; color: #999; text-align: center;">해당 범위에 등록된 돌봄 내역이 없습니다.</td></tr>';
+                    currentFilteredReport = null;
+                    lastSearchQuery = null;
+                    if (isManualSearch) showAlert('해당 범위에 등록된 돌봄 내역이 없습니다.', 'warning');
                     return;
                 }
 
@@ -1167,6 +1489,7 @@
                     if (r.careDataSnapshot) {
                         r.careDataSnapshot.forEach(item => {
                             if (!uniqueAuxMap.has(item.auxId)) {
+                                const realAux = auxiliaryList.find(a => String(a.id) === String(item.auxId));
                                 uniqueAuxMap.set(item.auxId, {
                                     id: item.auxId,
                                     name: item.name,
@@ -1174,7 +1497,8 @@
                                     gender: item.gender,
                                     activeMemberId: item.activeMemberId,
                                     activeMemberName: item.activeMemberName,
-                                    activeMemberBaptismalName: item.activeMemberBaptismalName
+                                    activeMemberBaptismalName: item.activeMemberBaptismalName,
+                                    withdrawalDate: realAux ? (realAux.withdrawalDate || '') : (item.withdrawalDate || '')
                                 });
                             }
                         });
@@ -1191,7 +1515,8 @@
                                         gender: realAux.gender,
                                         activeMemberId: realAux.activeMemberId,
                                         activeMemberName: realAux.activeMemberName,
-                                        activeMemberBaptismalName: realAux.activeMemberBaptismalName
+                                        activeMemberBaptismalName: realAux.activeMemberBaptismalName,
+                                        withdrawalDate: realAux.withdrawalDate || ''
                                     });
                                 }
                             }
@@ -1241,7 +1566,14 @@
                                 status = r.careData[aux.id] || 'none';
                             }
 
-                            if (status === 'checked') {
+                            const isRetiredAtThisSession = 
+                                aux.withdrawalDate && 
+                                aux.withdrawalDate.trim() !== '' && 
+                                aux.withdrawalDate <= r.date;
+
+                            if (isRetiredAtThisSession) {
+                                rowHtml += '<td style="color: #888888; font-weight: 500; background-color: #fafafa;">퇴단</td>';
+                            } else if (status === 'checked') {
                                 rowHtml += '<td style="color: var(--secondary-color); font-weight: bold;">돌봄</td>';
                             } else {
                                 rowHtml += '<td style="color: #ccc;">-</td>';
@@ -1254,15 +1586,29 @@
                 });
 
                 // No title subtitles per request
+                currentFilteredReport = relevantRecords;
+                lastSearchQuery = {
+                    church: churchSelect.value,
+                    curia: curiaSelect.value,
+                    presidium: pr,
+                    member: memberSelect.value,
+                    year: yearSelect.value,
+                    start: startDRaw,
+                    end: endDRaw
+                };
             } catch (error) {
+                currentFilteredReport = null;
+                lastSearchQuery = null;
                 console.error("Error rendering report:", error);
-                showCustomAlert("보고서를 생성하는 중 오류가 발생했습니다.");
+                showAlert("보고서를 생성하는 중 오류가 발생했습니다.", "error");
             }
         }
     </script>
 </body>
 
 </html>
+
+
 
 
 

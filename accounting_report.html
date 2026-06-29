@@ -5,8 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>입출내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260625_1621">
+    <link rel="stylesheet" href="styles.css?v=20260629_2351">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- ExcelJS & FileSaver.js 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2325">
     <style>
         /* Report specific overrides */
@@ -84,7 +87,6 @@
 
         .btn-section .btn {
             flex: none;
-            width: 130px;
             height: 42px;
             font-size: 1rem;
             font-weight: bold;
@@ -312,13 +314,16 @@
                 </div>
 
                 <div class="btn-section">
-                    <button id="btnSearch" class="btn btn-search">
+                    <button id="btnSearch" class="btn btn-search" style="padding: 0 35px; white-space: nowrap;">
                         <i class="fas fa-search"></i> 조회
                     </button>
-                    <button onclick="window.print()" class="btn btn-print">
+                    <button id="btnExcel" class="btn" style="height: 42px; background-color: #2e7d32; color: white; border: none; padding: 0 35px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fas fa-file-excel"></i> 엑셀내려받기
+                    </button>
+                    <button id="btnPrint" class="btn btn-print" style="padding: 0 35px; white-space: nowrap;">
                         <i class="fas fa-print"></i> 인쇄
                     </button>
-                    <button id="btnClose" class="btn btn-close">
+                    <button id="btnClose" class="btn btn-close" style="padding: 0 35px; white-space: nowrap;">
                         <i class="fas fa-times"></i> 닫기
                     </button>
                 </div>
@@ -385,7 +390,7 @@
     </div>
     </div>
 
-    <script src="script.js?v=20260625_1621"></script>
+    <script src="script.js?v=20260629_2351"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, doc, orderBy, limit } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -393,6 +398,7 @@
 
         let currentUser = null;
         let isAdmin = false;
+        let currentFilteredReport = null; // 엑셀 출력을 위한 전역 캐싱 변수
 
         // Data
         let allTransactions = [];
@@ -407,6 +413,8 @@
         const startDateFilter = document.getElementById('startDateFilter');
         const endDateFilter = document.getElementById('endDateFilter');
         const btnSearch = document.getElementById('btnSearch');
+        const btnExcel = document.getElementById('btnExcel');
+        const btnPrint = document.getElementById('btnPrint');
         const btnClose = document.getElementById('btnClose');
 
         const reportContent = document.getElementById('reportContent');
@@ -604,10 +612,19 @@
             return { year, startDate, endDate, church, curia, presidium };
         }
 
+        function showAlert(message, type = 'warning') {
+            if (window.showGlobalAlert) {
+                window.showGlobalAlert(message, type);
+            } else {
+                alert(message);
+            }
+        }
+
         async function loadReport() {
             const filters = getFilterValues();
             if (!filters.church || !filters.curia || !filters.presidium) {
-                alert("성당, 꾸리아, 쁘레시디움을 모두 선택해주세요.");
+                currentFilteredReport = null;
+                showAlert("성당, 꾸리아, 쁘레시디움을 모두 선택해주세요.", "warning");
                 return;
             }
 
@@ -616,7 +633,8 @@
                 const startYear = filters.startDate.split('-')[0];
                 const endYear = filters.endDate.split('-')[0];
                 if (startYear !== endYear) {
-                    await window.showGlobalAlert("⚠️ 회계 보고서는 동일한 년도 내에서만 조회가 가능합니다.\n기준일자를 확인해 주세요.", "warning");
+                    currentFilteredReport = null;
+                    showAlert("⚠️ 회계 보고서는 동일한 년도 내에서만 조회가 가능합니다.\n기준일자를 확인해 주세요.", "warning");
                     return;
                 }
             }
@@ -916,27 +934,420 @@
                 }
 
                 if (displayTrans.length === 0 && prevBalance === 0) {
-                    // reportContent.style.display = 'none';
-                    // noDataMsg.style.display = 'block';
-                    // Keep report visible even if empty to show carryover
+                    currentFilteredReport = null;
                     reportContent.style.display = 'block';
                     noDataMsg.style.display = 'none';
                 } else {
+                    currentFilteredReport = {
+                        carryoverTitle,
+                        isFirstMonth,
+                        prevIncome,
+                        prevExpense,
+                        prevBalance,
+                        transactions: displayTrans.map(t => ({
+                            session: t.session || '',
+                            month: t.month,
+                            day: t.day,
+                            brief: t.brief || t.item || '',
+                            type: t.type,
+                            amount: parseInt(t.amount) || 0
+                        })),
+                        rangeIncomeTotal,
+                        rangeExpenseTotal,
+                        totalCumulativeIncome,
+                        totalCumulativeExpense,
+                        finalBalance,
+                        incomeBreakdown,
+                        expenseBreakdown
+                    };
                     reportContent.style.display = 'block';
                     noDataMsg.style.display = 'none';
                 }
             } catch (error) {
+                currentFilteredReport = null;
                 console.error("Error generating report:", error);
-                alert("보고서를 생성하는 중 오류가 발생했습니다.");
+                showAlert("보고서를 생성하는 중 오류가 발생했습니다.", "error");
             }
         }
 
         btnSearch.addEventListener('click', loadReport);
+        btnExcel.addEventListener('click', exportToExcel);
+        btnPrint.addEventListener('click', handlePrint);
         btnClose.addEventListener('click', () => window.location.href = 'dashboard.html');
+
+        function handlePrint() {
+            if (!currentFilteredReport) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+            window.print();
+        }
+
+        async function exportToExcel() {
+            if (!currentFilteredReport) {
+                showAlert('조회된 데이터가 없습니다.\n먼저 [조회] 버튼을 눌러 데이터를 검색해 주세요.', 'warning');
+                return;
+            }
+
+            const filters = getFilterValues();
+            const churchVal = filters.church || '전체';
+            const curiaVal = filters.curia || '전체';
+            const presidiumVal = filters.presidium || '전체';
+            const yearVal = filters.year;
+            const startVal = filters.startDate;
+            const endVal = filters.endDate;
+
+            const baseDateStr = new Date().toISOString().split('T')[0];
+            const filename = `입출내역_${churchVal}_${presidiumVal}_${baseDateStr}.xlsx`;
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('입출내역');
+
+                const startCol = 2; // B열
+                const baseStartRow = 2; // 2행
+
+                // 1. 타이틀
+                worksheet.mergeCells(baseStartRow, startCol, baseStartRow, startCol + 6);
+                const titleCell = worksheet.getCell(baseStartRow, startCol);
+                titleCell.value = '입출내역';
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF1A202C' } };
+                titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+                // 2. 필터 요약
+                worksheet.getCell(baseStartRow + 1, startCol).value = `성당: ${churchVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 1).value = `꾸리아: ${curiaVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 2).value = `쁘레시디움: ${presidiumVal}`;
+                worksheet.getCell(baseStartRow + 1, startCol + 3).value = `년도: ${yearVal}년`;
+                worksheet.getCell(baseStartRow + 1, startCol + 4).value = `조회기간: ${(startVal || endVal) ? `${startVal || '초기'} ~ ${endVal || '현재'}` : '전 기간'}`;
+
+                const summaryCells = [
+                    worksheet.getCell(baseStartRow + 1, startCol),
+                    worksheet.getCell(baseStartRow + 1, startCol + 1),
+                    worksheet.getCell(baseStartRow + 1, startCol + 2),
+                    worksheet.getCell(baseStartRow + 1, startCol + 3),
+                    worksheet.getCell(baseStartRow + 1, startCol + 4)
+                ];
+                summaryCells.forEach(cell => {
+                    cell.font = { bold: true, size: 9, color: { argb: 'FF4A5568' } };
+                    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                });
+
+                const startRow = baseStartRow + 3; // B5행부터 표 헤더 작성
+
+                // 컬럼 명세
+                const columns = [
+                    { key: 'session', label: '회차', width: 10 },
+                    { key: 'month', label: '월', width: 6 },
+                    { key: 'day', label: '일', width: 6 },
+                    { key: 'brief', label: '항목', width: 35 },
+                    { key: 'income', label: '수입금액', width: 15 },
+                    { key: 'expense', label: '지출금액', width: 15 },
+                    { key: 'balance', label: '잔 액', width: 15 }
+                ];
+
+                // 표 헤더 렌더링
+                const headerRow = worksheet.getRow(startRow);
+                columns.forEach((col, idx) => {
+                    const excelCol = startCol + idx;
+                    const cell = headerRow.getCell(excelCol);
+                    cell.value = col.label;
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFEBF4FF' } // 연파랑
+                    };
+                    cell.font = { bold: true, color: { argb: 'FF2D3748' }, size: 10 };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                let currentRowNum = startRow + 1;
+                const d = currentFilteredReport;
+
+                // 3. 이월금 행 렌더링
+                const rowInit = worksheet.getRow(currentRowNum);
+                columns.forEach((col, idx) => {
+                    const cell = rowInit.getCell(startCol + idx);
+                    cell.border = {
+                        top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                    };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.font = { size: 10 };
+                });
+
+                rowInit.getCell(startCol + 3).value = d.carryoverTitle;
+                rowInit.getCell(startCol + 3).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+                rowInit.getCell(startCol + 3).font = { size: 10, bold: true };
+
+                if (d.isFirstMonth) {
+                    rowInit.getCell(startCol + 4).value = d.prevBalance;
+                    rowInit.getCell(startCol + 4).numFmt = '#,##0';
+                    rowInit.getCell(startCol + 4).alignment = { vertical: 'middle', horizontal: 'right' };
+                } else {
+                    rowInit.getCell(startCol + 4).value = d.prevIncome;
+                    rowInit.getCell(startCol + 4).numFmt = '#,##0';
+                    rowInit.getCell(startCol + 4).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                    rowInit.getCell(startCol + 5).value = d.prevExpense;
+                    rowInit.getCell(startCol + 5).numFmt = '#,##0';
+                    rowInit.getCell(startCol + 5).alignment = { vertical: 'middle', horizontal: 'right' };
+                }
+                rowInit.getCell(startCol + 6).value = d.prevBalance;
+                rowInit.getCell(startCol + 6).numFmt = '#,##0';
+                rowInit.getCell(startCol + 6).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                currentRowNum++;
+
+                // 4. 트랜잭션 행 렌더링
+                let activeBalance = d.prevBalance;
+                d.transactions.forEach(t => {
+                    const row = worksheet.getRow(currentRowNum);
+                    
+                    let incVal = null;
+                    let expVal = null;
+                    if (t.type === 'deposit') {
+                        activeBalance += t.amount;
+                        incVal = t.amount;
+                    } else {
+                        activeBalance -= t.amount;
+                        expVal = t.amount;
+                    }
+
+                    columns.forEach((col, idx) => {
+                        const cell = row.getCell(startCol + idx);
+                        cell.border = {
+                            top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                        };
+                        cell.font = { size: 10 };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    });
+
+                    row.getCell(startCol).value = t.session;
+                    row.getCell(startCol + 1).value = t.month;
+                    row.getCell(startCol + 2).value = t.day;
+
+                    row.getCell(startCol + 3).value = t.brief;
+                    row.getCell(startCol + 3).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+                    if (incVal !== null) {
+                        row.getCell(startCol + 4).value = incVal;
+                        row.getCell(startCol + 4).numFmt = '#,##0';
+                        row.getCell(startCol + 4).alignment = { vertical: 'middle', horizontal: 'right' };
+                    }
+                    if (expVal !== null) {
+                        row.getCell(startCol + 5).value = expVal;
+                        row.getCell(startCol + 5).numFmt = '#,##0';
+                        row.getCell(startCol + 5).alignment = { vertical: 'middle', horizontal: 'right' };
+                    }
+
+                    row.getCell(startCol + 6).value = activeBalance;
+                    row.getCell(startCol + 6).numFmt = '#,##0';
+                    row.getCell(startCol + 6).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                    currentRowNum++;
+                });
+
+                // 5. 소계(월계) 행 렌더링
+                const rowSub = worksheet.getRow(currentRowNum);
+                columns.forEach((col, idx) => {
+                    const cell = rowSub.getCell(startCol + idx);
+                    cell.border = {
+                        top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                    };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFF5F5F5' } // 밝은 회색
+                    };
+                    cell.font = { size: 10, bold: true };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                rowSub.getCell(startCol + 3).value = '월 계 (소계)';
+                
+                rowSub.getCell(startCol + 4).value = d.rangeIncomeTotal;
+                rowSub.getCell(startCol + 4).numFmt = '#,##0';
+                rowSub.getCell(startCol + 4).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                rowSub.getCell(startCol + 5).value = d.rangeExpenseTotal;
+                rowSub.getCell(startCol + 5).numFmt = '#,##0';
+                rowSub.getCell(startCol + 5).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                currentRowNum++;
+
+                // 6. 누계 행 렌더링
+                const rowCum = worksheet.getRow(currentRowNum);
+                columns.forEach((col, idx) => {
+                    const cell = rowCum.getCell(startCol + idx);
+                    cell.border = {
+                        top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'double' }, right: { style: 'thin' }
+                    };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFFF0F0' } // 매우 연한 빨간색
+                    };
+                    cell.font = { size: 10, bold: true, color: { argb: 'FFFF0000' } }; // 빨간색 글씨
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                rowCum.getCell(startCol + 3).value = '누 계';
+                
+                rowCum.getCell(startCol + 4).value = d.totalCumulativeIncome;
+                rowCum.getCell(startCol + 4).numFmt = '#,##0';
+                rowCum.getCell(startCol + 4).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                rowCum.getCell(startCol + 5).value = d.totalCumulativeExpense;
+                rowCum.getCell(startCol + 5).numFmt = '#,##0';
+                rowCum.getCell(startCol + 5).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                rowCum.getCell(startCol + 6).value = d.finalBalance;
+                rowCum.getCell(startCol + 6).numFmt = '#,##0';
+                rowCum.getCell(startCol + 6).alignment = { vertical: 'middle', horizontal: 'right' };
+
+                currentRowNum += 2; // 한 행 띄우기
+
+                // '기간 요약' 타이틀 행 추가
+                const summaryLabelRow = worksheet.getRow(currentRowNum);
+                summaryLabelRow.getCell(startCol).value = '기간 요약';
+                summaryLabelRow.getCell(startCol).font = { size: 11, bold: true, color: { argb: 'FF4A5568' } };
+                currentRowNum += 2; // 약간의 간격 확보
+
+                // 7. 하단 기간 요약 카드 렌더링 (화면의 요약 카드 레이아웃과 일치화)
+                function renderSummaryRow(rowNum, title, valStr, align = 'right', isNumber = false, numVal = 0, isBold = true, textColor = 'FF000000', bgColor = 'FFFFFFFF') {
+                    worksheet.mergeCells(rowNum, startCol, rowNum, startCol + 1); // B, C열 병합 (항목명)
+                    worksheet.mergeCells(rowNum, startCol + 2, rowNum, startCol + 3); // D, E열 병합 (금액란 - 끝선 E열 매칭)
+                    
+                    const row = worksheet.getRow(rowNum);
+                    
+                    for (let c = startCol; c <= startCol + 3; c++) {
+                        const cell = row.getCell(c);
+                        cell.border = {
+                            top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                        };
+                        if (bgColor !== 'FFFFFFFF') {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                        }
+                    }
+
+                    const titleCell = row.getCell(startCol);
+                    titleCell.value = title;
+                    titleCell.font = { size: 10, bold: true };
+                    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+                    const valCell = row.getCell(startCol + 2);
+                    if (isNumber) {
+                        valCell.value = numVal;
+                        valCell.numFmt = '#,##0';
+                    } else {
+                        valCell.value = valStr;
+                    }
+                    valCell.font = { size: 10, bold: isBold, color: { argb: textColor } };
+                    valCell.alignment = { vertical: 'middle', horizontal: align, wrapText: true };
+                    
+                    // 멀티라인 텍스트 높이 자동 확보
+                    const lines = valStr ? valStr.toString().split('\n').length : 1;
+                    row.height = Math.max(24, lines * 16 + 6);
+                }
+
+                // (가) 이월금 행
+                renderSummaryRow(
+                    currentRowNum,
+                    d.carryoverTitle,
+                    d.prevBalance.toLocaleString(),
+                    'right',
+                    true,
+                    d.prevBalance,
+                    true,
+                    'FF1A202C',
+                    'FFF5F5F5'
+                );
+                currentRowNum++;
+
+                // (나) 수입 합계 행 (세부 항목 포함 멀티라인 구성)
+                let incomeDetails = Object.entries(d.incomeBreakdown || {})
+                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                    .join('\n');
+                let incomeCellValue = incomeDetails 
+                    ? `${incomeDetails}\n-------------------------\n${d.rangeIncomeTotal.toLocaleString()}`
+                    : d.rangeIncomeTotal.toLocaleString();
+
+                renderSummaryRow(
+                    currentRowNum,
+                    '수입 합계',
+                    incomeCellValue,
+                    'right',
+                    false,
+                    0,
+                    true,
+                    'FF0000FF',
+                    'FFFFFFFF'
+                );
+                currentRowNum++;
+
+                // (다) 지출 합계 행 (세부 항목 포함 멀티라인 구성)
+                let expenseDetails = Object.entries(d.expenseBreakdown || {})
+                    .map(([k, v]) => `(${k}) ${v.toLocaleString()}`)
+                    .join('\n');
+                let expenseCellValue = expenseDetails 
+                    ? `${expenseDetails}\n-------------------------\n${d.rangeExpenseTotal.toLocaleString()}`
+                    : d.rangeExpenseTotal.toLocaleString();
+
+                renderSummaryRow(
+                    currentRowNum,
+                    '지출 합계',
+                    expenseCellValue,
+                    'right',
+                    false,
+                    0,
+                    true,
+                    'FFFF0000',
+                    'FFFFFFFF'
+                );
+                currentRowNum++;
+
+                // (라) 잔 액 행
+                renderSummaryRow(
+                    currentRowNum,
+                    '잔 액',
+                    d.finalBalance.toLocaleString(),
+                    'right',
+                    true,
+                    d.finalBalance,
+                    true,
+                    'FF2E7D32',
+                    'FFE8F5E9'
+                );
+
+                // A열 여백
+                worksheet.getColumn(1).width = 3;
+
+                // 정의된 컬럼 너비 지정
+                columns.forEach((col, idx) => {
+                    worksheet.getColumn(startCol + idx).width = col.width || 12;
+                });
+
+                // 엑셀 세이브
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), filename);
+
+            } catch (error) {
+                console.error('[ExcelJS] Export failed:', error);
+                showAlert('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
+            }
+        }
     </script>
 </body>
 
 </html>
+
+
 
 
 
