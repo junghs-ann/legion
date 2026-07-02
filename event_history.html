@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사관리내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260702_1702">
+    <link rel="stylesheet" href="styles.css?v=20260702_1827">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -617,7 +617,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260702_1702"></script>
+    <script src="script.js?v=20260702_1827"></script>
     <script type="module">
         import { db, collection, query, where, orderBy, getDocs } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -1159,6 +1159,9 @@
 
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
+                if (window.showToast) {
+                    window.showToast("엑셀 파일이 성공적으로 다운로드되었습니다.", "success");
+                }
 
             } catch (error) {
                 console.error('[ExcelJS] Export failed:', error);
@@ -1200,6 +1203,7 @@
 </body>
 
 </html>
+
 
 
 

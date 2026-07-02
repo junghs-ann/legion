@@ -12,7 +12,7 @@
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=20260702_1702">
+    <link rel="stylesheet" href="styles.css?v=20260702_1827">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -549,7 +549,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260702_1702"></script>
+    <script src="script.js?v=20260702_1827"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy, doc, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -1561,6 +1561,9 @@
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
                 console.log(`[ExcelJS] Exported: ${filename}`);
+                if (window.showToast) {
+                    window.showToast("엑셀 파일이 성공적으로 다운로드되었습니다.", "success");
+                }
 
             } catch (error) {
                 console.error('[ExcelJS] Export failed:', error);
@@ -1593,6 +1596,7 @@
         };
     </script>
 </body>
+
 
 
 

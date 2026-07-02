@@ -9,7 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=20260702_1702">
+    <link rel="stylesheet" href="styles.css?v=20260702_1827">
+    <script src="script.js?v=20260702_1827"></script>
     <!-- Excel Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -423,7 +424,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260702_1702"></script>
+    <script src="script.js?v=20260702_1827"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -743,14 +744,40 @@
                     }
                 }
 
-                // 너비 설정
+                // A열(1번째 열)은 고정 너비 3
                 worksheet.getColumn(1).width = 3;
-                [20, 15, 10, 30, 15, 25].forEach((w, i) => {
-                    worksheet.getColumn(startCol + i).width = w;
-                });
+
+                // B열부터 G열까지 자동 너비 조절 적용
+                for (let colIdx = startCol; colIdx < startCol + 6; colIdx++) {
+                    const column = worksheet.getColumn(colIdx);
+                    let maxLen = 10; // 최소 너비 기본값 10
+                    
+                    column.eachCell({ includeEmpty: false }, cell => {
+                        if (cell.row >= startRow && cell.value) {
+                            const valStr = String(cell.value);
+                            let visualLength = 0;
+                            for (let i = 0; i < valStr.length; i++) {
+                                if (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(valStr[i])) {
+                                    visualLength += 2.1; // 한글 가중치
+                                } else {
+                                    visualLength += 1.0;
+                                }
+                            }
+                            if (visualLength > maxLen) {
+                                maxLen = visualLength;
+                            }
+                        }
+                    });
+                    
+                    // 최대 너비를 45로 제한하고, 여유 공간 4를 더해줌
+                    column.width = Math.min(maxLen + 4, 45);
+                }
 
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
+                if (window.showToast) {
+                    window.showToast("엑셀 파일이 성공적으로 다운로드되었습니다.", "success");
+                }
             } catch (err) {
                 console.error("엑셀 저장 실패:", err);
                 alert("엑셀 생성 중 오류가 발생했습니다.");
@@ -760,6 +787,7 @@
 </body>
 
 </html>
+
 
 
 

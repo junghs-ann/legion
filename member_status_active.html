@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단원 현황 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260702_1702">
+    <link rel="stylesheet" href="styles.css?v=20260702_1827">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="accounting_styles.css?v=20260307_2335">
     <!-- ExcelJS & FileSaver.js -->
@@ -591,7 +591,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260702_1702"></script>
+    <script src="script.js?v=20260702_1827"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy, addDoc } from "./firebase-config.js?v=20260307_2335";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260303_1210";
@@ -1135,16 +1135,16 @@
                     
                     const addrCell = rowObj.getCell(startCol + 10);
                     addrCell.value = m.address || '-';
-                    addrCell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    addrCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 
                     const notesCell = rowObj.getCell(startCol + 11);
                     notesCell.value = m.notes || '-';
-                    notesCell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    notesCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 
                     currentRowNum++;
                 });
 
-                const widths = [10, 14, 16, 10, 14, 14, 14, 14, 14, 16, 32, 32];
+                const widths = [10, 14, 16, 10, 14, 14, 14, 14, 14, 16, 35, 45];
                 widths.forEach((w, idx) => {
                     worksheet.getColumn(startCol + idx).width = w;
                 });
@@ -1299,6 +1299,7 @@
 </body>
 
 </html>
+
 
 
 

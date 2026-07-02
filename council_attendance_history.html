@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>평의회 출석 내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260702_1702">
+    <link rel="stylesheet" href="styles.css?v=20260702_1827">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -675,7 +675,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260702_1702"></script>
+    <script src="script.js?v=20260702_1827"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -1011,7 +1011,7 @@
                         for (let colIdx = startCol; colIdx < startCol + 7; colIdx++) {
                             const cell = rowObj.getCell(colIdx);
                             cell.font = { size: 9 };
-                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                             cell.border = {
                                 top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
                             };
@@ -1046,17 +1046,37 @@
                 // A열 여백
                 worksheet.getColumn(1).width = 3;
 
-                // 기본 컬럼 너비 설정
-                worksheet.getColumn(startCol).width = 8;
-                worksheet.getColumn(startCol + 1).width = 12;
-                worksheet.getColumn(startCol + 2).width = 18;
-                worksheet.getColumn(startCol + 3).width = 10;
-                worksheet.getColumn(startCol + 4).width = 10;
-                worksheet.getColumn(startCol + 5).width = 13;
-                worksheet.getColumn(startCol + 6).width = 10;
+                // B열부터 H열까지 자동 너비 조절 적용
+                for (let colIdx = startCol; colIdx < startCol + 7; colIdx++) {
+                    const column = worksheet.getColumn(colIdx);
+                    let maxLen = 10; // 최소 너비 기본값 10
+                    
+                    column.eachCell({ includeEmpty: false }, cell => {
+                        if (cell.row >= startRow && cell.value) {
+                            const valStr = String(cell.value);
+                            let visualLength = 0;
+                            for (let i = 0; i < valStr.length; i++) {
+                                if (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(valStr[i])) {
+                                    visualLength += 2.1; // 한글 가중치
+                                } else {
+                                    visualLength += 1.0;
+                                }
+                            }
+                            if (visualLength > maxLen) {
+                                maxLen = visualLength;
+                            }
+                        }
+                    });
+                    
+                    // 최대 너비를 45로 제한하고, 여유 공간 4를 더해줌
+                    column.width = Math.min(maxLen + 4, 45);
+                }
 
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), filename);
+                if (window.showToast) {
+                    window.showToast("엑셀 파일이 성공적으로 다운로드되었습니다.", "success");
+                }
 
             } catch (error) {
                 console.error('[ExcelJS] Export failed:', error);
@@ -1300,6 +1320,7 @@
 </body>
 
 </html>
+
 
 
 
