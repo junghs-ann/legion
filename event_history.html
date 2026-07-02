@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>행사관리내역 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260629_2351">
+    <link rel="stylesheet" href="styles.css?v=20260702_1618">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -617,7 +617,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260629_2351"></script>
+    <script src="script.js?v=20260702_1618"></script>
     <script type="module">
         import { db, collection, query, where, orderBy, getDocs } from "./firebase-config.js?v=20260303_1210";
         import { initAuthObserver } from "./auth.js?v=20260303_1210";
@@ -860,7 +860,7 @@
                 // e.category가 '실시'/'계획'이므로, e.type을 기준으로 분류해야 함
                 if (e.type === '교육') {
                     grouped['교육'].push(e);
-                } else if (e.type === '피정') {
+                } else if (e.type === '피정' || e.type === '피정(단체)' || e.type === '피정(개인)') {
                     grouped['피정'].push(e);
                 } else {
                     // '레지오마리애 5대행사' 또는 '기타행사'는 모두 '행사' 그룹으로 분류
@@ -1053,7 +1053,7 @@
                 currentFilteredReport.forEach(e => {
                     if (e.type === '교육') {
                         grouped['교육'].push(e);
-                    } else if (e.type === '피정') {
+                    } else if (e.type === '피정' || e.type === '피정(단체)' || e.type === '피정(개인)') {
                         grouped['피정'].push(e);
                     } else {
                         grouped['행사'].push(e);
@@ -1200,6 +1200,7 @@
 </body>
 
 </html>
+
 
 
 

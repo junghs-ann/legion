@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사업 보고서 출력 - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260629_2351">
+    <link rel="stylesheet" href="styles.css?v=20260702_1618">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -1083,7 +1083,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260629_2351"></script>
+    <script src="script.js?v=20260702_1618"></script>
     <script type="module">
         import { db, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, orderBy } from "./firebase-config.js?v=20260307_2325";
         import { initAuthObserver, convertToStdRole } from "./auth.js?v=20260304_1525";
@@ -2130,7 +2130,8 @@
                     const pEvs = allEv.filter(e => 
                         isMatch(e.churchName, e.presidiumName, e.curiaName) && 
                         e.eventDate >= reportMonthStart && 
-                        e.eventDate <= reportMonthEnd
+                        e.eventDate <= reportMonthEnd &&
+                        (e.type || '') !== '피정(개인)'
                     );
                     const evMap = {
                         '아치에스': 'acies', '야외행사': 'outdoor', '야외 행사': 'outdoor',
@@ -2156,11 +2157,12 @@
                         }
                     });
 
-                    const edus = pEvs.filter(e => ['교육', '피정'].includes(e.type));
+                    const edus = pEvs.filter(e => ['교육', '피정', '피정(단체)'].includes(e.type));
                     edus.forEach((e, i) => {
                         if (i < 5) {
                             const idx = i + 1;
-                            safeSetText(`edu_${idx}_name`, e.eventName);
+                            const displayName = e.eventName === '피정(단체)' ? '피정' : (e.eventName || '');
+                            safeSetText(`edu_${idx}_name`, displayName);
                             safeSetText(`edu_${idx}_date`, e.eventDate);
                             safeSetText(`edu_${idx}_att`, e.attendanceCount || '-');
                         }
@@ -2471,6 +2473,7 @@
 </body>
 
 </html>
+
 
 
 

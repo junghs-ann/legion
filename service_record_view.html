@@ -348,8 +348,8 @@
                     const attendeeList = data.attendees || [];
                     // Check if attendee
                     const isAttendee = attendeeList.some(a => (a.uid === member.id || a.id === member.id));
-                    // Filter only 'Education' (교육) and 'Retreat' (피정) and exclude '계획' (Planned)
-                    const isValidType = (data.type === '교육' || data.type === '피정') && data.category !== '계획';
+                    // Filter only 'Education' (교육) and 'Retreat' (피정/피정(단체)/피정(개인)) and exclude '계획' (Planned)
+                    const isValidType = (data.type === '교육' || data.type === '피정' || data.type === '피정(단체)' || data.type === '피정(개인)') && data.category !== '계획';
                     
                     if (isAttendee && isValidType) {
                         allEvents.push(data);
@@ -736,7 +736,8 @@
                 const e = data[i];
                 if (e) {
                     const prName = e.presidiumName || '';
-                    html += `<tr><td>${prName}</td><td>${e.eventDate}</td><td style="text-align:left;">${e.eventName}</td><td>${e.organizer || '-'}</td></tr>`;
+                    const displayName = (e.eventName === '피정(단체)' || e.eventName === '피정(개인)') ? '피정' : (e.eventName || '');
+                    html += `<tr><td>${prName}</td><td>${e.eventDate}</td><td style="text-align:left;">${displayName}</td><td>${e.organizer || '-'}</td></tr>`;
                 }
                 else html += '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
             }
@@ -771,9 +772,10 @@
             }
         }, () => { window.close(); });
     </script>
-    <script src="script.js?v=20260629_2351"></script>
+    <script src="script.js?v=20260702_1618"></script>
 </body>
 
 </html>
+
 
 
