@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>꾸리아 기본 정보 관리 - 레지오 마리애 관리시스템</title>
-    <link rel="stylesheet" href="styles.css?v=20260702_1827">
+    <link rel="stylesheet" href="styles.css?v=20260830_0207">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Form specific styles */
@@ -460,7 +460,7 @@
                         <label>소속 세나뚜스 명</label>
                         <select name="senatusName" required>
                             <option value="">선택하세요</option>
-                            <option value="서울">서울</option>
+                            <option value="서울 무염시태">서울 무염시태</option>
                             <option value="광주">광주</option>
                             <option value="대구">대구</option>
                         </select>
@@ -539,7 +539,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260702_1827"></script>
+    <script src="script.js?v=20260830_0207"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
@@ -784,7 +784,12 @@
                         Object.keys(record).forEach(key => {
                             const input = form.querySelector(`[name="${key}"]`);
                             if (input) {
-                                input.value = record[key];
+                                let val = record[key];
+                                // 기존 '서울' 데이터를 '서울 무염시태' 옵션과 호환되도록 처리
+                                if (key === 'senatusName' && val === '서울') {
+                                    val = '서울 무염시태';
+                                }
+                                input.value = val;
                             }
                         });
 
@@ -807,7 +812,12 @@
                         const firstRecord = churchCuriae[0];
                         if (firstRecord.comitiumName) document.querySelector('input[name="comitiumName"]').value = firstRecord.comitiumName;
                         if (firstRecord.regiaName) document.querySelector('input[name="regiaName"]').value = firstRecord.regiaName;
-                        if (firstRecord.senatusName) document.querySelector('select[name="senatusName"]').value = firstRecord.senatusName;
+                        if (firstRecord.senatusName) {
+                            let sName = firstRecord.senatusName;
+                            // 기존 '서울' 데이터를 '서울 무염시태' 옵션과 호환되도록 처리
+                            if (sName === '서울') sName = '서울 무염시태';
+                            document.querySelector('select[name="senatusName"]').value = sName;
+                        }
 
                         document.querySelector('input[name="uniqueNumber"]').value = '';
                         document.querySelector('input[name="spiritualDirector"]').value = '';
@@ -988,6 +998,7 @@
 </body>
 
 </html>
+
 
 
 
