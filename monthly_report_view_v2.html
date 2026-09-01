@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -812,8 +812,7 @@
                 &nbsp;&nbsp;&nbsp;&nbsp; 단원 <span id="repAttMem" class="underline">- / -</span>
             </div>
 
-            <div class="section-title">4. 간부 명단 : ( 담당 사제 : <span id="repPriest">-</span> 대리자 : <span
-                    id="repProxy">-</span> )</div>
+            <div class="section-title">4. 간부 명단 : ( 담당 사제:&nbsp;<span id="repPriest">-</span>&nbsp;&nbsp;대리자:&nbsp;<span id="repProxy">-</span> )</div>
             <table class="report-table">
                 <thead>
                     <tr>
@@ -1875,6 +1874,7 @@
                     document.getElementById('repMin').textContent = rd.repMin || '';
                     document.getElementById('repPlace').textContent = rd.repPlace || '';
                     document.getElementById('repPriest').textContent = rd.repPriest || '';
+                    if (document.getElementById('repProxy')) document.getElementById('repProxy').textContent = rd.repProxy || '';
                     
                     // 2. 명단 및 요약
                     document.getElementById('offTableBody').innerHTML = rd.offTableBody || '';
@@ -2372,7 +2372,7 @@
                 // 기본 텍스트 필드
                 const textIds = [
                     'repYear', 'repMonth', 'repStartSess', 'repEndSess', 'serialNum',
-                    'repDay', 'repHour', 'repMin', 'repPlace', 'repPriest',
+                    'repDay', 'repHour', 'repMin', 'repPlace', 'repPriest', 'repProxy',
                     'repAttOff', 'repAttMem',
                     'm_p_m', 'm_p_f', 'm_p_t', 'm_c_m', 'm_c_f', 'm_c_t',
                     'm_i_m', 'm_i_f', 'm_i_t', 'm_o_m', 'm_o_f', 'm_o_t',
