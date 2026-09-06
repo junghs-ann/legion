@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -12,7 +12,7 @@
     <!-- ExcelJS & FileSaver.js 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=20260830_0207">
+    <link rel="stylesheet" href="styles.css?v=20260901_1635">
     <style>
         :root {
             --primary-color: #2E7D32; /* 시스템 표준 진녹색 */
@@ -224,6 +224,7 @@
         .detail-item span {
             font-weight: 600;
             color: #2d3748;
+            min-height: 1.2em;
         }
 
         .detail-item.span-2 {
@@ -549,7 +550,7 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="script.js?v=20260830_0207"></script>
+    <script src="script.js?v=20260901_1635"></script>
     <script type="module">
         import { db, collection, getDocs, query, where, orderBy, doc, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver } from "./auth.js?v=20260313_1450";
@@ -1091,6 +1092,7 @@
                     <div class="detail-item"><strong>설립일</strong><span>${formatDate(pr.foundationDate)}</span></div>
                     <div class="detail-item"><strong>승인일</strong><span>${formatDate(pr.approvalDate)}</span></div>
                     <div class="detail-item"><strong>승인 평의회 명</strong><span>${pr.approvalCouncilName || '-'}</span></div>
+                    <div class="detail-item span-2"><strong>모체 Pr. 명</strong><span>${(pr.motherPr && !pr.motherPr.includes('선택 안 함')) ? pr.motherPr : ''}</span></div>
                     <div class="detail-item"><strong>주회합 요일</strong><span>${formatDay(pr.meetingDay)}</span></div>
                     <div class="detail-item"><strong>주회합 일시</strong><span>${pr.meetingTime || '-'}</span></div>
                     <div class="detail-item span-2"><strong>주회합 장소</strong><span>${pr.meetingPlace || '-'}</span></div>
@@ -1605,6 +1607,7 @@
         };
     </script>
 </body>
+
 
 
 

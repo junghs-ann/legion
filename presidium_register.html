@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쁘레시디움 기본정보 관리 - 레지오 마리애 관리시스템</title>
     <!-- UI Update: 2026-03-13_1450 (Presidium Name Input Resized) -->
-    <link rel="stylesheet" href="styles.css?v=20260830_0207">
+    <link rel="stylesheet" href="styles.css?v=20260901_1635">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Form specific styles */
@@ -553,6 +553,13 @@
                             <button type="button" id="btnToggleApprovalCouncilInput" class="btn-toggle-church">직접 입력</button>
                         </div>
                     </div>
+                    <!-- 모체 Pr. 입력 항목 -->
+                    <div class="form-group span-2">
+                        <label>모체 Pr.</label>
+                        <select name="motherPr" id="motherPrSelect">
+                            <option value="">선택 안 함 (분단 설립 아님)</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>주회합 요일</label>
                         <select name="meetingDay">
@@ -695,7 +702,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260830_0207"></script>
+    <script src="script.js?v=20260901_1635"></script>
     <script type="module">
         import { db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, getDoc } from "./firebase-config.js?v=20260313_1450";
         import { initAuthObserver, logoutUser } from "./auth.js?v=20260313_1450";
@@ -712,6 +719,9 @@
             onSnapshot(collection(db, 'presidia_list'), (snapshot) => {
                 presidia_list = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id }));
                 updateChurchSelect();
+                if (typeof updateMotherPrOptions === 'function') {
+                    updateMotherPrOptions();
+                }
             });
 
             // Firestore real-time sync for curia_list
@@ -920,6 +930,72 @@
                 curiaInputRef.addEventListener('input', () => {
                     updateApprovalCouncilOptions();
                 });
+
+                // --- 모체 Pr. (동적 목록) ---
+                const motherPrSelect = document.getElementById('motherPrSelect');
+
+                // 모체 Pr. 목록 갱신 함수 (해당 성당의 모든 쁘레시디움 명 + ' Pr.' 목록)
+                const updateMotherPrOptions = () => {
+                    if (!motherPrSelect) return;
+                    const churchVal = (churchNameInput.value || '').trim();
+                    const currentPrVal = (presidiumNameInput.value || '').trim();
+                    const cleanCurrentPr = currentPrVal.replace(/\s*Pr\.?$/i, '').trim();
+                    const currentSelected = (motherPrSelect.value || '').trim();
+
+                    motherPrSelect.innerHTML = '<option value="">선택 안 함 (분단 설립 아님)</option>';
+
+                    if (!churchVal) return;
+
+                    // 1. 해당 성당에 소속된 모든 쁘레시디움 필터링
+                    let churchPresidia = presidia_list.filter(p => {
+                        const pChurch = (p.churchName || p.church || '').trim();
+                        return pChurch === churchVal;
+                    });
+
+                    // 2. 고유번호(uniqueNumber) 기준 오름차순 정렬 후 이름 가나다순 정렬
+                    churchPresidia.sort((a, b) => {
+                        const numA = parseInt(a.uniqueNumber || 9999);
+                        const numB = parseInt(b.uniqueNumber || 9999);
+                        if (numA !== numB) return numA - numB;
+                        const nameA = (a.presidiumName || a.presidium || '').trim();
+                        const nameB = (b.presidiumName || b.presidium || '').trim();
+                        return nameA.localeCompare(nameB, 'ko');
+                    });
+
+                    // 3. 쁘레시디움 명 뒤에 한 칸 띄우고 'Pr.' 추가 (자기 자신 제외)
+                    let options = [];
+                    churchPresidia.forEach(p => {
+                        const rawName = (p.presidiumName || p.presidium || '').trim();
+                        if (!rawName) return;
+                        const cleanName = rawName.replace(/\s*Pr\.?$/i, '').trim();
+                        // 현재 작성/조회 중인 본인 쁘레시디움은 모체 Pr. 목록에서 제외
+                        if (cleanCurrentPr && cleanName.toLowerCase() === cleanCurrentPr.toLowerCase()) {
+                            return;
+                        }
+                        options.push(`${cleanName} Pr.`);
+                    });
+
+                    // 4. 현재 이미 선택되어 있는 값이 목록에 없다면 보존을 위해 추가
+                    if (currentSelected && !options.includes(currentSelected)) {
+                        options.push(currentSelected);
+                    }
+
+                    // 5. 중복 제거
+                    const uniqueOptions = [...new Set(options)];
+
+                    // 6. 드롭다운 옵션 추가
+                    uniqueOptions.forEach(optVal => {
+                        const opt = document.createElement('option');
+                        opt.value = optVal;
+                        opt.textContent = optVal;
+                        motherPrSelect.appendChild(opt);
+                    });
+
+                    // 7. 이전 선택 값 유지
+                    if (currentSelected && uniqueOptions.includes(currentSelected)) {
+                        motherPrSelect.value = currentSelected;
+                    }
+                };
                 const form = document.getElementById('presidiumForm');
 
                 // 1. Update Presidium List
@@ -959,6 +1035,7 @@
                         li.addEventListener('click', () => {
                             presidiumNameInput.value = name;
                             presidiumCustomList.style.display = 'none';
+                            updateMotherPrOptions();
                         });
                         presidiumCustomList.appendChild(li);
                     });
@@ -1039,7 +1116,10 @@
                 // Event Listeners
                 presidiumNameInput.addEventListener('focus', () => updatePresidiumList(''));
                 presidiumNameInput.addEventListener('click', () => updatePresidiumList(''));
-                presidiumNameInput.addEventListener('input', (e) => updatePresidiumList(e.target.value));
+                presidiumNameInput.addEventListener('input', (e) => {
+                    updatePresidiumList(e.target.value);
+                    updateMotherPrOptions();
+                });
 
                 curiaInputRef.addEventListener('focus', () => updateCuriaList(''));
                 curiaInputRef.addEventListener('click', () => updateCuriaList(''));
@@ -1176,6 +1256,32 @@
                             approvalCouncilInput.value = '';
                         }
 
+                        // 모체 Pr. 옵션 목록 갱신 및 바인딩 처리
+                        updateMotherPrOptions();
+                        const savedMotherPr = (record.motherPr || '').trim();
+                        if (savedMotherPr) {
+                            const cleanSaved = savedMotherPr.replace(/\s*Pr\.?$/i, '').trim();
+                            const formattedSaved = `${cleanSaved} Pr.`;
+                            
+                            let matchOpt = Array.from(motherPrSelect.options).find(opt => 
+                                opt.value === formattedSaved || 
+                                opt.value === savedMotherPr ||
+                                opt.value.replace(/\s*Pr\.?$/i, '').trim() === cleanSaved
+                            );
+
+                            if (matchOpt) {
+                                motherPrSelect.value = matchOpt.value;
+                            } else {
+                                const opt = document.createElement('option');
+                                opt.value = formattedSaved;
+                                opt.textContent = formattedSaved;
+                                motherPrSelect.appendChild(opt);
+                                motherPrSelect.value = formattedSaved;
+                            }
+                        } else {
+                            motherPrSelect.value = '';
+                        }
+
                         if (btnDelete) btnDelete.style.display = 'inline-block';
                         form.dataset.currentId = record.id; // ✅ 폼 객체에 ID를 확실하게 저장
 
@@ -1210,6 +1316,8 @@
                         document.querySelector('input[name="uniqueNumber"]').value = '';
                         document.querySelector('input[name="spiritualDirector"]').value = '';
                         document.querySelector('input[name="spiritualDirectorDeputy"]').value = '';
+                        if (motherPrSelect) motherPrSelect.value = '';
+                        updateMotherPrOptions();
 
                         // 승인 평의회 초기화
                         isApprovalCouncilDirectInput = false;
@@ -1228,12 +1336,14 @@
                     presidiumNameInput.value = '';
                     autoFillHigherCouncils();
                     updateApprovalCouncilOptions();
+                    updateMotherPrOptions();
                 });
                 // We don't need 'change' as well if we dispatch 'input' manually, but safe to keep logic consistent.
 
                 // Initial auto-fill
                 if (churchNameInput.value) {
                     autoFillHigherCouncils();
+                    updateMotherPrOptions();
                 }
 
                 // Pre-fill Church Name with last used if exists
@@ -1273,6 +1383,11 @@
 
                     // ID 필드는 데이터 내부가 아닌 문서 키로만 사용되도록 정리
                     delete data.id;
+
+                    // [모체 Pr. 안전 처리] '선택 안 함' 선택 시 DB에 빈 문자열("")로 안전하게 저장 보장
+                    if (!data.motherPr || data.motherPr.includes('선택 안 함')) {
+                        data.motherPr = '';
+                    }
 
                     try {
                         // 1. 현재 폼에 로드된 ID 확인
@@ -1347,6 +1462,10 @@
                             approvalCouncilSelect.value = '';
                             approvalCouncilInput.value = '';
                             updateApprovalCouncilOptions();
+
+                            // 모체 Pr. 리셋
+                            if (motherPrSelect) motherPrSelect.value = '';
+                            updateMotherPrOptions();
                             
                             const historyBtnContainer = document.getElementById('historyBtnContainer');
                             if (historyBtnContainer) historyBtnContainer.style.display = 'none';
@@ -1791,6 +1910,7 @@
 </body>
 
 </html>
+
 
 
 
