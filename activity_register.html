@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동항목 관리 (v22!) - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260901_1635">
+    <link rel="stylesheet" href="styles.css?v=20260910_0645">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-container {
@@ -392,7 +392,7 @@
         </button>
     </div>
 
-    <script src="script.js?v=20260901_1635"></script>
+    <script src="script.js?v=20260910_0645"></script>
     <script type="module">
         import {
             auth, db, storage,
@@ -405,6 +405,11 @@
 
         let currentChurch = "";
         let activitySchema = {}; // { churchName: [ { id, title, items: [{name, unit}] } ] }
+
+        // [공통 유틸리티] 성당 명칭 표준화 함수: 앞뒤 공백 제거 및 연속 공백을 1개로 통일
+        const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
+        // [공통 유틸리티] 공백 완전 제거 함수: 유연한 성당 명칭 매칭용
+        const normalize = (s) => (s || '').toString().replace(/\s/g, '');
 
         // --- 이미지 기반 고도화된 기본 데이터 세트 ---
         const DEFAULT_SCHEMA = [
@@ -577,11 +582,7 @@
             const container = document.getElementById('categoryContainer');
             container.innerHTML = '';
 
-            // [강화] 유연한 매칭: 공백 제거 후 비교 등
-            // [공용] 명칭 표준화 함수: 공백을 1개로 통일하고 앞뒤 공백 제거
-            const normalizeName = (s) => (s || '').toString().trim().replace(/\s+/g, ' ');
-
-            const normalize = (s) => (s || '').toString().replace(/\s/g, '');
+            // [강화] 유연한 매칭: 상단 공통 정의된 normalize, normalizeName 활용
             const targetNorm = normalize(currentChurch);
             
             let churchItems = activitySchema[currentChurch];
@@ -822,13 +823,20 @@
                 return;
             }
 
-            if (!activitySchema[currentChurch]) activitySchema[currentChurch] = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+            // 유연한 성당 데이터 매칭 (현재 성당 키가 없을 경우 공백 무시 키 탐색)
+            const targetNorm = normalize(currentChurch);
+            let targetSchema = activitySchema[currentChurch];
+            if (!targetSchema) {
+                const foundKey = Object.keys(activitySchema).find(k => normalize(k) === targetNorm);
+                if (foundKey) targetSchema = activitySchema[foundKey];
+            }
+            if (!targetSchema) targetSchema = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
 
             try {
                 // [개선] Firestore에 저장하기 전 데이터 무결성 검사 (undefined 방지)
-                const cleanCategories = JSON.parse(JSON.stringify(activitySchema[currentChurch]));
+                const cleanCategories = JSON.parse(JSON.stringify(targetSchema));
                 
-                // Firestore에 성당별로 저장
+                // Firestore에 성당별로 저장 (상단 공통 함수 normalizeName 정상 호출)
                 const churchNameVal = normalizeName(currentChurch);
                 const docRef = doc(db, 'activity_schemas', churchNameVal);
                 await setDoc(docRef, {
@@ -837,7 +845,9 @@
                     updatedAt: new Date().toISOString()
                 });
 
-                // localStorage에도 백업
+                // 메모리 객체와 localStorage에도 최신 데이터 백업
+                activitySchema[currentChurch] = cleanCategories;
+                activitySchema[churchNameVal] = cleanCategories;
                 localStorage.setItem('activity_schema_v2', JSON.stringify(activitySchema));
                 await showGlobalAlert(`[${currentChurch}]의 활동 항목 설정이 성공적으로 저장되었습니다.`);
             } catch (error) {
@@ -849,6 +859,8 @@
 </body>
 
 </html>
+
+
 
 
 

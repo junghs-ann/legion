@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>활동내역 조회(간편) - 레지오 마리애</title>
-    <link rel="stylesheet" href="styles.css?v=20260901_1635">
+    <link rel="stylesheet" href="styles.css?v=20260910_0645">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -302,15 +302,15 @@
                 <div class="info-labels">
                     <div class="info-item">
                         <div class="label">성당</div>
-                        <select id="selChurch" class="info-select" disabled></select>
+                        <select id="selChurch" class="info-select"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">꾸리아</div>
-                        <select id="selCuria" class="info-select" disabled></select>
+                        <select id="selCuria" class="info-select"></select>
                     </div>
                     <div class="info-item">
                         <div class="label">쁘레시디움</div>
-                        <select id="selPr" class="info-select" disabled></select>
+                        <select id="selPr" class="info-select"></select>
                     </div>
                 </div>
                 <div class="info-labels" style="margin-top: 10px; border-top: 1px dashed #eee; padding-top: 20px;">
@@ -354,11 +354,11 @@
         </button>
     </div>
 
-    <script src="script.js?v=20260901_1635"></script>
+    <script src="script.js?v=20260910_0645"></script>
     <script type="module">
         import { db, collection, query, where, getDocs, orderBy, doc, getDoc } from "./firebase-config.js";
         import { initAuthObserver } from "./auth.js";
-        import { fetchPresidiaList } from "./data.js";
+        import { getChurches, getCuriae, getPresidia, fetchPresidiaList } from "./data.js";
 
         let currentUser = null;
         let activitySchemaMap = {};
@@ -386,10 +386,14 @@
             const schemaSnap = await getDocs(collection(db, 'activity_schemas'));
             schemaSnap.forEach(docSnap => {
                 const data = docSnap.data();
-                activitySchemaMap[data.churchName.trim()] = data.categories;
+                if (data.churchName) {
+                    const cName = data.churchName.trim();
+                    activitySchemaMap[cName] = data.categories;
+                    activitySchemaMap[cName.replace(/\s+/g, '')] = data.categories;
+                }
             });
 
-            setupUnifiedSelectors();
+            await setupUnifiedSelectors();
         });
 
         async function setupUnifiedSelectors() {
@@ -400,36 +404,131 @@
             const selSessionStart = document.getElementById('selSessionStart');
             const selSessionEnd = document.getElementById('selSessionEnd');
 
-            const cName = currentUser.churchName || "";
-            const cuName = currentUser.curiaName || "";
-            const prName = currentUser.presidiumName || "";
+            const isAdmin = window.isAdmin;
+            const isOfficer = window.isOfficer;
 
-            selChurch.innerHTML = `<option value="${cName}">${cName}</option>`;
-            selCuria.innerHTML = `<option value="${cuName}">${cuName}</option>`;
-            selPr.innerHTML = `<option value="${prName}">${prName}</option>`;
-
-            await syncSessions(prName);
-
+            // 회차 및 단원 변경 시 자동 검색 이벤트
             selSessionStart.onchange = async () => {
-                await syncMembers(prName);
+                await syncMembers();
                 performSearch();
             };
             selSessionEnd.onchange = async () => {
-                await syncMembers(prName);
+                await syncMembers();
                 performSearch();
             };
             selMember.onchange = () => performSearch();
+
+            if (isAdmin) {
+                // 1. 관리자 권한인 경우: 성당, 꾸리아, 쁘레시디움 선택 가능
+                const churches = getChurches();
+                selChurch.innerHTML = churches.map(c => `<option value="${c}">${c}</option>`).join('');
+                selChurch.disabled = false;
+                selCuria.disabled = false;
+                selPr.disabled = false;
+
+                const defaultChurch = (currentUser.churchName || churches[0] || "").trim();
+                if (churches.includes(defaultChurch)) {
+                    selChurch.value = defaultChurch;
+                }
+
+                // 성당 변경 이벤트: 꾸리아 목록 동기화
+                selChurch.onchange = async () => {
+                    const c = selChurch.value;
+                    if (!c) return;
+
+                    const curiae = getCuriae(c);
+                    selCuria.innerHTML = curiae.map(cu => `<option value="${cu}">${cu}</option>`).join('');
+
+                    const defaultCuria = (currentUser.curiaName || curiae[0] || "").trim();
+                    if (curiae.includes(defaultCuria)) {
+                        selCuria.value = defaultCuria;
+                    }
+
+                    await selCuria.onchange();
+                };
+
+                // 꾸리아 변경 이벤트: 쁘레시디움 목록 동기화
+                selCuria.onchange = async () => {
+                    const c = selChurch.value;
+                    const cu = selCuria.value;
+                    if (!cu) {
+                        selPr.innerHTML = '<option value="">-- 꾸리아 선택 필요 --</option>';
+                        return;
+                    }
+                    const presidia = getPresidia(c, cu).map(p => p.name).sort();
+                    selPr.innerHTML = '<option value="">-- 쁘레시디움 선택 --</option>' + 
+                        presidia.map(p => `<option value="${p}">${p}</option>`).join('');
+
+                    const defaultPr = (currentUser.presidiumName || "").trim();
+                    const matchedPr = presidia.find(p => p === defaultPr);
+                    if (matchedPr) {
+                        selPr.value = matchedPr;
+                    }
+
+                    await selPr.onchange();
+                };
+
+                // 쁘레시디움 변경 이벤트: 회차 및 단원 동기화
+                selPr.onchange = async () => {
+                    const prName = selPr.value;
+                    if (prName) {
+                        await syncSessions(prName);
+                    } else {
+                        selSessionStart.innerHTML = '';
+                        selSessionEnd.innerHTML = '';
+                        selMember.innerHTML = '';
+                        performSearch();
+                    }
+                };
+
+                // 초기 실행
+                await selChurch.onchange();
+            } else {
+                // 2. 비관리자(간부 또는 일반 단원): 로그인 정보로 고정 및 비활성화
+                const cName = (currentUser.churchName || "").trim();
+                const cuName = (currentUser.curiaName || "").trim();
+                const prName = (currentUser.presidiumName || "").trim();
+
+                selChurch.innerHTML = `<option value="${cName}">${cName}</option>`;
+                selCuria.innerHTML = `<option value="${cuName}">${cuName}</option>`;
+                selPr.innerHTML = `<option value="${prName}">${prName}</option>`;
+
+                selChurch.value = cName;
+                selCuria.value = cuName;
+                selPr.value = prName;
+
+                selChurch.disabled = true;
+                selCuria.disabled = true;
+                selPr.disabled = true;
+
+                await syncSessions(prName);
+
+                // 간부(단장, 부단장, 서기, 회계)가 아닌 일반 단원은 단원 선택 불가
+                if (!isOfficer) {
+                    selMember.disabled = true;
+                }
+            }
         }
 
         async function syncSessions(prName) {
             const selStart = document.getElementById('selSessionStart');
             const selEnd = document.getElementById('selSessionEnd');
-            const church = currentUser.churchName;
+            const selChurch = document.getElementById('selChurch');
+            const church = (selChurch ? selChurch.value : currentUser.churchName || "").trim();
+            const pr = prName || (document.getElementById('selPr') ? document.getElementById('selPr').value : "").trim();
+
+            if (!church || !pr) {
+                selStart.innerHTML = '';
+                selEnd.innerHTML = '';
+                await syncMembers(pr);
+                performSearch();
+                return;
+            }
 
             try {
                 const q = query(collection(db, 'attendance_list'),
                     where('churchName', '==', church),
-                    where('presidiumName', '==', prName)
+                    where('presidiumName', '==', pr)
                 );
                 const snap = await getDocs(q);
                 sessionList = snap.docs.map(d => {
@@ -450,10 +549,10 @@
                     selStart.selectedIndex = 0;
                 }
 
-                await syncMembers(prName);
+                await syncMembers(pr);
                 performSearch();
             } catch (e) {
-                console.error(e);
+                console.error("Error syncSessions:", e);
             }
         }
 
@@ -461,7 +560,14 @@
             const selMember = document.getElementById('selMember');
             const selStart = document.getElementById('selSessionStart');
             const selEnd = document.getElementById('selSessionEnd');
-            const church = currentUser.churchName;
+            const selChurch = document.getElementById('selChurch');
+            const church = (selChurch ? selChurch.value : currentUser.churchName || "").trim();
+            const pr = prName || (document.getElementById('selPr') ? document.getElementById('selPr').value : "").trim();
+
+            if (!church || !pr) {
+                selMember.innerHTML = '';
+                return;
+            }
 
             const sessStart = parseInt(selStart.value);
             const sessEnd = parseInt(selEnd.value);
@@ -478,12 +584,12 @@
 
             try {
                 const [ofSnap, memSnap] = await Promise.all([
-                    getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', prName))),
-                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', prName)))
+                    getDocs(query(collection(db, 'officers_list'), where('presidiumName', '==', pr))),
+                    getDocs(query(collection(db, 'members_list'), where('presidiumName', '==', pr)))
                 ]);
 
                 const filterActive = (list) => list.filter(m => {
-                    if (m.churchName !== church) return false;
+                    if (church && m.churchName !== church) return false;
                     
                     const join = (m.joinDate || m.appointmentDate || '').trim();
                     const leave = (m.leaveDate || m.appointmentExpiryDate || '').trim();
@@ -521,10 +627,16 @@
                     return `<option value="${m.uid}" ${selected}>${m.name} (${m.baptismalName || ''})</option>`;
                 }).join('');
 
+                // 일반 단원인데 목록에 없는 경우 로그인 정보로 기본 옵션 추가
+                if (!window.canManageOthers && allList.length === 0) {
+                    html = `<option value="${currentUser.memberId || currentUser.id}">${currentUser.name || '단원'}</option>`;
+                }
+
                 selMember.innerHTML = html;
                 if (!window.canManageOthers) selMember.disabled = true;
+                else selMember.disabled = false;
             } catch (e) {
-                console.error(e);
+                console.error("Error syncMembers:", e);
             }
         }
 
@@ -538,6 +650,12 @@
             const startSess = parseInt(document.getElementById('selSessionStart').value);
             const endSess = parseInt(document.getElementById('selSessionEnd').value);
 
+            if (isNaN(startSess) || isNaN(endSess)) {
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-search fa-3x" style="margin-bottom: 15px;"></i><br>조회할 범위를 선택해 주세요.</div>';
+                summaryBar.style.display = 'none';
+                return;
+            }
+
             const s = Math.min(startSess, endSess);
             const e = Math.max(startSess, endSess);
 
@@ -545,8 +663,15 @@
             summaryBar.style.display = 'none';
 
             try {
-                const church = currentUser.churchName;
-                const pr = currentUser.presidiumName;
+                const selChurch = document.getElementById('selChurch');
+                const selPr = document.getElementById('selPr');
+                const church = (selChurch ? selChurch.value : currentUser.churchName || "").trim();
+                const pr = (selPr ? selPr.value : currentUser.presidiumName || "").trim();
+
+                if (!church || !pr) {
+                    grid.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle fa-3x" style="margin-bottom: 15px;"></i><br>성당과 쁘레시디움을 선택해 주세요.</div>';
+                    return;
+                }
                 
                 let q = query(collection(db, 'activity_records'),
                     where('churchName', '==', church),
@@ -597,7 +722,9 @@
             const grid = document.getElementById('activityGrid');
             grid.innerHTML = '';
 
-            const churchSchema = activitySchemaMap[currentUser.churchName.trim()] || [];
+            const selChurch = document.getElementById('selChurch');
+            const church = (selChurch ? selChurch.value : currentUser.churchName || "").trim();
+            const churchSchema = activitySchemaMap[church] || activitySchemaMap[church.replace(/\s+/g, '')] || [];
             
             const flatSchema = {};
             churchSchema.forEach(cat => {
@@ -650,6 +777,8 @@
 </body>
 
 </html>
+
+
 
 
 
