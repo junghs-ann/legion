@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -930,7 +930,7 @@
                 <span id="acc_out" class="underline">-</span> 잔 액 <span id="acc_bal" class="underline">-</span>
             </div>
             <div style="font-size:10pt; margin-bottom: 2mm; padding-left: 20px;">
-                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow" class="underline">-</span> (기타) <span id="exp_etc" class="underline">-</span>
+                중요 지출 내역 : (의연금) <span id="exp_cont" class="underline">-</span> (꽃값) <span id="exp_flow" class="underline">-</span> (기타) <span id="exp_etc" class="underline" style="padding-left: 0; margin-left: 0;">-</span>
             </div>
 
             <div class="section-title">8. 주요 활동 요약</div>
@@ -1650,6 +1650,21 @@
                 // 6. 회계 보고 (UI상 7번)
                 let totalIn = 0, totalOut = 0;
                 let expCont = 0, expFlow = 0;
+                const etcItemsSet = new Set(); // [추가] 기타 지출 항목명(중복 제거) 수집용
+
+                // [추가] 기타 지출 항목명 포함 표시 시 길이에 따라 줄바꿈 방지용 폰트 크기 보정
+                const adjustExpEtcFontSize = () => {
+                    const expEtcEl = document.getElementById('exp_etc');
+                    if (!expEtcEl) return;
+                    const len = (expEtcEl.textContent || '').trim().length;
+                    if (len > 26) {
+                        expEtcEl.style.fontSize = '8pt';
+                    } else if (len > 18) {
+                        expEtcEl.style.fontSize = '9pt';
+                    } else {
+                        expEtcEl.style.fontSize = '';
+                    }
+                };
 
                 // 당월 거래 내역 집계 로직
                 leds.forEach(l => {
@@ -1669,6 +1684,14 @@
                             expCont += amt;
                         } else if (item.includes('꽃값') || item.includes('꽃비') || remark.includes('꽃값')) {
                             expFlow += amt;
+                        } else if (amt > 0) {
+                            // [추가] 의연금·꽃값 외 기타 지출 항목 내용 수집
+                            // 항목명이 비어있거나 '기타' 계열이면 적요(remarks)를 항목 내용으로 활용
+                            const isGenericEtc = !item || ['기타', '기타지출', '기타 지출', '기타비용', '기타 비용'].includes(item);
+                            const etcLabel = isGenericEtc ? remark : item;
+                            if (etcLabel) {
+                                etcItemsSet.add(etcLabel);
+                            }
                         }
                     }
                 });
@@ -1703,11 +1726,16 @@
                 setVal('acc_out', totalOut.toLocaleString());
                 setVal('acc_bal', (accPrev + totalIn - totalOut).toLocaleString());
 
-                // 중요 지출 내역 표시
+                // 중요 지출 내역 표시 (기타 지출 시 항목 내용과 금액을 함께 표시)
                 const expEtc = totalOut - (expCont + expFlow);
+                const etcLabelStr = Array.from(etcItemsSet).join(', ');
+                const expEtcDisplay = (expEtc > 0 && etcLabelStr)
+                    ? `${etcLabelStr} ${expEtc.toLocaleString()}`
+                    : expEtc.toLocaleString();
                 setVal('exp_cont', expCont.toLocaleString());
                 setVal('exp_flow', expFlow.toLocaleString());
-                setVal('exp_etc', expEtc.toLocaleString());
+                setVal('exp_etc', expEtcDisplay);
+                adjustExpEtcFontSize();
 
                 // [정예화] 오직 표준 명칭(adjs)으로만 활동 실적 합산
                 const sumAct = (name) => {
@@ -1898,7 +1926,21 @@
                     ];
                     accs.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) el.textContent = rd[id] || '0';
+                        if (!el) return;
+                        // [추가] 기존 스냅샷에 기타 지출 항목명 없이 금액만 저장된 경우,
+                        // 실시간 집계 금액과 일치할 때만 항목 내용을 보강하여 표시
+                        if (id === 'exp_etc') {
+                            const savedEtc = String(rd[id] || '0').trim();
+                            const isNumericOnly = /^[0-9,]+$/.test(savedEtc);
+                            if (isNumericOnly && etcLabelStr && expEtc > 0 && savedEtc === expEtc.toLocaleString()) {
+                                el.textContent = expEtcDisplay;
+                            } else {
+                                el.textContent = savedEtc || '0';
+                            }
+                            adjustExpEtcFontSize();
+                        } else {
+                            el.textContent = rd[id] || '0';
+                        }
                     });
 
                     // 5. 기타 및 활동 요약/행사
@@ -1911,7 +1953,7 @@
                         document.getElementById('activitySummaryBody').innerHTML = rd.activitySummaryBody || '';
                     }
                     if (document.getElementById('activityDetailBody')) {
-                        document.getElementById('activityDetailBody').innerHTML = rd.activityDetailBody || '';
+                        document.getElementById('activityDetailBody').innerHTML = (rd.activityDetailBody || '').replace(/기타활동\(1\)/g, '기타 활동');
                     }
                     if (document.getElementById('eventTableBody')) {
                         document.getElementById('eventTableBody').innerHTML = rd.eventTableBody || '';
@@ -1991,7 +2033,7 @@
                 gCount += (simpleCount + combinedCount);
 
                 detailHtml += `<tr>
-                    <th rowspan="2">${grpSimple.title}</th>
+                    <th rowspan="2">기타 활동</th>
                     <td style="text-align:center;">${simpleCount > 0 ? simpleCount.toLocaleString() : '-'}</td>
                     <td style="text-align:left; padding-left:10px; line-height:1.6;">${simpleDetails.join(', ')}</td>
                 </tr>`;
